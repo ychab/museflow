@@ -1,0 +1,173 @@
+[tool.poetry]
+name = "spotifagent"
+version = "0.1.0"
+description = "An assistant for your Spotify Account"
+authors = ["Yannick Chabbert <yannick.chabbert.it@gmail.com>"]
+license = "MIT"
+
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = {extras = ["standard"], version = "^0.128.0"}
+pydantic = {extras = ["email"], version = "^2.12.5"}
+pydantic-settings = "^2.12.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.45"}
+alembic = "^1.18.0"
+asyncpg = "^0.31.0"
+httpx = "^0.28.1"
+argon2-cffi = "^25.1.0"
+pyjwt = "^2.10.1"
+typer = "^0.21.1"
+tenacity = "^9.1.4"
+python-slugify = "^8.0.4"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^9.0.2"
+pytest-cov = "^7.0.0"
+pytest-env = "^1.2.0"
+pytest-httpx = "^0.36.0"
+pytest-reverse = "^1.9.0"
+coverage = {version = ">=7.2", extras = ["toml"]}
+polyfactory = "^3.2.0"
+time-machine = "^3.2.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.5.1"
+deptry = "^0.24.0"
+ruff = "^0.14.11"
+mypy = "^1.19.1"
+pydantic = {extras = ["dotenv"], version = "^2.12.5"}
+
+
+[tool.poetry.scripts]
+spotifagent = "spotifagent.infrastructure.entrypoints.cli.main:app"
+
+
+[build-system]
+requires = ["poetry-core>=1.8.5"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+src = ["spotifagent", "tests"]
+target-version = "py313"
+line-length = 119
+fix = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes (by default)
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "PERF", # Perflint
+    "FURB", # refurb
+]
+ignore = [
+    "B008",  # Allow function calls in argument defaults (required for FastAPI Depends)
+    "E501",  # Line too long will be formatted by Ruff format
+]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+known-first-party = ["spotifagent"]
+known-local-folder = ["tests"]
+section-order = [
+    "future",
+    "standard-library",
+    "fastapi",
+    "pydantic",
+    "sqlalchemy",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+sections.fastapi = [
+    "fastapi",
+    "starlette",
+    "httpx",
+    "uvicorn",
+]
+sections.pydantic = [
+    "pydantic",
+    "pydantic_settings",
+]
+sections.sqlalchemy = [
+    "sqlalchemy",
+    "alembic",
+    "asyncpg",
+]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["spotifagent", "tests"]
+plugins = "pydantic.mypy"
+
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    # Used as a driver for SQLAlchemy.
+    "asyncpg",
+]
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=spotifagent",
+    "--cov-report=xml",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-branch",
+]
+testpaths = ["tests"]
+pythonpath = ["."]
+env = [
+    # App required settings
+    'SPOTIFAGENT_SECRET_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
+    'SPOTIFAGENT_LOG_LEVEL=DEBUG',
+    'SPOTIFAGENT_LOG_HANDLERS=["null"]',
+    # Database required settings (could be overriden)
+    'D:DATABASE_HOST=127.0.0.1',
+    'D:DATABASE_PORT=5432',
+    'D:DATABASE_USER=spotifagent',
+    'D:DATABASE_PASSWORD=spotifagent',
+    'D:DATABASE_PATH=spotifagent',
+    # Spotify client adapter required settings
+    'SPOTIFY_CLIENT_ID=dummy-client-id',
+    'SPOTIFY_CLIENT_SECRET=dummy-client-secret',
+    'SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+]
+
+[tool.coverage.run]
+source = [
+    "spotifagent",
+    "tests",
+]
+branch = true
+concurrency = ["thread", "greenlet"]
+omit = [
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "def __str__",
+    "def __repr__",
+    "@abstractmethod",
+    "if __name__ == .__main__.:",
+]
+fail_under = 100
+skip_covered = true
+show_missing = true
+
+[tool.coverage.html]
+directory = "htmlcov"

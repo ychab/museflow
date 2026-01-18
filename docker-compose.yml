@@ -1,0 +1,72 @@
+x-common-env: &common-env
+  DATABASE_URI: postgresql+asyncpg://${DATABASE_USER:-spotifagent}:${DATABASE_PASSWORD:-spotifagent}@db:${DATABASE_PORT:-5432}/${DATABASE_PATH:-spotifagent}
+
+services:
+  db:
+    image: postgres:16.10
+    container_name: spotifagent-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-spotifagent}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-spotifagent}
+      POSTGRES_DB: ${DATABASE_PATH:-spotifagent}
+    ports:
+      - ${DATABASE_PORT:-5432}:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spotifagent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - spotifagent-network
+
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.13}
+        POETRY_VERSION: ${POETRY_VERSION:-1.8.5}
+    container_name: spotifagent-migration
+    command: alembic upgrade head
+    environment:
+      <<: *common-env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - spotifagent-network
+    restart: on-failure
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.13}
+        POETRY_VERSION: ${POETRY_VERSION:-1.8.5}
+    container_name: spotifagent-app
+    environment:
+      <<: *common-env
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-dummy-client-id}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-dummy-client-secret}
+      SPOTIFAGENT_SECRET_KEY: ${SPOTIFAGENT_SECRET_KEY:-dummy-app-secret-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
+    ports:
+      - ${APP_PORT_LOCAL_FORWARD:-8000}:8000
+    depends_on:
+      db:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    networks:
+      - spotifagent-network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+networks:
+  spotifagent-network:
+    driver: bridge

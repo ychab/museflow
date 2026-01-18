@@ -1,0 +1,46 @@
+minimum_pre_commit_version: 4.5.1
+default_language_version:
+    python: python3.13
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: check-ast
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff-check
+        files: (spotifagent|tests)
+        args: [ --fix ]
+      - id: ruff-format
+        files: (spotifagent|tests)
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        files: (spotifagent|tests)
+        entry: poetry run mypy
+        language: system
+        types: [python]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: deptry
+        name: deptry
+        entry: poetry run deptry .
+        language: system
+        pass_filenames: false
+        require_serial: true

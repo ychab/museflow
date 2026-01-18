@@ -1,0 +1,27 @@
+# ROADMAP
+
+This quick and dirty document just list the roadmap tasks.
+
+## Renaming project
+
+- replace spotifagent occurrences almost everywhere...
+
+## Sync
+
+- spotify: fetch user songs (liked song)
+- spotify: fetch all playlists to collect all the user's song (to don't get recommendations for them)
+
+## Recommendations / Suggestions
+
+- spotify: search endpoint to discover new musics?
+- found other providers for recommendations (listenbrainz or musicbrainz)?
+    => last.fm: works pretty great with latino sounds, but only :/ hip-hop/rap FR not supported at all
+    => tastedive API
+
+## Playlist (recommendations)
+
+- spotify: create a user playlist
+
+## AI agents
+
+Once the project is stable, try to auto-generate the agents scripts

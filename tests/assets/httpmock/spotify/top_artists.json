@@ -1,0 +1,738 @@
+{
+  "items": [
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/3CnCGFxXbOA8bAK54jR8js"
+      },
+      "followers": {
+        "href": null,
+        "total": 1369795
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/3CnCGFxXbOA8bAK54jR8js",
+      "id": "3CnCGFxXbOA8bAK54jR8js",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb7f424b7449ae0a21541a370d",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051747f424b7449ae0a21541a370d",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1787f424b7449ae0a21541a370d",
+          "width": 160
+        }
+      ],
+      "name": "Vald",
+      "popularity": 68,
+      "type": "artist",
+      "uri": "spotify:artist:3CnCGFxXbOA8bAK54jR8js"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/7BFnoFhJjLWcsqmN3Hizqg"
+      },
+      "followers": {
+        "href": null,
+        "total": 1119673
+      },
+      "genres": [
+        "salsa",
+        "merengue",
+        "tropical music"
+      ],
+      "href": "https://api.spotify.com/v1/artists/7BFnoFhJjLWcsqmN3Hizqg",
+      "id": "7BFnoFhJjLWcsqmN3Hizqg",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebcb7c0576763d7105ca2762fd",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174cb7c0576763d7105ca2762fd",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178cb7c0576763d7105ca2762fd",
+          "width": 160
+        }
+      ],
+      "name": "Joe Arroyo",
+      "popularity": 66,
+      "type": "artist",
+      "uri": "spotify:artist:7BFnoFhJjLWcsqmN3Hizqg"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2UwqpfQtNuhBwviIC0f2ie"
+      },
+      "followers": {
+        "href": null,
+        "total": 5877395
+      },
+      "genres": [
+        "french rap",
+        "pop urbaine",
+        "french r&b"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2UwqpfQtNuhBwviIC0f2ie",
+      "id": "2UwqpfQtNuhBwviIC0f2ie",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb301a9c599d85d89e7a90fed0",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174301a9c599d85d89e7a90fed0",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178301a9c599d85d89e7a90fed0",
+          "width": 160
+        }
+      ],
+      "name": "Damso",
+      "popularity": 77,
+      "type": "artist",
+      "uri": "spotify:artist:2UwqpfQtNuhBwviIC0f2ie"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/58wXmynHaAWI5hwlPZP3qL"
+      },
+      "followers": {
+        "href": null,
+        "total": 3819653
+      },
+      "genres": [
+        "french rap",
+        "french r&b",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/58wXmynHaAWI5hwlPZP3qL",
+      "id": "58wXmynHaAWI5hwlPZP3qL",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb96b3ab10e89bad078d125c3a",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517496b3ab10e89bad078d125c3a",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17896b3ab10e89bad078d125c3a",
+          "width": 160
+        }
+      ],
+      "name": "Booba",
+      "popularity": 74,
+      "type": "artist",
+      "uri": "spotify:artist:58wXmynHaAWI5hwlPZP3qL"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/54kCbQZaZWHnwwj9VP2hn4"
+      },
+      "followers": {
+        "href": null,
+        "total": 2573312
+      },
+      "genres": [
+        "french rap",
+        "french r&b"
+      ],
+      "href": "https://api.spotify.com/v1/artists/54kCbQZaZWHnwwj9VP2hn4",
+      "id": "54kCbQZaZWHnwwj9VP2hn4",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebbceb0b4fabbf8639d20ffc42",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174bceb0b4fabbf8639d20ffc42",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178bceb0b4fabbf8639d20ffc42",
+          "width": 160
+        }
+      ],
+      "name": "Zola",
+      "popularity": 64,
+      "type": "artist",
+      "uri": "spotify:artist:54kCbQZaZWHnwwj9VP2hn4"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/3DCWeG2J1fZeu0Oe6i5Q6m"
+      },
+      "followers": {
+        "href": null,
+        "total": 2525039
+      },
+      "genres": [
+        "french rap",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/3DCWeG2J1fZeu0Oe6i5Q6m",
+      "id": "3DCWeG2J1fZeu0Oe6i5Q6m",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb14510062360ec398470cf4bc",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517414510062360ec398470cf4bc",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17814510062360ec398470cf4bc",
+          "width": 160
+        }
+      ],
+      "name": "PLK",
+      "popularity": 75,
+      "type": "artist",
+      "uri": "spotify:artist:3DCWeG2J1fZeu0Oe6i5Q6m"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/7nVgP0ISalazUzugR7D8zk"
+      },
+      "followers": {
+        "href": null,
+        "total": 185062
+      },
+      "genres": [],
+      "href": "https://api.spotify.com/v1/artists/7nVgP0ISalazUzugR7D8zk",
+      "id": "7nVgP0ISalazUzugR7D8zk",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebbc10450077d1b4587b7ea651",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174bc10450077d1b4587b7ea651",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178bc10450077d1b4587b7ea651",
+          "width": 160
+        }
+      ],
+      "name": "Caskey",
+      "popularity": 54,
+      "type": "artist",
+      "uri": "spotify:artist:7nVgP0ISalazUzugR7D8zk"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/0QcZD8V0Ug1KINWBSyG0dB"
+      },
+      "followers": {
+        "href": null,
+        "total": 248346
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/0QcZD8V0Ug1KINWBSyG0dB",
+      "id": "0QcZD8V0Ug1KINWBSyG0dB",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2d14e35f8f24c9a3fbb37c46",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051742d14e35f8f24c9a3fbb37c46",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1782d14e35f8f24c9a3fbb37c46",
+          "width": 160
+        }
+      ],
+      "name": "Alkpote",
+      "popularity": 49,
+      "type": "artist",
+      "uri": "spotify:artist:0QcZD8V0Ug1KINWBSyG0dB"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/6L34dW6SKMSDaGIfYDU19j"
+      },
+      "followers": {
+        "href": null,
+        "total": 3698168
+      },
+      "genres": [
+        "french rap",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/6L34dW6SKMSDaGIfYDU19j",
+      "id": "6L34dW6SKMSDaGIfYDU19j",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb94d3aff5f84dfc8bf111f157",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517494d3aff5f84dfc8bf111f157",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17894d3aff5f84dfc8bf111f157",
+          "width": 160
+        }
+      ],
+      "name": "Maes",
+      "popularity": 73,
+      "type": "artist",
+      "uri": "spotify:artist:6L34dW6SKMSDaGIfYDU19j"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2kXKa3aAFngGz2P4GjG5w2"
+      },
+      "followers": {
+        "href": null,
+        "total": 2823904
+      },
+      "genres": [
+        "french rap",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2kXKa3aAFngGz2P4GjG5w2",
+      "id": "2kXKa3aAFngGz2P4GjG5w2",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4ed985f33e971801dae4e24d",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744ed985f33e971801dae4e24d",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784ed985f33e971801dae4e24d",
+          "width": 160
+        }
+      ],
+      "name": "SCH",
+      "popularity": 74,
+      "type": "artist",
+      "uri": "spotify:artist:2kXKa3aAFngGz2P4GjG5w2"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/0zhMujl1yB8pkB023Qm4Y2"
+      },
+      "followers": {
+        "href": null,
+        "total": 249014
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/0zhMujl1yB8pkB023Qm4Y2",
+      "id": "0zhMujl1yB8pkB023Qm4Y2",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb43379c09ef34d7669d8e7920",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517443379c09ef34d7669d8e7920",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17843379c09ef34d7669d8e7920",
+          "width": 160
+        }
+      ],
+      "name": "Green Montana",
+      "popularity": 60,
+      "type": "artist",
+      "uri": "spotify:artist:0zhMujl1yB8pkB023Qm4Y2"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2VviFtXYreO6Zn9n8Ibk6C"
+      },
+      "followers": {
+        "href": null,
+        "total": 237655
+      },
+      "genres": [
+        "latin jazz",
+        "salsa",
+        "afro-cuban jazz",
+        "son cubano",
+        "cha cha cha",
+        "mambo"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2VviFtXYreO6Zn9n8Ibk6C",
+      "id": "2VviFtXYreO6Zn9n8Ibk6C",
+      "images": [
+        {
+          "height": 1000,
+          "url": "https://i.scdn.co/image/3379207a21ec6bc412184687a941bd30c5af0920",
+          "width": 1000
+        },
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/32e943fe5916c04101ec144a7c6bece4de9a9754",
+          "width": 640
+        },
+        {
+          "height": 200,
+          "url": "https://i.scdn.co/image/b837f74950427c80860fd536253037383a3b5fb9",
+          "width": 200
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/e445abc352059e68d431116486e0c3089e9adfe4",
+          "width": 64
+        }
+      ],
+      "name": "Eddie Palmieri",
+      "popularity": 46,
+      "type": "artist",
+      "uri": "spotify:artist:2VviFtXYreO6Zn9n8Ibk6C"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2ktpq7bp4m1quizyEmp4r1"
+      },
+      "followers": {
+        "href": null,
+        "total": 200031
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2ktpq7bp4m1quizyEmp4r1",
+      "id": "2ktpq7bp4m1quizyEmp4r1",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb685443ccd8e2f0573b7c875d",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174685443ccd8e2f0573b7c875d",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178685443ccd8e2f0573b7c875d",
+          "width": 160
+        }
+      ],
+      "name": "A2h",
+      "popularity": 50,
+      "type": "artist",
+      "uri": "spotify:artist:2ktpq7bp4m1quizyEmp4r1"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/1mMUzAMrNqoTHgtxA0dZi6"
+      },
+      "followers": {
+        "href": null,
+        "total": 345061
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/1mMUzAMrNqoTHgtxA0dZi6",
+      "id": "1mMUzAMrNqoTHgtxA0dZi6",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebbc17ac2f9ed41684682ac6d1",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174bc17ac2f9ed41684682ac6d1",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178bc17ac2f9ed41684682ac6d1",
+          "width": 160
+        }
+      ],
+      "name": "Caballero & JeanJass",
+      "popularity": 53,
+      "type": "artist",
+      "uri": "spotify:artist:1mMUzAMrNqoTHgtxA0dZi6"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/790FomKkXshlbRYZFtlgla"
+      },
+      "followers": {
+        "href": null,
+        "total": 62455856
+      },
+      "genres": [
+        "reggaeton",
+        "latin",
+        "urbano latino"
+      ],
+      "href": "https://api.spotify.com/v1/artists/790FomKkXshlbRYZFtlgla",
+      "id": "790FomKkXshlbRYZFtlgla",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb66041ce9eb4497057cbc3496",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517466041ce9eb4497057cbc3496",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17866041ce9eb4497057cbc3496",
+          "width": 160
+        }
+      ],
+      "name": "KAROL G",
+      "popularity": 89,
+      "type": "artist",
+      "uri": "spotify:artist:790FomKkXshlbRYZFtlgla"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/1zng9JZpblpk48IPceRWs8"
+      },
+      "followers": {
+        "href": null,
+        "total": 4697319
+      },
+      "genres": [
+        "salsa",
+        "merengue"
+      ],
+      "href": "https://api.spotify.com/v1/artists/1zng9JZpblpk48IPceRWs8",
+      "id": "1zng9JZpblpk48IPceRWs8",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb74a0064f0d1d4c849d0e249b",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517474a0064f0d1d4c849d0e249b",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17874a0064f0d1d4c849d0e249b",
+          "width": 160
+        }
+      ],
+      "name": "Grupo Niche",
+      "popularity": 72,
+      "type": "artist",
+      "uri": "spotify:artist:1zng9JZpblpk48IPceRWs8"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/5l8WyvJ50fdSghK2ySNq1y"
+      },
+      "followers": {
+        "href": null,
+        "total": 346671
+      },
+      "genres": [
+        "french rap"
+      ],
+      "href": "https://api.spotify.com/v1/artists/5l8WyvJ50fdSghK2ySNq1y",
+      "id": "5l8WyvJ50fdSghK2ySNq1y",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebaeadb37bba882423385e1a85",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174aeadb37bba882423385e1a85",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178aeadb37bba882423385e1a85",
+          "width": 160
+        }
+      ],
+      "name": "Luv Resval",
+      "popularity": 58,
+      "type": "artist",
+      "uri": "spotify:artist:5l8WyvJ50fdSghK2ySNq1y"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/5gs4Sm2WQUkcGeikMcVHbh"
+      },
+      "followers": {
+        "href": null,
+        "total": 1892791
+      },
+      "genres": [
+        "french rap",
+        "pop urbaine",
+        "french r&b"
+      ],
+      "href": "https://api.spotify.com/v1/artists/5gs4Sm2WQUkcGeikMcVHbh",
+      "id": "5gs4Sm2WQUkcGeikMcVHbh",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb78aad18b8890189a46286aa4",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517478aad18b8890189a46286aa4",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17878aad18b8890189a46286aa4",
+          "width": 160
+        }
+      ],
+      "name": "Hamza",
+      "popularity": 74,
+      "type": "artist",
+      "uri": "spotify:artist:5gs4Sm2WQUkcGeikMcVHbh"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/5aAlzehdUM14I4ppq24Xob"
+      },
+      "followers": {
+        "href": null,
+        "total": 454337
+      },
+      "genres": [
+        "salsa",
+        "merengue",
+        "tropical music"
+      ],
+      "href": "https://api.spotify.com/v1/artists/5aAlzehdUM14I4ppq24Xob",
+      "id": "5aAlzehdUM14I4ppq24Xob",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2f748d6046c5d9701ce234fc",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051742f748d6046c5d9701ce234fc",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1782f748d6046c5d9701ce234fc",
+          "width": 160
+        }
+      ],
+      "name": "Fruko Y Sus Tesos",
+      "popularity": 59,
+      "type": "artist",
+      "uri": "spotify:artist:5aAlzehdUM14I4ppq24Xob"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X"
+      },
+      "followers": {
+        "href": null,
+        "total": 107519137
+      },
+      "genres": [
+        "reggaeton",
+        "trap latino",
+        "urbano latino",
+        "latin"
+      ],
+      "href": "https://api.spotify.com/v1/artists/4q3ewBCX7sLwd24euuV69X",
+      "id": "4q3ewBCX7sLwd24euuV69X",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb81f47f44084e0a09b5f0fa13",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517481f47f44084e0a09b5f0fa13",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17881f47f44084e0a09b5f0fa13",
+          "width": 160
+        }
+      ],
+      "name": "Bad Bunny",
+      "popularity": 99,
+      "type": "artist",
+      "uri": "spotify:artist:4q3ewBCX7sLwd24euuV69X"
+    }
+  ],
+  "total": 234,
+  "limit": 20,
+  "offset": 0,
+  "href": "https://api.spotify.com/v1/me/top/artists?offset=0&time_range=long_term&locale=en-US,en;q%3D0.9,fr;q%3D0.8",
+  "next": "https://api.spotify.com/v1/me/top/artists?offset=20&limit=20&time_range=long_term&locale=en-US,en;q%3D0.9,fr;q%3D0.8",
+  "previous": null
+}

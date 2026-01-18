@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Development
+.git/
+.gitignore
+.gitattributes
+.env
+.env.*
+*.md
+.pre-commit-config.yaml
+.editorconfig
+Makefile
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Documentation & legal
+LICENSE
+docs/

@@ -1,0 +1,140 @@
+import uuid
+from collections.abc import Iterable
+from typing import Final
+from unittest import mock
+
+import pytest
+import typer
+from typer.testing import CliRunner
+
+from spotifagent.domain.entities.users import User
+from spotifagent.infrastructure.entrypoints.cli.commands.users.update import user_update_logic
+from spotifagent.infrastructure.entrypoints.cli.main import app
+
+from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
+
+
+class TestUserUpdateCommand:
+    @pytest.fixture(autouse=True)
+    def mock_user_update_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.users.user_update_logic"
+        with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
+            yield patched
+
+    def test__nominal(self, runner: CliRunner) -> None:
+        # fmt: off
+        cmd_args = [
+            "users", "update", f"{uuid.uuid4()}",
+            "--email", "test@example.com",
+            "--password", "testtest",
+        ]
+        # fmt: on
+
+        result = runner.invoke(app, cmd_args)
+        assert result.exit_code == 0
+
+    @pytest.mark.parametrize("user_id", ["123456", "foo-bar-baz"])
+    def test__user_id__invalid(self, runner: CliRunner, user_id: str, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(
+            app,
+            ["users", "update", f"{user_id}", "--email", "test@example.com"],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert f"Invalid value for 'USER_ID': '{user_id}' is not a valid UUID." in output
+
+    @pytest.mark.parametrize(
+        ("email", "expected_msg"),
+        [
+            pytest.param(
+                "testtest.com",
+                "An email address must have an @-sign",
+                id="missing_@",
+            ),
+            pytest.param(
+                "test@test",
+                "The part after the @-sign is not valid. It should have a period",
+                id="missing_dot",
+            ),
+        ],
+    )
+    def test__email__invalid(
+        self,
+        runner: CliRunner,
+        email: str,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["users", "update", f"{uuid.uuid4()}", "--email", email],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
+
+    @pytest.mark.parametrize(
+        ("password", "expected_msg"),
+        [
+            pytest.param(
+                "test",
+                "String should have at least 8 characters",
+                id="too_short",
+            ),
+            pytest.param(
+                "".join("test" for _ in range(30)),
+                "String should have at most 100 characters",
+                id="too_long",
+            ),
+        ],
+    )
+    def test__password__invalid__flag(self, runner: CliRunner, password: str, expected_msg: str) -> None:
+        result = runner.invoke(
+            app,
+            ["users", "update", f"{uuid.uuid4()}", "--password", password],
+        )
+        assert result.exit_code != 0
+        assert f"Invalid value for '--password': {expected_msg}" in result.output
+
+
+@pytest.mark.usefixtures("mock_get_db", "mock_user_repository")
+class TestUserUpdateLogic:
+    TARGET_PATH: Final[str] = "spotifagent.infrastructure.entrypoints.cli.commands.users.update"
+
+    @pytest.fixture
+    def mock_user_update(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{self.TARGET_PATH}.user_update", new_callable=mock.AsyncMock) as patched:
+            yield patched
+
+    async def test__no_attribute_to_update(self, mock_get_db: mock.Mock, mock_user_repository: mock.AsyncMock) -> None:
+        with pytest.raises(typer.BadParameter, match="At least one field to update must be provided."):
+            await user_update_logic(uuid.uuid4())
+
+    async def test__user_not_found(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        capsys: pytest.CaptureFixture,
+    ) -> None:
+        mock_user_repository.get_by_id.return_value = None
+
+        user_id = uuid.uuid4()
+        with pytest.raises(typer.BadParameter, match=f"User not found with ID {user_id}"):
+            await user_update_logic(user_id, email="new@example.com")
+
+    async def test__unexpected_exceptions(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_user_update: mock.AsyncMock,
+        capsys: pytest.CaptureFixture,
+    ) -> None:
+        mock_user_repository.get_by_id.return_value = user
+        mock_user_update.side_effect = Exception("Boom")
+
+        with pytest.raises(Exception, match="Boom"):
+            await user_update_logic(user.id, password="testtest")
+
+        captured = capsys.readouterr()
+        assert "Unexpected error: Boom" in captured.err
