@@ -4,297 +4,335 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.music import TopArtist
-from spotifagent.domain.entities.music import TopTrack
+from spotifagent.domain.entities.music import Artist
+from spotifagent.domain.entities.music import Track
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import TopArtist as TopArtistModel
-from spotifagent.infrastructure.adapters.database.models import TopTrack as TopTrackModel
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
+from spotifagent.infrastructure.adapters.database.models import Artist as ArtistModel
+from spotifagent.infrastructure.adapters.database.models import Track as TrackModel
 
-from tests.integration.factories.music import TopArtistModelFactory
-from tests.integration.factories.music import TopTrackModelFactory
-from tests.unit.factories.music import TopArtistFactory
-from tests.unit.factories.music import TopTrackFactory
+from tests.integration.factories.music import ArtistModelFactory
+from tests.integration.factories.music import TrackModelFactory
+from tests.unit.factories.music import ArtistFactory
+from tests.unit.factories.music import TrackFactory
 
 
-class TestTopArtistRepository:
+class TestArtistRepository:
     @pytest.fixture
-    async def top_artists(self, user: User) -> list[TopArtist]:
-        top_artists_db = await TopArtistModelFactory.create_batch_async(size=10, user_id=user.id)
-        return [TopArtist.model_validate(top_artist_db) for top_artist_db in top_artists_db]
-
-    @pytest.fixture
-    def top_artists_create(self, user: User) -> list[TopArtist]:
-        return TopArtistFactory.batch(size=10, user_id=user.id)
+    async def artists(self, user: User) -> list[Artist]:
+        artists_db = await ArtistModelFactory.create_batch_async(size=10, user_id=user.id)
+        return [Artist.model_validate(artist_db) for artist_db in artists_db]
 
     @pytest.fixture
-    def top_artists_update(self, top_artists: list[TopArtist]) -> list[TopArtist]:
-        return [TopArtist.model_validate({**top_artist.model_dump(), "genres": ["foo"]}) for top_artist in top_artists]
+    async def artists_other(self) -> list[Artist]:
+        artists_db = await ArtistModelFactory.create_batch_async(size=2)
+        return [Artist.model_validate(artist_db) for artist_db in artists_db]
 
     @pytest.fixture
-    def top_artists_mix(self, user: User, top_artists: list[TopArtist]) -> list[TopArtist]:
+    def artists_create(self, user: User) -> list[Artist]:
+        return ArtistFactory.batch(size=10, user_id=user.id)
+
+    @pytest.fixture
+    def artists_update(self, artists: list[Artist]) -> list[Artist]:
+        return [Artist.model_validate({**artist.model_dump(), "genres": ["foo"]}) for artist in artists]
+
+    @pytest.fixture
+    def artists_mix(self, user: User, artists: list[Artist]) -> list[Artist]:
         return [
-            *TopArtistFactory.batch(size=5, user_id=user.id),  # 5 created
-            *[
-                TopArtist.model_validate({**top_artist.model_dump(), "genres": ["foo"]})
-                for top_artist in top_artists[:5]
-            ],  # 5 updated
+            *ArtistFactory.batch(size=5, user_id=user.id),  # 5 created
+            *[  # 5 updated
+                Artist.model_validate({**artist.model_dump(), "genres": ["foo"]}) for artist in artists[:5]
+            ],
         ]
 
     @pytest.fixture
-    async def top_artists_delete(self, user: User) -> list[TopArtist]:
-        top_artists_user = await TopArtistModelFactory.create_batch_async(size=3, user_id=user.id)
-        top_artists_others = await TopArtistModelFactory.create_batch_async(size=2)
+    async def artists_delete(self, user: User) -> list[Artist]:
+        artists_user = await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)
+        artists_others = await ArtistModelFactory.create_batch_async(size=2)
 
-        return [TopArtist.model_validate(top_artist_db) for top_artist_db in top_artists_user + top_artists_others]
+        return [Artist.model_validate(artist_db) for artist_db in artists_user + artists_others]
+
+    @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
+    async def test__get_list__nominal(
+        self,
+        user: User,
+        offset: int | None,
+        limit: int | None,
+        artists: list[Artist],
+        artists_other: list[Artist],
+        artist_repository: ArtistRepositoryPort,
+    ) -> None:
+        artists_expected = artists[offset : offset + limit] if offset is not None and limit is not None else artists
+
+        artist_list = await artist_repository.get_list(user.id, offset=offset, limit=limit)
+
+        # Check that we have the expected items.
+        assert len(artist_list) == len(artists_expected)
+        assert sorted([a.provider_id for a in artist_list]) == sorted([str(a.provider_id) for a in artists_expected])
+
+        # Check that items have been collected only for that user.
+        assert set([a.user_id for a in artist_list]) == {user.id}
 
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_artists_create: list[TopArtist],
-        top_artist_repository: TopArtistRepositoryPort,
+        artists_create: list[Artist],
+        artist_repository: ArtistRepositoryPort,
     ) -> None:
-        top_artist_ids, create_count = await top_artist_repository.bulk_upsert(
-            top_artists_create,
-            batch_size=int(len(top_artists_create) / 5),
+        artist_ids, create_count = await artist_repository.bulk_upsert(
+            artists_create,
+            batch_size=int(len(artists_create) / 5),
         )
 
         # Check that we have the expected number of items.
-        assert len(top_artist_ids) == len(top_artists_create) == create_count == 10
+        assert len(artist_ids) == len(artists_create) == create_count == 10
 
         # Check that objects has been really created in DB.
-        stmt = select(TopArtistModel).where(TopArtistModel.id.in_(top_artist_ids))
+        stmt = select(ArtistModel).where(ArtistModel.id.in_(artist_ids))
         results = await async_session_db.execute(stmt)
-        top_artists_db = results.scalars().all()
-        assert len(top_artists_db) == len(top_artist_ids)
+        artists_db = results.scalars().all()
+        assert len(artists_db) == len(artist_ids)
 
-        # Check that top items have been created only for that user.
-        assert set([ta.user_id for ta in top_artists_db]) == {user.id}
+        # Check that items have been created only for that user.
+        assert set([a.user_id for a in artists_db]) == {user.id}
         # Check that at least one field was inserted as expected.
-        assert sorted([ta.provider_id for ta in top_artists_db]) == sorted(
-            [str(ta.provider_id) for ta in top_artists_create]
-        )
+        assert sorted([a.provider_id for a in artists_db]) == sorted([str(a.provider_id) for a in artists_create])
 
     async def test__bulk_upsert__update(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_artists: list[TopArtist],
-        top_artists_update: list[TopArtist],
-        top_artist_repository: TopArtistRepositoryPort,
+        artists: list[Artist],
+        artists_update: list[Artist],
+        artist_repository: ArtistRepositoryPort,
     ) -> None:
-        top_artist_ids, create_count = await top_artist_repository.bulk_upsert(
-            top_artists_update,
-            batch_size=int(len(top_artists_update) / 5),
+        artist_ids, create_count = await artist_repository.bulk_upsert(
+            artists_update,
+            batch_size=int(len(artists_update) / 5),
         )
 
         # Check that we have the expected number of items.
-        assert len(top_artist_ids) == len(top_artists_update) == len(top_artists) == 10
+        assert len(artist_ids) == len(artists_update) == len(artists) == 10
         assert create_count == 0
 
         # Check that objects has been really updated in DB.
-        stmt = select(TopArtistModel).where(TopArtistModel.id.in_(top_artist_ids))
+        stmt = select(ArtistModel).where(ArtistModel.id.in_(artist_ids))
         results = await async_session_db.execute(stmt)
-        top_artists_db = results.scalars().all()
-        assert len(top_artists_db) == len(top_artists_update)
+        artists_db = results.scalars().all()
+        assert len(artists_db) == len(artists_update)
 
-        # Check that top items have been created only for that user.
-        assert set([ta.user_id for ta in top_artists_db]) == {user.id}
+        # Check that items have been created only for that user.
+        assert set([a.user_id for a in artists_db]) == {user.id}
         # Check that at least one field was updated as expected.
-        assert set([top_artist_db.genres[0] for top_artist_db in top_artists_db]) == {"foo"}
+        assert set([artist_db.genres[0] for artist_db in artists_db]) == {"foo"}
 
     async def test__bulk_upsert__both(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_artists_mix: list[TopArtist],
-        top_artist_repository: TopArtistRepositoryPort,
+        artists_mix: list[Artist],
+        artist_repository: ArtistRepositoryPort,
     ) -> None:
-        top_artist_ids, create_count = await top_artist_repository.bulk_upsert(top_artists_mix, 300)
+        artist_ids, create_count = await artist_repository.bulk_upsert(artists_mix, 300)
 
         # Check that we have the expected number of items.
-        assert len(top_artist_ids) == len(top_artists_mix) == 10
+        assert len(artist_ids) == len(artists_mix) == 10
         assert create_count == 5
 
         # Check that objects has been really updated in DB.
-        stmt = (
-            select(TopArtistModel)
-            .where(TopArtistModel.id.in_(top_artist_ids))
-            .order_by(TopArtistModel.created_at.asc())
-        )
+        stmt = select(ArtistModel).where(ArtistModel.id.in_(artist_ids)).order_by(ArtistModel.created_at.asc())
         results = await async_session_db.execute(stmt)
-        top_artists_db = results.scalars().all()
-        assert len(top_artists_db) == len(top_artists_mix)
+        artists_db = results.scalars().all()
+        assert len(artists_db) == len(artists_mix)
 
-        # Check that top items have been upserted only for that user.
-        assert set([ta.user_id for ta in top_artists_db]) == {user.id}
+        # Check that items have been upserted only for that user.
+        assert set([a.user_id for a in artists_db]) == {user.id}
 
         # Check created as expected.
-        assert sorted([ta.provider_id for ta in top_artists_db[:5]]) == sorted(
-            [str(ta.provider_id) for ta in top_artists_mix[:5]]
-        )
+        assert sorted([a.provider_id for a in artists_db[:5]]) == sorted([str(a.provider_id) for a in artists_mix[:5]])
         # Check updated as expected.
-        assert set([ta.genres[0] for ta in top_artists_db[5:]]) == {"foo"}
+        assert set([a.genres[0] for a in artists_db[5:]]) == {"foo"}
 
     async def test__purge(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_artists_delete: list[TopArtist],
-        top_artist_repository: TopArtistRepositoryPort,
+        artists_delete: list[Artist],
+        artist_repository: ArtistRepositoryPort,
     ) -> None:
-        count = await top_artist_repository.purge(user.id)
+        count = await artist_repository.purge(user.id)
         assert count == 3
 
-        # Check if all top artists have been deleted for that user.
-        stmt = select(func.count()).select_from(TopArtistModel).where(TopArtistModel.user_id == user.id)
+        # Check if all artists have been deleted for that user.
+        stmt = select(func.count()).select_from(ArtistModel).where(ArtistModel.user_id == user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 0
 
-        # Be sure to keep other users tops!
-        stmt = select(func.count()).select_from(TopArtistModel).where(TopArtistModel.user_id != user.id)
+        # Be sure to keep other users items!
+        stmt = select(func.count()).select_from(ArtistModel).where(ArtistModel.user_id != user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 2
 
 
-class TestTopTrackRepository:
+class TestTrackRepository:
     @pytest.fixture
-    async def top_tracks(self, user: User) -> list[TopTrack]:
-        top_tracks_db = await TopTrackModelFactory.create_batch_async(size=10, user_id=user.id)
-        return [TopTrack.model_validate(top_track_db) for top_track_db in top_tracks_db]
+    async def tracks(self, user: User) -> list[Track]:
+        tracks_db = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
+        return [Track.model_validate(track_db) for track_db in tracks_db]
 
     @pytest.fixture
-    def top_tracks_create(self, user: User) -> list[TopTrack]:
-        return TopTrackFactory.batch(size=10, user_id=user.id)
+    async def tracks_other(self) -> list[Track]:
+        tracks_db = await TrackModelFactory.create_batch_async(size=2)
+        return [Track.model_validate(track_db) for track_db in tracks_db]
 
     @pytest.fixture
-    def top_tracks_update(self, top_tracks: list[TopTrack]) -> list[TopTrack]:
+    def tracks_create(self, user: User) -> list[Track]:
+        return TrackFactory.batch(size=10, user_id=user.id)
+
+    @pytest.fixture
+    def tracks_update(self, tracks) -> list[Track]:
         return [
-            TopTrack.model_validate({**top_track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
-            for top_track in top_tracks
+            Track.model_validate({**track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
+            for track in tracks
         ]
 
     @pytest.fixture
-    def top_tracks_mix(self, user: User, top_tracks: list[TopTrack]) -> list[TopTrack]:
+    def tracks_mix(self, user: User, tracks) -> list[Track]:
         return [
-            *TopTrackFactory.batch(size=5, user_id=user.id),  # 5 created
+            *TrackFactory.batch(size=5, user_id=user.id),  # 5 created
             *[
-                TopTrack.model_validate({**top_track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
-                for top_track in top_tracks[:5]
+                Track.model_validate({**track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
+                for track in tracks[:5]
             ],  # 5 updated
         ]
 
     @pytest.fixture
-    async def top_tracks_delete(self, user: User) -> list[TopTrack]:
-        top_tracks_user = await TopTrackModelFactory.create_batch_async(size=3, user_id=user.id)
-        top_tracks_others = await TopTrackModelFactory.create_batch_async(size=2)
+    async def tracks_delete(self, user: User) -> list[Track]:
+        tracks_user = await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
+        tracks_others = await TrackModelFactory.create_batch_async(size=2)
 
-        return [TopTrack.model_validate(top_track_db) for top_track_db in top_tracks_user + top_tracks_others]
+        return [Track.model_validate(track_db) for track_db in tracks_user + tracks_others]
+
+    @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
+    async def test__get_list__nominal(
+        self,
+        user: User,
+        offset: int | None,
+        limit: int | None,
+        tracks: list[Track],
+        tracks_other: list[Track],
+        track_repository: TrackRepositoryPort,
+    ) -> None:
+        tracks_expected = tracks[offset : offset + limit] if offset is not None and limit is not None else tracks
+
+        track_list = await track_repository.get_list(user.id, offset=offset, limit=limit)
+
+        # Check that we have the expected items.
+        assert len(track_list) == len(tracks_expected)
+        assert set([t.provider_id for t in track_list]).issubset([t.provider_id for t in tracks])
+        assert sorted([t.provider_id for t in track_list]) == sorted([str(t.provider_id) for t in tracks_expected])
+
+        # Check that items have been collected only for that user.
+        assert set([t.user_id for t in track_list]) == {user.id}
 
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_tracks_create: list[TopTrack],
-        top_track_repository: TopTrackRepositoryPort,
+        tracks_create: list[Track],
+        track_repository: TrackRepositoryPort,
     ) -> None:
-        top_track_ids, create_count = await top_track_repository.bulk_upsert(
-            top_tracks_create,
-            batch_size=int(len(top_tracks_create) / 5),
+        track_ids, create_count = await track_repository.bulk_upsert(
+            tracks_create,
+            batch_size=int(len(tracks_create) / 5),
         )
 
         # Check that we have the expected number of items.
-        assert len(top_track_ids) == len(top_tracks_create) == create_count == 10
+        assert len(track_ids) == len(tracks_create) == create_count == 10
 
         # Check that objects has been really created in DB.
-        stmt = select(TopTrackModel).where(TopTrackModel.id.in_(top_track_ids))
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids))
         results = await async_session_db.execute(stmt)
-        top_tracks_db = results.scalars().all()
+        tracks_db = results.scalars().all()
 
-        assert len(top_tracks_db) == len(top_track_ids)
-        assert set([ta.user_id for ta in top_tracks_db]) == {user.id}
-        assert sorted([ta.provider_id for ta in top_tracks_db]) == sorted(
-            [str(ta.provider_id) for ta in top_tracks_create]
-        )
+        assert len(tracks_db) == len(track_ids)
+        assert set([t.user_id for t in tracks_db]) == {user.id}
+        assert sorted([t.provider_id for t in tracks_db]) == sorted([str(t.provider_id) for t in tracks_create])
 
     async def test__bulk_upsert__update(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_tracks: list[TopTrack],
-        top_tracks_update: list[TopTrack],
-        top_track_repository: TopTrackRepositoryPort,
+        tracks: list[Track],
+        tracks_update: list[Track],
+        track_repository: TrackRepositoryPort,
     ) -> None:
-        top_track_ids, create_count = await top_track_repository.bulk_upsert(
-            top_tracks_update,
-            batch_size=int(len(top_tracks_update) / 5),
+        track_ids, create_count = await track_repository.bulk_upsert(
+            tracks_update,
+            batch_size=int(len(tracks_update) / 5),
         )
 
         # Check that we have the expected number of items.
-        assert len(top_track_ids) == len(top_tracks_update) == len(top_tracks) == 10
+        assert len(track_ids) == len(tracks_update) == len(tracks) == 10
         assert create_count == 0
 
         # Check that objects has been really updated in DB.
-        stmt = select(TopTrackModel).where(TopTrackModel.id.in_(top_track_ids))
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids))
         results = await async_session_db.execute(stmt)
-        top_tracks_db = results.scalars().all()
+        tracks_db = results.scalars().all()
 
-        assert len(top_tracks_db) == len(top_tracks_update)
-        assert set([ta.user_id for ta in top_tracks_db]) == {user.id}
+        assert len(tracks_db) == len(tracks_update)
+        assert set([t.user_id for t in tracks_db]) == {user.id}
 
-        artists = [top_track_db.artists[0] for top_track_db in top_tracks_db]
-        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(top_tracks_db))]
+        artists = [track_db.artists[0] for track_db in tracks_db]
+        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(tracks_db))]
         assert artists == expected_artists
 
     async def test__bulk_upsert__both(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_tracks_mix: list[TopTrack],
-        top_track_repository: TopTrackRepositoryPort,
+        tracks_mix: list[Track],
+        track_repository: TrackRepositoryPort,
     ) -> None:
-        top_track_ids, create_count = await top_track_repository.bulk_upsert(top_tracks_mix, 300)
+        track_ids, create_count = await track_repository.bulk_upsert(tracks_mix, 300)
 
         # Check that we have the expected number of items.
-        assert len(top_track_ids) == len(top_tracks_mix) == 10
+        assert len(track_ids) == len(tracks_mix) == 10
         assert create_count == 5
 
         # Check that objects has been really updated in DB.
-        stmt = (
-            select(TopTrackModel).where(TopTrackModel.id.in_(top_track_ids)).order_by(TopTrackModel.created_at.asc())
-        )
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids)).order_by(TrackModel.created_at.asc())
         results = await async_session_db.execute(stmt)
-        top_tracks_db = results.scalars().all()
-        assert len(top_tracks_db) == len(top_tracks_mix)
-        assert set([ta.user_id for ta in top_tracks_db]) == {user.id}
+        tracks_db = results.scalars().all()
+        assert len(tracks_db) == len(tracks_mix)
+        assert set([t.user_id for t in tracks_db]) == {user.id}
 
         # Check created as expected.
-        assert sorted([ta.provider_id for ta in top_tracks_db[:5]]) == sorted(
-            [str(ta.provider_id) for ta in top_tracks_mix[:5]]
-        )
+        assert sorted([t.provider_id for t in tracks_db[:5]]) == sorted([str(t.provider_id) for t in tracks_mix[:5]])
         # Check updated as expected.
-        artists = [top_track_db.artists[0] for top_track_db in top_tracks_db[5:]]
-        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(top_tracks_db[5:]))]
+        artists = [track_db.artists[0] for track_db in tracks_db[5:]]
+        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
 
     async def test__purge(
         self,
         async_session_db: AsyncSession,
         user: User,
-        top_tracks_delete: list[TopTrack],
-        top_track_repository: TopTrackRepositoryPort,
+        tracks_delete: list[Track],
+        track_repository: TrackRepositoryPort,
     ) -> None:
-        count = await top_track_repository.purge(user.id)
+        count = await track_repository.purge(user.id)
         assert count == 3
 
-        # Check if all top artists have been deleted for that user.
-        stmt = select(func.count()).select_from(TopTrackModel).where(TopTrackModel.user_id == user.id)
+        # Check if all artists have been deleted for that user.
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 0
 
-        # Be sure to keep other users tops!
-        stmt = select(func.count()).select_from(TopTrackModel).where(TopTrackModel.user_id != user.id)
+        # Be sure to keep other users items!
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 2

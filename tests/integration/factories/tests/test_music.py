@@ -1,37 +1,37 @@
 import pytest
 
-from tests.integration.factories.music import TopArtistModelFactory
-from tests.integration.factories.music import TopTrackModelFactory
+from tests.integration.factories.music import ArtistModelFactory
+from tests.integration.factories.music import TrackModelFactory
 from tests.integration.factories.users import UserModelFactory
 
 
-class TestTopArtistModelFactory:
+class TestArtistModelFactory:
     @pytest.mark.parametrize(("name", "expected_slug"), [("Yé Ho", "ye-ho")])
     async def test__slug(self, name: str, expected_slug: str) -> None:
-        top_artist_db = await TopArtistModelFactory.create_async(name=name)
-        assert top_artist_db.slug == expected_slug
+        artist_db = await ArtistModelFactory.create_async(name=name)
+        assert artist_db.slug == expected_slug
 
     async def test__user__default(self) -> None:
-        top_artist_db = await TopArtistModelFactory.create_async()
-        assert top_artist_db.user_id is not None
+        artist_db = await ArtistModelFactory.create_async()
+        assert artist_db.user_id is not None
 
     async def test__user__provided(self) -> None:
         user_db = await UserModelFactory.create_async()
-        top_artist_db = await TopArtistModelFactory.create_async(user_id=user_db.id)
-        assert top_artist_db.user_id == user_db.id
+        artist_db = await ArtistModelFactory.create_async(user_id=user_db.id)
+        assert artist_db.user_id == user_db.id
 
 
-class TestTopTrackModelFactory:
+class TestTrackModelFactory:
     @pytest.mark.parametrize(("name", "expected_slug"), [("Yé Ho", "ye-ho")])
     async def test__slug(self, name: str, expected_slug: str) -> None:
-        top_track_db = await TopTrackModelFactory.create_async(name=name)
-        assert top_track_db.slug == expected_slug
+        track_db = await TrackModelFactory.create_async(name=name)
+        assert track_db.slug == expected_slug
 
     async def test__user__default(self) -> None:
-        top_track_db = await TopTrackModelFactory.create_async()
-        assert top_track_db.user_id is not None
+        track_db = await TrackModelFactory.create_async()
+        assert track_db.user_id is not None
 
     async def test__user__provided(self) -> None:
         user_db = await UserModelFactory.create_async()
-        top_track_db = await TopTrackModelFactory.create_async(user_id=user_db.id)
-        assert top_track_db.user_id == user_db.id
+        track_db = await TrackModelFactory.create_async(user_id=user_db.id)
+        assert track_db.user_id == user_db.id

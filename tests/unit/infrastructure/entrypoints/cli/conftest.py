@@ -13,8 +13,8 @@ import pytest
 from typer.testing import CliRunner
 
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
@@ -119,22 +119,22 @@ def mock_user_repository(
 
 
 @pytest.fixture
-def mock_top_artist_repository(
+def mock_artist_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=TopArtistRepositoryPort)
-    with mock_dependency_factory(f"{target_path}.get_top_artist_repository", repo) as mock_repo:
+    repo = mock.AsyncMock(spec=ArtistRepositoryPort)
+    with mock_dependency_factory(f"{target_path}.get_artist_repository", repo) as mock_repo:
         yield mock_repo
 
 
 @pytest.fixture
-def mock_top_track_repository(
+def mock_track_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=TopTrackRepositoryPort)
-    with mock_dependency_factory(f"{target_path}.get_top_track_repository", repo) as mock_repo:
+    repo = mock.AsyncMock(spec=TrackRepositoryPort)
+    with mock_dependency_factory(f"{target_path}.get_track_repository", repo) as mock_repo:
         yield mock_repo
 
 

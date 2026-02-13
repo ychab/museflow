@@ -2,78 +2,113 @@ import uuid
 from typing import Any
 
 from sqlalchemy import delete
+from sqlalchemy import select
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.domain.entities.music import TopArtist
-from spotifagent.domain.entities.music import TopItem
-from spotifagent.domain.entities.music import TopTrack
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import TopArtist as TopArtistModel
-from spotifagent.infrastructure.adapters.database.models import TopMusicMixin
-from spotifagent.infrastructure.adapters.database.models import TopTrack as TopTrackModel
+from spotifagent.domain.entities.music import Artist
+from spotifagent.domain.entities.music import BaseMusicItem
+from spotifagent.domain.entities.music import Track
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
+from spotifagent.infrastructure.adapters.database.models import Artist as ArtistModel
+from spotifagent.infrastructure.adapters.database.models import MusicItemMixin
+from spotifagent.infrastructure.adapters.database.models import Track as TrackModel
 
 
-class TopArtistRepository(TopArtistRepositoryPort):
+class ArtistRepository(ArtistRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def bulk_upsert(self, top_artists: list[TopArtist], batch_size: int) -> tuple[list[uuid.UUID], int]:
-        return await bulk_top_item_upsert(
+    async def get_list(
+        self,
+        user_id: uuid.UUID,
+        offset: int | None = None,
+        limit: int | None = None,
+    ) -> list[Artist]:
+        stmt = select(ArtistModel).where(ArtistModel.user_id == user_id).order_by("created_at")
+
+        if offset is not None:
+            stmt = stmt.offset(offset)
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        results = await self.session.execute(stmt)
+        return [Artist.model_validate(artist_db) for artist_db in results.scalars().all()]
+
+    async def bulk_upsert(self, artists: list[Artist], batch_size: int) -> tuple[list[uuid.UUID], int]:
+        return await bulk_item_upsert(
             session=self.session,
-            sql_model=TopArtistModel,
-            top_items=top_artists,
+            sql_model=ArtistModel,
+            items=artists,
             batch_size=batch_size,
         )
 
     async def purge(self, user_id: uuid.UUID) -> int:
-        stmt = delete(TopArtistModel).where(TopArtistModel.user_id == user_id)
+        stmt = delete(ArtistModel).where(ArtistModel.user_id == user_id)
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
 
-class TopTrackRepository(TopTrackRepositoryPort):
+class TrackRepository(TrackRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def bulk_upsert(self, top_tracks: list[TopTrack], batch_size: int) -> tuple[list[uuid.UUID], int]:
-        return await bulk_top_item_upsert(
+    async def get_list(
+        self,
+        user_id: uuid.UUID,
+        offset: int | None = None,
+        limit: int | None = None,
+    ) -> list[Track]:
+        stmt = select(TrackModel).where(TrackModel.user_id == user_id).order_by("created_at")
+
+        if offset is not None:
+            stmt = stmt.offset(offset)
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        results = await self.session.execute(stmt)
+        return [Track.model_validate(tracks_db) for tracks_db in results.scalars().all()]
+
+    async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
+        return await bulk_item_upsert(
             session=self.session,
-            sql_model=TopTrackModel,
-            top_items=top_tracks,
+            sql_model=TrackModel,
+            items=tracks,
             batch_size=batch_size,
         )
 
     async def purge(self, user_id: uuid.UUID) -> int:
-        stmt = delete(TopTrackModel).where(TopTrackModel.user_id == user_id)
+        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
 
-async def bulk_top_item_upsert[TopItemModel: TopMusicMixin, TopItemType: TopItem](
+async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMusicItem](
     session: AsyncSession,
-    sql_model: type[TopItemModel],
-    top_items: list[TopItemType],
+    sql_model: type[ItemModel],
+    items: list[ItemEntity],
     batch_size: int,
 ) -> tuple[list[uuid.UUID], int]:
-    top_item_ids: list[uuid.UUID] = []
+    item_ids: list[uuid.UUID] = []
     created_count: int = 0
 
     index_elements: list[str] = ["user_id", "provider_id"]
     index_excluded: list[str] = ["id"] + index_elements
 
-    top_items_dicts: list[dict[str, Any]] = [top_item.model_dump(mode="json") for top_item in top_items]
+    items_dicts: list[dict[str, Any]] = [item.model_dump(mode="json") for item in items]
 
-    total: int = len(top_items_dicts)
+    total: int = len(items_dicts)
     for offset in range(0, total, batch_size):
-        top_items_chunk = top_items_dicts[offset : offset + batch_size]
+        items_chunk = items_dicts[offset : offset + batch_size]
 
-        stmt = pg_insert(sql_model).values(top_items_chunk)
+        stmt = pg_insert(sql_model).values(items_chunk)
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=index_elements,
-            set_={key: getattr(stmt.excluded, key) for key in top_items_chunk[0] if key not in index_excluded},
+            set_={key: getattr(stmt.excluded, key) for key in items_chunk[0] if key not in index_excluded},
         ).returning(
             sql_model.id,
             text("(xmax = 0) AS was_created"),
@@ -82,9 +117,9 @@ async def bulk_top_item_upsert[TopItemModel: TopMusicMixin, TopItemType: TopItem
         results = await session.execute(upsert_stmt)
         rows = results.all()
 
-        top_item_ids.extend([row[0] for row in rows])
+        item_ids.extend([row[0] for row in rows])
         created_count += sum(row[1] for row in rows)
 
     await session.commit()
 
-    return top_item_ids, created_count
+    return item_ids, created_count

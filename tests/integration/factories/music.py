@@ -7,19 +7,21 @@ from polyfactory.decorators import post_generated
 from slugify import slugify
 
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.infrastructure.adapters.database.models import TopArtist
-from spotifagent.infrastructure.adapters.database.models import TopTrack
+from spotifagent.infrastructure.adapters.database.models import Artist
+from spotifagent.infrastructure.adapters.database.models import Track
 
 from tests.integration.factories.base import BaseModelFactory
 from tests.integration.factories.users import UserModelFactory
 
 
-class BaseTopItemModelFactory[T: (TopArtist, TopTrack)](BaseModelFactory[T]):
+class BaseMusicItemModelFactory[T: (Artist | Track)](BaseModelFactory[T]):
     __is_base_factory__ = True
 
     name = Use(BaseModelFactory.__faker__.name)
 
     popularity = Use(BaseModelFactory.__faker__.random_int, min=0, max=100)
+    top_position = Use(BaseModelFactory.__faker__.random_int, min=1)
+
     provider = MusicProvider.SPOTIFY
 
     @post_generated
@@ -44,21 +46,21 @@ class BaseTopItemModelFactory[T: (TopArtist, TopTrack)](BaseModelFactory[T]):
         return cast(list[T], await super().create_batch_async(size=size, **kwargs))
 
 
-class TopArtistModelFactory(BaseTopItemModelFactory[TopArtist]):
-    __model__ = TopArtist
+class ArtistModelFactory(BaseMusicItemModelFactory[Artist]):
+    __model__ = Artist
 
     genres = Use(lambda: ["Pop", "Rock", "Rap", "Indie", "Alternative"])
 
 
-class TopTrackModelFactory(BaseTopItemModelFactory[TopTrack]):
-    __model__ = TopTrack
+class TrackModelFactory(BaseMusicItemModelFactory[Track]):
+    __model__ = Track
 
     artists = Use(
         lambda: [
             {
-                "name": BaseModelFactory.__faker__.name(),
+                "name": BaseMusicItemModelFactory.__faker__.name(),
                 "provider_id": str(uuid.uuid4()),
             }
-            for _ in range(BaseModelFactory.__faker__.random_int(min=1, max=3))
+            for _ in range(BaseMusicItemModelFactory.__faker__.random_int(min=1, max=3))
         ]
     )

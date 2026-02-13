@@ -5,15 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
-from spotifagent.infrastructure.adapters.database.repositories.music import TopArtistRepository
-from spotifagent.infrastructure.adapters.database.repositories.music import TopTrackRepository
+from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
+from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
@@ -56,12 +56,12 @@ def get_spotify_account_repository(session: AsyncSession) -> SpotifyAccountRepos
     return SpotifyAccountRepository(session)
 
 
-def get_top_artist_repository(session: AsyncSession) -> TopArtistRepositoryPort:
-    return TopArtistRepository(session)
+def get_artist_repository(session: AsyncSession) -> ArtistRepositoryPort:
+    return ArtistRepository(session)
 
 
-def get_top_track_repository(session: AsyncSession) -> TopTrackRepositoryPort:
-    return TopTrackRepository(session)
+def get_track_repository(session: AsyncSession) -> TrackRepositoryPort:
+    return TrackRepository(session)
 
 
 def get_spotify_user_session_factory(

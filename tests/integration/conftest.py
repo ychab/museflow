@@ -14,8 +14,8 @@ from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.entities.spotify import SpotifyAccount
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
@@ -23,8 +23,8 @@ from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.models import Base
-from spotifagent.infrastructure.adapters.database.repositories.music import TopArtistRepository
-from spotifagent.infrastructure.adapters.database.repositories.music import TopTrackRepository
+from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
+from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import async_session_factory
@@ -180,13 +180,13 @@ def spotify_account_repository(async_session_db: AsyncSession) -> SpotifyAccount
 
 
 @pytest.fixture
-def top_artist_repository(async_session_db: AsyncSession) -> TopArtistRepositoryPort:
-    return TopArtistRepository(async_session_db)
+def artist_repository(async_session_db: AsyncSession) -> ArtistRepositoryPort:
+    return ArtistRepository(async_session_db)
 
 
 @pytest.fixture
-def top_track_repository(async_session_db: AsyncSession) -> TopTrackRepositoryPort:
-    return TopTrackRepository(async_session_db)
+def track_repository(async_session_db: AsyncSession) -> TrackRepositoryPort:
+    return TrackRepository(async_session_db)
 
 
 # --- Clients impl ---

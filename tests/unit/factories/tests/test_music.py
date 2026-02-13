@@ -1,18 +1,18 @@
 import pytest
 
-from tests.unit.factories.music import TopArtistFactory
-from tests.unit.factories.music import TopTrackFactory
+from tests.unit.factories.music import ArtistFactory
+from tests.unit.factories.music import TrackFactory
 
 
-class TestTopArtistFactory:
+class TestArtistFactory:
     @pytest.mark.parametrize(("name", "expected_slug"), [("Yé Ho", "ye-ho")])
     def test__slug(self, name: str, expected_slug: str) -> None:
-        top_artist = TopArtistFactory.build(name=name)
-        assert top_artist.slug == expected_slug
+        artist = ArtistFactory.build(name=name)
+        assert artist.slug == expected_slug
 
 
-class TestTopTrackFactory:
+class TestTrackFactory:
     @pytest.mark.parametrize(("name", "expected_slug"), [("Yé Ho", "ye-ho")])
     def test__slug(self, name: str, expected_slug: str) -> None:
-        top_track = TopTrackFactory.build(name=name)
-        assert top_track.slug == expected_slug
+        track = TrackFactory.build(name=name)
+        assert track.slug == expected_slug

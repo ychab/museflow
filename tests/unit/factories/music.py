@@ -1,19 +1,22 @@
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from spotifagent.domain.entities.music import TopArtist
-from spotifagent.domain.entities.music import TopTrack
+from spotifagent.domain.entities.music import Artist
+from spotifagent.domain.entities.music import Track
 
 
-class BaseTopItemFactory[T: (TopArtist, TopTrack)](ModelFactory[T]):
+class BaseMusicItemFactory[T: (Artist, Track)](ModelFactory[T]):
     __is_base_factory__ = True
 
     name = Use(ModelFactory.__faker__.name)
 
+    popularity = Use(ModelFactory.__faker__.random_int, min=0, max=100)
+    top_position = Use(ModelFactory.__faker__.random_int, min=1)
 
-class TopArtistFactory(BaseTopItemFactory[TopArtist]):
-    __model__ = TopArtist
+
+class ArtistFactory(BaseMusicItemFactory[Artist]):
+    __model__ = Artist
 
 
-class TopTrackFactory(BaseTopItemFactory[TopTrack]):
-    __model__ = TopTrack
+class TrackFactory(BaseMusicItemFactory[Track]):
+    __model__ = Track

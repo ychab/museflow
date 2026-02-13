@@ -15,30 +15,37 @@ class MusicProvider(StrEnum):
     SPOTIFY = "spotify"
 
 
-class TopItem(BaseEntity):
+class BaseUserProvider(BaseEntity):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     user_id: uuid.UUID
 
-    name: str = Field(..., max_length=255)
-    popularity: int = Field(..., ge=0, le=100)
-    position: PositiveInt
-
     provider: MusicProvider = MusicProvider.SPOTIFY
     provider_id: str = Field(..., max_length=512)
+
+
+class BaseMusicItem(BaseUserProvider):
+    name: str = Field(..., max_length=255)
+
+    popularity: int | None = Field(default=None, ge=0, le=100)
+
+    is_saved: bool = False
+
+    is_top: bool = False
+    top_position: PositiveInt | None = None
 
     @computed_field
     def slug(self) -> str:
         return slugify(self.name)
 
 
-class TopTrackArtist(BaseModel):
+class TrackArtist(BaseModel):
     provider_id: str
     name: str
 
 
-class TopArtist(TopItem):
+class Artist(BaseMusicItem):
     genres: list[str]
 
 
-class TopTrack(TopItem):
-    artists: list[TopTrackArtist]
+class Track(BaseMusicItem):
+    artists: list[TrackArtist]

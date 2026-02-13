@@ -5,8 +5,8 @@ import pytest
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
-from spotifagent.domain.ports.repositories.music import TopArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TopTrackRepositoryPort
+from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
+from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
@@ -48,13 +48,13 @@ def mock_spotify_account_repository() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_top_artist_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=TopArtistRepositoryPort)
+def mock_artist_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=ArtistRepositoryPort)
 
 
 @pytest.fixture
-def mock_top_track_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=TopTrackRepositoryPort)
+def mock_track_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=TrackRepositoryPort)
 
 
 # --- Client Mocks ---

@@ -151,7 +151,9 @@ class TestSpotifyUserSession:
         assert top_artist_first.user_id == spotify_user_session.user.id
         assert top_artist_first.name == "Vald"
         assert top_artist_first.popularity == 68
-        assert top_artist_first.position == 1
+        assert top_artist_first.is_saved is False
+        assert top_artist_first.is_top is True
+        assert top_artist_first.top_position == 1
         assert top_artist_first.genres == ["french rap"]
         assert top_artist_first.provider == MusicProvider.SPOTIFY
         assert top_artist_first.provider_id == "3CnCGFxXbOA8bAK54jR8js"
@@ -161,7 +163,9 @@ class TestSpotifyUserSession:
         assert top_artist_last.user_id == spotify_user_session.user.id
         assert top_artist_last.name == "Bad Bunny"
         assert top_artist_last.popularity == 99
-        assert top_artist_last.position == len(top_artists) == 20
+        assert top_artist_last.is_saved is False
+        assert top_artist_last.is_top is True
+        assert top_artist_last.top_position == len(top_artists) == 20
         assert top_artist_last.genres == ["reggaeton", "trap latino", "urbano latino", "latin"]
         assert top_artist_last.provider == MusicProvider.SPOTIFY
         assert top_artist_last.provider_id == "4q3ewBCX7sLwd24euuV69X"
@@ -181,7 +185,9 @@ class TestSpotifyUserSession:
         assert top_track_first.user_id == spotify_user_session.user.id
         assert top_track_first.name == "La Negra No Quiere"
         assert top_track_first.popularity == 20
-        assert top_track_first.position == 1
+        assert top_track_first.is_saved is False
+        assert top_track_first.is_top is True
+        assert top_track_first.top_position == 1
         assert len(top_track_first.artists) == 1
         assert top_track_first.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert top_track_first.artists[0].name == "Grupo Niche"
@@ -193,7 +199,9 @@ class TestSpotifyUserSession:
         assert top_track_last.user_id == spotify_user_session.user.id
         assert top_track_last.name == "Deux mille"
         assert top_track_last.popularity == 60
-        assert top_track_last.position == len(top_tracks) == 20
+        assert top_track_last.is_saved is False
+        assert top_track_last.is_top is True
+        assert top_track_last.top_position == len(top_tracks) == 20
         assert len(top_track_last.artists) == 1
         assert top_track_last.artists[0].provider_id == "2kXKa3aAFngGz2P4GjG5w2"
         assert top_track_last.artists[0].name == "SCH"
