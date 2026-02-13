@@ -1,27 +1,22 @@
 from collections.abc import Callable
 from typing import Any
 from typing import Literal
-from typing import TypeVar
 
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import BaseMusicItem
 from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.spotify import SpotifyTopArtist
-from spotifagent.domain.entities.spotify import SpotifyTopArtists
-from spotifagent.domain.entities.spotify import SpotifyTopItem
-from spotifagent.domain.entities.spotify import SpotifyTopItems
-from spotifagent.domain.entities.spotify import SpotifyTopTrack
-from spotifagent.domain.entities.spotify import SpotifyTopTracks
+from spotifagent.domain.entities.spotify import SpotifyArtist
+from spotifagent.domain.entities.spotify import SpotifyItem
+from spotifagent.domain.entities.spotify import SpotifyTopPageArtist
+from spotifagent.domain.entities.spotify import SpotifyTopPageItem
+from spotifagent.domain.entities.spotify import SpotifyTopPageTrack
+from spotifagent.domain.entities.spotify import SpotifyTrack
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 
 TimeRange = Literal["short_term", "medium_term", "long_term"]
-
-SpotifyTopPaginatorModel = TypeVar("SpotifyTopPaginatorModel", bound=SpotifyTopItems)
-SpotifyTopItemModel = TypeVar("SpotifyTopItemModel", bound=SpotifyTopItem)
-MusicItemType = TypeVar("MusicItemType", bound=BaseMusicItem)
 
 
 class SpotifySessionFactory:
@@ -90,8 +85,8 @@ class SpotifyUserSession:
     async def get_top_artists(self, limit: int = 50, time_range: TimeRange = "long_term") -> list[Artist]:
         return await self._fetch_paged_top_items(
             endpoint="/me/top/artists",
-            paginator_model=SpotifyTopArtists,
-            validator=self._validate_top_artist,
+            paginator_model=SpotifyTopPageArtist,
+            validator=self._map_top_artist,
             limit=limit,
             time_range=time_range,
         )
@@ -99,17 +94,21 @@ class SpotifyUserSession:
     async def get_top_tracks(self, limit: int = 50, time_range: TimeRange = "long_term") -> list[Track]:
         return await self._fetch_paged_top_items(
             endpoint="/me/top/tracks",
-            paginator_model=SpotifyTopTracks,
-            validator=self._validate_top_track,
+            paginator_model=SpotifyTopPageTrack,
+            validator=self._map_top_track,
             limit=limit,
             time_range=time_range,
         )
 
-    async def _fetch_paged_top_items(
+    async def _fetch_paged_top_items[
+        SpotifyTopPageType: SpotifyTopPageItem,
+        SpotifyItemType: SpotifyItem,
+        MusicItemType: BaseMusicItem,
+    ](
         self,
         endpoint: str,
-        paginator_model: type[SpotifyTopPaginatorModel],
-        validator: Callable[[SpotifyTopItemModel, int], MusicItemType],
+        paginator_model: type[SpotifyTopPageType],
+        validator: Callable[[SpotifyItemType, int], MusicItemType],
         limit: int,
         time_range: TimeRange,
     ) -> list[MusicItemType]:
@@ -136,7 +135,7 @@ class SpotifyUserSession:
 
         return items
 
-    def _validate_top_artist(self, item: SpotifyTopArtist, position: int) -> Artist:
+    def _map_top_artist(self, item: SpotifyArtist, position: int) -> Artist:
         return Artist.model_validate(
             {
                 **item.model_dump(exclude={"id"}),
@@ -147,7 +146,7 @@ class SpotifyUserSession:
             }
         )
 
-    def _validate_top_track(self, item: SpotifyTopTrack, position: int) -> Track:
+    def _map_top_track(self, item: SpotifyTrack, position: int) -> Track:
         return Track.model_validate(
             {
                 **item.model_dump(exclude={"id", "artists"}),

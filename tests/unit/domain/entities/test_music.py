@@ -61,7 +61,7 @@ class TestArtist:
     @pytest.mark.parametrize(
         ("popularity", "expected_msg"),
         [
-            (0, "Input should be greater than or equal to 1"),
+            (-1, "Input should be greater than or equal to 0"),
             (101, "Input should be less than or equal to 100"),
         ],
     )
@@ -129,7 +129,7 @@ class TestTrack:
     @pytest.mark.parametrize(
         ("popularity", "expected_msg"),
         [
-            (0, "Input should be greater than or equal to 1"),
+            (-1, "Input should be greater than or equal to 0"),
             (101, "Input should be less than or equal to 100"),
         ],
     )

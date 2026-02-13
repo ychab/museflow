@@ -137,7 +137,7 @@ class SpotifyAccountUpdate(BaseEntity):
         return self
 
 
-class SpotifyTopItem(BaseModel):
+class SpotifyItem(BaseModel):
     id: str
     name: str
     href: HttpUrl
@@ -145,27 +145,27 @@ class SpotifyTopItem(BaseModel):
     popularity: int
 
 
-class SpotifyTopTrackArtist(BaseModel):
+class SpotifyTrackArtist(BaseModel):
     id: str
     name: str
 
 
-class SpotifyTopArtist(SpotifyTopItem):
+class SpotifyArtist(SpotifyItem):
     genres: list[str]
 
 
-class SpotifyTopTrack(SpotifyTopItem):
-    artists: list[SpotifyTopTrackArtist]
+class SpotifyTrack(SpotifyItem):
+    artists: list[SpotifyTrackArtist]
 
 
-class SpotifyTopItems[T: SpotifyTopItem](BaseModel):
+class SpotifyTopPageItem[T: SpotifyItem](BaseModel):
     items: list[T]
     total: Annotated[int, Field(ge=0)]
     limit: Annotated[int, Field(ge=1)]
     offset: Annotated[int, Field(ge=0)]
 
 
-class SpotifyTopArtists(SpotifyTopItems[SpotifyTopArtist]): ...
+class SpotifyTopPageArtist(SpotifyTopPageItem[SpotifyArtist]): ...
 
 
-class SpotifyTopTracks(SpotifyTopItems[SpotifyTopTrack]): ...
+class SpotifyTopPageTrack(SpotifyTopPageItem[SpotifyTrack]): ...
