@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -61,6 +62,10 @@ class SpotifyScope(StrEnum):
     def required_scopes(cls) -> list[Self]:
         return [
             cls.USER_TOP_READ,
+            cls.USER_LIBRARY_READ,
+            cls.PLAYLIST_READ_PRIVATE,
+            cls.PLAYLIST_MODIFY_PUBLIC,
+            cls.PLAYLIST_MODIFY_PRIVATE,
         ]
 
     @classmethod
@@ -137,17 +142,17 @@ class SpotifyAccountUpdate(BaseEntity):
         return self
 
 
+class SpotifyTrackArtist(BaseModel):
+    id: str
+    name: str
+
+
 class SpotifyItem(BaseModel):
     id: str
     name: str
     href: HttpUrl
 
     popularity: int
-
-
-class SpotifyTrackArtist(BaseModel):
-    id: str
-    name: str
 
 
 class SpotifyArtist(SpotifyItem):
@@ -158,14 +163,23 @@ class SpotifyTrack(SpotifyItem):
     artists: list[SpotifyTrackArtist]
 
 
-class SpotifyTopPageItem[T: SpotifyItem](BaseModel):
-    items: list[T]
+class SpotifySavedTrack(BaseModel):
+    added_at: AwareDatetime | None = None
+    track: SpotifyTrack
+
+
+class SpotifyPage[T: SpotifyItem | SpotifySavedTrack](BaseModel):
+    items: Sequence[T]
     total: Annotated[int, Field(ge=0)]
     limit: Annotated[int, Field(ge=1)]
     offset: Annotated[int, Field(ge=0)]
 
 
-class SpotifyTopPageArtist(SpotifyTopPageItem[SpotifyArtist]): ...
+class SpotifySavedTrackPage(SpotifyPage[SpotifySavedTrack]):
+    items: Sequence[SpotifySavedTrack]
 
 
-class SpotifyTopPageTrack(SpotifyTopPageItem[SpotifyTrack]): ...
+class SpotifyTopArtistPage(SpotifyPage[SpotifyArtist]): ...
+
+
+class SpotifyTopTrackPage(SpotifyPage[SpotifyTrack]): ...
