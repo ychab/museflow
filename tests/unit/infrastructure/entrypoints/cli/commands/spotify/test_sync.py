@@ -9,6 +9,7 @@ import typer
 from typer.testing import CliRunner
 
 from spotifagent.application.services.spotify import TimeRange
+from spotifagent.application.use_cases.spotify_sync import SyncConfig
 from spotifagent.application.use_cases.spotify_sync import SyncReport
 from spotifagent.domain.entities.users import User
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import sync_logic
@@ -35,9 +36,11 @@ class TestSpotifySyncCommand:
                 "spotify",
                 "sync",
                 "--email", "test@example.com",
+                "--purge",
                 "--purge-artist-top",
                 "--purge-track-top",
                 "--purge-track-saved",
+                "--no-sync",
                 "--no-sync-artist-top",
                 "--no-sync-track-top",
                 "--no-sync-track-saved",
@@ -189,15 +192,7 @@ class TestSpotifySyncLogic:
         mock_spotify_sync.return_value = SyncReport()
 
         with pytest.raises(typer.Abort):
-            await sync_logic(
-                user.email,
-                purge_artist_top=False,
-                purge_track_top=False,
-                purge_track_saved=False,
-                sync_artist_top=False,
-                sync_track_top=False,
-                sync_track_saved=False,
-            )
+            await sync_logic(user.email, config=SyncConfig())
 
         captured = capsys.readouterr()
         assert "At least one flag must be provided." in captured.err
@@ -211,7 +206,7 @@ class TestSpotifySyncLogic:
 
         email = "test@example.com"
         with pytest.raises(typer.BadParameter, match=f"User not found with email: {email}"):
-            await sync_logic(email, sync_artist_top=True)
+            await sync_logic(email, config=SyncConfig(sync=True))
 
     async def test__output__errors(
         self,
@@ -224,14 +219,17 @@ class TestSpotifySyncLogic:
         mock_spotify_sync.return_value = SyncReport(errors=["An error occurred: Boom"])
 
         with pytest.raises(typer.Abort):
-            await sync_logic(user.email, sync_artist_top=True)
+            await sync_logic(user.email, config=SyncConfig(sync=True))
 
         captured = capsys.readouterr()
         assert "An error occurred: Boom" in captured.err
 
+    @pytest.mark.parametrize(("purge", "purge_artist_top"), [(True, False), (False, True), (True, True)])
     async def test__output__purge_artists(
         self,
         user: User,
+        purge: bool,
+        purge_artist_top: bool,
         mock_user_repository: mock.AsyncMock,
         mock_spotify_sync: mock.AsyncMock,
         capsys: pytest.CaptureFixture,
@@ -241,22 +239,32 @@ class TestSpotifySyncLogic:
 
         await sync_logic(
             user.email,
-            purge_artist_top=True,
-            purge_track_top=False,
-            purge_track_saved=False,
-            sync_artist_top=False,
-            sync_track_top=False,
-            sync_track_saved=False,
+            config=SyncConfig(
+                purge=purge,
+                purge_artist_top=purge_artist_top,
+            ),
         )
 
         captured = capsys.readouterr()
         assert "Synchronization successful!" in captured.out
         assert "- 330 artists purged" in captured.out
 
-    @pytest.mark.parametrize(("purge_track_top", "purge_track_saved"), [(True, False), (False, True), (True, True)])
+    @pytest.mark.parametrize(
+        ("purge", "purge_track_top", "purge_track_saved"),
+        [
+            (True, True, True),
+            (True, True, False),
+            (True, False, True),
+            (True, False, False),
+            (False, True, True),
+            (False, True, False),
+            (False, False, True),
+        ],
+    )
     async def test__output__purge_tracks(
         self,
         user: User,
+        purge: bool,
         purge_track_top: bool,
         purge_track_saved: bool,
         mock_user_repository: mock.AsyncMock,
@@ -268,20 +276,23 @@ class TestSpotifySyncLogic:
 
         await sync_logic(
             user.email,
-            purge_artist_top=False,
-            purge_track_top=purge_track_top,
-            purge_track_saved=purge_track_saved,
-            sync_artist_top=False,
-            sync_track_top=False,
+            config=SyncConfig(
+                purge=purge,
+                purge_track_top=purge_track_top,
+                purge_track_saved=purge_track_saved,
+            ),
         )
 
         captured = capsys.readouterr()
         assert "Synchronization successful!" in captured.out
         assert "- 550 tracks purged" in captured.out
 
+    @pytest.mark.parametrize(("sync", "sync_artist_top"), [(True, False), (False, True), (True, True)])
     async def test__output__sync_artists_top(
         self,
         user: User,
+        sync: bool,
+        sync_artist_top: bool,
         mock_user_repository: mock.AsyncMock,
         mock_spotify_sync: mock.AsyncMock,
         capsys: pytest.CaptureFixture,
@@ -294,12 +305,10 @@ class TestSpotifySyncLogic:
 
         await sync_logic(
             user.email,
-            purge_artist_top=False,
-            purge_track_top=False,
-            purge_track_saved=False,
-            sync_artist_top=True,
-            sync_track_top=False,
-            sync_track_saved=False,
+            config=SyncConfig(
+                sync=sync,
+                sync_artist_top=sync_artist_top,
+            ),
         )
 
         captured = capsys.readouterr()
@@ -307,10 +316,22 @@ class TestSpotifySyncLogic:
         assert "- 100 artists created" in captured.out
         assert "- 250 artists updated" in captured.out
 
-    @pytest.mark.parametrize(("sync_track_top", "sync_track_saved"), [(True, False), (False, True), (True, True)])
+    @pytest.mark.parametrize(
+        ("sync", "sync_track_top", "sync_track_saved"),
+        [
+            (True, True, True),
+            (True, True, False),
+            (True, False, True),
+            (True, False, False),
+            (False, True, True),
+            (False, True, False),
+            (False, False, True),
+        ],
+    )
     async def test__output__sync_tracks(
         self,
         user: User,
+        sync: bool,
         sync_track_top: bool,
         sync_track_saved: bool,
         mock_user_repository: mock.AsyncMock,
@@ -325,12 +346,11 @@ class TestSpotifySyncLogic:
 
         await sync_logic(
             user.email,
-            purge_artist_top=False,
-            purge_track_top=False,
-            purge_track_saved=False,
-            sync_artist_top=False,
-            sync_track_top=sync_track_top,
-            sync_track_saved=sync_track_saved,
+            config=SyncConfig(
+                sync=sync,
+                sync_track_top=sync_track_top,
+                sync_track_saved=sync_track_saved,
+            ),
         )
 
         captured = capsys.readouterr()

@@ -12,6 +12,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
+from spotifagent.application.use_cases.spotify_sync import SyncConfig
 from spotifagent.application.use_cases.spotify_sync import SyncReport
 from spotifagent.application.use_cases.spotify_sync import spotify_sync
 from spotifagent.domain.entities.music import Artist
@@ -177,7 +178,7 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            purge_artist_top=True,
+            config=SyncConfig(purge_artist_top=True),
         )
         assert report == SyncReport(purge_artist=len(artists_top_delete))
 
@@ -213,8 +214,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            purge_track_top=purge_track_top,
-            purge_track_saved=purge_track_saved,
+            config=SyncConfig(
+                purge_track_top=purge_track_top,
+                purge_track_saved=purge_track_saved,
+            ),
         )
         assert report == SyncReport(purge_track=expected_purged_track)
 
@@ -250,8 +253,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_artist_top=True,
-            page_limit=len(artists_top_response_paginated),
+            config=SyncConfig(
+                sync_artist_top=True,
+                page_limit=len(artists_top_response_paginated),
+            ),
         )
         assert report == SyncReport(artist_created=expected_count)
 
@@ -286,8 +291,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_artist_top=True,
-            page_limit=len(artists_top_response_paginated),
+            config=SyncConfig(
+                sync_artist_top=True,
+                page_limit=len(artists_top_response_paginated),
+            ),
         )
         assert report == SyncReport(artist_updated=expected_count)
 
@@ -325,8 +332,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_track_top=True,
-            page_limit=len(tracks_top_response_paginated),
+            config=SyncConfig(
+                sync_track_top=True,
+                page_limit=len(tracks_top_response_paginated),
+            ),
         )
         assert report == SyncReport(track_created=expected_count)
 
@@ -365,8 +374,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_track_top=True,
-            page_limit=len(tracks_top_response_paginated),
+            config=SyncConfig(
+                sync_track_top=True,
+                page_limit=len(tracks_top_response_paginated),
+            ),
         )
         assert report == SyncReport(track_updated=expected_count)
 
@@ -407,8 +418,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_track_saved=True,
-            page_limit=len(tracks_saved_response_paginated),
+            config=SyncConfig(
+                sync_track_saved=True,
+                page_limit=len(tracks_saved_response_paginated),
+            ),
         )
         assert report == SyncReport(track_created=expected_count)
 
@@ -447,8 +460,10 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_track_saved=True,
-            page_limit=len(tracks_saved_response_paginated),
+            config=SyncConfig(
+                sync_track_saved=True,
+                page_limit=len(tracks_saved_response_paginated),
+            ),
         )
         assert report == SyncReport(track_updated=expected_count)
 
@@ -513,13 +528,11 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            purge_artist_top=True,
-            purge_track_top=True,
-            purge_track_saved=True,
-            sync_artist_top=True,
-            sync_track_top=True,
-            sync_track_saved=True,
-            page_limit=len(tracks_top_response_paginated),
+            config=SyncConfig(
+                purge=True,
+                sync=True,
+                page_limit=len(tracks_top_response_paginated),
+            ),
         )
         assert report == SyncReport(
             purge_artist=len(artists_top_delete),
@@ -604,10 +617,11 @@ class TestSpotifySync:
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
-            sync_artist_top=True,
-            sync_track_top=True,
-            sync_track_saved=True,
-            page_limit=len(tracks_top_response_paginated),
+            config=SyncConfig(
+                purge=False,
+                sync=True,
+                page_limit=len(tracks_top_response_paginated),
+            ),
         )
         assert report == SyncReport(
             artist_created=expect_artists_created,

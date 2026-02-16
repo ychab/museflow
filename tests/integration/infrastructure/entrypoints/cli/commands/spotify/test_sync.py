@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 
+from spotifagent.application.use_cases.spotify_sync import SyncConfig
 from spotifagent.application.use_cases.spotify_sync import SyncReport
 from spotifagent.domain.entities.users import User
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import sync_logic
@@ -20,7 +21,7 @@ class TestSpotifySyncLogic:
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    async def test__artist_top__nominal(
+    async def test__sync__nominal(
         self,
         user: User,
         mock_spotify_sync: mock.AsyncMock,
@@ -33,7 +34,7 @@ class TestSpotifySyncLogic:
             track_updated=250,
         )
 
-        await sync_logic(user.email, sync_artist_top=True, sync_track_top=True, sync_track_saved=True)
+        await sync_logic(email=user.email, config=SyncConfig(sync=True))
 
         captured = capsys.readouterr()
         assert "Synchronization successful!" in captured.out

@@ -3,6 +3,7 @@ import asyncio
 import typer
 
 from spotifagent.application.services.spotify import TimeRange
+from spotifagent.application.use_cases.spotify_sync import SyncConfig
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from spotifagent.infrastructure.entrypoints.cli.parsers import parse_email
@@ -32,6 +33,11 @@ def connect(  # pragma: no cover
 @app.command("sync", help="Synchronize the Spotify user's items.")
 def sync(  # pragma: no cover
     email: str = typer.Option(..., help="User email address", parser=parse_email),
+    purge: bool = typer.Option(
+        False,
+        "--purge/--no-purge",
+        help="Whether to purge all user's items",
+    ),
     purge_artist_top: bool = typer.Option(
         False,
         "--purge-artist-top/--no-purge-artist-top",
@@ -46,6 +52,11 @@ def sync(  # pragma: no cover
         False,
         "--purge-track-saved/--no-purge-track-saved",
         help="Whether to purge user's saved tracks",
+    ),
+    sync: bool = typer.Option(
+        True,
+        "--sync/--no-sync",
+        help="Whether to sync all user's items",
     ),
     sync_artist_top: bool = typer.Option(
         True,
@@ -89,15 +100,19 @@ def sync(  # pragma: no cover
         asyncio.run(
             sync_logic(
                 email=email,
-                purge_artist_top=purge_artist_top,
-                purge_track_top=purge_track_top,
-                purge_track_saved=purge_track_saved,
-                sync_artist_top=sync_artist_top,
-                sync_track_top=sync_track_top,
-                sync_track_saved=sync_track_saved,
-                page_limit=page_limit,
-                time_range=time_range,
-                batch_size=batch_size,
+                config=SyncConfig(
+                    purge=purge,
+                    purge_artist_top=purge_artist_top,
+                    purge_track_top=purge_track_top,
+                    purge_track_saved=purge_track_saved,
+                    sync=sync,
+                    sync_artist_top=sync_artist_top,
+                    sync_track_top=sync_track_top,
+                    sync_track_saved=sync_track_saved,
+                    page_limit=page_limit,
+                    time_range=time_range,
+                    batch_size=batch_size,
+                ),
             )
         )
     except Exception as e:
