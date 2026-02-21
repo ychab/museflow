@@ -26,6 +26,18 @@ type AsyncDependencyPatcherFactory = Callable[..., AbstractContextManager[mock.M
 type TextCleaner = Callable[[str], str]
 
 
+@pytest.fixture(autouse=True)
+def force_rich_terminal_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Force Rich/Typer to use a standard terminal width and no colors
+    ONLY for CLI unit tests to ensure consistent output assertions.
+    """
+    monkeypatch.setenv("COLUMNS", "100")
+    monkeypatch.setenv("TERM", "dumb")
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("CI", "true")
+
+
 @pytest.fixture
 def block_cli_configure_loggers() -> Iterable[mock.Mock]:
     """Prevent the CLI 'main' callback from re-configuring logging during tests."""
