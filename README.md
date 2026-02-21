@@ -14,6 +14,9 @@ To work with this project, you will need the following tools installed on your m
 *   **Python**: 3.13
 *   **Poetry**: 1.8.5
 *   **Docker Compose**: v2
+
+For the Spotify connector:
+
 *   **Spotify Developer Account**: You need a Spotify account and access to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
 *   **Spotify App**: Create an app in the Spotify Developer Dashboard to get a `Client ID` and `Client Secret`.
 
@@ -30,17 +33,27 @@ Follow these steps to set up the project locally:
 
 2.  **Install dependencies:**
 
-    Use Poetry to install the project dependencies.
+    You can install dependencies and pre-commit hooks in one go using the Makefile:
 
     ```bash
     make install
     ```
 
-3.  **Install pre-commit hooks:**
+    Alternatively, you can install them manually:
 
-    ```bash
-    poetry run pre-commit install
-    ```
+    *   **Install dependencies:**
+        ```bash
+        make install-deps
+        # OR
+        poetry install
+        ```
+
+    *   **Install pre-commit hooks:**
+        ```bash
+        make install-precommit
+        # OR
+        poetry run pre-commit install
+        ```
 
 ## Configuration
 

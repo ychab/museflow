@@ -6,14 +6,27 @@
 ##############
 
 
-.PHONY: install
-install:
+.PHONY: install-deps
+install-deps:
 	poetry install
 
-.PHONY: update
-update:
+.PHONY: install-precommit
+install-precommit:
+	poetry run pre-commit install
+
+.PHONY: install
+install: install-deps install-precommit
+
+.PHONY: update-deps
+update-deps:
 	poetry update
+
+.PHONY: update-precommit
+update-precommit:
 	poetry run pre-commit autoupdate
+
+.PHONY: update
+update: update-deps update-precommit
 
 .PHONY: lock
 lock:

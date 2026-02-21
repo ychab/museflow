@@ -2,6 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## CI
+
+Add a github CI integration to run the tests, add badges like coverage, etc
+
 ## Dependencies
 
 - replace poetry by UV?
