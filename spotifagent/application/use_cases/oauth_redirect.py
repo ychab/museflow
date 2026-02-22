@@ -1,7 +1,6 @@
 from pydantic import HttpUrl
 
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
@@ -16,7 +15,6 @@ async def oauth_redirect(
     state_token_generator: StateTokenGeneratorPort,
 ) -> HttpUrl:
     authorization_url, state = provider_client.get_authorization_url(
-        scopes=SpotifyScope.required_scopes(),
         state=state_token_generator.generate(),
     )
 

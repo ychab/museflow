@@ -16,9 +16,9 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
-from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -68,12 +68,12 @@ class SpotifyClientAdapter(SpotifyClientPort):
     def token_endpoint(self) -> HttpUrl:
         return self.TOKEN_ENDPOINT
 
-    def get_authorization_url(self, scopes: list[SpotifyScope], state: str) -> tuple[HttpUrl, str]:
+    def get_authorization_url(self, state: str) -> tuple[HttpUrl, str]:
         params = {
             "client_id": self.client_id,
             "response_type": "code",
             "redirect_uri": str(self.redirect_uri),
-            "scope": SpotifyScope.to_scope_string(scopes),
+            "scope": SpotifyScope.required_scopes(),
             "state": state,
         }
 

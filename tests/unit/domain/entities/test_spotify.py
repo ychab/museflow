@@ -8,22 +8,7 @@ from pydantic import ValidationError
 import pytest
 
 from spotifagent.domain.entities.spotify import SpotifyAccountUpdate
-from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.spotify import SpotifyTokenState
-
-
-class TestSpotifyScope:
-    def test_all(self) -> None:
-        assert len(SpotifyScope.all()) == len(SpotifyScope)
-
-    def test_to_scope_string(self) -> None:
-        scope_str = SpotifyScope.to_scope_string(
-            [
-                SpotifyScope.USER_READ_EMAIL,
-                SpotifyScope.USER_READ_PRIVATE,
-            ]
-        )
-        assert scope_str == "user-read-email user-read-private"
 
 
 class TestSpotifyTokenState:

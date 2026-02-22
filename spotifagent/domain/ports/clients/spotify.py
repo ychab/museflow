@@ -4,7 +4,6 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 
 
@@ -16,7 +15,7 @@ class SpotifyClientPort(ABC):
     def token_endpoint(self) -> HttpUrl: ...
 
     @abstractmethod
-    def get_authorization_url(self, scopes: list[SpotifyScope], state: str) -> tuple[HttpUrl, str]:
+    def get_authorization_url(self, state: str) -> tuple[HttpUrl, str]:
         """Generate OAuth authorization URL."""
         ...
 

@@ -14,7 +14,6 @@ from pydantic import HttpUrl
 import pytest
 from pytest_httpx import HTTPXMock
 
-from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 
@@ -52,17 +51,14 @@ class TestSpotifyClientAdapter:
     def test__get_authorization_url(self, spotify_client: SpotifyClientAdapter) -> None:
         spotify_token_state = "dummy-token-state"
 
-        url, state = spotify_client.get_authorization_url(
-            scopes=[SpotifyScope.USER_READ_EMAIL, SpotifyScope.USER_READ_PRIVATE],
-            state=spotify_token_state,
-        )
+        url, state = spotify_client.get_authorization_url(state=spotify_token_state)
 
         base_url = "https://accounts.spotify.com/authorize"
         query = (
             f"client_id=dummy-client-id"
             f"&response_type=code"
             f"&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
-            f"&scope=user-read-email+user-read-private"
+            f"&scope=user-top-read+user-library-read+playlist-read-private"
             f"&state={state}"
         )
         assert url == HttpUrl(f"{base_url}?{query}")
