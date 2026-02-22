@@ -5,7 +5,7 @@ import pytest
 from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
@@ -92,6 +92,6 @@ def token_state(request: pytest.FixtureRequest) -> SpotifyTokenState:
 @pytest.fixture
 def mock_spotify_client(token_state: SpotifyTokenState) -> mock.AsyncMock:
     return mock.AsyncMock(
-        spec=SpotifyClientPort,
+        spec=ProviderOAuthClientPort,
         refresh_access_token=mock.AsyncMock(return_value=token_state),
     )

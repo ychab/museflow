@@ -23,7 +23,6 @@ from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.models import Base
 from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
@@ -31,6 +30,7 @@ from spotifagent.infrastructure.adapters.database.repositories.music import Trac
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import async_session_factory
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import JwtAccessTokenManager
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -203,8 +203,8 @@ def track_repository(async_session_db: AsyncSession) -> TrackRepositoryPort:
 
 
 @pytest.fixture
-async def spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
-    async with SpotifyClientAdapter(
+async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+    async with SpotifyOAuthClientAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
@@ -218,7 +218,7 @@ async def spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
 @pytest.fixture
 def spotify_session_factory(
     spotify_account_repository: SpotifyAccountRepositoryPort,
-    spotify_client: SpotifyClientAdapter,
+    spotify_client: SpotifyOAuthClientAdapter,
 ) -> SpotifySessionFactory:
     return SpotifySessionFactory(
         spotify_account_repository=spotify_account_repository,

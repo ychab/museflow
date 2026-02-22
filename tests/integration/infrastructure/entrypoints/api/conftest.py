@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_db
@@ -37,7 +37,7 @@ async def mock_db_session() -> AsyncMock:
 
 @pytest.fixture
 async def mock_spotify_client() -> AsyncMock:
-    return AsyncMock(spec=SpotifyClientPort)
+    return AsyncMock(spec=ProviderOAuthClientPort)
 
 
 @pytest.fixture

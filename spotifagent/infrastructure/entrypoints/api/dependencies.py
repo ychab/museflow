@@ -12,18 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import JwtAccessTokenManager
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -62,8 +62,8 @@ def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserReposito
     return UserRepository(session)
 
 
-async def get_spotify_client() -> AsyncGenerator[SpotifyClientPort]:
-    async with SpotifyClientAdapter(
+async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
+    async with SpotifyOAuthClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,

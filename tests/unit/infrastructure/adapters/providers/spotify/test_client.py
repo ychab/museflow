@@ -15,7 +15,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from spotifagent.domain.entities.spotify import SpotifyTokenState
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
 from tests.unit.factories.spotify import SpotifyTokenStateFactory
 
@@ -23,7 +23,7 @@ from tests.unit.factories.spotify import SpotifyTokenStateFactory
 class TestSpotifyClientAdapter:
     @pytest.fixture
     def mock_tenacity_sleep(self) -> Iterable[None]:
-        retry_controller = SpotifyClientAdapter.make_user_api_call.retry  # type: ignore[attr-defined]
+        retry_controller = SpotifyOAuthClientAdapter.make_user_api_call.retry  # type: ignore[attr-defined]
         original_sleep = retry_controller.sleep
 
         retry_controller.sleep = mock.AsyncMock(return_value=None)
@@ -31,8 +31,8 @@ class TestSpotifyClientAdapter:
         retry_controller.sleep = original_sleep
 
     @pytest.fixture
-    async def spotify_client(self) -> AsyncGenerator[SpotifyClientAdapter]:
-        spotify_client = SpotifyClientAdapter(
+    async def spotify_client(self) -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+        spotify_client = SpotifyOAuthClientAdapter(
             client_id="dummy-client-id",
             client_secret="dummy-client-secret",
             redirect_uri=HttpUrl("https://example.com/callback"),
@@ -43,12 +43,16 @@ class TestSpotifyClientAdapter:
         await spotify_client.close()
 
     @pytest.fixture
-    def token_state_expired(self, frozen_time: datetime, spotify_client: SpotifyClientAdapter) -> SpotifyTokenState:
+    def token_state_expired(
+        self,
+        frozen_time: datetime,
+        spotify_client: SpotifyOAuthClientAdapter,
+    ) -> SpotifyTokenState:
         return SpotifyTokenStateFactory().build(
             expires_at=frozen_time - timedelta(seconds=spotify_client.token_buffer_seconds + 20),
         )
 
-    def test__get_authorization_url(self, spotify_client: SpotifyClientAdapter) -> None:
+    def test__get_authorization_url(self, spotify_client: SpotifyOAuthClientAdapter) -> None:
         spotify_token_state = "dummy-token-state"
 
         url, state = spotify_client.get_authorization_url(state=spotify_token_state)
@@ -66,7 +70,7 @@ class TestSpotifyClientAdapter:
 
     async def test__exchange_code_for_token__nominal(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         frozen_time: datetime,
     ) -> None:
@@ -103,7 +107,7 @@ class TestSpotifyClientAdapter:
 
     async def test__exchange_code_for_token__exception_http_status(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(status_code=400, json={"detail": "Bad Request"})
@@ -114,7 +118,7 @@ class TestSpotifyClientAdapter:
     @pytest.mark.parametrize("response_json_extra", [{}, {"refresh_token": "dummy-new-refresh_token"}])
     async def test__refresh_access_token__nominal(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         frozen_time: datetime,
         response_json_extra: dict[str, Any],
@@ -152,7 +156,7 @@ class TestSpotifyClientAdapter:
 
     async def test__refresh_access_token__exception_http_status(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(status_code=400, json={"detail": "Bad Request"})
@@ -163,7 +167,7 @@ class TestSpotifyClientAdapter:
     @pytest.mark.parametrize("method", ["get", "post", "put", "patch", "delete", "head"])
     async def test__make_user_api_call__nominal(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         token_state: SpotifyTokenState,
         method: str,
@@ -190,7 +194,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__no_content(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         token_state: SpotifyTokenState,
     ) -> None:
@@ -205,7 +209,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__access_token_expired(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         frozen_time: datetime,
         token_state_expired: SpotifyTokenState,
@@ -247,7 +251,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__access_token_enforced(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
         token_state: SpotifyTokenState,
         frozen_time: datetime,
@@ -297,7 +301,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__not_on_404(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
     ) -> None:
@@ -318,7 +322,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__not_on_generic_error(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
     ) -> None:
@@ -334,7 +338,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__server_error(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
@@ -366,7 +370,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__network_error(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
@@ -389,7 +393,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__max_attempts_exceeded(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
@@ -413,7 +417,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__rate_limit__with_header(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
@@ -449,7 +453,7 @@ class TestSpotifyClientAdapter:
 
     async def test__make_user_api_call__retry__rate_limit__without_header(
         self,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         token_state: SpotifyTokenState,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,

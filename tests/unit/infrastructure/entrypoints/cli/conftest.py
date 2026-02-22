@@ -12,7 +12,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
@@ -169,7 +169,7 @@ def mock_spotify_client(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.Mock]:
-    client = mock.Mock(spec=SpotifyClientPort)
+    client = mock.Mock(spec=ProviderOAuthClientPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_spotify_client", client) as mock_client:
         yield mock_client
 

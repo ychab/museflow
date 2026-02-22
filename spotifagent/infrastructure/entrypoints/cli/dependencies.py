@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
@@ -12,13 +12,13 @@ from spotifagent.domain.ports.repositories.spotify import SpotifyAccountReposito
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
 from spotifagent.infrastructure.config.settings.spotify import spotify_settings
@@ -39,8 +39,8 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 @asynccontextmanager
-async def get_spotify_client() -> AsyncGenerator[SpotifyClientPort]:
-    async with SpotifyClientAdapter(
+async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
+    async with SpotifyOAuthClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
@@ -72,7 +72,7 @@ def get_track_repository(session: AsyncSession) -> TrackRepositoryPort:
 
 def get_spotify_user_session_factory(
     session: AsyncSession,
-    spotify_client: SpotifyClientPort,
+    spotify_client: ProviderOAuthClientPort,
 ) -> SpotifySessionFactory:
     return SpotifySessionFactory(
         spotify_account_repository=get_spotify_account_repository(session),

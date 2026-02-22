@@ -7,8 +7,8 @@ from pydantic import HttpUrl
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 
 
-class SpotifyClientPort(ABC):
-    """Port interface for Spotify user API client."""
+class ProviderOAuthClientPort(ABC):
+    """Port interface for OAuth provider API client."""
 
     @property
     @abstractmethod

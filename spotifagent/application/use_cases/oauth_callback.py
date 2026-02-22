@@ -1,6 +1,6 @@
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import ProviderExchangeCodeError
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 
 
@@ -8,7 +8,7 @@ async def oauth_callback(
     code: str,
     user: User,
     spotify_account_repository: SpotifyAccountRepositoryPort,
-    provider_client: SpotifyClientPort,
+    provider_client: ProviderOAuthClientPort,
 ) -> None:
     try:
         token_state = await provider_client.exchange_code_for_token(code)

@@ -21,7 +21,7 @@ from spotifagent.domain.entities.spotify import SpotifyTrack
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 from spotifagent.domain.exceptions import SpotifyPageValidationError
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.infrastructure.config.settings.app import app_settings
 
@@ -39,7 +39,7 @@ class SpotifySessionFactory:
     def __init__(
         self,
         spotify_account_repository: SpotifyAccountRepositoryPort,
-        spotify_client: SpotifyClientPort,
+        spotify_client: ProviderOAuthClientPort,
     ) -> None:
         self.spotify_account_repository = spotify_account_repository
         self.spotify_client = spotify_client
@@ -65,7 +65,7 @@ class SpotifyUserSession:
         self,
         user: User,
         spotify_account_repository: SpotifyAccountRepositoryPort,
-        spotify_client: SpotifyClientPort,
+        spotify_client: ProviderOAuthClientPort,
         max_concurrency: int = app_settings.SYNC_SEMAPHORE_MAX_CONCURRENCY,
     ) -> None:
         self.user = user

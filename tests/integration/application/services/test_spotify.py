@@ -9,7 +9,7 @@ import pytest
 from spotifagent.application.services.spotify import SpotifyUserSession
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.infrastructure.adapters.database.models import User as UserModel
 
@@ -17,7 +17,7 @@ from spotifagent.infrastructure.adapters.database.models import User as UserMode
 class TestSpotifyUserSession:
     @pytest.fixture
     def mock_spotify_client(self) -> mock.AsyncMock:
-        return mock.AsyncMock(spec=SpotifyClientPort)
+        return mock.AsyncMock(spec=ProviderOAuthClientPort)
 
     @pytest.fixture
     def spotify_session(

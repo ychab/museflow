@@ -22,9 +22,9 @@ from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.models import Artist as ArtistModel
 from spotifagent.infrastructure.adapters.database.models import Track as TrackModel
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.factories.music import ArtistModelFactory
@@ -363,7 +363,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -404,7 +404,7 @@ class TestSpotifySync:
         async_session_db: AsyncSession,
         user: User,
         artists_update: list[Artist],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -446,7 +446,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -491,7 +491,7 @@ class TestSpotifySync:
         async_session_db: AsyncSession,
         user: User,
         tracks_top_update: list[Track],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -536,7 +536,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -581,7 +581,7 @@ class TestSpotifySync:
         async_session_db: AsyncSession,
         user: User,
         tracks_saved_update: list[Track],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -626,7 +626,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -682,7 +682,7 @@ class TestSpotifySync:
         async_session_db: AsyncSession,
         user: User,
         tracks_playlist_update: list[Track],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -738,7 +738,7 @@ class TestSpotifySync:
         user: User,
         artists_top_delete: list[Artist],
         tracks_delete: list[Track],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
@@ -851,7 +851,7 @@ class TestSpotifySync:
         tracks_top_update: list[Track],
         tracks_saved_update: list[Track],
         tracks_playlist_update: list[Track],
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,

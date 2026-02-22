@@ -17,7 +17,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from spotifagent.domain.entities.spotify import SpotifyTokenState
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
 
 
@@ -34,7 +34,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class SpotifyClientAdapter(SpotifyClientPort):
+class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
     """Async Spotify user API client with OAuth and automatic token refresh."""
 
     BASE_URL: Final[ClassVar[HttpUrl]] = HttpUrl("https://api.spotify.com/v1")
@@ -182,7 +182,7 @@ class SpotifyClientAdapter(SpotifyClientPort):
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self) -> "SpotifyClientAdapter":
+    async def __aenter__(self) -> "SpotifyOAuthClientAdapter":
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:

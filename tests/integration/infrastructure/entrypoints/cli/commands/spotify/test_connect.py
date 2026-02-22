@@ -16,7 +16,7 @@ import pytest
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.spotify import SpotifyAccountCreate
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from spotifagent.infrastructure.adapters.database.models import SpotifyAccount as SpotifyAccountModel
 from spotifagent.infrastructure.adapters.database.models import User as UserModel
@@ -34,10 +34,10 @@ class TestSpotifyConnectLogic:
 
     @pytest.fixture
     def mock_spotify_client(self) -> Iterable[mock.Mock]:
-        spotify_client = mock.Mock(spec=SpotifyClientPort)
+        spotify_client = mock.Mock(spec=ProviderOAuthClientPort)
 
         @asynccontextmanager
-        async def mock_dependency() -> AsyncGenerator[SpotifyClientPort]:
+        async def mock_dependency() -> AsyncGenerator[ProviderOAuthClientPort]:
             yield spotify_client
 
         target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect.get_spotify_client"

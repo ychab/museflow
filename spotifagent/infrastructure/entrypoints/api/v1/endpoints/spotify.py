@@ -9,7 +9,7 @@ from spotifagent.application.use_cases.oauth_redirect import oauth_redirect
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import ProviderExchangeCodeError
-from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
@@ -28,7 +28,7 @@ router = APIRouter()
 async def connect(
     current_user: User = Depends(get_current_user),
     auth_state_repository: OAuthProviderStateRepositoryPort = Depends(get_auth_state_repository),
-    provider_client: SpotifyClientPort = Depends(get_spotify_client),
+    provider_client: ProviderOAuthClientPort = Depends(get_spotify_client),
     state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
 ) -> RedirectResponse:
     authorization_url = await oauth_redirect(
@@ -47,7 +47,7 @@ async def spotify_callback(
     error: str | None = None,
     current_user: User = Depends(get_user_from_state),
     spotify_account_repository: SpotifyAccountRepositoryPort = Depends(get_spotify_account_repository),
-    spotify_client: SpotifyClientPort = Depends(get_spotify_client),
+    spotify_client: ProviderOAuthClientPort = Depends(get_spotify_client),
 ) -> SuccessResponse:
     if error:
         raise HTTPException(status_code=400, detail=f"OAuth error: {error}")

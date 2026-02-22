@@ -8,8 +8,8 @@ from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
 
 class TestSpotifyOAuthRedirectUseCase:
@@ -18,7 +18,7 @@ class TestSpotifyOAuthRedirectUseCase:
         async_session_db: AsyncSession,
         user: User,
         auth_state_repository: OAuthProviderStateRepositoryPort,
-        spotify_client: SpotifyClientAdapter,
+        spotify_client: SpotifyOAuthClientAdapter,
         state_token_generator: StateTokenGeneratorPort,
     ) -> None:
         authorization_url = await oauth_redirect(
