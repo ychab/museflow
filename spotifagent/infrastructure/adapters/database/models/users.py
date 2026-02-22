@@ -21,7 +21,6 @@ class User(UUIDIdMixin, DatetimeTrackMixin, Base):
 
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    spotify_state: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None)
     spotify_account: Mapped["SpotifyAccount | None"] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",

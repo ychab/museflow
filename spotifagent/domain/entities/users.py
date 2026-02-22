@@ -21,7 +21,6 @@ class User(BaseEntity):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
-    spotify_state: str | None = Field(default=None, max_length=512)
     spotify_account: SpotifyAccount | None = None
 
     @property
@@ -45,8 +44,6 @@ class UserCreate(BaseEntity):
 class UserUpdate(BaseEntity):
     email: EmailStr | None = None
     password: str | None = Field(default=None, min_length=8, max_length=100)
-
-    spotify_state: str | None = Field(default=None, max_length=512, description="Spotify authorization state")
 
     @model_validator(mode="after")
     def validate_payload(self):

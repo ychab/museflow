@@ -13,12 +13,14 @@ import jwt
 
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
+from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
@@ -46,6 +48,10 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 async def get_db() -> AsyncGenerator[AsyncSession]:  # pragma: no cover
     async with session_scope() as session:
         yield session
+
+
+def get_auth_state_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderStateRepositoryPort:
+    return OAuthProviderStateRepository(session)
 
 
 def get_spotify_account_repository(session: AsyncSession = Depends(get_db)) -> SpotifyAccountRepositoryPort:
@@ -105,15 +111,20 @@ async def get_current_user(
     return user
 
 
-async def get_user_from_spotify_state(
+async def get_user_from_state(
     state: str,
+    auth_state_repository: OAuthProviderStateRepositoryPort = Depends(get_auth_state_repository),
     user_repository: UserRepositoryPort = Depends(get_user_repository),
 ) -> User:
     if not state:
         raise HTTPException(status_code=400, detail="Missing state parameter")
 
-    user = await user_repository.get_by_spotify_state(state)
-    if not user:
+    auth_state = await auth_state_repository.consume(state=state)
+    if not auth_state:
         raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    user = await user_repository.get_by_id(auth_state.user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="Unable to load user from state")
 
     return user

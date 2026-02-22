@@ -54,35 +54,6 @@ class TestUserRepository:
         assert user_db is not None
         assert user_db.spotify_account is not None
 
-    @pytest.mark.parametrize("user", [{"spotify_state": "dummy-token-state"}], indirect=["user"])
-    async def test__get_by_spotify_state__nominal(self, user: User, user_repository: UserRepositoryPort) -> None:
-        assert user.spotify_state == "dummy-token-state"
-
-        user_db = await user_repository.get_by_spotify_state(user.spotify_state)
-        assert user_db is not None
-        assert user_db.id == user.id
-        assert user_db.spotify_account is None
-
-    async def test__get_by_spotify_state__none(self, user_repository: UserRepositoryPort) -> None:
-        assert await user_repository.get_by_spotify_state("dummy-token-state") is None
-
-    @pytest.mark.parametrize(
-        "user",
-        [{"spotify_state": "dummy-token-state", "with_spotify_account": True}],
-        indirect=["user"],
-    )
-    async def test__get_by_spotify_state__with_spotify_account(
-        self,
-        user: User,
-        user_repository: UserRepositoryPort,
-    ) -> None:
-        assert user.spotify_state == "dummy-token-state"
-
-        user_db = await user_repository.get_by_spotify_state(user.spotify_state)
-        assert user_db is not None
-        assert user_db.id == user.id
-        assert user_db.spotify_account is not None
-
     async def test__create__nominal(
         self,
         user_create: UserCreate,
@@ -118,8 +89,6 @@ class TestUserRepository:
         assert user_updated.email == user_update.email
         assert password_hasher.verify(user_update.password, user_updated.hashed_password)
         assert user_updated.is_active is True
-
-        assert user_updated.spotify_state is not None
         assert user_updated.created_at == user.created_at
         assert user_updated.updated_at >= user.updated_at
 

@@ -2,9 +2,11 @@ from unittest import mock
 
 import pytest
 
+from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
@@ -13,6 +15,7 @@ from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 
+from tests.unit.factories.auth import OAuthProviderStateFactory
 from tests.unit.factories.spotify import SpotifyTokenStateFactory
 from tests.unit.factories.users import UserFactory
 
@@ -43,6 +46,11 @@ def mock_user_repository() -> mock.AsyncMock:
 
 
 @pytest.fixture
+def mock_auth_state_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=OAuthProviderStateRepositoryPort)
+
+
+@pytest.fixture
 def mock_spotify_account_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=SpotifyAccountRepositoryPort)
 
@@ -63,6 +71,14 @@ def mock_track_repository() -> mock.AsyncMock:
 @pytest.fixture
 def user(request: pytest.FixtureRequest) -> User:
     return UserFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
+def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProviderState:
+    params = getattr(request, "param", {})
+    params.setdefault("user_id", user.id)
+
+    return OAuthProviderStateFactory.build(**params)
 
 
 @pytest.fixture

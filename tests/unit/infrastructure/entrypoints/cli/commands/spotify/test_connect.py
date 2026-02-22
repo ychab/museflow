@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import UserNotFound
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
@@ -170,7 +171,7 @@ class TestSpotifyConnectCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_spotify_client")
+@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_auth_state_repository", "mock_spotify_client")
 class TestSpotifyConnectLogic:
     TARGET_PATH: Final[str] = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect"
 
@@ -186,14 +187,16 @@ class TestSpotifyConnectLogic:
         with pytest.raises(UserNotFound):
             await connect_logic(email, 10, 2)
 
-    @pytest.mark.parametrize("user", [{"spotify_state": "dummy-token-state"}], indirect=True)
     async def test__timeout__exceed(
         self,
         mock_user_repository: mock.AsyncMock,
+        mock_auth_state_repository: mock.AsyncMock,
         mock_spotify_client: mock.Mock,
         user: User,
+        auth_state: OAuthProviderState,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
+        mock_auth_state_repository.get.return_value = auth_state
         mock_spotify_client.get_authorization_url.return_value = "http://example.com", "dummy-token-state"
 
         timeout = 0.1

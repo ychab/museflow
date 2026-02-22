@@ -24,7 +24,7 @@ class SpotifyAccountNotFoundError(Exception):
     pass
 
 
-class SpotifyExchangeCodeError(Exception):
+class ProviderExchangeCodeError(Exception):
     pass
 
 

@@ -13,6 +13,7 @@ import pytest
 from typer.testing import CliRunner
 
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
@@ -127,6 +128,16 @@ def mock_user_repository(
 ) -> Iterable[mock.AsyncMock]:
     repo = mock.AsyncMock(spec=UserRepositoryPort)
     with mock_dependency_factory(f"{target_path}.get_user_repository", repo) as mock_repo:
+        yield mock_repo
+
+
+@pytest.fixture
+def mock_auth_state_repository(
+    target_path: str,
+    mock_dependency_factory: DependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    repo = mock.AsyncMock(spec=OAuthProviderStateRepositoryPort)
+    with mock_dependency_factory(f"{target_path}.get_auth_state_repository", repo) as mock_repo:
         yield mock_repo
 
 

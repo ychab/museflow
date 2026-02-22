@@ -40,20 +40,6 @@ class UserRepository(UserRepositoryPort):
 
         return User.model_validate(user) if user else None
 
-    async def get_by_spotify_state(self, state: str) -> User | None:
-        stmt = (
-            select(UserModel)
-            .where(
-                UserModel.spotify_state.is_not(None),
-                UserModel.spotify_state == str(state),
-            )
-            .options(selectinload(UserModel.spotify_account))
-        )
-        result = await self.session.execute(stmt)
-        user = result.scalar_one_or_none()
-
-        return User.model_validate(user) if user else None
-
     async def create(self, user_data: UserCreate, hashed_password: str) -> User:
         user_dict: dict[str, Any] = user_data.model_dump(exclude={"password"})
         user_dict["hashed_password"] = hashed_password

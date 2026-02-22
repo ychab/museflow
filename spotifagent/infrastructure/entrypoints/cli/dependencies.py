@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
@@ -12,6 +13,7 @@ from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
+from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
@@ -50,6 +52,10 @@ async def get_spotify_client() -> AsyncGenerator[SpotifyClientPort]:
 
 def get_user_repository(session: AsyncSession) -> UserRepositoryPort:
     return UserRepository(session)
+
+
+def get_auth_state_repository(session: AsyncSession) -> OAuthProviderStateRepositoryPort:
+    return OAuthProviderStateRepository(session)
 
 
 def get_spotify_account_repository(session: AsyncSession) -> SpotifyAccountRepositoryPort:

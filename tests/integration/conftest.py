@@ -11,9 +11,11 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import pytest
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
+from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.spotify import SpotifyAccount
 from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
@@ -23,6 +25,7 @@ from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.clients.spotify import SpotifyClientAdapter
 from spotifagent.infrastructure.adapters.database.models import Base
+from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
 from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
@@ -33,6 +36,7 @@ from spotifagent.infrastructure.adapters.security import JwtAccessTokenManager
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
 from spotifagent.infrastructure.config.settings.database import database_settings
 
+from tests.integration.factories.auth import AuthProviderStateModelFactory
 from tests.integration.factories.base import BaseModelFactory
 from tests.integration.factories.spotify import SpotifyAccountModelFactory
 from tests.integration.factories.users import UserModelFactory
@@ -176,6 +180,11 @@ def user_repository(async_session_db: AsyncSession) -> UserRepositoryPort:
 
 
 @pytest.fixture
+def auth_state_repository(async_session_db: AsyncSession) -> OAuthProviderStateRepositoryPort:
+    return OAuthProviderStateRepository(async_session_db)
+
+
+@pytest.fixture
 def spotify_account_repository(async_session_db: AsyncSession) -> SpotifyAccountRepositoryPort:
     return SpotifyAccountRepository(async_session_db)
 
@@ -232,6 +241,15 @@ def token_state(request: pytest.FixtureRequest) -> SpotifyTokenState:
 async def user(request: pytest.FixtureRequest) -> User:
     user_db = await UserModelFactory.create_async(**getattr(request, "param", {}))
     return User.model_validate(user_db)
+
+
+@pytest.fixture
+async def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProviderState:
+    params = getattr(request, "param", {})
+    params.setdefault("user_id", user.id)
+
+    auth_state_db = await AuthProviderStateModelFactory.create_async(**params)
+    return OAuthProviderState.model_validate(auth_state_db)
 
 
 @pytest.fixture

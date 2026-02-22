@@ -53,10 +53,6 @@ class TestUserUpdate:
         assert "1 validation error for UserUpdate\npassword" in str(exc_info.value)
         assert error_msg in str(exc_info.value)
 
-    def test_model_validator__one_value_set__valid(self) -> None:
-        compare_page_update = UserUpdate(spotify_state=None)
-        assert compare_page_update.spotify_state is None
-
     def test_model_validator__one_value_set__exception(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
             UserUpdate()

@@ -17,9 +17,6 @@ class UserRepositoryPort(ABC):
     async def get_by_email(self, email: EmailStr) -> User | None: ...
 
     @abstractmethod
-    async def get_by_spotify_state(self, state: str) -> User | None: ...
-
-    @abstractmethod
     async def create(self, user_data: UserCreate, hashed_password: str) -> User: ...
 
     @abstractmethod

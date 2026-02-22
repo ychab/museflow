@@ -18,8 +18,6 @@ class UserModelFactory(BaseModelFactory[User]):
 
     is_active = True
 
-    spotify_state = None
-
     @post_generated
     @classmethod
     def hashed_password(cls, password: str = "testtest") -> str:

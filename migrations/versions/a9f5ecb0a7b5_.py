@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e424c7c75871
+Revision ID: a9f5ecb0a7b5
 Revises:
-Create Date: 2026-02-13 15:11:06.212990
+Create Date: 2026-02-22 14:55:42.056985
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e424c7c75871'
+revision: str = 'a9f5ecb0a7b5'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,12 +26,23 @@ def upgrade() -> None:
     sa.Column('email', sa.String(length=255), nullable=False),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('spotify_state', sa.String(length=512), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_spotifagent_user_email'), 'spotifagent_user', ['email'], unique=True)
+    op.create_table('spotifagent_auth_provider_state',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
+    sa.Column('state', sa.String(length=512), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['spotifagent_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_pending_auth')
+    )
+    op.create_index(op.f('ix_spotifagent_auth_provider_state_state'), 'spotifagent_auth_provider_state', ['state'], unique=True)
     op.create_table('spotifagent_music_artist',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -93,6 +104,8 @@ def downgrade() -> None:
     op.drop_table('spotifagent_music_track')
     op.drop_index(op.f('ix_spotifagent_music_artist_user_id'), table_name='spotifagent_music_artist')
     op.drop_table('spotifagent_music_artist')
+    op.drop_index(op.f('ix_spotifagent_auth_provider_state_state'), table_name='spotifagent_auth_provider_state')
+    op.drop_table('spotifagent_auth_provider_state')
     op.drop_index(op.f('ix_spotifagent_user_email'), table_name='spotifagent_user')
     op.drop_table('spotifagent_user')
     # ### end Alembic commands ###

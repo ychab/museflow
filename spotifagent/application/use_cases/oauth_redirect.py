@@ -1,26 +1,25 @@
 from pydantic import HttpUrl
 
+from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.spotify import SpotifyScope
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.entities.users import UserUpdate
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 
 
-async def spotify_oauth_redirect(
+async def oauth_redirect(
     user: User,
-    user_repository: UserRepositoryPort,
-    spotify_client: SpotifyClientPort,
+    auth_state_repository: OAuthProviderStateRepositoryPort,
+    provider: MusicProvider,
+    provider_client: SpotifyClientPort,
     state_token_generator: StateTokenGeneratorPort,
 ) -> HttpUrl:
-    authorization_url, state = spotify_client.get_authorization_url(
+    authorization_url, state = provider_client.get_authorization_url(
         scopes=SpotifyScope.required_scopes(),
         state=state_token_generator.generate(),
     )
 
-    # Store the state to be retrieved by the callback endpoint.
-    user_data = UserUpdate(spotify_state=state)
-    await user_repository.update(user.id, user_data)
+    await auth_state_repository.upsert(user_id=user.id, provider=provider, state=state)
 
     return authorization_url

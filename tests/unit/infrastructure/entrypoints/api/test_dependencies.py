@@ -1,4 +1,5 @@
 import logging
+import uuid
 from unittest import mock
 
 from fastapi import HTTPException
@@ -6,9 +7,10 @@ from fastapi import HTTPException
 import pytest
 from jwt import InvalidTokenError
 
+from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.users import User
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_spotify_state
+from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_state
 
 
 class TestGetCurrentUser:
@@ -67,24 +69,46 @@ class TestGetCurrentUser:
         assert "Invalid token" in caplog.text
 
 
-class TestGetUserFromSpotifyState:
-    @pytest.mark.parametrize("user", [{"spotify_state": "dummy-token-state"}], indirect=["user"])
-    async def test__nominal(self, user: User, mock_user_repository: mock.AsyncMock) -> None:
-        assert user.spotify_state is not None
-        mock_user_repository.get_by_spotify_state.return_value = user
-
-        current_user = await get_user_from_spotify_state(
-            state=user.spotify_state, user_repository=mock_user_repository
-        )
-        assert current_user is not None
-        assert current_user.id == user.id
-
-    async def test__missing_state(self) -> None:
+class TestGetUserFromState:
+    async def test__state__missing(
+        self,
+        mock_auth_state_repository: mock.AsyncMock,
+        mock_user_repository: mock.AsyncMock,
+    ) -> None:
         with pytest.raises(HTTPException, match="Missing state parameter"):
-            await get_user_from_spotify_state(state="", user_repository=mock.Mock())
+            await get_user_from_state(
+                state="",
+                auth_state_repository=mock_auth_state_repository,
+                user_repository=mock_user_repository,
+            )
 
-    async def test__missing_user(self, mock_user_repository: mock.AsyncMock) -> None:
-        mock_user_repository.get_by_spotify_state.return_value = None
+    async def test__state__invalid(
+        self,
+        mock_auth_state_repository: mock.AsyncMock,
+        mock_user_repository: mock.AsyncMock,
+    ) -> None:
+        mock_auth_state_repository.consume.return_value = None
 
         with pytest.raises(HTTPException, match="Invalid or expired state"):
-            await get_user_from_spotify_state(state="fake-token", user_repository=mock_user_repository)
+            await get_user_from_state(
+                state="dummy-state",
+                auth_state_repository=mock_auth_state_repository,
+                user_repository=mock_user_repository,
+            )
+
+    @pytest.mark.parametrize("auth_state", [{"user_id": uuid.uuid4()}], indirect=True)
+    async def test__user__unknown(
+        self,
+        auth_state: OAuthProviderState,
+        mock_auth_state_repository: mock.AsyncMock,
+        mock_user_repository: mock.AsyncMock,
+    ) -> None:
+        mock_auth_state_repository.consume.return_value = auth_state
+        mock_user_repository.get_by_id.return_value = None
+
+        with pytest.raises(HTTPException, match="Unable to load user from state"):
+            await get_user_from_state(
+                state=auth_state.state,
+                auth_state_repository=mock_auth_state_repository,
+                user_repository=mock_user_repository,
+            )

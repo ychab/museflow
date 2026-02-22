@@ -5,11 +5,14 @@ from fastapi import HTTPException
 
 import pytest
 
+from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.users import User
+from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.infrastructure.config.settings.app import app_settings
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
+from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_state
 
 
 class TestGetCurrentUser:
@@ -60,3 +63,21 @@ class TestGetCurrentUser:
         assert exc_info is not None
         assert "Could not validate credentials" in str(exc_info.value)
         assert "No user associated to the token" in caplog.text
+
+
+class TestGetUserFromState:
+    async def test__nominal(
+        self,
+        user: User,
+        auth_state: OAuthProviderState,
+        auth_state_repository: OAuthProviderStateRepositoryPort,
+        user_repository: UserRepositoryPort,
+    ) -> None:
+        current_user = await get_user_from_state(
+            state=auth_state.state,
+            auth_state_repository=auth_state_repository,
+            user_repository=user_repository,
+        )
+
+        assert current_user is not None
+        assert current_user.id == user.id

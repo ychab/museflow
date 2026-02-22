@@ -1,4 +1,3 @@
-import uuid
 from typing import Any
 
 from httpx import AsyncClient
@@ -169,8 +168,8 @@ class TestUserCurrentInfo:
 class TestUserCurrentUpdate:
     async def test_not_authenticated(self, async_client: AsyncClient) -> None:
         payload: dict[str, Any] = {
-            "spotify_id": str(uuid.uuid4()),
-            "spotify_state": "dummy-token-state",
+            "email": "bar@example.com",
+            "password": "blahblah",
         }
         url = app.url_path_for("user_me")
 

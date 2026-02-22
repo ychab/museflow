@@ -5,17 +5,19 @@ from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from unittest import mock
 
+from sqlalchemy import delete
 from sqlalchemy import insert
 from sqlalchemy import select
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import pytest
 
+from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.spotify import SpotifyAccountCreate
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.clients.spotify import SpotifyClientPort
+from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from spotifagent.infrastructure.adapters.database.models import SpotifyAccount as SpotifyAccountModel
 from spotifagent.infrastructure.adapters.database.models import User as UserModel
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
@@ -63,19 +65,22 @@ class TestSpotifyConnectLogic:
                 # Wait for the CLI to start polling
                 await asyncio.sleep(delay)
 
-                # Unset user spotify state.
-                stmt = update(UserModel).where(UserModel.email == str(user.email)).values(spotify_state=None)
-                await async_session_db.execute(stmt)
+                # Unset user auth state.
+                stmt_delete = delete(AuthProviderStateModel).where(
+                    AuthProviderStateModel.user_id == user.id,
+                    AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
+                )
+                await async_session_db.execute(stmt_delete)
 
                 # Then create a new account.
-                stmt = insert(SpotifyAccountModel).values(
+                stmt_insert = insert(SpotifyAccountModel).values(
                     user_id=user.id,
                     token_type=spotify_account.token_type,
                     token_access=spotify_account.token_access,
                     token_refresh=spotify_account.token_refresh,
                     token_expires_at=spotify_account.token_expires_at,
                 )
-                await async_session_db.execute(stmt)
+                await async_session_db.execute(stmt_insert)
 
                 # Flush to make this change visible to the CLI's query
                 await async_session_db.flush()
@@ -102,12 +107,20 @@ class TestSpotifyConnectLogic:
         # Ensure the background task completed without error
         await task
 
-        stmt = select(UserModel).where(UserModel.email == user.email).options(selectinload(UserModel.spotify_account))
-        result = await async_session_db.execute(stmt)
-        user_db = result.scalar_one()
+        stmt_auth_state = select(AuthProviderStateModel).where(
+            AuthProviderStateModel.user_id == user.id,
+            AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
+        )
+        result_auth = await async_session_db.execute(stmt_auth_state)
+        auth_state_db = result_auth.scalar_one_or_none()
+        assert auth_state_db is None
 
+        stmt_user = (
+            select(UserModel).where(UserModel.email == user.email).options(selectinload(UserModel.spotify_account))
+        )
+        result_user = await async_session_db.execute(stmt_user)
+        user_db = result_user.scalar_one_or_none()
         assert user_db is not None
-        assert user_db.spotify_state is None
         assert user_db.spotify_account is not None
         assert user_db.spotify_account.token_type == spotify_account.token_type
         assert user_db.spotify_account.token_access == spotify_account.token_access
