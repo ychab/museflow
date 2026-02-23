@@ -2,9 +2,10 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from enum import StrEnum
-from typing import Any
 
-from pydantic import model_validator
+from pydantic import BaseModel
+from pydantic import NonNegativeInt
+from pydantic import computed_field
 
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 
@@ -56,19 +57,24 @@ class SpotifyScope(StrEnum):
         return " ".join(scope.value for scope in scopes)
 
 
-class SpotifyTokenStateDTO(OAuthProviderTokenState):
-    @model_validator(mode="before")
-    @classmethod
-    def calculate_expires_at(cls, data: Any) -> Any:
-        # Special handling for input data coming from Spotify API.
-        if isinstance(data, dict) and not data.get("expires_at"):
-            if "expires_in" in data and isinstance(data["expires_in"], int) and data["expires_in"] > 0:
-                data["expires_at"] = datetime.now(UTC) + timedelta(seconds=data["expires_in"])
-            else:
-                raise ValueError("Input must contain a positive integer 'expires_in' or 'expires_at")
+class SpotifyTokenResponseDTO(BaseModel):
+    token_type: str
+    access_token: str
+    refresh_token: str | None = None  # Sometimes refresh token isn't returned on refresh
+    expires_in: NonNegativeInt
 
-        return data
+    @computed_field
+    def expires_at(self) -> datetime:
+        return datetime.now(UTC) + timedelta(seconds=self.expires_in)
 
-    @classmethod
-    def to_entity(cls, data: Any) -> OAuthProviderTokenState:
-        return OAuthProviderTokenState.model_validate(cls.model_validate(data))
+    def to_domain(self, existing_refresh_token: str | None = None) -> OAuthProviderTokenState:
+        refresh_token = self.refresh_token or existing_refresh_token
+        if not refresh_token:
+            raise ValueError("Refresh token is missing from both response and existing state.")
+
+        return OAuthProviderTokenState(
+            token_type=self.token_type,
+            access_token=self.access_token,
+            refresh_token=refresh_token,
+            expires_at=self.expires_at,
+        )

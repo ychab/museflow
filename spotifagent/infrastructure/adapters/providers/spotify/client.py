@@ -19,7 +19,7 @@ from tenacity import wait_exponential
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenStateDTO
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenResponseDTO
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -95,7 +95,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyTokenStateDTO.to_entity(response.json())
+        return SpotifyTokenResponseDTO(**response.json()).to_domain()
 
     async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
         response = await self._client.post(
@@ -111,12 +111,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        token_data = response.json()
-        # Spotify doesn't always return a new refresh token
-        if "refresh_token" not in token_data:
-            token_data["refresh_token"] = refresh_token
-
-        return SpotifyTokenStateDTO.to_entity(token_data)
+        return SpotifyTokenResponseDTO(**response.json()).to_domain(refresh_token)
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),

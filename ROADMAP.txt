@@ -4,7 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## refacto hexa:
 
-- review SpotifyTokenStateDTO to be a dataclass instead
 - cleanup User entity (like renaming spotify_token_state to provider_token_state)
 - rename SpotifyAccountRepositoryPort to ProviderAccountRepository
 - review domain exceptions to be only domain exception (remove spotify prefix)

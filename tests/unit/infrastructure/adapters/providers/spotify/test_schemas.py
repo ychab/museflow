@@ -1,4 +1,3 @@
-from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -8,7 +7,7 @@ from pydantic import ValidationError
 import pytest
 
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenStateDTO
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenResponseDTO
 
 
 class TestSpotifyScope:
@@ -16,20 +15,24 @@ class TestSpotifyScope:
         assert SpotifyScope.required_scopes() == "user-top-read user-library-read playlist-read-private"
 
 
-class TestSpotifyTokenStateDTO:
-    @pytest.mark.parametrize("expires_at", [datetime(2026, 1, 3, 0, 0, 0, tzinfo=UTC)])
-    def test_calculate_expires_at__with_expires_at(self, expires_at: datetime) -> None:
-        token_state = SpotifyTokenStateDTO(
-            token_type="bearer",
-            access_token="dummy-access-token",
-            refresh_token="dummy-refresh-token",
-            expires_at=expires_at,
-        )
-        assert token_state.expires_at == expires_at
+class TestSpotifyTokenResponseDTO:
+    def test_expires_in__invalid(self, frozen_time: datetime) -> None:
+        payload: dict[str, Any] = {
+            "token_type": "bearer",
+            "access_token": "dummy-access-token",
+            "refresh_token": "dummy-refresh-token",
+            "expires_in": -15,
+        }
 
-    def test_calculate_expires_at__with_expires_in(self, frozen_time: datetime) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            SpotifyTokenResponseDTO(**payload)
+
+        assert "1 validation error for SpotifyTokenResponseDTO" in str(exc_info.value)
+        assert "expires_in\n  Input should be greater than or equal to 0" in str(exc_info.value)
+
+    def test_expires_at__nominal(self, frozen_time: datetime) -> None:
         expires_in = 3600
-        token_state = SpotifyTokenStateDTO(
+        token_state = SpotifyTokenResponseDTO(
             **{
                 "token_type": "bearer",
                 "access_token": "dummy-access-token",
@@ -39,13 +42,12 @@ class TestSpotifyTokenStateDTO:
         )
         assert token_state.expires_at == frozen_time + timedelta(seconds=expires_in)
 
-    @pytest.mark.parametrize("payload_extra", [{}, {"expires_in": "foo"}, {"expires_in": -15}])
-    def test_calculate_expires_at__errors(self, payload_extra: Any) -> None:
+    def test_to_domain__missing_refresh_token(self) -> None:
         payload: dict[str, Any] = {
+            "token_type": "bearer",
             "access_token": "dummy-access-token",
-            "refresh_token": "dummy-refresh-token",
-            **payload_extra,
+            "expires_in": 15,
         }
 
-        with pytest.raises(ValidationError, match="Input must contain a positive integer 'expires_in' or 'expires_at"):
-            SpotifyTokenStateDTO(**payload)
+        with pytest.raises(ValueError, match="Refresh token is missing from both response and existing state."):
+            SpotifyTokenResponseDTO(**payload).to_domain()
