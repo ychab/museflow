@@ -1,10 +1,6 @@
 import uuid
 from collections.abc import Sequence
-from datetime import UTC
-from datetime import datetime
-from datetime import timedelta
 from typing import Annotated
-from typing import Any
 
 from pydantic import AwareDatetime
 from pydantic import BaseModel
@@ -13,46 +9,6 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from spotifagent.domain.entities.base import BaseEntity
-
-
-class SpotifyTokenState(BaseModel):
-    """User token state with expiration tracking."""
-
-    token_type: str
-    access_token: str
-    refresh_token: str
-    expires_at: AwareDatetime
-
-    def is_expired(self, buffer_seconds: int = 60) -> bool:
-        return datetime.now(UTC) >= self.expires_at - timedelta(seconds=buffer_seconds)
-
-    @model_validator(mode="before")
-    @classmethod
-    def calculate_expires_at(cls, data: Any) -> Any:
-        # Special handling for input data coming from Spotify API.
-        if isinstance(data, dict) and not data.get("expires_at"):
-            if "expires_in" in data and isinstance(data["expires_in"], int) and data["expires_in"] > 0:
-                data["expires_at"] = datetime.now(UTC) + timedelta(seconds=data["expires_in"])
-            else:
-                raise ValueError("Input must contain a positive integer 'expires_in' or 'expires_at")
-
-        return data
-
-    def to_user_create(self) -> "SpotifyAccountCreate":
-        return SpotifyAccountCreate(
-            token_type=self.token_type,
-            token_access=self.access_token,
-            token_refresh=self.refresh_token,
-            token_expires_at=self.expires_at,
-        )
-
-    def to_user_update(self) -> "SpotifyAccountUpdate":
-        return SpotifyAccountUpdate(
-            token_type=self.token_type,
-            token_access=self.access_token,
-            token_refresh=self.refresh_token,
-            token_expires_at=self.expires_at,
-        )
 
 
 class BaseSpotifyAccount(BaseEntity):

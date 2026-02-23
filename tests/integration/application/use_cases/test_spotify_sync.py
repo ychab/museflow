@@ -16,9 +16,9 @@ from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.application.use_cases.spotify_sync import SyncConfig
 from spotifagent.application.use_cases.spotify_sync import SyncReport
 from spotifagent.application.use_cases.spotify_sync import spotify_sync
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
@@ -68,8 +68,8 @@ class TestSpotifySync:
         self,
         httpx_mock: HTTPXMock,
         spotify_session_factory: SpotifySessionFactory,
-        token_state: SpotifyTokenState,
-    ) -> SpotifyTokenState:
+        token_state: OAuthProviderTokenState,
+    ) -> OAuthProviderTokenState:
         httpx_mock.add_response(
             url=str(spotify_session_factory.spotify_client.token_endpoint),
             method="POST",
@@ -367,7 +367,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
@@ -408,7 +408,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -450,7 +450,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         tracks_top_response: dict[str, Any],
         tracks_top_response_paginated: list[dict[str, Any]],
@@ -495,7 +495,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -540,7 +540,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         tracks_saved_response: dict[str, Any],
         tracks_saved_response_paginated: list[dict[str, Any]],
@@ -585,7 +585,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -630,7 +630,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
         playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
@@ -686,7 +686,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
         playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
@@ -742,7 +742,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
@@ -855,7 +855,7 @@ class TestSpotifySync:
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
-        mock_refresh_token_endpoint: SpotifyTokenState,
+        mock_refresh_token_endpoint: OAuthProviderTokenState,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],

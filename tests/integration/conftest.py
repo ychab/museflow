@@ -12,8 +12,8 @@ import pytest
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.entities.auth import OAuthProviderState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.spotify import SpotifyAccount
-from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
@@ -40,7 +40,7 @@ from tests.integration.factories.auth import AuthProviderStateModelFactory
 from tests.integration.factories.base import BaseModelFactory
 from tests.integration.factories.spotify import SpotifyAccountModelFactory
 from tests.integration.factories.users import UserModelFactory
-from tests.unit.factories.spotify import SpotifyTokenStateFactory
+from tests.unit.factories.auth import OAuthProviderTokenStateFactory
 
 
 @pytest.fixture(scope="session")
@@ -230,8 +230,8 @@ def spotify_session_factory(
 
 
 @pytest.fixture
-def token_state(request: pytest.FixtureRequest) -> SpotifyTokenState:
-    return SpotifyTokenStateFactory.build(**getattr(request, "param", {}))
+def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
+    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
 
 
 # --- Models DB factories ---

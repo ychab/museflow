@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.spotify import SpotifyTokenState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
@@ -16,7 +16,7 @@ from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 
 from tests.unit.factories.auth import OAuthProviderStateFactory
-from tests.unit.factories.spotify import SpotifyTokenStateFactory
+from tests.unit.factories.auth import OAuthProviderTokenStateFactory
 from tests.unit.factories.users import UserFactory
 
 # --- Security Mocks ---
@@ -82,15 +82,15 @@ def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProviderState
 
 
 @pytest.fixture
-def token_state(request: pytest.FixtureRequest) -> SpotifyTokenState:
-    return SpotifyTokenStateFactory.build(**getattr(request, "param", {}))
+def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
+    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
 
 
 # --- Client Mocks ---
 
 
 @pytest.fixture
-def mock_spotify_client(token_state: SpotifyTokenState) -> mock.AsyncMock:
+def mock_spotify_client(token_state: OAuthProviderTokenState) -> mock.AsyncMock:
     return mock.AsyncMock(
         spec=ProviderOAuthClientPort,
         refresh_access_token=mock.AsyncMock(return_value=token_state),

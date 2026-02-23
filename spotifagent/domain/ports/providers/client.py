@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from spotifagent.domain.entities.spotify import SpotifyTokenState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 
 
 class ProviderOAuthClientPort(ABC):
@@ -20,12 +20,12 @@ class ProviderOAuthClientPort(ABC):
         ...
 
     @abstractmethod
-    async def exchange_code_for_token(self, code: str) -> SpotifyTokenState:
+    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenState:
         """Exchange authorization code for access token."""
         ...
 
     @abstractmethod
-    async def refresh_access_token(self, refresh_token: str) -> SpotifyTokenState:
+    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
         """Refresh an expired access token."""
         ...
 
@@ -34,10 +34,10 @@ class ProviderOAuthClientPort(ABC):
         self,
         method: str,
         endpoint: str,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
-    ) -> tuple[dict[str, Any], SpotifyTokenState]:
+    ) -> tuple[dict[str, Any], OAuthProviderTokenState]:
         """
         Make an authenticated user API call with automatic token refresh.
 
@@ -51,7 +51,7 @@ class ProviderOAuthClientPort(ABC):
             json_data: JSON body for POST/PUT requests
 
         Returns:
-            Tuple of (response_data, SpotifyTokenState)
+            Tuple of (response_data, OAuthProviderTokenState)
         """
         ...
 

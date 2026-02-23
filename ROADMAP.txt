@@ -4,8 +4,8 @@ This quick and dirty document just list the roadmap tasks.
 
 ## refacto hexa:
 
-- change ProviderOAuthClientPort to be ProviderClientPort and adapt it to put only required method
-- review SpotifyScope to be a port with something like ProviderScope
+- review SpotifyTokenStateDTO to be a dataclass instead
+- cleanup User entity (like renaming spotify_token_state to provider_token_state)
 - rename SpotifyAccountRepositoryPort to ProviderAccountRepository
 - review domain exceptions to be only domain exception (remove spotify prefix)
 

@@ -1,4 +1,12 @@
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 from enum import StrEnum
+from typing import Any
+
+from pydantic import model_validator
+
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 
 
 class SpotifyScope(StrEnum):
@@ -46,3 +54,21 @@ class SpotifyScope(StrEnum):
             cls.PLAYLIST_READ_PRIVATE,
         ]
         return " ".join(scope.value for scope in scopes)
+
+
+class SpotifyTokenStateDTO(OAuthProviderTokenState):
+    @model_validator(mode="before")
+    @classmethod
+    def calculate_expires_at(cls, data: Any) -> Any:
+        # Special handling for input data coming from Spotify API.
+        if isinstance(data, dict) and not data.get("expires_at"):
+            if "expires_in" in data and isinstance(data["expires_in"], int) and data["expires_in"] > 0:
+                data["expires_at"] = datetime.now(UTC) + timedelta(seconds=data["expires_in"])
+            else:
+                raise ValueError("Input must contain a positive integer 'expires_in' or 'expires_at")
+
+        return data
+
+    @classmethod
+    def to_entity(cls, data: Any) -> OAuthProviderTokenState:
+        return OAuthProviderTokenState.model_validate(cls.model_validate(data))

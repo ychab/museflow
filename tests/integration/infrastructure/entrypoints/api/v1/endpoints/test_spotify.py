@@ -12,8 +12,8 @@ from sqlalchemy.orm import selectinload
 import pytest
 
 from spotifagent.domain.entities.auth import OAuthProviderState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
@@ -60,7 +60,7 @@ class TestSpotifyCallback:
     ) -> None:
         assert user.spotify_account is None
 
-        mock_spotify_client.exchange_code_for_token.return_value = SpotifyTokenState(
+        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
             token_type="Bearer",
             access_token="mock_access_token",
             refresh_token="mock_refresh_token",
@@ -108,7 +108,7 @@ class TestSpotifyCallback:
     ) -> None:
         assert user.spotify_account is not None
 
-        mock_spotify_client.exchange_code_for_token.return_value = SpotifyTokenState(
+        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
             token_type="Bearer",
             access_token="mock_access_token",
             refresh_token="mock_refresh_token",

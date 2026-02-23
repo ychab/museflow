@@ -9,8 +9,8 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from spotifagent.application.use_cases.oauth_callback import oauth_callback
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
@@ -24,7 +24,7 @@ class TestSpotifyOauthCallbackUseCase:
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         spotify_account_repository: SpotifyAccountRepositoryPort,
         spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
@@ -71,7 +71,7 @@ class TestSpotifyOauthCallbackUseCase:
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         spotify_account_repository: SpotifyAccountRepositoryPort,
         spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,

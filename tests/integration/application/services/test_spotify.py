@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 import pytest
 
 from spotifagent.application.services.spotify import SpotifyUserSession
-from spotifagent.domain.entities.spotify import SpotifyTokenState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
@@ -37,7 +37,7 @@ class TestSpotifyUserSession:
         self,
         spotify_session: SpotifyUserSession,
         user: User,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
         async_session_db: AsyncSession,
     ) -> None:

@@ -16,9 +16,10 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
-from spotifagent.domain.entities.spotify import SpotifyTokenState
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenStateDTO
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -79,7 +80,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
 
         return HttpUrl(f"{self.AUTH_ENDPOINT}?{urlencode(params)}"), state
 
-    async def exchange_code_for_token(self, code: str) -> SpotifyTokenState:
+    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenState:
         response = await self._client.post(
             str(self.token_endpoint),
             headers={
@@ -94,9 +95,9 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyTokenState.model_validate(response.json())
+        return SpotifyTokenStateDTO.to_entity(response.json())
 
-    async def refresh_access_token(self, refresh_token: str) -> SpotifyTokenState:
+    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
         response = await self._client.post(
             str(self.token_endpoint),
             headers={
@@ -115,7 +116,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         if "refresh_token" not in token_data:
             token_data["refresh_token"] = refresh_token
 
-        return SpotifyTokenState.model_validate(token_data)
+        return SpotifyTokenStateDTO.to_entity(token_data)
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),
@@ -127,11 +128,11 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         self,
         method: str,
         endpoint: str,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
         enforce_refresh_token: bool = False,
-    ) -> tuple[dict[str, Any], SpotifyTokenState]:
+    ) -> tuple[dict[str, Any], OAuthProviderTokenState]:
         # Check if token needs refresh
         if token_state.is_expired(self.token_buffer_seconds) or enforce_refresh_token:
             token_state = await self.refresh_access_token(token_state.refresh_token)

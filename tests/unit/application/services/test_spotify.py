@@ -9,26 +9,26 @@ import pytest
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.application.services.spotify import SpotifyUserSession
+from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.spotify import SpotifyAccountUpdate
-from spotifagent.domain.entities.spotify import SpotifyTokenState
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 from spotifagent.infrastructure.config.settings.app import app_settings
 
 from tests import ASSETS_DIR
-from tests.unit.factories.spotify import SpotifyTokenStateFactory
+from tests.unit.factories.auth import OAuthProviderTokenStateFactory
 from tests.unit.factories.users import UserFactory
 
 
 def paginate_response(
-    token_state: SpotifyTokenState,
+    token_state: OAuthProviderTokenState,
     response: dict[str, Any],
     total: int,
     limit: int,
     offset: int = 0,
     size: int | None = None,
-) -> list[tuple[dict[str, Any], SpotifyTokenState]]:
+) -> list[tuple[dict[str, Any], OAuthProviderTokenState]]:
     side_effects = []
 
     while offset + limit <= (size or total):
@@ -113,7 +113,7 @@ class TestSpotifyUserSession:
         self,
         request: pytest.FixtureRequest,
         spotify_response: dict[str, Any],
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
     ) -> tuple[int, int]:
         params = getattr(request, "param", {})
@@ -134,7 +134,7 @@ class TestSpotifyUserSession:
         self,
         request: pytest.FixtureRequest,
         spotify_response_pages: tuple[int, int],
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
     ) -> tuple[int, int]:
         side_effects = list(mock_spotify_client.make_user_api_call.side_effect)
@@ -168,7 +168,7 @@ class TestSpotifyUserSession:
     @pytest.fixture
     def spotify_response_playlist_items_invalid_pages(
         self,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
     ) -> None:
         side_effects = list(mock_spotify_client.make_user_api_call.side_effect)
@@ -200,7 +200,7 @@ class TestSpotifyUserSession:
         self,
         spotify_user_session: SpotifyUserSession,
         user: User,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
         mock_spotify_account_repository: mock.AsyncMock,
     ) -> None:
@@ -236,7 +236,7 @@ class TestSpotifyUserSession:
     ) -> None:
         assert user.spotify_account is not None
 
-        token_state_unchanged = SpotifyTokenStateFactory.build(access_token=user.spotify_account.token_access)
+        token_state_unchanged = OAuthProviderTokenStateFactory.build(access_token=user.spotify_account.token_access)
         mock_spotify_client.refresh_access_token.return_value = token_state_unchanged
         mock_spotify_client.make_user_api_call.return_value = ({"data": "ok"}, token_state_unchanged)
 
@@ -267,11 +267,11 @@ class TestSpotifyUserSession:
         patch_max_concurrency: int,
         mock_spotify_client: mock.AsyncMock,
         mock_spotify_account_repository: mock.AsyncMock,
-        token_state: SpotifyTokenState,
+        token_state: OAuthProviderTokenState,
     ) -> None:
         assert spotify_user_session.user.spotify_account is not None
 
-        new_token_state = SpotifyTokenStateFactory.build()
+        new_token_state = OAuthProviderTokenStateFactory.build()
 
         async def delayed_refresh(*args, **kwargs):
             await asyncio.sleep(0.05)  # Simulate network latency
