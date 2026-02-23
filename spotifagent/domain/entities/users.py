@@ -24,7 +24,7 @@ class User(BaseEntity):
     spotify_account: SpotifyAccount | None = None
 
     @property
-    def spotify_token_state(self) -> OAuthProviderTokenState:
+    def provider_token_state(self) -> OAuthProviderTokenState:
         if not self.spotify_account:
             raise ValueError("User has no Spotify account linked")
 

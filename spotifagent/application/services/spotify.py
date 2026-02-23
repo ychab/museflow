@@ -149,9 +149,9 @@ class SpotifyUserSession:
             if self._is_token_refreshed:
                 return
 
-            token_state = await self.spotify_client.refresh_access_token(self.user.spotify_token_state.refresh_token)
+            token_state = await self.spotify_client.refresh_access_token(self.user.provider_token_state.refresh_token)
 
-            if token_state.access_token != self.user.spotify_token_state.access_token:
+            if token_state.access_token != self.user.provider_token_state.access_token:
                 # Update the token state in DB.
                 await self.spotify_account_repository.update(
                     user_id=self.user.id,
@@ -243,7 +243,7 @@ class SpotifyUserSession:
         response_data, _ = await self.spotify_client.make_user_api_call(
             method=method,
             endpoint=endpoint,
-            token_state=self.user.spotify_token_state,
+            token_state=self.user.provider_token_state,
             params=params,
             json_data=json_data,
         )
