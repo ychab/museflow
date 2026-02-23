@@ -4,18 +4,18 @@ from fastapi import HTTPException
 from fastapi import status
 from fastapi.responses import RedirectResponse
 
-from spotifagent.application.use_cases.oauth_callback import oauth_callback
-from spotifagent.application.use_cases.oauth_redirect import oauth_redirect
+from spotifagent.application.use_cases.provider_oauth_callback import oauth_callback
+from spotifagent.application.use_cases.provider_oauth_redirect import oauth_redirect
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import ProviderExchangeCodeError
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_auth_state_repository
+from spotifagent.infrastructure.entrypoints.api.dependencies import get_auth_token_repository
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_spotify_account_repository
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_spotify_client
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_state_token_generator
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_state
@@ -46,7 +46,7 @@ async def spotify_callback(
     code: str | None = None,
     error: str | None = None,
     current_user: User = Depends(get_user_from_state),
-    spotify_account_repository: SpotifyAccountRepositoryPort = Depends(get_spotify_account_repository),
+    auth_token_repository: OAuthProviderTokenRepositoryPort = Depends(get_auth_token_repository),
     spotify_client: ProviderOAuthClientPort = Depends(get_spotify_client),
 ) -> SuccessResponse:
     if error:
@@ -58,7 +58,8 @@ async def spotify_callback(
         await oauth_callback(
             code=code,
             user=current_user,
-            spotify_account_repository=spotify_account_repository,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_repository=auth_token_repository,
             provider_client=spotify_client,
         )
     except ProviderExchangeCodeError as e:

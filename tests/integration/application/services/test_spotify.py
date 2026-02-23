@@ -2,16 +2,17 @@ from unittest import mock
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 import pytest
 
 from spotifagent.application.services.spotify import SpotifyUserSession
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
+from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
-from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 
 
 class TestSpotifyUserSession:
@@ -23,21 +24,23 @@ class TestSpotifyUserSession:
     def spotify_session(
         self,
         user: User,
-        spotify_account_repository: SpotifyAccountRepositoryPort,
+        auth_token: OAuthProviderUserToken,
+        auth_token_repository: OAuthProviderTokenRepositoryPort,
         mock_spotify_client: mock.AsyncMock,
     ) -> SpotifyUserSession:
         return SpotifyUserSession(
             user=user,
-            spotify_account_repository=spotify_account_repository,
-            spotify_client=mock_spotify_client,
+            auth_token=auth_token,
+            auth_token_repository=auth_token_repository,
+            client=mock_spotify_client,
         )
 
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=True)
     async def test__execute_request__persists_new_token(
         self,
         spotify_session: SpotifyUserSession,
         user: User,
         token_state: OAuthProviderTokenState,
+        auth_token: OAuthProviderUserToken,
         mock_spotify_client: mock.AsyncMock,
         async_session_db: AsyncSession,
     ) -> None:
@@ -46,21 +49,22 @@ class TestSpotifyUserSession:
 
         await spotify_session._execute_request("GET", "/test")
 
-        # Check that token state is refresh in memory.
-        assert spotify_session.user.spotify_account is not None
-        assert spotify_session.user.spotify_account.token_type == token_state.token_type
-        assert spotify_session.user.spotify_account.token_access == token_state.access_token
-        assert spotify_session.user.spotify_account.token_refresh == token_state.refresh_token
-        assert spotify_session.user.spotify_account.token_expires_at == token_state.expires_at
+        # Check that user token is refresh in memory.
+        assert spotify_session.auth_token.token_type == token_state.token_type
+        assert spotify_session.auth_token.token_access == token_state.access_token
+        assert spotify_session.auth_token.token_refresh == token_state.refresh_token
+        assert spotify_session.auth_token.token_expires_at == token_state.expires_at
 
-        # Check that token state is refresh in DB.
-        stmt = select(UserModel).where(UserModel.email == user.email).options(selectinload(UserModel.spotify_account))
+        # Check that user token is refresh in DB.
+        stmt = select(AuthProviderTokenModel).where(
+            AuthProviderTokenModel.user_id == user.id,
+            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        )
         result = await async_session_db.execute(stmt)
-        user_db = result.scalar_one()
+        auth_token_db = result.scalar_one()
 
-        assert user_db is not None
-        assert user_db.spotify_account is not None
-        assert user_db.spotify_account.token_type == token_state.token_type
-        assert user_db.spotify_account.token_access == token_state.access_token
-        assert user_db.spotify_account.token_refresh == token_state.refresh_token
-        assert user_db.spotify_account.token_expires_at == token_state.expires_at
+        assert auth_token_db is not None
+        assert auth_token_db.token_type == token_state.token_type
+        assert auth_token_db.token_access == token_state.access_token
+        assert auth_token_db.token_refresh == token_state.refresh_token
+        assert auth_token_db.token_expires_at == token_state.expires_at

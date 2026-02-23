@@ -14,13 +14,13 @@ import jwt
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
-from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
+from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
 from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
@@ -54,8 +54,8 @@ def get_auth_state_repository(session: AsyncSession = Depends(get_db)) -> OAuthP
     return OAuthProviderStateRepository(session)
 
 
-def get_spotify_account_repository(session: AsyncSession = Depends(get_db)) -> SpotifyAccountRepositoryPort:
-    return SpotifyAccountRepository(session)
+def get_auth_token_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderTokenRepositoryPort:
+    return OAuthProviderTokenRepository(session)
 
 
 def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepositoryPort:

@@ -13,10 +13,11 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
-from spotifagent.application.use_cases.spotify_sync import SyncConfig
-from spotifagent.application.use_cases.spotify_sync import SyncReport
-from spotifagent.application.use_cases.spotify_sync import spotify_sync
+from spotifagent.application.use_cases.provider_sync_music import SyncConfig
+from spotifagent.application.use_cases.provider_sync_music import SyncReport
+from spotifagent.application.use_cases.provider_sync_music import sync_music
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import Track
 from spotifagent.domain.entities.users import User
@@ -29,7 +30,6 @@ from spotifagent.infrastructure.adapters.providers.spotify.client import Spotify
 from tests import ASSETS_DIR
 from tests.integration.factories.music import ArtistModelFactory
 from tests.integration.factories.music import TrackModelFactory
-from tests.integration.factories.users import UserModelFactory
 
 DEFAULT_PAGINATION_LIMIT: Final[int] = 2
 DEFAULT_PAGINATION_TOTAL: Final[int] = 10
@@ -62,7 +62,7 @@ def paginate_spotify_response(
     return response_chunks
 
 
-class TestSpotifySync:
+class TestSyncMusic:
     @pytest.fixture
     def mock_refresh_token_endpoint(
         self,
@@ -186,11 +186,6 @@ class TestSpotifySync:
         return responses, playlist_limit, total
 
     @pytest.fixture
-    async def user(self) -> User:
-        user_db = await UserModelFactory.create_async(with_spotify_account=True)
-        return User.model_validate(user_db)
-
-    @pytest.fixture
     async def artists_update(
         self,
         request: pytest.FixtureRequest,
@@ -296,14 +291,16 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         artists_top_delete: list[Artist],
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
         track_repository: TrackRepositoryPort,
     ) -> None:
         pass
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -329,6 +326,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         tracks_delete: list[Track],
         purge_track_top: bool,
         purge_track_saved: bool,
@@ -341,8 +339,9 @@ class TestSpotifySync:
         expected_other = 1
         total_user = len(tracks_delete) - expected_other
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -363,6 +362,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
@@ -383,8 +383,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -403,6 +404,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         artists_update: list[Artist],
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
@@ -423,8 +425,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -446,6 +449,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
@@ -466,8 +470,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -490,6 +495,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         tracks_top_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
@@ -510,8 +516,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -536,6 +543,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
@@ -556,8 +564,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -580,6 +589,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         tracks_saved_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
@@ -600,8 +610,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -626,6 +637,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
         artist_repository: ArtistRepositoryPort,
@@ -657,8 +669,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -681,6 +694,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         tracks_playlist_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_factory: SpotifySessionFactory,
@@ -709,8 +723,9 @@ class TestSpotifySync:
                 json=response,
             )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -736,6 +751,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         artists_top_delete: list[Artist],
         tracks_delete: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
@@ -800,8 +816,9 @@ class TestSpotifySync:
         expected_tracks_playlist = playlist_response_paginated[2] * playlist_tracks_response_paginated[2]
         expect_tracks = expected_tracks_top + expected_tracks_saved + expected_tracks_playlist
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,
@@ -847,6 +864,7 @@ class TestSpotifySync:
         self,
         async_session_db: AsyncSession,
         user: User,
+        auth_token: OAuthProviderUserToken,
         artists_update: list[Artist],
         tracks_top_update: list[Track],
         tracks_saved_update: list[Track],
@@ -982,8 +1000,9 @@ class TestSpotifySync:
             expect_tracks_top_updated + expect_tracks_saved_updated + expect_tracks_playlist_updated
         )
 
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=spotify_session_factory,
             artist_repository=artist_repository,
             track_repository=track_repository,

@@ -9,20 +9,16 @@ from sqlalchemy import delete
 from sqlalchemy import insert
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 import pytest
 
+from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.spotify import SpotifyAccountCreate
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.database.models import SpotifyAccount as SpotifyAccountModel
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
+from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
-
-from tests.unit.factories.spotify import SpotifyAccountCreateFactory
 
 
 class TestSpotifyConnectLogic:
@@ -45,14 +41,10 @@ class TestSpotifyConnectLogic:
             yield spotify_client
 
     @pytest.fixture
-    async def spotify_account(self) -> SpotifyAccountCreate:
-        return SpotifyAccountCreateFactory.build()
-
-    @pytest.fixture
     def simulate_oauth_callback(
         self,
         user: User,
-        spotify_account: SpotifyAccountCreate,
+        auth_token_create: OAuthProviderUserTokenCreate,
         async_session_db: AsyncSession,
     ) -> Callable[[float], asyncio.Task]:
         """
@@ -65,7 +57,7 @@ class TestSpotifyConnectLogic:
                 # Wait for the CLI to start polling
                 await asyncio.sleep(delay)
 
-                # Unset user auth state.
+                # Delete user auth state.
                 stmt_delete = delete(AuthProviderStateModel).where(
                     AuthProviderStateModel.user_id == user.id,
                     AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
@@ -73,12 +65,13 @@ class TestSpotifyConnectLogic:
                 await async_session_db.execute(stmt_delete)
 
                 # Then create a new account.
-                stmt_insert = insert(SpotifyAccountModel).values(
+                stmt_insert = insert(AuthProviderTokenModel).values(
                     user_id=user.id,
-                    token_type=spotify_account.token_type,
-                    token_access=spotify_account.token_access,
-                    token_refresh=spotify_account.token_refresh,
-                    token_expires_at=spotify_account.token_expires_at,
+                    provider=MusicProvider.SPOTIFY,
+                    token_type=auth_token_create.token_type,
+                    token_access=auth_token_create.token_access,
+                    token_refresh=auth_token_create.token_refresh,
+                    token_expires_at=auth_token_create.token_expires_at,
                 )
                 await async_session_db.execute(stmt_insert)
 
@@ -92,7 +85,7 @@ class TestSpotifyConnectLogic:
     async def test__nominal(
         self,
         user: User,
-        spotify_account: SpotifyAccountCreate,
+        auth_token_create: OAuthProviderUserTokenCreate,
         mock_spotify_client: mock.Mock,
         simulate_oauth_callback: Callable[[float], asyncio.Task],
         async_session_db: AsyncSession,
@@ -107,22 +100,22 @@ class TestSpotifyConnectLogic:
         # Ensure the background task completed without error
         await task
 
-        stmt_auth_state = select(AuthProviderStateModel).where(
+        stmt_state = select(AuthProviderStateModel).where(
             AuthProviderStateModel.user_id == user.id,
             AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
         )
-        result_auth = await async_session_db.execute(stmt_auth_state)
-        auth_state_db = result_auth.scalar_one_or_none()
+        result_state = await async_session_db.execute(stmt_state)
+        auth_state_db = result_state.scalar_one_or_none()
         assert auth_state_db is None
 
-        stmt_user = (
-            select(UserModel).where(UserModel.email == user.email).options(selectinload(UserModel.spotify_account))
+        stmt_token = select(AuthProviderTokenModel).where(
+            AuthProviderTokenModel.user_id == user.id,
+            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
         )
-        result_user = await async_session_db.execute(stmt_user)
-        user_db = result_user.scalar_one_or_none()
-        assert user_db is not None
-        assert user_db.spotify_account is not None
-        assert user_db.spotify_account.token_type == spotify_account.token_type
-        assert user_db.spotify_account.token_access == spotify_account.token_access
-        assert user_db.spotify_account.token_refresh == spotify_account.token_refresh
-        assert user_db.spotify_account.token_expires_at == spotify_account.token_expires_at
+        result_token = await async_session_db.execute(stmt_token)
+        auth_token_db = result_token.scalar_one_or_none()
+        assert auth_token_db is not None
+        assert auth_token_db.token_type == auth_token_create.token_type
+        assert auth_token_db.token_access == auth_token_create.token_access
+        assert auth_token_db.token_refresh == auth_token_create.token_refresh
+        assert auth_token_db.token_expires_at == auth_token_create.token_expires_at

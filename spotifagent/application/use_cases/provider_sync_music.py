@@ -8,6 +8,7 @@ from typing import Any
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.application.services.spotify import TimeRange
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
@@ -91,8 +92,9 @@ class SyncConfig:
         )
 
 
-async def spotify_sync(
+async def sync_music(
     user: User,
+    auth_token: OAuthProviderUserToken,
     spotify_session_factory: SpotifySessionFactory,
     artist_repository: ArtistRepositoryPort,
     track_repository: TrackRepositoryPort,
@@ -103,6 +105,7 @@ async def spotify_sync(
     and tracks, depending on the given flags.
 
     :param user: A user object
+    :param auth_token: A user auth token for the given provider
     :param spotify_session_factory: Spotify session factory
     :param artist_repository: Artists repository
     :param track_repository: Tracks repository
@@ -115,7 +118,7 @@ async def spotify_sync(
     # First of all, purge items if required.
     if config.has_purge():
         if config.purge or config.purge_artist_top:
-            report = await _purge(
+            report = await _purge_entity(
                 report=report,
                 report_field_purge="purge_artist",
                 user=user,
@@ -124,7 +127,7 @@ async def spotify_sync(
             )
 
         if config.purge or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
-            report = await _purge(
+            report = await _purge_entity(
                 report=report,
                 report_field_purge="purge_track",
                 user=user,
@@ -142,14 +145,14 @@ async def spotify_sync(
 
     # Then init a spotify user session (in case we just want to purge).
     try:
-        spotify_session = spotify_session_factory.create(user)
+        spotify_session = spotify_session_factory.create(user, auth_token)
     except SpotifyAccountNotFoundError:
         logger.debug(f"Spotify account not found for user {user.email}")
         return replace(report, errors=["You must connect your Spotify account first."])
 
     # Then fetch and upsert top artists.
     if config.sync or config.sync_artist_top:
-        report = await _sync(
+        report = await _sync_entity(
             report=report,
             report_field_created="artist_created",
             report_field_updated="artist_updated",
@@ -167,7 +170,7 @@ async def spotify_sync(
 
     # Then fetch and upsert top tracks.
     if config.sync or config.sync_track_top:
-        report = await _sync(
+        report = await _sync_entity(
             report=report,
             report_field_created="track_created",
             report_field_updated="track_updated",
@@ -185,7 +188,7 @@ async def spotify_sync(
 
     # Then fetch and upsert saved tracks.
     if config.sync or config.sync_track_saved:
-        report = await _sync(
+        report = await _sync_entity(
             report=report,
             report_field_created="track_created",
             report_field_updated="track_updated",
@@ -202,7 +205,7 @@ async def spotify_sync(
 
     # Then fetch and upsert playlist tracks.
     if config.sync or config.sync_track_playlist:
-        report = await _sync(
+        report = await _sync_entity(
             report=report,
             report_field_created="track_created",
             report_field_updated="track_updated",
@@ -220,7 +223,7 @@ async def spotify_sync(
     return report
 
 
-async def _purge(
+async def _purge_entity(
     report: SyncReport,
     report_field_purge: str,
     user: User,
@@ -242,7 +245,7 @@ async def _purge(
     return report
 
 
-async def _sync[T](
+async def _sync_entity[T](
     report: SyncReport,
     report_field_created: str,
     report_field_updated: str,

@@ -15,9 +15,10 @@ import pytest
 
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.application.services.spotify import SpotifyUserSession
-from spotifagent.application.use_cases.spotify_sync import SyncConfig
-from spotifagent.application.use_cases.spotify_sync import SyncReport
-from spotifagent.application.use_cases.spotify_sync import spotify_sync
+from spotifagent.application.use_cases.provider_sync_music import SyncConfig
+from spotifagent.application.use_cases.provider_sync_music import SyncReport
+from spotifagent.application.use_cases.provider_sync_music import sync_music
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import Track
 from spotifagent.domain.entities.users import User
@@ -25,7 +26,6 @@ from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 
 from tests.unit.factories.music import ArtistFactory
 from tests.unit.factories.music import TrackFactory
-from tests.unit.factories.users import UserFactory
 
 
 def validation_error() -> ValidationError:
@@ -49,7 +49,7 @@ def validation_error() -> ValidationError:
     return exc_info.value
 
 
-class TestSpotifyConfig:
+class TestSyncConfig:
     @pytest.mark.parametrize(
         ("attributes", "expected_bool"),
         [
@@ -81,11 +81,7 @@ class TestSpotifyConfig:
         assert config.has_sync() is expected_bool
 
 
-class TestSpotifySync:
-    @pytest.fixture
-    def user(self) -> User:
-        return UserFactory.build(with_spotify_account=True)
-
+class TestSyncMusic:
     @pytest.fixture
     def artists(self) -> list[Artist]:
         return ArtistFactory.batch(size=10)
@@ -95,10 +91,9 @@ class TestSpotifySync:
         return TrackFactory.batch(size=10)
 
     @pytest.fixture
-    def mock_spotify_session(self, user: User, artists: list[Artist], tracks: list[Track]) -> mock.Mock:
+    def mock_spotify_session(self, artists: list[Artist], tracks: list[Track]) -> mock.Mock:
         return mock.Mock(
             spec=SpotifyUserSession,
-            user=user,
             get_top_artists=mock.AsyncMock(return_value=artists),
             get_top_tracks=mock.AsyncMock(return_value=tracks),
             get_saved_tracks=mock.AsyncMock(return_value=tracks),
@@ -114,12 +109,14 @@ class TestSpotifySync:
     async def test__do_nothing(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         mock_spotify_session_factory: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        report = await spotify_sync(
+        report = await sync_music(
             user=user,
+            auth_token=auth_token,
             spotify_session_factory=mock_spotify_session_factory,
             artist_repository=mock_artist_repository,
             track_repository=mock_track_repository,
@@ -131,6 +128,7 @@ class TestSpotifySync:
     async def test__purge__artist__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         purge: bool,
         purge_artist_top: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -142,8 +140,9 @@ class TestSpotifySync:
         mock_track_repository.purge.return_value = 0
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -164,6 +163,7 @@ class TestSpotifySync:
     async def test__purge__track__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         purge: bool,
         purge_track_top: bool,
         purge_track_saved: bool,
@@ -177,8 +177,9 @@ class TestSpotifySync:
         mock_track_repository.purge.side_effect = SQLAlchemyError("Boom")
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -194,9 +195,10 @@ class TestSpotifySync:
         assert "An error occurred while purging your tracks." in report.errors
         assert f"An error occurred while purging tracks for user {user.email}" in caplog.text
 
-    async def test__user__spotify_account_not_found(
+    async def test__user__auth_token_not_found(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         mock_spotify_session_factory: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -205,8 +207,9 @@ class TestSpotifySync:
         mock_spotify_session_factory.create.side_effect = SpotifyAccountNotFoundError("Boom")
 
         with caplog.at_level(logging.DEBUG):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -226,6 +229,7 @@ class TestSpotifySync:
     async def test__artist_top__fetch__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_artist_top: bool,
         exception_raised: Exception,
@@ -238,8 +242,9 @@ class TestSpotifySync:
         mock_spotify_session.get_top_artists.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -263,6 +268,7 @@ class TestSpotifySync:
     async def test__artist_top__bulk_upsert__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_artist_top: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -275,8 +281,9 @@ class TestSpotifySync:
         mock_artist_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -300,6 +307,7 @@ class TestSpotifySync:
     async def test__track_top__fetch__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_top: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -312,8 +320,9 @@ class TestSpotifySync:
         mock_spotify_session.get_top_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -337,6 +346,7 @@ class TestSpotifySync:
     async def test__track_top__bulk_upsert__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_top: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -349,8 +359,9 @@ class TestSpotifySync:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -374,6 +385,7 @@ class TestSpotifySync:
     async def test__track_saved__fetch__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_saved: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -386,8 +398,9 @@ class TestSpotifySync:
         mock_spotify_session.get_saved_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -411,6 +424,7 @@ class TestSpotifySync:
     async def test__track_saved__bulk_upsert__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_saved: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -423,8 +437,9 @@ class TestSpotifySync:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -448,6 +463,7 @@ class TestSpotifySync:
     async def test__track_playlist__fetch__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_playlist: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -460,8 +476,9 @@ class TestSpotifySync:
         mock_spotify_session.get_playlist_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
@@ -485,6 +502,7 @@ class TestSpotifySync:
     async def test__track_playlist__bulk_upsert__exception(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_playlist: bool,
         mock_spotify_session_factory: mock.Mock,
@@ -497,8 +515,9 @@ class TestSpotifySync:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await spotify_sync(
+            report = await sync_music(
                 user=user,
+                auth_token=auth_token,
                 spotify_session_factory=mock_spotify_session_factory,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,

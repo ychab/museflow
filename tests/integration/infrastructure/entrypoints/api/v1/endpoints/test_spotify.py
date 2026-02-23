@@ -7,17 +7,17 @@ from httpx import AsyncClient
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 import pytest
 
 from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
+from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from spotifagent.infrastructure.entrypoints.api.main import app
 
 
@@ -49,7 +49,7 @@ class TestSpotifyConnect:
 
 
 class TestSpotifyCallback:
-    async def test__nominal__create_spotify_account(
+    async def test__nominal__create_auth_token(
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
@@ -58,8 +58,6 @@ class TestSpotifyCallback:
         mock_spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
     ) -> None:
-        assert user.spotify_account is None
-
         mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
             token_type="Bearer",
             access_token="mock_access_token",
@@ -79,35 +77,38 @@ class TestSpotifyCallback:
         response_data = response.json()
         assert response_data["message"] == "Spotify account linked successfully"
 
-        stmt_auth = select(AuthProviderStateModel).where(
+        stmt_state = select(AuthProviderStateModel).where(
             AuthProviderStateModel.user_id == user.id,
             AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
         )
-        result_auth = await async_session_db.execute(stmt_auth)
-        auth_state_db = result_auth.scalar_one_or_none()
+        result_state = await async_session_db.execute(stmt_state)
+        auth_state_db = result_state.scalar_one_or_none()
         assert auth_state_db is None
 
-        stmt = select(UserModel).where(UserModel.id == str(user.id)).options(selectinload(UserModel.spotify_account))
-        result_user = await async_session_db.execute(stmt)
-        user_db = result_user.scalar_one()
-        assert user_db.spotify_account is not None
-        assert user_db.spotify_account.token_type == "Bearer"
-        assert user_db.spotify_account.token_access == "mock_access_token"
-        assert user_db.spotify_account.token_refresh == "mock_refresh_token"
-        assert user_db.spotify_account.token_expires_at == frozen_time + timedelta(seconds=3600)
+        stmt_token = select(AuthProviderTokenModel).where(
+            AuthProviderTokenModel.user_id == user.id,
+            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        )
+        result_token = await async_session_db.execute(stmt_token)
+        auth_token_db = result_token.scalar_one_or_none()
 
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=["user"])
-    async def test__nominal__update_spotify_account(
+        assert auth_token_db is not None
+        assert auth_token_db.token_type == "Bearer"
+        assert auth_token_db.token_access == "mock_access_token"
+        assert auth_token_db.token_refresh == "mock_refresh_token"
+        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+
+    @pytest.mark.parametrize("auth_token", [{"provider": MusicProvider.SPOTIFY}], indirect=["auth_token"])
+    async def test__nominal__update_auth_token(
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
         auth_state: OAuthProviderState,
+        auth_token: OAuthProviderUserToken,
         mock_spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
     ) -> None:
-        assert user.spotify_account is not None
-
         mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
             token_type="Bearer",
             access_token="mock_access_token",
@@ -127,22 +128,26 @@ class TestSpotifyCallback:
         response_data = response.json()
         assert response_data["message"] == "Spotify account linked successfully"
 
-        stmt_auth = select(AuthProviderStateModel).where(
+        stmt_state = select(AuthProviderStateModel).where(
             AuthProviderStateModel.user_id == user.id,
             AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
         )
-        result_auth = await async_session_db.execute(stmt_auth)
-        auth_state_db = result_auth.scalar_one_or_none()
+        result_state = await async_session_db.execute(stmt_state)
+        auth_state_db = result_state.scalar_one_or_none()
         assert auth_state_db is None
 
-        stmt = select(UserModel).where(UserModel.id == str(user.id)).options(selectinload(UserModel.spotify_account))
-        result_user = await async_session_db.execute(stmt)
-        user_db = result_user.scalar_one()
-        assert user_db.spotify_account is not None
-        assert user_db.spotify_account.token_type == "Bearer"
-        assert user_db.spotify_account.token_access == "mock_access_token"
-        assert user_db.spotify_account.token_refresh == "mock_refresh_token"
-        assert user_db.spotify_account.token_expires_at == frozen_time + timedelta(seconds=3600)
+        stmt_token = select(AuthProviderTokenModel).where(
+            AuthProviderTokenModel.user_id == user.id,
+            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        )
+        result_token = await async_session_db.execute(stmt_token)
+        auth_token_db = result_token.scalar_one_or_none()
+
+        assert auth_token_db is not None
+        assert auth_token_db.token_type == "Bearer"
+        assert auth_token_db.token_access == "mock_access_token"
+        assert auth_token_db.token_refresh == "mock_refresh_token"
+        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__state__missing(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("spotify_callback")

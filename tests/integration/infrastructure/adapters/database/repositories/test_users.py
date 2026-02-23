@@ -4,8 +4,6 @@ from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import pytest
-
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserCreate
 from spotifagent.domain.entities.users import UserUpdate
@@ -13,46 +11,21 @@ from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.infrastructure.adapters.database.models import User as UserModel
 
-from tests.unit.factories.users import UserCreateFactory
-from tests.unit.factories.users import UserUpdateFactory
-
 
 class TestUserRepository:
-    @pytest.fixture
-    def user_create(self) -> UserCreate:
-        return UserCreateFactory.build()
-
-    @pytest.fixture
-    def user_update(self) -> UserUpdate:
-        return UserUpdateFactory.build()
-
     async def test__get_by_id__nominal(self, user: User, user_repository: UserRepositoryPort) -> None:
         user_db = await user_repository.get_by_id(user.id)
         assert user_db is not None
-        assert user_db.spotify_account is None
 
     async def test__get_by_id__none(self, user_repository: UserRepositoryPort) -> None:
         assert await user_repository.get_by_id(uuid.uuid4()) is None
 
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=["user"])
-    async def test__get_by_id__with_spotify_account(self, user: User, user_repository: UserRepositoryPort) -> None:
-        user_db = await user_repository.get_by_id(user.id)
-        assert user_db is not None
-        assert user_db.spotify_account is not None
-
     async def test__get_by_email__nominal(self, user: User, user_repository: UserRepositoryPort) -> None:
         user_db = await user_repository.get_by_email(user.email)
         assert user_db is not None
-        assert user_db.spotify_account is None
 
     async def test__get_by_email__none(self, user_repository: UserRepositoryPort) -> None:
         assert await user_repository.get_by_email("foo@example.com") is None
-
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=["user"])
-    async def test__get_by_email__with_spotify_account(self, user: User, user_repository: UserRepositoryPort) -> None:
-        user_db = await user_repository.get_by_email(user.email)
-        assert user_db is not None
-        assert user_db.spotify_account is not None
 
     async def test__create__nominal(
         self,

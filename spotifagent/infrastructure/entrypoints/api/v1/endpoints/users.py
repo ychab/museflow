@@ -12,10 +12,10 @@ from spotifagent.domain.entities.users import UserCreate
 from spotifagent.domain.entities.users import UserResponse
 from spotifagent.domain.entities.users import UserUpdate
 from spotifagent.domain.entities.users import UserWithToken
-from spotifagent.domain.exceptions import EmailAlreadyExistsException
-from spotifagent.domain.exceptions import InvalidCredentials
 from spotifagent.domain.exceptions import UserAlreadyExistsException
+from spotifagent.domain.exceptions import UserEmailAlreadyExistsException
 from spotifagent.domain.exceptions import UserInactive
+from spotifagent.domain.exceptions import UserInvalidCredentials
 from spotifagent.domain.exceptions import UserNotFound
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
@@ -63,7 +63,7 @@ async def login(
             user_repository=user_repository,
             password_hasher=password_hasher,
         )
-    except (UserNotFound, InvalidCredentials) as e:
+    except (UserNotFound, UserInvalidCredentials) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -96,7 +96,7 @@ async def update_current_user(
             user_repository=user_repository,
             password_hasher=password_hasher,
         )
-    except EmailAlreadyExistsException as e:
+    except UserEmailAlreadyExistsException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
 
     return UserResponse.model_validate(updated_user)

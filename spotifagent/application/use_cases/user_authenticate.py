@@ -3,8 +3,8 @@ import logging
 from pydantic import EmailStr
 
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import InvalidCredentials
 from spotifagent.domain.exceptions import UserInactive
+from spotifagent.domain.exceptions import UserInvalidCredentials
 from spotifagent.domain.exceptions import UserNotFound
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
@@ -24,7 +24,7 @@ async def user_authenticate(
         raise UserNotFound()
 
     if not password_hasher.verify(password, user.hashed_password):
-        raise InvalidCredentials()
+        raise UserInvalidCredentials()
 
     if not user.is_active:
         raise UserInactive()

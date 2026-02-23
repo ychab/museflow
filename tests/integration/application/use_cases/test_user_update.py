@@ -6,7 +6,7 @@ import pytest
 from spotifagent.application.use_cases.user_update import user_update
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.exceptions import EmailAlreadyExistsException
+from spotifagent.domain.exceptions import UserEmailAlreadyExistsException
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.infrastructure.adapters.database.models import User as UserModel
@@ -69,7 +69,7 @@ class TestUserUpdateUseCase:
         other_user_db = await UserModelFactory.create_async()
         user_update_data = UserUpdate(email=other_user_db.email)
 
-        with pytest.raises(EmailAlreadyExistsException):
+        with pytest.raises(UserEmailAlreadyExistsException):
             await user_update(
                 user=user,
                 user_data=user_update_data,

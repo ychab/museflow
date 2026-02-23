@@ -4,8 +4,8 @@ import pytest
 
 from spotifagent.application.use_cases.user_authenticate import user_authenticate
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import InvalidCredentials
 from spotifagent.domain.exceptions import UserInactive
+from spotifagent.domain.exceptions import UserInvalidCredentials
 from spotifagent.domain.exceptions import UserNotFound
 
 
@@ -53,7 +53,7 @@ class TestUserService:
         mock_user_repository.get_by_email.return_value = user
         mock_password_hasher.verify.return_value = False
 
-        with pytest.raises(InvalidCredentials):
+        with pytest.raises(UserInvalidCredentials):
             await user_authenticate(
                 email=user.email,
                 password="blahblah",

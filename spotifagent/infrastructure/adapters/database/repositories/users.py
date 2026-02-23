@@ -7,7 +7,6 @@ from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserCreate
@@ -21,20 +20,14 @@ class UserRepository(UserRepositoryPort):
         self.session = session
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
-        stmt = (
-            select(UserModel)
-            .where(UserModel.id == user_id)
-            .options(  # lazy loading is not supported by async session
-                selectinload(UserModel.spotify_account)
-            )
-        )
+        stmt = select(UserModel).where(UserModel.id == user_id)
         result = await self.session.execute(stmt)
         user = result.scalar_one_or_none()
 
         return User.model_validate(user) if user else None
 
     async def get_by_email(self, email: EmailStr) -> User | None:
-        stmt = select(UserModel).where(UserModel.email == str(email)).options(selectinload(UserModel.spotify_account))
+        stmt = select(UserModel).where(UserModel.email == str(email))
         result = await self.session.execute(stmt)
         user = result.scalar_one_or_none()
 
@@ -48,9 +41,8 @@ class UserRepository(UserRepositoryPort):
 
         self.session.add(user)
         await self.session.commit()
+        await self.session.refresh(user)
 
-        # Manually refresh to avoid lazy loading issue with async sqlalchemy
-        user = await self.get_by_id(user.id)  # type: ignore[assignment]
         return User.model_validate(user)
 
     async def update(self, user_id: uuid.UUID, user_data: UserUpdate, hashed_password: str | None = None) -> User:
@@ -62,10 +54,10 @@ class UserRepository(UserRepositoryPort):
         stmt = update(UserModel).where(UserModel.id == user_id).values(**update_data).returning(UserModel)
         result = await self.session.execute(stmt)
         user = result.scalar_one()
-        await self.session.commit()
 
-        # Manually refresh to avoid lazy loading issue with async sqlalchemy
-        user = await self.get_by_id(user.id)  # type: ignore[assignment]
+        await self.session.commit()
+        await self.session.refresh(user)
+
         return User.model_validate(user)
 
     async def delete(self, user_id: uuid.UUID) -> None:

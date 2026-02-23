@@ -10,15 +10,15 @@ import pytest
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.application.services.spotify import SpotifyUserSession
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
+from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
 from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.spotify import SpotifyAccountUpdate
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
 from spotifagent.infrastructure.config.settings.app import app_settings
 
 from tests import ASSETS_DIR
 from tests.unit.factories.auth import OAuthProviderTokenStateFactory
-from tests.unit.factories.users import UserFactory
 
 
 def paginate_response(
@@ -48,39 +48,35 @@ class TestSpotifySessionFactory:
     @pytest.fixture
     def spotify_session_factory(
         self,
-        mock_spotify_account_repository: mock.Mock,
+        mock_auth_token_repository: mock.Mock,
         mock_spotify_client: mock.Mock,
     ) -> SpotifySessionFactory:
         return SpotifySessionFactory(
-            spotify_account_repository=mock_spotify_account_repository,
+            auth_token_repository=mock_auth_token_repository,
             spotify_client=mock_spotify_client,
         )
 
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=True)
-    def test_create__spotify_account__nominal(
+    def test_create__auth_token__nominal(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_session_factory: SpotifySessionFactory,
     ) -> None:
-        session = spotify_session_factory.create(user)
+        session = spotify_session_factory.create(user, auth_token)
         assert isinstance(session, SpotifyUserSession)
         assert session.user == user
 
-    @pytest.mark.parametrize("user", [{"with_spotify_account": False}], indirect=True)
-    def test_create__spotify_account__not_found(
+    def test_create__auth_token__not_found(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         spotify_session_factory: SpotifySessionFactory,
     ) -> None:
         with pytest.raises(SpotifyAccountNotFoundError):
-            spotify_session_factory.create(user)
+            spotify_session_factory.create(user, None)  # type: ignore[arg-type]
 
 
 class TestSpotifyUserSession:
-    @pytest.fixture
-    def user(self) -> User:
-        return UserFactory.build(with_spotify_account=True)
-
     @pytest.fixture
     def patch_max_concurrency(self, monkeypatch: pytest.MonkeyPatch) -> int:
         max_concurrency: int = 10
@@ -91,14 +87,16 @@ class TestSpotifyUserSession:
     def spotify_user_session(
         self,
         user: User,
+        auth_token: OAuthProviderUserToken,
         patch_max_concurrency: int,
-        mock_spotify_account_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
         mock_spotify_client: mock.AsyncMock,
     ) -> SpotifyUserSession:
         return SpotifyUserSession(
             user=user,
-            spotify_account_repository=mock_spotify_account_repository,
-            spotify_client=mock_spotify_client,
+            auth_token=auth_token,
+            auth_token_repository=mock_auth_token_repository,
+            client=mock_spotify_client,
             max_concurrency=patch_max_concurrency,
         )
 
@@ -202,24 +200,23 @@ class TestSpotifyUserSession:
         user: User,
         token_state: OAuthProviderTokenState,
         mock_spotify_client: mock.AsyncMock,
-        mock_spotify_account_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
-        assert user.spotify_account is not None
-
         mock_spotify_client.make_user_api_call.return_value = ({"data": "ok"}, token_state)
 
         await spotify_user_session._execute_request("GET", "/test")
 
-        # Check that token state is refresh in memory.
-        assert user.spotify_account.token_type == token_state.token_type
-        assert user.spotify_account.token_access == token_state.access_token
-        assert user.spotify_account.token_refresh == token_state.refresh_token
-        assert user.spotify_account.token_expires_at == token_state.expires_at
+        # Check that user token is refreshed in memory.
+        assert spotify_user_session.auth_token.token_type == token_state.token_type
+        assert spotify_user_session.auth_token.token_access == token_state.access_token
+        assert spotify_user_session.auth_token.token_refresh == token_state.refresh_token
+        assert spotify_user_session.auth_token.token_expires_at == token_state.expires_at
 
-        # Check that token state is refresh in DB.
-        mock_spotify_account_repository.update.assert_called_once_with(
+        # Check that user token is refreshed in DB.
+        mock_auth_token_repository.update.assert_called_once_with(
             user_id=spotify_user_session.user.id,
-            spotify_account_data=SpotifyAccountUpdate(
+            provider=MusicProvider.SPOTIFY,
+            auth_token_data=OAuthProviderUserTokenUpdate(
                 token_type=token_state.token_type,
                 token_access=token_state.access_token,
                 token_refresh=token_state.refresh_token,
@@ -232,45 +229,43 @@ class TestSpotifyUserSession:
         spotify_user_session: SpotifyUserSession,
         user: User,
         mock_spotify_client: mock.AsyncMock,
-        mock_spotify_account_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
-        assert user.spotify_account is not None
-
-        token_state_unchanged = OAuthProviderTokenStateFactory.build(access_token=user.spotify_account.token_access)
+        token_state_unchanged = OAuthProviderTokenStateFactory.build(
+            access_token=spotify_user_session.auth_token.token_access
+        )
         mock_spotify_client.refresh_access_token.return_value = token_state_unchanged
         mock_spotify_client.make_user_api_call.return_value = ({"data": "ok"}, token_state_unchanged)
 
         await spotify_user_session._execute_request("GET", "/test")
 
-        # Check that token state wasn't refreshed in memory.
-        assert user.spotify_account.token_access == token_state_unchanged.access_token
+        # Check that user token wasn't refreshed in memory.
+        assert spotify_user_session.auth_token.token_access == token_state_unchanged.access_token
 
         # Check that DB have not been updated.
-        mock_spotify_account_repository.update.assert_not_called()
+        mock_auth_token_repository.update.assert_not_called()
 
     async def test__refresh_token__already_refreshed(
         self,
         spotify_user_session: SpotifyUserSession,
         mock_spotify_client: mock.AsyncMock,
-        mock_spotify_account_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
         spotify_user_session._is_token_refreshed = True
 
         await spotify_user_session._refresh_token()
 
         mock_spotify_client.refresh_access_token.assert_not_called()
-        mock_spotify_account_repository.update.assert_not_called()
+        mock_auth_token_repository.update.assert_not_called()
 
     async def test__refresh_token__concurrent_calls__executes_once(
         self,
         spotify_user_session: SpotifyUserSession,
         patch_max_concurrency: int,
         mock_spotify_client: mock.AsyncMock,
-        mock_spotify_account_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
         token_state: OAuthProviderTokenState,
     ) -> None:
-        assert spotify_user_session.user.spotify_account is not None
-
         new_token_state = OAuthProviderTokenStateFactory.build()
 
         async def delayed_refresh(*args, **kwargs):
@@ -285,10 +280,10 @@ class TestSpotifyUserSession:
                 tg.create_task(spotify_user_session._refresh_token())
 
         mock_spotify_client.refresh_access_token.assert_called_once()
-        mock_spotify_account_repository.update.assert_called_once()
+        mock_auth_token_repository.update.assert_called_once()
 
         assert spotify_user_session._is_token_refreshed is True
-        assert spotify_user_session.user.spotify_account.token_access == new_token_state.access_token
+        assert spotify_user_session.auth_token.token_access == new_token_state.access_token
 
     @pytest.mark.parametrize("spotify_response", ["top_artists"], indirect=["spotify_response"])
     async def test__get_top_artists__nominal(

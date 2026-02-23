@@ -6,9 +6,7 @@ from pydantic import EmailStr
 from pydantic import Field
 from pydantic import model_validator
 
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.base import BaseEntity
-from spotifagent.domain.entities.spotify import SpotifyAccount
 
 
 class User(BaseEntity):
@@ -20,20 +18,6 @@ class User(BaseEntity):
 
     created_at: AwareDatetime
     updated_at: AwareDatetime
-
-    spotify_account: SpotifyAccount | None = None
-
-    @property
-    def provider_token_state(self) -> OAuthProviderTokenState:
-        if not self.spotify_account:
-            raise ValueError("User has no Spotify account linked")
-
-        return OAuthProviderTokenState(
-            token_type=self.spotify_account.token_type,
-            access_token=self.spotify_account.token_access,
-            refresh_token=self.spotify_account.token_refresh,
-            expires_at=self.spotify_account.token_expires_at,
-        )
 
 
 class UserCreate(BaseEntity):

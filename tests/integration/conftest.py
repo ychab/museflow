@@ -13,21 +13,25 @@ import pytest
 from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.spotify import SpotifyAccount
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
+from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
+from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
+from spotifagent.domain.entities.users import UserCreate
+from spotifagent.domain.entities.users import UserUpdate
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 from spotifagent.domain.ports.security import StateTokenGeneratorPort
 from spotifagent.infrastructure.adapters.database.models import Base
 from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
+from spotifagent.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import ArtistRepository
 from spotifagent.infrastructure.adapters.database.repositories.music import TrackRepository
-from spotifagent.infrastructure.adapters.database.repositories.spotify import SpotifyAccountRepository
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import async_session_factory
 from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
@@ -37,10 +41,13 @@ from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerat
 from spotifagent.infrastructure.config.settings.database import database_settings
 
 from tests.integration.factories.auth import AuthProviderStateModelFactory
+from tests.integration.factories.auth import AuthProviderTokenFactory
 from tests.integration.factories.base import BaseModelFactory
-from tests.integration.factories.spotify import SpotifyAccountModelFactory
 from tests.integration.factories.users import UserModelFactory
 from tests.unit.factories.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.auth import OAuthProviderUserTokenCreateFactory
+from tests.unit.factories.users import UserCreateFactory
+from tests.unit.factories.users import UserUpdateFactory
 
 
 @pytest.fixture(scope="session")
@@ -185,8 +192,8 @@ def auth_state_repository(async_session_db: AsyncSession) -> OAuthProviderStateR
 
 
 @pytest.fixture
-def spotify_account_repository(async_session_db: AsyncSession) -> SpotifyAccountRepositoryPort:
-    return SpotifyAccountRepository(async_session_db)
+def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenRepositoryPort:
+    return OAuthProviderTokenRepository(async_session_db)
 
 
 @pytest.fixture
@@ -217,11 +224,11 @@ async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
 
 @pytest.fixture
 def spotify_session_factory(
-    spotify_account_repository: SpotifyAccountRepositoryPort,
+    auth_token_repository: OAuthProviderTokenRepositoryPort,
     spotify_client: SpotifyOAuthClientAdapter,
 ) -> SpotifySessionFactory:
     return SpotifySessionFactory(
-        spotify_account_repository=spotify_account_repository,
+        auth_token_repository=auth_token_repository,
         spotify_client=spotify_client,
     )
 
@@ -230,8 +237,28 @@ def spotify_session_factory(
 
 
 @pytest.fixture
+def user_create(request: pytest.FixtureRequest) -> UserCreate:
+    return UserCreateFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
+def user_update(request: pytest.FixtureRequest) -> UserUpdate:
+    return UserUpdateFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
 def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
     return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
+def auth_token_create() -> OAuthProviderUserTokenCreate:
+    return OAuthProviderUserTokenCreateFactory.build()
+
+
+@pytest.fixture
+def auth_token_update() -> OAuthProviderUserTokenCreate:
+    return OAuthProviderUserTokenCreateFactory.build()
 
 
 # --- Models DB factories ---
@@ -253,9 +280,13 @@ async def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
 
 @pytest.fixture
-async def spotify_account(request: pytest.FixtureRequest) -> SpotifyAccount:
-    spotify_account_db = await SpotifyAccountModelFactory.create_async(**getattr(request, "param", {}))
-    return SpotifyAccount.model_validate(spotify_account_db)
+async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserToken:
+    params = getattr(request, "param", {})
+    user_id = params.pop("user_id", user.id)
+    provider = params.pop("provider", MusicProvider.SPOTIFY)
+
+    auth_token_db = await AuthProviderTokenFactory.create_async(user_id=user_id, provider=provider, **params)
+    return OAuthProviderUserToken.model_validate(auth_token_db)
 
 
 # --- Security impl helper ---

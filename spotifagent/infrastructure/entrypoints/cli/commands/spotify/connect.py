@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import typer
 
-from spotifagent.application.use_cases.oauth_redirect import oauth_redirect
+from spotifagent.application.use_cases.provider_oauth_redirect import oauth_redirect
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.exceptions import UserNotFound
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort

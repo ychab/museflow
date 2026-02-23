@@ -1,9 +1,11 @@
 from datetime import UTC
 from datetime import datetime
+from typing import Any
 
 import pytest
 
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
 
 
 class TestOAuthProviderTokenState:
@@ -19,3 +21,14 @@ class TestOAuthProviderTokenState:
         self, frozen_time: datetime, token_state: OAuthProviderTokenState, expected_bool: bool
     ) -> None:
         assert token_state.is_expired(60) is expected_bool
+
+
+class TestOAuthProviderUserTokenUpdate:
+    @pytest.mark.parametrize("data", [{"token_type": "bearer"}, {"token_type": None}])
+    def test_validate_one_field_set__nominal(self, data: dict[str, Any]) -> None:
+        auth_token_data = OAuthProviderUserTokenUpdate(**data)
+        assert auth_token_data is not None
+
+    def test_validate_one_field_set__error(self) -> None:
+        with pytest.raises(ValueError, match="At least one field must be provided for update"):
+            OAuthProviderUserTokenUpdate()

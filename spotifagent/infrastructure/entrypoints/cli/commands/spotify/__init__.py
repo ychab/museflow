@@ -6,7 +6,9 @@ from rich.console import Console
 from rich.table import Table
 
 from spotifagent.application.services.spotify import TimeRange
-from spotifagent.application.use_cases.spotify_sync import SyncConfig
+from spotifagent.application.use_cases.provider_sync_music import SyncConfig
+from spotifagent.domain.entities.music import MusicProvider
+from spotifagent.domain.exceptions import ProviderAuthTokenNotFoundError
 from spotifagent.domain.exceptions import UserNotFound
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
@@ -49,6 +51,10 @@ def connect(
 @app.command("sync", help="Synchronize the Spotify user's items.")
 def sync(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
+    provider: MusicProvider = typer.Option(
+        MusicProvider.SPOTIFY,
+        help="The music provider to sync with",
+    ),
     purge: bool = typer.Option(
         False,
         "--purge/--no-purge",
@@ -144,9 +150,11 @@ def sync(
         raise typer.Abort()
 
     try:
-        report = asyncio.run(sync_logic(email=email, config=config))
+        report = asyncio.run(sync_logic(email=email, provider=provider, config=config))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
+    except ProviderAuthTokenNotFoundError as e:
+        raise typer.BadParameter(f"No user token found for provider: {provider} and email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e

@@ -2,26 +2,8 @@ from pydantic import ValidationError
 
 import pytest
 
-from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserCreate
 from spotifagent.domain.entities.users import UserUpdate
-
-
-class TestUser:
-    @pytest.mark.parametrize("user", [{"with_spotify_account": True}], indirect=True)
-    def test__spotify_token_state__nominal(self, user: User) -> None:
-        assert user.spotify_account is not None
-
-        token_state = user.provider_token_state
-        assert token_state.token_type == user.spotify_account.token_type
-        assert token_state.access_token == user.spotify_account.token_access
-        assert token_state.refresh_token == user.spotify_account.token_refresh
-        assert token_state.expires_at == user.spotify_account.token_expires_at
-
-    @pytest.mark.parametrize("user", [{"with_spotify_account": False}], indirect=True)
-    def test__spotify_token_state__exception(self, user: User) -> None:
-        with pytest.raises(ValueError, match="User has no Spotify account linked"):
-            user.provider_token_state  # noqa: B018
 
 
 class TestUserCreate:

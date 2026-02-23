@@ -6,7 +6,7 @@ class UserAlreadyExistsException(Exception):
     pass
 
 
-class EmailAlreadyExistsException(Exception):
+class UserEmailAlreadyExistsException(Exception):
     pass
 
 
@@ -14,17 +14,21 @@ class UserInactive(Exception):
     pass
 
 
-class InvalidCredentials(Exception):
+class UserInvalidCredentials(Exception):
+    pass
+
+
+class ProviderAuthTokenNotFoundError(Exception):
+    pass
+
+
+class ProviderExchangeCodeError(Exception):
     pass
 
 
 class SpotifyAccountNotFoundError(Exception):
     """Raised when an operation requires a linked Spotify account but none exists."""
 
-    pass
-
-
-class ProviderExchangeCodeError(Exception):
     pass
 
 

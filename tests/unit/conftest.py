@@ -4,12 +4,13 @@ import pytest
 
 from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.domain.ports.repositories.spotify import SpotifyAccountRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import AccessTokenManagerPort
 from spotifagent.domain.ports.security import PasswordHasherPort
@@ -17,6 +18,7 @@ from spotifagent.domain.ports.security import StateTokenGeneratorPort
 
 from tests.unit.factories.auth import OAuthProviderStateFactory
 from tests.unit.factories.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.auth import OAuthProviderUserTokenFactory
 from tests.unit.factories.users import UserFactory
 
 # --- Security Mocks ---
@@ -51,8 +53,8 @@ def mock_auth_state_repository() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_spotify_account_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=SpotifyAccountRepositoryPort)
+def mock_auth_token_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=OAuthProviderTokenRepositoryPort)
 
 
 @pytest.fixture
@@ -74,6 +76,11 @@ def user(request: pytest.FixtureRequest) -> User:
 
 
 @pytest.fixture
+def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
+    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
 def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProviderState:
     params = getattr(request, "param", {})
     params.setdefault("user_id", user.id)
@@ -82,8 +89,11 @@ def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProviderState
 
 
 @pytest.fixture
-def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
-    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
+def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserToken:
+    params = getattr(request, "param", {})
+    params.setdefault("user_id", user.id)
+
+    return OAuthProviderUserTokenFactory.build(**params)
 
 
 # --- Client Mocks ---

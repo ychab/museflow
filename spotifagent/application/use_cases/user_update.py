@@ -1,6 +1,6 @@
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.exceptions import EmailAlreadyExistsException
+from spotifagent.domain.exceptions import UserEmailAlreadyExistsException
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
 from spotifagent.domain.ports.security import PasswordHasherPort
 
@@ -15,7 +15,7 @@ async def user_update(
     if user_data.email and user_data.email != user.email:
         existing = await user_repository.get_by_email(user_data.email)
         if existing:
-            raise EmailAlreadyExistsException()
+            raise UserEmailAlreadyExistsException()
 
     hashed_password = password_hasher.hash(user_data.password) if user_data.password else None
 

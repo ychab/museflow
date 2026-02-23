@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 from spotifagent.domain.ports.repositories.users import UserRepositoryPort
@@ -138,6 +139,16 @@ def mock_auth_state_repository(
 ) -> Iterable[mock.AsyncMock]:
     repo = mock.AsyncMock(spec=OAuthProviderStateRepositoryPort)
     with mock_dependency_factory(f"{target_path}.get_auth_state_repository", repo) as mock_repo:
+        yield mock_repo
+
+
+@pytest.fixture
+def mock_auth_token_repository(
+    target_path: str,
+    mock_dependency_factory: DependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    repo = mock.AsyncMock(spec=OAuthProviderTokenRepositoryPort)
+    with mock_dependency_factory(f"{target_path}.get_auth_token_repository", repo) as mock_repo:
         yield mock_repo
 
 
