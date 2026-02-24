@@ -38,13 +38,13 @@ class BaseMusicItem(BaseUserProvider):
         return slugify(self.name)
 
 
+class Artist(BaseMusicItem):
+    genres: list[str]
+
+
 class TrackArtist(BaseModel):
     provider_id: str
     name: str
-
-
-class Artist(BaseMusicItem):
-    genres: list[str]
 
 
 class Track(BaseMusicItem):

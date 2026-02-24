@@ -1,8 +1,6 @@
 import asyncio
-from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Iterable
-from contextlib import asynccontextmanager
 from unittest import mock
 
 from sqlalchemy import delete
@@ -15,7 +13,6 @@ import pytest
 from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
@@ -27,18 +24,6 @@ class TestSpotifyConnectLogic:
         target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect.typer.launch"
         with mock.patch(target_path) as patched:
             yield patched
-
-    @pytest.fixture
-    def mock_spotify_client(self) -> Iterable[mock.Mock]:
-        spotify_client = mock.Mock(spec=ProviderOAuthClientPort)
-
-        @asynccontextmanager
-        async def mock_dependency() -> AsyncGenerator[ProviderOAuthClientPort]:
-            yield spotify_client
-
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect.get_spotify_client"
-        with mock.patch(target_path, side_effect=mock_dependency):
-            yield spotify_client
 
     @pytest.fixture
     def simulate_oauth_callback(
@@ -86,13 +71,10 @@ class TestSpotifyConnectLogic:
         self,
         user: User,
         auth_token_create: OAuthProviderUserTokenCreate,
-        mock_spotify_client: mock.Mock,
         simulate_oauth_callback: Callable[[float], asyncio.Task],
         async_session_db: AsyncSession,
         capsys: pytest.CaptureFixture,
     ) -> None:
-        mock_spotify_client.get_authorization_url.return_value = "http://example.com", "dummy-token-state"
-
         # Start the "callback" simulator in the background
         task = simulate_oauth_callback(0.2)
 

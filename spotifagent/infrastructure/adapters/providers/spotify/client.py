@@ -19,7 +19,7 @@ from tenacity import wait_exponential
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTokenResponseDTO
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -66,6 +66,10 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         return f"Basic {encoded}"
 
     @property
+    def base_url(self) -> HttpUrl:
+        return self.BASE_URL
+
+    @property
     def token_endpoint(self) -> HttpUrl:
         return self.TOKEN_ENDPOINT
 
@@ -95,7 +99,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyTokenResponseDTO(**response.json()).to_domain()
+        return SpotifyToken(**response.json()).to_domain()
 
     async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
         response = await self._client.post(
@@ -111,7 +115,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyTokenResponseDTO(**response.json()).to_domain(refresh_token)
+        return SpotifyToken(**response.json()).to_domain(refresh_token)
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),

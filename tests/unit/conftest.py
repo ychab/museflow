@@ -100,7 +100,7 @@ def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserT
 
 
 @pytest.fixture
-def mock_spotify_client(token_state: OAuthProviderTokenState) -> mock.AsyncMock:
+def mock_provider_client(token_state: OAuthProviderTokenState) -> mock.AsyncMock:
     return mock.AsyncMock(
         spec=ProviderOAuthClientPort,
         refresh_access_token=mock.AsyncMock(return_value=token_state),

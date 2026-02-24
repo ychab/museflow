@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
@@ -19,6 +18,7 @@ from spotifagent.infrastructure.adapters.database.repositories.music import Trac
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import session_scope
 from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
 from spotifagent.infrastructure.config.settings.spotify import spotify_settings
@@ -70,11 +70,11 @@ def get_track_repository(session: AsyncSession) -> TrackRepositoryPort:
     return TrackRepository(session)
 
 
-def get_spotify_user_session_factory(
+def get_spotify_library_factory(
     session: AsyncSession,
     spotify_client: ProviderOAuthClientPort,
-) -> SpotifySessionFactory:
-    return SpotifySessionFactory(
+) -> SpotifyLibraryFactory:
+    return SpotifyLibraryFactory(
         auth_token_repository=get_auth_token_repository(session),
-        spotify_client=spotify_client,
+        client=spotify_client,
     )

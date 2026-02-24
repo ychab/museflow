@@ -1,8 +1,8 @@
 import asyncio
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
-from typing import Literal
 
 from pydantic import ValidationError
 
@@ -12,59 +12,43 @@ from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import BaseMusicItem
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.spotify import SpotifyArtist
-from spotifagent.domain.entities.spotify import SpotifyPage
-from spotifagent.domain.entities.spotify import SpotifyPlaylist
-from spotifagent.domain.entities.spotify import SpotifyPlaylistPage
-from spotifagent.domain.entities.spotify import SpotifyPlaylistTrackPage
-from spotifagent.domain.entities.spotify import SpotifySavedTrackPage
-from spotifagent.domain.entities.spotify import SpotifyTopArtistPage
-from spotifagent.domain.entities.spotify import SpotifyTopTrackPage
-from spotifagent.domain.entities.spotify import SpotifyTrack
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
-from spotifagent.domain.exceptions import SpotifyPageValidationError
+from spotifagent.domain.exceptions import ProviderPageValidationError
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
+from spotifagent.domain.ports.providers.library import ProviderLibraryPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrackPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifySavedTrackPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTopArtistPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTopTrackPage
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from spotifagent.infrastructure.config.settings.app import app_settings
-
-TimeRange = Literal["short_term", "medium_term", "long_term"]
 
 logger = logging.getLogger(__name__)
 
 
-class SpotifySessionFactory:
-    """
-    Factory responsible for wiring up dependencies and validating
-    that a user is eligible for a session.
-    """
+@dataclass
+class SpotifyLibraryFactory:
+    """Factory responsible for wiring up dependencies"""
 
-    def __init__(
-        self,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
-        spotify_client: ProviderOAuthClientPort,
-    ) -> None:
-        self.auth_token_repository = auth_token_repository
-        self.spotify_client = spotify_client
+    auth_token_repository: OAuthProviderTokenRepositoryPort
+    client: ProviderOAuthClientPort
 
-    def create(self, user: User, auth_token: OAuthProviderUserToken) -> "SpotifyUserSession":
-        if not auth_token:
-            raise SpotifyAccountNotFoundError(f"User {user.email} is not connected to Spotify.")
-
-        return SpotifyUserSession(
+    def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
+        return SpotifyLibraryAdapter(
             user=user,
             auth_token=auth_token,
             auth_token_repository=self.auth_token_repository,
-            client=self.spotify_client,
+            client=self.client,
         )
 
 
-class SpotifyUserSession:
-    """
-    A service that binds a specific User to the SpotifyClient.
-    It automatically handles token persistence side effects.
-    """
-
+class SpotifyLibraryAdapter(ProviderLibraryPort):
     def __init__(
         self,
         user: User,
@@ -86,41 +70,49 @@ class SpotifyUserSession:
     # Public API
     # -------------------------------------------------------------------------
 
-    async def get_top_artists(self, limit: int = 50, time_range: TimeRange = "long_term") -> list[Artist]:
+    async def get_top_artists(
+        self,
+        page_limit: int = 50,
+        time_range: SpotifyTimeRange | str | None = "long_term",
+    ) -> list[Artist]:
         return await self._fetch_pages(
             endpoint="/me/top/artists",
             page_model=SpotifyTopArtistPage,
             page_processor=self._extract_top_artists,
             params={"time_range": time_range},
-            limit=limit,
+            limit=page_limit,
             prefix_log="[TopArtists]",
         )
 
-    async def get_top_tracks(self, limit: int = 50, time_range: TimeRange = "long_term") -> list[Track]:
+    async def get_top_tracks(
+        self,
+        page_limit: int = 50,
+        time_range: SpotifyTimeRange | str | None = "long_term",
+    ) -> list[Track]:
         return await self._fetch_pages(
             endpoint="/me/top/tracks",
             page_model=SpotifyTopTrackPage,
             page_processor=self._extract_top_tracks,
             params={"time_range": time_range},
-            limit=limit,
+            limit=page_limit,
             prefix_log="[TopTracks]",
         )
 
-    async def get_saved_tracks(self, limit: int = 50) -> list[Track]:
+    async def get_saved_tracks(self, page_limit: int = 50) -> list[Track]:
         return await self._fetch_pages(
             endpoint="/me/tracks",
             page_model=SpotifySavedTrackPage,
             page_processor=self._extract_saved_tracks,
-            limit=limit,
+            limit=page_limit,
             prefix_log="[SavedTracks]",
         )
 
-    async def get_playlist_tracks(self, limit: int = 50) -> list[Track]:
+    async def get_playlist_tracks(self, page_limit: int = 50) -> list[Track]:
         playlists = await self._fetch_pages(
             endpoint="/me/playlists",
             page_model=SpotifyPlaylistPage,
             page_processor=self._extract_playlists,
-            limit=limit,
+            limit=page_limit,
             prefix_log="[Playlists]",
         )
         logger.info(f"Found {len(playlists)} playlists. Fetching tracks...")
@@ -130,7 +122,7 @@ class SpotifyUserSession:
 
         async def _fetch_with_semaphore(playlist: SpotifyPlaylist) -> list[Track]:
             async with semaphore:
-                return await self._fetch_playlist_tracks(playlist, limit)
+                return await self._fetch_playlist_tracks(playlist, page_limit)
 
         # Fetch in parallel all playlist's tracks with a semaphore.
         async with asyncio.TaskGroup() as tg:
@@ -169,7 +161,7 @@ class SpotifyUserSession:
 
             self._is_token_refreshed = True
 
-    async def _fetch_playlist_tracks(self, playlist: SpotifyPlaylist, limit: int) -> list[Track]:
+    async def _fetch_playlist_tracks(self, playlist: SpotifyPlaylist, page_limit: int) -> list[Track]:
         tracks: list[Track] = []
 
         try:
@@ -181,10 +173,10 @@ class SpotifyUserSession:
                     "fields": "total,limit,offset,items(item(id,name,href,popularity,artists(id,name)))",
                     "additional_types": "track",
                 },
-                limit=limit,
+                limit=page_limit,
                 prefix_log=f"[PlaylistTracks({playlist.name})]",
             )
-        except SpotifyPageValidationError as e:
+        except ProviderPageValidationError as e:
             # Some playlist pages can return invalid data, like missing ID's.
             # Indeed, it could happen when manually uploading custom tracks not known by Spotify.
             logger.error(f"Skip playlist {playlist.name.strip()} with error: {e}")
@@ -219,7 +211,7 @@ class SpotifyUserSession:
             try:
                 page = page_model.model_validate(data)
             except ValidationError as e:
-                raise SpotifyPageValidationError(
+                raise ProviderPageValidationError(
                     f"{prefix_log} - Page validation error on {endpoint} (offset: {offset}): {e}"
                 ) from e
 

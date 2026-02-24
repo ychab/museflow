@@ -7,14 +7,13 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.application.services.spotify import SpotifySessionFactory
-from spotifagent.application.services.spotify import SpotifyUserSession
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
+from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from spotifagent.infrastructure.config.settings.app import app_settings
 
 from tests import ASSETS_DIR
@@ -44,39 +43,31 @@ def paginate_response(
     return side_effects
 
 
-class TestSpotifySessionFactory:
+class TestSpotifyLibraryFactory:
     @pytest.fixture
-    def spotify_session_factory(
+    def spotify_library_factory(
         self,
         mock_auth_token_repository: mock.Mock,
-        mock_spotify_client: mock.Mock,
-    ) -> SpotifySessionFactory:
-        return SpotifySessionFactory(
+        mock_provider_client: mock.AsyncMock,
+    ) -> SpotifyLibraryFactory:
+        return SpotifyLibraryFactory(
             auth_token_repository=mock_auth_token_repository,
-            spotify_client=mock_spotify_client,
+            client=mock_provider_client,
         )
 
-    def test_create__auth_token__nominal(
+    def test_create__nominal(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        spotify_session_factory: SpotifySessionFactory,
+        spotify_library_factory: SpotifyLibraryFactory,
     ) -> None:
-        session = spotify_session_factory.create(user, auth_token)
-        assert isinstance(session, SpotifyUserSession)
-        assert session.user == user
-
-    def test_create__auth_token__not_found(
-        self,
-        user: User,
-        auth_token: OAuthProviderUserToken,
-        spotify_session_factory: SpotifySessionFactory,
-    ) -> None:
-        with pytest.raises(SpotifyAccountNotFoundError):
-            spotify_session_factory.create(user, None)  # type: ignore[arg-type]
+        spotify_library = spotify_library_factory.create(user, auth_token)
+        assert isinstance(spotify_library, SpotifyLibraryAdapter)
+        assert spotify_library.user == user
+        assert spotify_library.auth_token == auth_token
 
 
-class TestSpotifyUserSession:
+class TestSpotifyLibrary:
     @pytest.fixture
     def patch_max_concurrency(self, monkeypatch: pytest.MonkeyPatch) -> int:
         max_concurrency: int = 10
@@ -84,19 +75,19 @@ class TestSpotifyUserSession:
         return max_concurrency
 
     @pytest.fixture
-    def spotify_user_session(
+    def spotify_library(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
         patch_max_concurrency: int,
         mock_auth_token_repository: mock.AsyncMock,
-        mock_spotify_client: mock.AsyncMock,
-    ) -> SpotifyUserSession:
-        return SpotifyUserSession(
+        mock_provider_client: mock.AsyncMock,
+    ) -> SpotifyLibraryAdapter:
+        return SpotifyLibraryAdapter(
             user=user,
             auth_token=auth_token,
             auth_token_repository=mock_auth_token_repository,
-            client=mock_spotify_client,
+            client=mock_provider_client,
             max_concurrency=patch_max_concurrency,
         )
 
@@ -112,13 +103,13 @@ class TestSpotifyUserSession:
         request: pytest.FixtureRequest,
         spotify_response: dict[str, Any],
         token_state: OAuthProviderTokenState,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
     ) -> tuple[int, int]:
         params = getattr(request, "param", {})
         total: int = params.get("total", 20)
         limit: int = params.get("limit", 5)
 
-        mock_spotify_client.make_user_api_call.side_effect = paginate_response(
+        mock_provider_client.make_user_api_call.side_effect = paginate_response(
             token_state=token_state,
             response=spotify_response,
             total=total,
@@ -133,9 +124,9 @@ class TestSpotifyUserSession:
         request: pytest.FixtureRequest,
         spotify_response_pages: tuple[int, int],
         token_state: OAuthProviderTokenState,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
     ) -> tuple[int, int]:
-        side_effects = list(mock_spotify_client.make_user_api_call.side_effect)
+        side_effects = list(mock_provider_client.make_user_api_call.side_effect)
 
         params: dict[str, Any] = getattr(request, "param", {})
         has_duplicates = params.get("has_duplicates", False)
@@ -160,16 +151,16 @@ class TestSpotifyUserSession:
             if not has_duplicates:
                 offset += total
 
-        mock_spotify_client.make_user_api_call.side_effect = side_effects
+        mock_provider_client.make_user_api_call.side_effect = side_effects
         return total, playlist_limit
 
     @pytest.fixture
     def spotify_response_playlist_items_invalid_pages(
         self,
         token_state: OAuthProviderTokenState,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
     ) -> None:
-        side_effects = list(mock_spotify_client.make_user_api_call.side_effect)
+        side_effects = list(mock_provider_client.make_user_api_call.side_effect)
 
         side_effects += [
             (
@@ -192,29 +183,29 @@ class TestSpotifyUserSession:
                 token_state,
             ),
         ]
-        mock_spotify_client.make_user_api_call.side_effect = side_effects
+        mock_provider_client.make_user_api_call.side_effect = side_effects
 
     async def test__execute_request__refreshed_token(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         user: User,
         token_state: OAuthProviderTokenState,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
-        mock_spotify_client.make_user_api_call.return_value = ({"data": "ok"}, token_state)
+        mock_provider_client.make_user_api_call.return_value = ({"data": "ok"}, token_state)
 
-        await spotify_user_session._execute_request("GET", "/test")
+        await spotify_library._execute_request("GET", "/test")
 
         # Check that user token is refreshed in memory.
-        assert spotify_user_session.auth_token.token_type == token_state.token_type
-        assert spotify_user_session.auth_token.token_access == token_state.access_token
-        assert spotify_user_session.auth_token.token_refresh == token_state.refresh_token
-        assert spotify_user_session.auth_token.token_expires_at == token_state.expires_at
+        assert spotify_library.auth_token.token_type == token_state.token_type
+        assert spotify_library.auth_token.token_access == token_state.access_token
+        assert spotify_library.auth_token.token_refresh == token_state.refresh_token
+        assert spotify_library.auth_token.token_expires_at == token_state.expires_at
 
         # Check that user token is refreshed in DB.
         mock_auth_token_repository.update.assert_called_once_with(
-            user_id=spotify_user_session.user.id,
+            user_id=spotify_library.user.id,
             provider=MusicProvider.SPOTIFY,
             auth_token_data=OAuthProviderUserTokenUpdate(
                 token_type=token_state.token_type,
@@ -226,43 +217,43 @@ class TestSpotifyUserSession:
 
     async def test__execute_request__no_refreshed_token(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         user: User,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
         token_state_unchanged = OAuthProviderTokenStateFactory.build(
-            access_token=spotify_user_session.auth_token.token_access
+            access_token=spotify_library.auth_token.token_access
         )
-        mock_spotify_client.refresh_access_token.return_value = token_state_unchanged
-        mock_spotify_client.make_user_api_call.return_value = ({"data": "ok"}, token_state_unchanged)
+        mock_provider_client.refresh_access_token.return_value = token_state_unchanged
+        mock_provider_client.make_user_api_call.return_value = ({"data": "ok"}, token_state_unchanged)
 
-        await spotify_user_session._execute_request("GET", "/test")
+        await spotify_library._execute_request("GET", "/test")
 
         # Check that user token wasn't refreshed in memory.
-        assert spotify_user_session.auth_token.token_access == token_state_unchanged.access_token
+        assert spotify_library.auth_token.token_access == token_state_unchanged.access_token
 
         # Check that DB have not been updated.
         mock_auth_token_repository.update.assert_not_called()
 
     async def test__refresh_token__already_refreshed(
         self,
-        spotify_user_session: SpotifyUserSession,
-        mock_spotify_client: mock.AsyncMock,
+        spotify_library: SpotifyLibraryAdapter,
+        mock_provider_client: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
     ) -> None:
-        spotify_user_session._is_token_refreshed = True
+        spotify_library._is_token_refreshed = True
 
-        await spotify_user_session._refresh_token()
+        await spotify_library._refresh_token()
 
-        mock_spotify_client.refresh_access_token.assert_not_called()
+        mock_provider_client.refresh_access_token.assert_not_called()
         mock_auth_token_repository.update.assert_not_called()
 
     async def test__refresh_token__concurrent_calls__executes_once(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         patch_max_concurrency: int,
-        mock_spotify_client: mock.AsyncMock,
+        mock_provider_client: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         token_state: OAuthProviderTokenState,
     ) -> None:
@@ -272,32 +263,32 @@ class TestSpotifyUserSession:
             await asyncio.sleep(0.05)  # Simulate network latency
             return new_token_state
 
-        mock_spotify_client.refresh_access_token.side_effect = delayed_refresh
+        mock_provider_client.refresh_access_token.side_effect = delayed_refresh
 
         # Launch concurrent calls
         async with asyncio.TaskGroup() as tg:
             for _ in range(patch_max_concurrency):
-                tg.create_task(spotify_user_session._refresh_token())
+                tg.create_task(spotify_library._refresh_token())
 
-        mock_spotify_client.refresh_access_token.assert_called_once()
+        mock_provider_client.refresh_access_token.assert_called_once()
         mock_auth_token_repository.update.assert_called_once()
 
-        assert spotify_user_session._is_token_refreshed is True
-        assert spotify_user_session.auth_token.token_access == new_token_state.access_token
+        assert spotify_library._is_token_refreshed is True
+        assert spotify_library.auth_token.token_access == new_token_state.access_token
 
     @pytest.mark.parametrize("spotify_response", ["top_artists"], indirect=["spotify_response"])
     async def test__get_top_artists__nominal(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        top_artists = await spotify_user_session.get_top_artists(limit=spotify_response_pages[1])
+        top_artists = await spotify_library.get_top_artists(page_limit=spotify_response_pages[1])
         assert len(top_artists) == 20
 
         top_artist_first = top_artists[0]
         assert top_artist_first.id is not None
-        assert top_artist_first.user_id == spotify_user_session.user.id
+        assert top_artist_first.user_id == spotify_library.user.id
         assert top_artist_first.name == "Vald"
         assert top_artist_first.popularity == 68
         assert top_artist_first.is_saved is False
@@ -309,7 +300,7 @@ class TestSpotifyUserSession:
 
         top_artist_last = top_artists[-1]
         assert top_artist_last.id is not None
-        assert top_artist_last.user_id == spotify_user_session.user.id
+        assert top_artist_last.user_id == spotify_library.user.id
         assert top_artist_last.name == "Bad Bunny"
         assert top_artist_last.popularity == 99
         assert top_artist_last.is_saved is False
@@ -322,16 +313,16 @@ class TestSpotifyUserSession:
     @pytest.mark.parametrize("spotify_response", ["top_tracks"], indirect=["spotify_response"])
     async def test__get_top_tracks__nominal(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        top_tracks = await spotify_user_session.get_top_tracks(limit=spotify_response_pages[1])
+        top_tracks = await spotify_library.get_top_tracks(page_limit=spotify_response_pages[1])
         assert len(top_tracks) == 20
 
         top_track_first = top_tracks[0]
         assert top_track_first.id is not None
-        assert top_track_first.user_id == spotify_user_session.user.id
+        assert top_track_first.user_id == spotify_library.user.id
         assert top_track_first.name == "La Negra No Quiere"
         assert top_track_first.popularity == 20
         assert top_track_first.is_saved is False
@@ -345,7 +336,7 @@ class TestSpotifyUserSession:
 
         top_track_last = top_tracks[-1]
         assert top_track_last.id is not None
-        assert top_track_last.user_id == spotify_user_session.user.id
+        assert top_track_last.user_id == spotify_library.user.id
         assert top_track_last.name == "Deux mille"
         assert top_track_last.popularity == 60
         assert top_track_last.is_saved is False
@@ -360,16 +351,16 @@ class TestSpotifyUserSession:
     @pytest.mark.parametrize("spotify_response", ["saved_tracks"], indirect=["spotify_response"])
     async def test__get_saved_tracks__nominal(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        tracks_saved = await spotify_user_session.get_saved_tracks(limit=spotify_response_pages[1])
+        tracks_saved = await spotify_library.get_saved_tracks(page_limit=spotify_response_pages[1])
         assert len(tracks_saved) == 20
 
         track_saved_first = tracks_saved[0]
         assert track_saved_first.id is not None
-        assert track_saved_first.user_id == spotify_user_session.user.id
+        assert track_saved_first.user_id == spotify_library.user.id
         assert track_saved_first.name == "Honey"
         assert track_saved_first.popularity == 48
         assert track_saved_first.is_saved is True
@@ -383,7 +374,7 @@ class TestSpotifyUserSession:
 
         track_saved_last = tracks_saved[-1]
         assert track_saved_last.id is not None
-        assert track_saved_last.user_id == spotify_user_session.user.id
+        assert track_saved_last.user_id == spotify_library.user.id
         assert track_saved_last.name == "Magnum"
         assert track_saved_last.popularity == 36
         assert track_saved_last.is_saved is True
@@ -402,7 +393,7 @@ class TestSpotifyUserSession:
     )
     async def test__get_playlist_tracks__duplicate__none(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
         spotify_response_playlist_items_pages: tuple[int, int],
@@ -410,12 +401,12 @@ class TestSpotifyUserSession:
         playlist_total = spotify_response_pages[0]
         playlist_tracks_total = spotify_response_playlist_items_pages[0]
 
-        tracks = await spotify_user_session.get_playlist_tracks(limit=spotify_response_pages[1])
+        tracks = await spotify_library.get_playlist_tracks(page_limit=spotify_response_pages[1])
         assert len(tracks) == playlist_total * playlist_tracks_total
 
         track_first = tracks[0]
         assert track_first.id is not None
-        assert track_first.user_id == spotify_user_session.user.id
+        assert track_first.user_id == spotify_library.user.id
         assert track_first.name == "El Preso"
         assert track_first.popularity == 0
         assert track_first.is_saved is False
@@ -429,7 +420,7 @@ class TestSpotifyUserSession:
 
         track_last = tracks[-1]
         assert track_last.id is not None
-        assert track_last.user_id == spotify_user_session.user.id
+        assert track_last.user_id == spotify_library.user.id
         assert track_last.name == "Con la Punta del Pie"
         assert track_last.popularity == 56
         assert track_last.is_saved is False
@@ -448,19 +439,19 @@ class TestSpotifyUserSession:
     )
     async def test__get_playlist_tracks__duplicate(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
         spotify_response_playlist_items_pages: tuple[int, int],
     ) -> None:
         playlist_tracks_total = spotify_response_playlist_items_pages[0]
 
-        tracks = await spotify_user_session.get_playlist_tracks(limit=spotify_response_pages[1])
+        tracks = await spotify_library.get_playlist_tracks(page_limit=spotify_response_pages[1])
         assert len(tracks) == playlist_tracks_total
 
         track_first = tracks[0]
         assert track_first.id is not None
-        assert track_first.user_id == spotify_user_session.user.id
+        assert track_first.user_id == spotify_library.user.id
         assert track_first.name == "El Preso"
         assert track_first.popularity == 0
         assert track_first.is_saved is False
@@ -474,7 +465,7 @@ class TestSpotifyUserSession:
 
         track_last = tracks[-1]
         assert track_last.id is not None
-        assert track_last.user_id == spotify_user_session.user.id
+        assert track_last.user_id == spotify_library.user.id
         assert track_last.name == "Micaela"
         assert track_last.popularity == 54
         assert track_last.is_saved is False
@@ -495,7 +486,7 @@ class TestSpotifyUserSession:
     )
     async def test__get_playlist_tracks__page_validation_error(
         self,
-        spotify_user_session: SpotifyUserSession,
+        spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
         spotify_response_playlist_items_invalid_pages: None,
@@ -504,7 +495,7 @@ class TestSpotifyUserSession:
         playlist = spotify_response["items"][0]
 
         with caplog.at_level(logging.ERROR):
-            tracks = await spotify_user_session.get_playlist_tracks(limit=1)
+            tracks = await spotify_library.get_playlist_tracks(page_limit=1)
         assert len(tracks) == 0
 
         prefix_log = f"[PlaylistTracks({playlist['name']})]"

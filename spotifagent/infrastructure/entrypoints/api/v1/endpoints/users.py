@@ -9,9 +9,7 @@ from spotifagent.application.use_cases.user_create import user_create
 from spotifagent.application.use_cases.user_update import user_update
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.entities.users import UserResponse
 from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.entities.users import UserWithToken
 from spotifagent.domain.exceptions import UserAlreadyExistsException
 from spotifagent.domain.exceptions import UserEmailAlreadyExistsException
 from spotifagent.domain.exceptions import UserInactive
@@ -24,6 +22,8 @@ from spotifagent.infrastructure.entrypoints.api.dependencies import get_access_t
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_repository
+from spotifagent.infrastructure.entrypoints.api.schemas import UserResponse
+from spotifagent.infrastructure.entrypoints.api.schemas import UserWithToken
 
 router = APIRouter()
 

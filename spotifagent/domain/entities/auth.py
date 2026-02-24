@@ -13,6 +13,8 @@ from spotifagent.domain.entities.music import MusicProvider
 
 
 class OAuthProviderState(BaseEntity):
+    """User state send to music provider in order to get its oauth token."""
+
     id: int
 
     user_id: uuid.UUID
@@ -24,7 +26,7 @@ class OAuthProviderState(BaseEntity):
 
 
 class OAuthProviderTokenState(BaseEntity):
-    """User token state with expiration tracking."""
+    """User "volatile" token state with expiration tracking."""
 
     token_type: str
     access_token: str
@@ -43,6 +45,8 @@ class BaseOAuthProviderUserToken(BaseEntity):
 
 
 class OAuthProviderUserToken(BaseOAuthProviderUserToken):
+    """User persistent auth token provider"""
+
     id: int
     user_id: uuid.UUID
     provider: MusicProvider

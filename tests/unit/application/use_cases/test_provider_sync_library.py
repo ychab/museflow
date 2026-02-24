@@ -13,16 +13,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import pytest
 
-from spotifagent.application.services.spotify import SpotifySessionFactory
-from spotifagent.application.services.spotify import SpotifyUserSession
-from spotifagent.application.use_cases.provider_sync_music import SyncConfig
-from spotifagent.application.use_cases.provider_sync_music import SyncReport
-from spotifagent.application.use_cases.provider_sync_music import sync_music
+from spotifagent.application.use_cases.provider_sync_library import SyncConfig
+from spotifagent.application.use_cases.provider_sync_library import SyncReport
+from spotifagent.application.use_cases.provider_sync_library import sync_library
 from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import Track
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
+from spotifagent.domain.ports.providers.library import ProviderLibraryPort
 
 from tests.unit.factories.music import ArtistFactory
 from tests.unit.factories.music import TrackFactory
@@ -91,33 +89,25 @@ class TestSyncMusic:
         return TrackFactory.batch(size=10)
 
     @pytest.fixture
-    def mock_spotify_session(self, artists: list[Artist], tracks: list[Track]) -> mock.Mock:
+    def mock_provider_library(self, artists: list[Artist], tracks: list[Track]) -> mock.Mock:
         return mock.Mock(
-            spec=SpotifyUserSession,
+            spec=ProviderLibraryPort,
             get_top_artists=mock.AsyncMock(return_value=artists),
             get_top_tracks=mock.AsyncMock(return_value=tracks),
             get_saved_tracks=mock.AsyncMock(return_value=tracks),
-        )
-
-    @pytest.fixture
-    def mock_spotify_session_factory(self, mock_spotify_session: mock.Mock) -> mock.Mock:
-        return mock.Mock(
-            spec=SpotifySessionFactory,
-            create=mock.Mock(return_value=mock_spotify_session),
         )
 
     async def test__do_nothing(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        mock_spotify_session_factory: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        report = await sync_music(
+        report = await sync_library(
             user=user,
-            auth_token=auth_token,
-            spotify_session_factory=mock_spotify_session_factory,
+            provider_library=mock_provider_library,
             artist_repository=mock_artist_repository,
             track_repository=mock_track_repository,
             config=SyncConfig(),
@@ -131,7 +121,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         purge: bool,
         purge_artist_top: bool,
-        mock_spotify_session_factory: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -140,10 +130,9 @@ class TestSyncMusic:
         mock_track_repository.purge.return_value = 0
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -168,7 +157,7 @@ class TestSyncMusic:
         purge_track_top: bool,
         purge_track_saved: bool,
         purge_track_playlist: bool,
-        mock_spotify_session_factory: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -177,10 +166,9 @@ class TestSyncMusic:
         mock_track_repository.purge.side_effect = SQLAlchemyError("Boom")
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -194,30 +182,6 @@ class TestSyncMusic:
         assert report == SyncReport(errors=[mock.ANY])
         assert "An error occurred while purging your tracks." in report.errors
         assert f"An error occurred while purging tracks for user {user.email}" in caplog.text
-
-    async def test__user__auth_token_not_found(
-        self,
-        user: User,
-        auth_token: OAuthProviderUserToken,
-        mock_spotify_session_factory: mock.Mock,
-        mock_artist_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        mock_spotify_session_factory.create.side_effect = SpotifyAccountNotFoundError("Boom")
-
-        with caplog.at_level(logging.DEBUG):
-            report = await sync_music(
-                user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
-                config=SyncConfig(),
-            )
-
-        assert report == SyncReport(errors=["You must connect your Spotify account first."])
-        assert f"Spotify account not found for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync", "sync_artist_top", "exception_raised"),
@@ -233,19 +197,17 @@ class TestSyncMusic:
         sync: bool,
         sync_artist_top: bool,
         exception_raised: Exception,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_spotify_session.get_top_artists.side_effect = exception_raised
+        mock_provider_library.get_top_artists.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -255,7 +217,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while fetching Spotify top artists." in report.errors
+        assert "An error occurred while fetching top artists." in report.errors
         assert f"An error occurred while fetching top artists for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -271,8 +233,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_artist_top: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
@@ -281,10 +242,9 @@ class TestSyncMusic:
         mock_artist_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -294,7 +254,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while saving Spotify top artists." in report.errors
+        assert "An error occurred while saving top artists." in report.errors
         assert f"An error occurred while upserting top artists for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -310,20 +270,18 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_top: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_spotify_session.get_top_tracks.side_effect = exception_raised
+        mock_provider_library.get_top_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -333,7 +291,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while fetching Spotify top tracks." in report.errors
+        assert "An error occurred while fetching top tracks." in report.errors
         assert f"An error occurred while fetching top tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -349,8 +307,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_top: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
@@ -359,10 +316,9 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -372,7 +328,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while saving Spotify top tracks." in report.errors
+        assert "An error occurred while saving top tracks." in report.errors
         assert f"An error occurred while upserting top tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -388,20 +344,18 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_saved: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_spotify_session.get_saved_tracks.side_effect = exception_raised
+        mock_provider_library.get_saved_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -411,7 +365,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while fetching Spotify saved tracks." in report.errors
+        assert "An error occurred while fetching saved tracks." in report.errors
         assert f"An error occurred while fetching saved tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -427,8 +381,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_saved: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
@@ -437,10 +390,9 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -450,7 +402,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while saving Spotify saved tracks." in report.errors
+        assert "An error occurred while saving saved tracks." in report.errors
         assert f"An error occurred while upserting saved tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -466,20 +418,18 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_playlist: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_spotify_session.get_playlist_tracks.side_effect = exception_raised
+        mock_provider_library.get_playlist_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -489,7 +439,7 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while fetching Spotify playlist tracks." in report.errors
+        assert "An error occurred while fetching playlist tracks." in report.errors
         assert f"An error occurred while fetching playlist tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
@@ -505,8 +455,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync: bool,
         sync_track_playlist: bool,
-        mock_spotify_session_factory: mock.Mock,
-        mock_spotify_session: mock.Mock,
+        mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         exception_raised: Exception,
@@ -515,10 +464,9 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_music(
+            report = await sync_library(
                 user=user,
-                auth_token=auth_token,
-                spotify_session_factory=mock_spotify_session_factory,
+                provider_library=mock_provider_library,
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
@@ -528,5 +476,5 @@ class TestSyncMusic:
             )
 
         assert report == SyncReport(errors=mock.ANY)
-        assert "An error occurred while saving Spotify playlist tracks." in report.errors
+        assert "An error occurred while saving playlist tracks." in report.errors
         assert f"An error occurred while upserting playlist tracks for user {user.email}" in caplog.text

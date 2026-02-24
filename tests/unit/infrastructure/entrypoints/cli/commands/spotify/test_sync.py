@@ -7,19 +7,18 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.application.services.spotify import TimeRange
-from spotifagent.application.use_cases.provider_sync_music import SyncConfig
-from spotifagent.application.use_cases.provider_sync_music import SyncReport
-from spotifagent.domain.entities.music import MusicProvider
+from spotifagent.application.use_cases.provider_sync_library import SyncConfig
+from spotifagent.application.use_cases.provider_sync_library import SyncReport
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import ProviderAuthTokenNotFoundError
 from spotifagent.domain.exceptions import UserNotFound
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify import sync_logic
 from spotifagent.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
-TIME_RANGE_OPTIONS_OUTPUT: Final[str] = ", ".join([f"'{tr}'" for tr in get_args(TimeRange)])
+TIME_RANGE_OPTIONS_OUTPUT: Final[str] = ", ".join([f"'{tr}'" for tr in get_args(SpotifyTimeRange)])
 
 
 class TestSpotifySyncParserCommand:
@@ -200,21 +199,15 @@ class TestSpotifySyncCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         mock_sync_logic.side_effect = ProviderAuthTokenNotFoundError()
-        # fmt: off
+
         result = runner.invoke(
             app,
-            [
-                "spotify", "sync",
-                "--email", "test@example.com",
-                "--provider", MusicProvider.SPOTIFY,
-                "--sync",
-            ],
+            ["spotify", "sync", "--email", "test@example.com", "--sync"],
         )
-        # fmt: on
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert f"No user token found for provider: {MusicProvider.SPOTIFY} and email: test@example.com" in output
+        assert "Auth token not found with email: test@example.com. Did you forget to connect?" in output
 
     def test__output__exceptions(
         self,
@@ -375,7 +368,7 @@ class TestSpotifySyncLogic:
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await sync_logic(email, provider=MusicProvider.SPOTIFY, config=SyncConfig(sync=True))
+            await sync_logic(email, config=SyncConfig(sync=True))
 
     async def test__auth_token__not_found(
         self,
@@ -387,4 +380,4 @@ class TestSpotifySyncLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await sync_logic(user.email, provider=MusicProvider.SPOTIFY, config=SyncConfig(sync=True))
+            await sync_logic(user.email, config=SyncConfig(sync=True))

@@ -5,11 +5,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from spotifagent.application.services.spotify import TimeRange
-from spotifagent.application.use_cases.provider_sync_music import SyncConfig
-from spotifagent.domain.entities.music import MusicProvider
+from spotifagent.application.use_cases.provider_sync_library import SyncConfig
 from spotifagent.domain.exceptions import ProviderAuthTokenNotFoundError
 from spotifagent.domain.exceptions import UserNotFound
+from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
 from spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from spotifagent.infrastructure.entrypoints.cli.parsers import parse_email
@@ -51,10 +50,6 @@ def connect(
 @app.command("sync", help="Synchronize the Spotify user's items.")
 def sync(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    provider: MusicProvider = typer.Option(
-        MusicProvider.SPOTIFY,
-        help="The music provider to sync with",
-    ),
     purge: bool = typer.Option(
         False,
         "--purge/--no-purge",
@@ -112,7 +107,7 @@ def sync(
         min=1,
         max=50,
     ),
-    time_range: TimeRange = typer.Option(
+    time_range: SpotifyTimeRange = typer.Option(
         "long_term",
         "--time-range",
         help="The time range of the items to fetch (top artist and top tracks)",
@@ -150,11 +145,14 @@ def sync(
         raise typer.Abort()
 
     try:
-        report = asyncio.run(sync_logic(email=email, provider=provider, config=config))
+        report = asyncio.run(sync_logic(email=email, config=config))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except ProviderAuthTokenNotFoundError as e:
-        raise typer.BadParameter(f"No user token found for provider: {provider} and email: {email}") from e
+        typer.secho(
+            f"Auth token not found with email: {email}. Did you forget to connect?", fg=typer.colors.RED, err=True
+        )
+        raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e

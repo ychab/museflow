@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 import pytest
 
-from spotifagent.application.services.spotify import SpotifySessionFactory
 from spotifagent.domain.entities.auth import OAuthProviderState
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.entities.auth import OAuthProviderUserToken
@@ -35,6 +34,7 @@ from spotifagent.infrastructure.adapters.database.repositories.music import Trac
 from spotifagent.infrastructure.adapters.database.repositories.users import UserRepository
 from spotifagent.infrastructure.adapters.database.session import async_session_factory
 from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import JwtAccessTokenManager
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -206,33 +206,6 @@ def track_repository(async_session_db: AsyncSession) -> TrackRepositoryPort:
     return TrackRepository(async_session_db)
 
 
-# --- Clients impl ---
-
-
-@pytest.fixture
-async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
-    async with SpotifyOAuthClientAdapter(
-        client_id="dummy-client-id",
-        client_secret="dummy-client-secret",
-        redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
-    ) as client:
-        yield client
-
-
-# --- Service impl ---
-
-
-@pytest.fixture
-def spotify_session_factory(
-    auth_token_repository: OAuthProviderTokenRepositoryPort,
-    spotify_client: SpotifyOAuthClientAdapter,
-) -> SpotifySessionFactory:
-    return SpotifySessionFactory(
-        auth_token_repository=auth_token_repository,
-        spotify_client=spotify_client,
-    )
-
-
 # --- Entity factories ---
 
 
@@ -287,6 +260,42 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
     auth_token_db = await AuthProviderTokenFactory.create_async(user_id=user_id, provider=provider, **params)
     return OAuthProviderUserToken.model_validate(auth_token_db)
+
+
+# --- Clients impl ---
+
+
+@pytest.fixture
+async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+    async with SpotifyOAuthClientAdapter(
+        client_id="dummy-client-id",
+        client_secret="dummy-client-secret",
+        redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+    ) as client:
+        yield client
+
+
+# --- Service impl ---
+
+
+@pytest.fixture
+def spotify_library(
+    request: pytest.FixtureRequest,
+    user: User,
+    auth_token: OAuthProviderUserToken,
+    auth_token_repository: OAuthProviderTokenRepositoryPort,
+    spotify_client: SpotifyOAuthClientAdapter,
+) -> SpotifyLibraryAdapter:
+    params = getattr(request, "param", {})
+    max_concurrency = params.get("max_concurrency", 20)
+
+    return SpotifyLibraryAdapter(
+        user=user,
+        auth_token=auth_token,
+        auth_token_repository=auth_token_repository,
+        client=spotify_client,
+        max_concurrency=max_concurrency,
+    )
 
 
 # --- Security impl helper ---

@@ -2,9 +2,9 @@ from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
-from spotifagent.application.use_cases.provider_sync_music import SyncConfig
-from spotifagent.application.use_cases.provider_sync_music import SyncReport
-from spotifagent.application.use_cases.provider_sync_music import sync_music
+from spotifagent.application.use_cases.provider_sync_library import SyncConfig
+from spotifagent.application.use_cases.provider_sync_library import SyncReport
+from spotifagent.application.use_cases.provider_sync_library import sync_library
 from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.exceptions import ProviderAuthTokenNotFoundError
 from spotifagent.domain.exceptions import UserNotFound
@@ -12,17 +12,17 @@ from spotifagent.infrastructure.entrypoints.cli.dependencies import get_artist_r
 from spotifagent.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from spotifagent.infrastructure.entrypoints.cli.dependencies import get_db
 from spotifagent.infrastructure.entrypoints.cli.dependencies import get_spotify_client
-from spotifagent.infrastructure.entrypoints.cli.dependencies import get_spotify_user_session_factory
+from spotifagent.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
 from spotifagent.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from spotifagent.infrastructure.entrypoints.cli.dependencies import get_user_repository
 
 
-async def sync_logic(email: EmailStr, provider: MusicProvider, config: SyncConfig) -> SyncReport:
+async def sync_logic(email: EmailStr, config: SyncConfig) -> SyncReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
         spotify_client = await stack.enter_async_context(get_spotify_client())
-        spotify_session_factory = get_spotify_user_session_factory(
+        spotify_library_factory = get_spotify_library_factory(
             session=session,
             spotify_client=spotify_client,
         )
@@ -36,14 +36,15 @@ async def sync_logic(email: EmailStr, provider: MusicProvider, config: SyncConfi
         if user is None:
             raise UserNotFound()
 
-        auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
+        auth_token = await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
         if auth_token is None:
             raise ProviderAuthTokenNotFoundError()
 
-        return await sync_music(
+        spotify_library = spotify_library_factory.create(user=user, auth_token=auth_token)
+
+        return await sync_library(
             user=user,
-            auth_token=auth_token,
-            spotify_session_factory=spotify_session_factory,
+            provider_library=spotify_library,
             artist_repository=artist_repository,
             track_repository=track_repository,
             config=config,

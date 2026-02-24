@@ -4,12 +4,14 @@ This quick and dirty document just list the roadmap tasks.
 
 ## refacto hexa:
 
-- remove SpotifySessionFactory
-- delete exception SpotifyAccountNotFoundError
-- review domain exceptions to be only domain exception (remove spotify prefix)
-
 - replace entity pydantic by dataclass instead (no parsing for domain)?
 - use case => use class when needed, like the sync
+- handling Token Refresh outside the ProviderLibraryPort
+- move sync cli command from spotify to music namespace instead (and set the provider arg)? but what about the time_rang arg?
+
+## Test
+
+- review integration test on api endpoint with spotify to use httpx mock instead of mock (two test only)...?
 
 ## Dependencies
 

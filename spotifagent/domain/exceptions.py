@@ -26,11 +26,5 @@ class ProviderExchangeCodeError(Exception):
     pass
 
 
-class SpotifyAccountNotFoundError(Exception):
-    """Raised when an operation requires a linked Spotify account but none exists."""
-
-    pass
-
-
-class SpotifyPageValidationError(Exception):
+class ProviderPageValidationError(Exception):
     pass

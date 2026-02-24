@@ -41,15 +41,3 @@ class UserUpdate(BaseEntity):
                 raise ValueError(f"The field '{field}' cannot be set to None")
 
         return self
-
-
-class UserResponse(BaseEntity):
-    id: uuid.UUID
-    email: EmailStr
-    is_active: bool
-
-
-class UserWithToken(BaseEntity):
-    user: UserResponse
-    access_token: str
-    token_type: str = "Bearer"

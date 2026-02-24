@@ -12,6 +12,10 @@ class ProviderOAuthClientPort(ABC):
 
     @property
     @abstractmethod
+    def base_url(self) -> HttpUrl: ...
+
+    @property
+    @abstractmethod
     def token_endpoint(self) -> HttpUrl: ...
 
     @abstractmethod

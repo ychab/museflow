@@ -6,11 +6,8 @@ from dataclasses import field
 from dataclasses import replace
 from typing import Any
 
-from spotifagent.application.services.spotify import SpotifySessionFactory
-from spotifagent.application.services.spotify import TimeRange
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import SpotifyAccountNotFoundError
+from spotifagent.domain.ports.providers.library import ProviderLibraryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
 from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
 
@@ -66,7 +63,7 @@ class SyncConfig:
     sync_track_saved: bool = False
     sync_track_playlist: bool = False
     page_limit: int = 50
-    time_range: TimeRange = "long_term"
+    time_range: str | None = None
     batch_size: int = 300
 
     def has_purge(self) -> bool:
@@ -92,21 +89,19 @@ class SyncConfig:
         )
 
 
-async def sync_music(
+async def sync_library(
     user: User,
-    auth_token: OAuthProviderUserToken,
-    spotify_session_factory: SpotifySessionFactory,
+    provider_library: ProviderLibraryPort,
     artist_repository: ArtistRepositoryPort,
     track_repository: TrackRepositoryPort,
     config: SyncConfig,
 ) -> SyncReport:
     """
-    For a given user, synchronize its Spotify items, including artists
+    For a given user, synchronize its provider items, including artists
     and tracks, depending on the given flags.
 
-    :param user: A user object
-    :param auth_token: A user auth token for the given provider
-    :param spotify_session_factory: Spotify session factory
+    :param user: A user entity to fetch its library
+    :param provider_library: A provider library
     :param artist_repository: Artists repository
     :param track_repository: Tracks repository
     :param config: A configuration dataclass object
@@ -143,13 +138,6 @@ async def sync_music(
         if report.has_errors:
             return report
 
-    # Then init a spotify user session (in case we just want to purge).
-    try:
-        spotify_session = spotify_session_factory.create(user, auth_token)
-    except SpotifyAccountNotFoundError:
-        logger.debug(f"Spotify account not found for user {user.email}")
-        return replace(report, errors=["You must connect your Spotify account first."])
-
     # Then fetch and upsert top artists.
     if config.sync or config.sync_artist_top:
         report = await _sync_entity(
@@ -158,8 +146,8 @@ async def sync_music(
             report_field_updated="artist_updated",
             user=user,
             entity_name="top artists",
-            fetch_func=lambda: spotify_session.get_top_artists(
-                limit=config.page_limit,
+            fetch_func=lambda: provider_library.get_top_artists(
+                page_limit=config.page_limit,
                 time_range=config.time_range,
             ),
             upsert_func=lambda items: artist_repository.bulk_upsert(
@@ -176,8 +164,8 @@ async def sync_music(
             report_field_updated="track_updated",
             user=user,
             entity_name="top tracks",
-            fetch_func=lambda: spotify_session.get_top_tracks(
-                limit=config.page_limit,
+            fetch_func=lambda: provider_library.get_top_tracks(
+                page_limit=config.page_limit,
                 time_range=config.time_range,
             ),
             upsert_func=lambda items: track_repository.bulk_upsert(
@@ -194,8 +182,8 @@ async def sync_music(
             report_field_updated="track_updated",
             user=user,
             entity_name="saved tracks",
-            fetch_func=lambda: spotify_session.get_saved_tracks(
-                limit=config.page_limit,
+            fetch_func=lambda: provider_library.get_saved_tracks(
+                page_limit=config.page_limit,
             ),
             upsert_func=lambda items: track_repository.bulk_upsert(
                 tracks=items,
@@ -211,8 +199,8 @@ async def sync_music(
             report_field_updated="track_updated",
             user=user,
             entity_name="playlist tracks",
-            fetch_func=lambda: spotify_session.get_playlist_tracks(
-                limit=config.page_limit,
+            fetch_func=lambda: provider_library.get_playlist_tracks(
+                page_limit=config.page_limit,
             ),
             upsert_func=lambda items: track_repository.bulk_upsert(
                 tracks=items,
@@ -261,7 +249,7 @@ async def _sync_entity[T](
         items = await fetch_func()
     except Exception:
         logger.exception(f"An error occurred while fetching {entity_name} for user {user.email}")
-        report = replace(report, errors=report.errors + [f"An error occurred while fetching Spotify {entity_name}."])
+        report = replace(report, errors=report.errors + [f"An error occurred while fetching {entity_name}."])
         return report
     else:
         logger.info(f"Fetched {len(items)} {entity_name} for user {user.email}")
@@ -271,7 +259,7 @@ async def _sync_entity[T](
         ids, created = await upsert_func(items)
     except Exception:
         logger.exception(f"An error occurred while upserting {entity_name} for user {user.email}")
-        report = replace(report, errors=report.errors + [f"An error occurred while saving Spotify {entity_name}."])
+        report = replace(report, errors=report.errors + [f"An error occurred while saving {entity_name}."])
         return report
     else:
         logger.info(f"Upserted {len(ids)} {entity_name} for user {user.email}")
