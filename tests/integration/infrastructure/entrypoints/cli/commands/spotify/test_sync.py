@@ -36,7 +36,7 @@ class TestSpotifySyncLogic:
             track_updated=250,
         )
 
-        report = await sync_logic(email=user.email, config=SyncConfig(sync=True))
+        report = await sync_logic(email=user.email, config=SyncConfig(sync_all=True))
 
         assert report.artist_created == 100
         assert report.artist_updated == 250

@@ -783,8 +783,8 @@ class TestSpotifySyncMusic:
             artist_repository=artist_repository,
             track_repository=track_repository,
             config=SyncConfig(
-                purge=True,
-                sync=True,
+                purge_all=True,
+                sync_all=True,
                 page_limit=playlist_tracks_response_paginated[1],
             ),
         )
@@ -965,8 +965,8 @@ class TestSpotifySyncMusic:
             artist_repository=artist_repository,
             track_repository=track_repository,
             config=SyncConfig(
-                purge=False,
-                sync=True,
+                purge_all=False,
+                sync_all=True,
                 page_limit=page_limit,
             ),
         )

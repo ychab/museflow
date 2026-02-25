@@ -52,7 +52,7 @@ class TestSyncConfig:
         ("attributes", "expected_bool"),
         [
             ({}, False),
-            ({"purge": True}, True),
+            ({"purge_all": True}, True),
             ({"purge_artist_top": True}, True),
             ({"purge_track_top": True}, True),
             ({"purge_track_saved": True}, True),
@@ -67,7 +67,7 @@ class TestSyncConfig:
         ("attributes", "expected_bool"),
         [
             ({}, False),
-            ({"sync": True}, True),
+            ({"sync_all": True}, True),
             ({"sync_artist_top": True}, True),
             ({"sync_track_top": True}, True),
             ({"sync_track_saved": True}, True),
@@ -114,12 +114,12 @@ class TestSyncMusic:
         )
         assert report == SyncReport()
 
-    @pytest.mark.parametrize(("purge", "purge_artist_top"), [(True, True), (True, False), (False, True)])
+    @pytest.mark.parametrize(("purge_all", "purge_artist_top"), [(True, True), (True, False), (False, True)])
     async def test__purge__artist__exception(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        purge: bool,
+        purge_all: bool,
         purge_artist_top: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -136,7 +136,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    purge=purge,
+                    purge_all=purge_all,
                     purge_artist_top=purge_artist_top,
                 ),
             )
@@ -146,14 +146,14 @@ class TestSyncMusic:
         assert f"An error occurred while purging artists for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("purge", "purge_track_top", "purge_track_saved", "purge_track_playlist"),
+        ("purge_all", "purge_track_top", "purge_track_saved", "purge_track_playlist"),
         [c for c in itertools.product([True, False], repeat=4) if any(c)],
     )
     async def test__purge__track__exception(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        purge: bool,
+        purge_all: bool,
         purge_track_top: bool,
         purge_track_saved: bool,
         purge_track_playlist: bool,
@@ -172,7 +172,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    purge=purge,
+                    purge_all=purge_all,
                     purge_track_top=purge_track_top,
                     purge_track_saved=purge_track_saved,
                     purge_track_playlist=purge_track_playlist,
@@ -184,7 +184,7 @@ class TestSyncMusic:
         assert f"An error occurred while purging tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_artist_top", "exception_raised"),
+        ("sync_all", "sync_artist_top", "exception_raised"),
         [
             (True, False, HTTPError("Boom")),
             (False, True, validation_error()),
@@ -194,7 +194,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_artist_top: bool,
         exception_raised: Exception,
         mock_provider_library: mock.Mock,
@@ -211,7 +211,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
                 ),
             )
@@ -221,7 +221,7 @@ class TestSyncMusic:
         assert f"An error occurred while fetching top artists for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_artist_top", "exception_raised"),
+        ("sync_all", "sync_artist_top", "exception_raised"),
         [
             (True, False, SQLAlchemyError("Boom")),
             (False, True, validation_error()),
@@ -231,7 +231,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_artist_top: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -248,7 +248,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
                 ),
             )
@@ -258,7 +258,7 @@ class TestSyncMusic:
         assert f"An error occurred while upserting top artists for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_top", "exception_raised"),
+        ("sync_all", "sync_track_top", "exception_raised"),
         [
             (True, False, HTTPError("Boom")),
             (False, True, validation_error()),
@@ -268,7 +268,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_top: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -285,7 +285,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_top=sync_track_top,
                 ),
             )
@@ -295,7 +295,7 @@ class TestSyncMusic:
         assert f"An error occurred while fetching top tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_top", "exception_raised"),
+        ("sync_all", "sync_track_top", "exception_raised"),
         [
             (True, False, SQLAlchemyError("Boom")),
             (False, True, validation_error()),
@@ -305,7 +305,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_top: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -322,7 +322,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_top=sync_track_top,
                 ),
             )
@@ -332,7 +332,7 @@ class TestSyncMusic:
         assert f"An error occurred while upserting top tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_saved", "exception_raised"),
+        ("sync_all", "sync_track_saved", "exception_raised"),
         [
             (True, False, HTTPError("Boom")),
             (False, True, validation_error()),
@@ -342,7 +342,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_saved: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -359,7 +359,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
                 ),
             )
@@ -369,7 +369,7 @@ class TestSyncMusic:
         assert f"An error occurred while fetching saved tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_saved", "exception_raised"),
+        ("sync_all", "sync_track_saved", "exception_raised"),
         [
             (True, False, SQLAlchemyError("Boom")),
             (False, True, validation_error()),
@@ -379,7 +379,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_saved: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -396,7 +396,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
                 ),
             )
@@ -406,7 +406,7 @@ class TestSyncMusic:
         assert f"An error occurred while upserting saved tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_playlist", "exception_raised"),
+        ("sync_all", "sync_track_playlist", "exception_raised"),
         [
             (True, False, HTTPError("Boom")),
             (False, True, validation_error()),
@@ -416,7 +416,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_playlist: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -433,7 +433,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,
                 ),
             )
@@ -443,7 +443,7 @@ class TestSyncMusic:
         assert f"An error occurred while fetching playlist tracks for user {user.email}" in caplog.text
 
     @pytest.mark.parametrize(
-        ("sync", "sync_track_playlist", "exception_raised"),
+        ("sync_all", "sync_track_playlist", "exception_raised"),
         [
             (True, False, SQLAlchemyError("Boom")),
             (False, True, validation_error()),
@@ -453,7 +453,7 @@ class TestSyncMusic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        sync: bool,
+        sync_all: bool,
         sync_track_playlist: bool,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
@@ -470,7 +470,7 @@ class TestSyncMusic:
                 artist_repository=mock_artist_repository,
                 track_repository=mock_track_repository,
                 config=SyncConfig(
-                    sync=sync,
+                    sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,
                 ),
             )

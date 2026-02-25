@@ -37,12 +37,12 @@ class TestSpotifySyncParserCommand:
                 "spotify",
                 "sync",
                 "--email", "test@example.com",
-                "--purge",
+                "--purge-all",
                 "--purge-artist-top",
                 "--purge-track-top",
                 "--purge-track-saved",
                 "--purge-track-playlist",
-                "--no-sync",
+                "--no-sync-all",
                 "--no-sync-artist-top",
                 "--no-sync-track-top",
                 "--no-sync-track-saved",
@@ -186,7 +186,7 @@ class TestSpotifySyncCommand:
     ) -> None:
         mock_sync_logic.side_effect = UserNotFound()
 
-        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync"])
+        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync-all"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -202,7 +202,7 @@ class TestSpotifySyncCommand:
 
         result = runner.invoke(
             app,
-            ["spotify", "sync", "--email", "test@example.com", "--sync"],
+            ["spotify", "sync", "--email", "test@example.com", "--sync-all"],
         )
         assert result.exit_code != 0
 
@@ -217,7 +217,7 @@ class TestSpotifySyncCommand:
     ) -> None:
         mock_sync_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync"])
+        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync-all"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -231,13 +231,20 @@ class TestSpotifySyncCommand:
     ) -> None:
         mock_sync_logic.return_value = SyncReport(errors=["An error occurred: Boom"])
 
-        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync"])
+        result = runner.invoke(app, ["spotify", "sync", "--email", "test@example.com", "--sync-all"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
         assert "An error occurred: Boom" in output
 
-    @pytest.mark.parametrize("cmd_args", [["--purge"], ["--purge-artist-top"], ["--purge", "--purge-artist-top"]])
+    @pytest.mark.parametrize(
+        "cmd_args",
+        [
+            ["--purge-all"],
+            ["--purge-artist-top"],
+            ["--purge-all", "--purge-artist-top"],
+        ],
+    )
     def test__output__purge_artists(
         self,
         cmd_args: list[str],
@@ -257,21 +264,21 @@ class TestSpotifySyncCommand:
     @pytest.mark.parametrize(
         "cmd_args",
         [
-            ["--purge"],
+            ["--purge-all"],
             ["--purge-track-top"],
             ["--purge-track-saved"],
             ["--purge-track-playlist"],
-            ["--purge", "--purge-track-top"],
-            ["--purge", "--purge-track-saved"],
-            ["--purge", "--purge-track-playlist"],
+            ["--purge-all", "--purge-track-top"],
+            ["--purge-all", "--purge-track-saved"],
+            ["--purge-all", "--purge-track-playlist"],
             ["--purge-track-top", "--purge-track-saved"],
             ["--purge-track-top", "--purge-track-playlist"],
             ["--purge-track-saved", "--purge-track-playlist"],
-            ["--purge", "--purge-track-top", "--purge-track-saved"],
-            ["--purge", "--purge-track-top", "--purge-track-playlist"],
-            ["--purge", "--purge-track-saved", "--purge-track-playlist"],
+            ["--purge-all", "--purge-track-top", "--purge-track-saved"],
+            ["--purge-all", "--purge-track-top", "--purge-track-playlist"],
+            ["--purge-all", "--purge-track-saved", "--purge-track-playlist"],
             ["--purge-track-top", "--purge-track-saved", "--purge-track-playlist"],
-            ["--purge", "--purge-track-top", "--purge-track-saved", "--purge-track-playlist"],
+            ["--purge-all", "--purge-track-top", "--purge-track-saved", "--purge-track-playlist"],
         ],
     )
     def test__output__purge_tracks(
@@ -290,7 +297,14 @@ class TestSpotifySyncCommand:
         assert "Synchronization successful in " in output
         assert "Tracks purged 550" in output
 
-    @pytest.mark.parametrize("cmd_args", [["--sync"], ["--sync-artist-top"], ["--sync", "--sync-artist-top"]])
+    @pytest.mark.parametrize(
+        "cmd_args",
+        [
+            ["--sync-all"],
+            ["--sync-artist-top"],
+            ["--sync-all", "--sync-artist-top"],
+        ],
+    )
     def test__output__sync_artists_top(
         self,
         cmd_args: list[str],
@@ -314,21 +328,21 @@ class TestSpotifySyncCommand:
     @pytest.mark.parametrize(
         "cmd_args",
         [
-            ["--sync"],
+            ["--sync-all"],
             ["--sync-track-top"],
             ["--sync-track-saved"],
             ["--sync-track-playlist"],
-            ["--sync", "--sync-track-top"],
-            ["--sync", "--sync-track-saved"],
-            ["--sync", "--sync-track-playlist"],
+            ["--sync-all", "--sync-track-top"],
+            ["--sync-all", "--sync-track-saved"],
+            ["--sync-all", "--sync-track-playlist"],
             ["--sync-track-top", "--sync-track-saved"],
             ["--sync-track-top", "--sync-track-playlist"],
             ["--sync-track-saved", "--sync-track-playlist"],
-            ["--sync", "--sync-track-top", "--sync-track-saved"],
-            ["--sync", "--sync-track-top", "--sync-track-playlist"],
-            ["--sync", "--sync-track-saved", "--sync-track-playlist"],
+            ["--sync-all", "--sync-track-top", "--sync-track-saved"],
+            ["--sync-all", "--sync-track-top", "--sync-track-playlist"],
+            ["--sync-all", "--sync-track-saved", "--sync-track-playlist"],
             ["--sync-track-top", "--sync-track-saved", "--sync-track-playlist"],
-            ["--sync", "--sync-track-top", "--sync-track-saved", "--sync-track-playlist"],
+            ["--sync-all", "--sync-track-top", "--sync-track-saved", "--sync-track-playlist"],
         ],
     )
     def test__output__sync_tracks(
@@ -368,7 +382,7 @@ class TestSpotifySyncLogic:
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await sync_logic(email, config=SyncConfig(sync=True))
+            await sync_logic(email, config=SyncConfig(sync_all=True))
 
     async def test__auth_token__not_found(
         self,
@@ -380,4 +394,4 @@ class TestSpotifySyncLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await sync_logic(user.email, config=SyncConfig(sync=True))
+            await sync_logic(user.email, config=SyncConfig(sync_all=True))

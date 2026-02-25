@@ -37,12 +37,12 @@ class SyncConfig:
     """
     A synchronization configuration object.
 
-    :param purge: Whether to purge all
+    :param purge_all: Whether to purge all
     :param purge_artist_top: Whether to purge top artists
     :param purge_track_top: Whether to purge top tracks
     :param purge_track_saved: Whether to purge saved tracks
     :param purge_track_playlist: Whether to purge playlist tracks
-    :param sync: Whether to sync all
+    :param sync_all: Whether to sync all
     :param sync_artist_top: Whether to sync top artists
     :param sync_track_top: Whether to sync top tracks
     :param sync_track_saved: Whether to sync saved tracks
@@ -52,12 +52,12 @@ class SyncConfig:
     :param batch_size: The number of items to bulk upsert in DB
     """
 
-    purge: bool = False
+    purge_all: bool = False
     purge_artist_top: bool = False
     purge_track_top: bool = False
     purge_track_saved: bool = False
     purge_track_playlist: bool = False
-    sync: bool = False
+    sync_all: bool = False
     sync_artist_top: bool = False
     sync_track_top: bool = False
     sync_track_saved: bool = False
@@ -69,7 +69,7 @@ class SyncConfig:
     def has_purge(self) -> bool:
         return any(
             [
-                self.purge,
+                self.purge_all,
                 self.purge_artist_top,
                 self.purge_track_top,
                 self.purge_track_saved,
@@ -80,7 +80,7 @@ class SyncConfig:
     def has_sync(self) -> bool:
         return any(
             [
-                self.sync,
+                self.sync_all,
                 self.sync_artist_top,
                 self.sync_track_top,
                 self.sync_track_saved,
@@ -112,7 +112,7 @@ async def sync_library(
 
     # First of all, purge items if required.
     if config.has_purge():
-        if config.purge or config.purge_artist_top:
+        if config.purge_all or config.purge_artist_top:
             report = await _purge_entity(
                 report=report,
                 report_field_purge="purge_artist",
@@ -121,7 +121,7 @@ async def sync_library(
                 purge_callback=lambda: artist_repository.purge(user_id=user.id),
             )
 
-        if config.purge or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
+        if config.purge_all or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
             report = await _purge_entity(
                 report=report,
                 report_field_purge="purge_track",
@@ -129,9 +129,9 @@ async def sync_library(
                 entity_name="tracks",
                 purge_callback=lambda: track_repository.purge(
                     user_id=user.id,
-                    is_top=config.purge_track_top and not config.purge,
-                    is_saved=config.purge_track_saved and not config.purge,
-                    is_playlist=config.purge_track_playlist and not config.purge,
+                    is_top=config.purge_track_top and not config.purge_all,
+                    is_saved=config.purge_track_saved and not config.purge_all,
+                    is_playlist=config.purge_track_playlist and not config.purge_all,
                 ),
             )
 
@@ -139,7 +139,7 @@ async def sync_library(
             return report
 
     # Then fetch and upsert top artists.
-    if config.sync or config.sync_artist_top:
+    if config.sync_all or config.sync_artist_top:
         report = await _sync_entity(
             report=report,
             report_field_created="artist_created",
@@ -157,7 +157,7 @@ async def sync_library(
         )
 
     # Then fetch and upsert top tracks.
-    if config.sync or config.sync_track_top:
+    if config.sync_all or config.sync_track_top:
         report = await _sync_entity(
             report=report,
             report_field_created="track_created",
@@ -175,7 +175,7 @@ async def sync_library(
         )
 
     # Then fetch and upsert saved tracks.
-    if config.sync or config.sync_track_saved:
+    if config.sync_all or config.sync_track_saved:
         report = await _sync_entity(
             report=report,
             report_field_created="track_created",
@@ -192,7 +192,7 @@ async def sync_library(
         )
 
     # Then fetch and upsert playlist tracks.
-    if config.sync or config.sync_track_playlist:
+    if config.sync_all or config.sync_track_playlist:
         report = await _sync_entity(
             report=report,
             report_field_created="track_created",

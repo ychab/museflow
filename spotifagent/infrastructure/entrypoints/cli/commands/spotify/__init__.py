@@ -50,9 +50,9 @@ def connect(
 @app.command("sync", help="Synchronize the Spotify user's items.")
 def sync(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    purge: bool = typer.Option(
+    purge_all: bool = typer.Option(
         False,
-        "--purge/--no-purge",
+        "--purge-all/--no-purge-all",
         help="Whether to purge all user's items",
     ),
     purge_artist_top: bool = typer.Option(
@@ -75,9 +75,9 @@ def sync(
         "--purge-track-playlist/--no-purge-track-playlist",
         help="Whether to purge user's playlist tracks",
     ),
-    sync: bool = typer.Option(
+    sync_all: bool = typer.Option(
         False,
-        "--sync/--no-sync",
+        "--sync-all/--no-sync-all",
         help="Whether to sync all user's items",
     ),
     sync_artist_top: bool = typer.Option(
@@ -126,12 +126,12 @@ def sync(
     start_time = time.perf_counter()
 
     config = SyncConfig(
-        purge=purge,
+        purge_all=purge_all,
         purge_artist_top=purge_artist_top,
         purge_track_top=purge_track_top,
         purge_track_saved=purge_track_saved,
         purge_track_playlist=purge_track_playlist,
-        sync=sync,
+        sync_all=sync_all,
         sync_artist_top=sync_artist_top,
         sync_track_top=sync_track_top,
         sync_track_saved=sync_track_saved,

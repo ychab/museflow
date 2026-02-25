@@ -173,8 +173,8 @@ poetry run spotifagent spotify sync --email <email> [OPTIONS]
 
 **Sync Options:**
 
-*   `--sync` / `--no-sync`: Sync all user's items.
-*   `--purge` / `--no-purge`: Purge all user's items before syncing.
+*   `--sync-all` / `--no-sync-all`: Sync all user's items.
+*   `--purge-all` / `--no-purge-all`: Purge all user's items before syncing.
 *   `--sync-artist-top`: Sync user's top artists.
 *   `--sync-track-top`: Sync user's top tracks.
 *   `--sync-track-saved`: Sync user's saved tracks.
@@ -186,7 +186,7 @@ poetry run spotifagent spotify sync --email <email> [OPTIONS]
 Example: Sync everything for a user
 
 ```bash
-poetry run spotifagent spotify sync --email user@example.com --sync
+poetry run spotifagent spotify sync --email user@example.com --sync-all
 ```
 
 ## Development
