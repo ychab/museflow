@@ -47,7 +47,7 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
 
 
 class Artist(MusicItemMixin, Base):
-    __tablename__ = "museflow_music_artist"
+    __tablename__ = "museflow_artist"
 
     genres: Mapped[list[str]] = mapped_column(
         ARRAY(String),
@@ -58,7 +58,7 @@ class Artist(MusicItemMixin, Base):
 
 
 class Track(MusicItemMixin, Base):
-    __tablename__ = "museflow_music_track"
+    __tablename__ = "museflow_track"
 
     artists: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB,

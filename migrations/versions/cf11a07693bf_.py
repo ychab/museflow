@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: ea9784e8d2a1
+Revision ID: cf11a07693bf
 Revises:
-Create Date: 2026-02-24 09:03:44.847319
+Create Date: 2026-02-25 15:22:12.490862
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'ea9784e8d2a1'
+revision: str = 'cf11a07693bf'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,31 +31,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_museflow_user_email'), 'museflow_user', ['email'], unique=True)
-    op.create_table('museflow_auth_provider_state',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
-    sa.Column('state', sa.String(length=512), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_state')
-    )
-    op.create_index(op.f('ix_museflow_auth_provider_state_state'), 'museflow_auth_provider_state', ['state'], unique=True)
-    op.create_table('museflow_auth_provider_token',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
-    sa.Column('token_type', sa.String(length=512), nullable=False),
-    sa.Column('token_access', sa.String(length=512), nullable=False),
-    sa.Column('token_refresh', sa.String(length=512), nullable=False),
-    sa.Column('token_expires_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_token')
-    )
-    op.create_table('museflow_music_artist',
+    op.create_table('museflow_artist',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -71,10 +47,34 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider_id', name='uq_museflow_music_artist_user_provider_id')
+    sa.UniqueConstraint('user_id', 'provider_id', name='uq_museflow_artist_user_provider_id')
     )
-    op.create_index(op.f('ix_museflow_music_artist_user_id'), 'museflow_music_artist', ['user_id'], unique=False)
-    op.create_table('museflow_music_track',
+    op.create_index(op.f('ix_museflow_artist_user_id'), 'museflow_artist', ['user_id'], unique=False)
+    op.create_table('museflow_auth_state',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
+    sa.Column('state', sa.String(length=512), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_state')
+    )
+    op.create_index(op.f('ix_museflow_auth_state_state'), 'museflow_auth_state', ['state'], unique=True)
+    op.create_table('museflow_auth_token',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
+    sa.Column('token_type', sa.String(length=512), nullable=False),
+    sa.Column('token_access', sa.String(length=512), nullable=False),
+    sa.Column('token_refresh', sa.String(length=512), nullable=False),
+    sa.Column('token_expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_token')
+    )
+    op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -90,22 +90,22 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider_id', name='uq_museflow_music_track_user_provider_id')
+    sa.UniqueConstraint('user_id', 'provider_id', name='uq_museflow_track_user_provider_id')
     )
-    op.create_index(op.f('ix_museflow_music_track_user_id'), 'museflow_music_track', ['user_id'], unique=False)
+    op.create_index(op.f('ix_museflow_track_user_id'), 'museflow_track', ['user_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_museflow_music_track_user_id'), table_name='museflow_music_track')
-    op.drop_table('museflow_music_track')
-    op.drop_index(op.f('ix_museflow_music_artist_user_id'), table_name='museflow_music_artist')
-    op.drop_table('museflow_music_artist')
-    op.drop_table('museflow_auth_provider_token')
-    op.drop_index(op.f('ix_museflow_auth_provider_state_state'), table_name='museflow_auth_provider_state')
-    op.drop_table('museflow_auth_provider_state')
+    op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
+    op.drop_table('museflow_track')
+    op.drop_table('museflow_auth_token')
+    op.drop_index(op.f('ix_museflow_auth_state_state'), table_name='museflow_auth_state')
+    op.drop_table('museflow_auth_state')
+    op.drop_index(op.f('ix_museflow_artist_user_id'), table_name='museflow_artist')
+    op.drop_table('museflow_artist')
     op.drop_index(op.f('ix_museflow_user_email'), table_name='museflow_user')
     op.drop_table('museflow_user')
     # ### end Alembic commands ###

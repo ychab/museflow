@@ -16,7 +16,7 @@ from museflow.infrastructure.adapters.database.models.base import NumericIdMixin
 
 
 class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
-    __tablename__ = "museflow_auth_provider_state"
+    __tablename__ = "museflow_auth_state"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("museflow_user.id", ondelete="CASCADE"),
@@ -30,7 +30,7 @@ class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
 
 class AuthProviderToken(NumericIdMixin, Base, kw_only=True):
-    __tablename__ = "museflow_auth_provider_token"
+    __tablename__ = "museflow_auth_token"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("museflow_user.id", ondelete="CASCADE"),
