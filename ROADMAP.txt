@@ -23,7 +23,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## Renaming project
 
-- replace spotifagent occurrences almost everywhere...
+- replace museflow occurrences almost everywhere...
 
 ## Logging
 

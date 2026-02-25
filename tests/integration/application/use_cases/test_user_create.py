@@ -3,11 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.application.use_cases.user_create import user_create
-from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
+from museflow.application.use_cases.user_create import user_create
+from museflow.domain.entities.users import UserCreate
+from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.infrastructure.adapters.database.models import User as UserModel
 
 from tests.unit.factories.users import UserCreateFactory
 

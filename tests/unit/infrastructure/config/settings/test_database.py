@@ -2,7 +2,7 @@ from pydantic import ValidationError
 
 import pytest
 
-from spotifagent.infrastructure.config.settings.database import DatabaseSettings
+from museflow.infrastructure.config.settings.database import DatabaseSettings
 
 
 class TestDatabaseSettings:

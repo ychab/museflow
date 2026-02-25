@@ -3,9 +3,9 @@ import base64
 from polyfactory.decorators import post_generated
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.entities.users import UserUpdate
+from museflow.domain.entities.users import User
+from museflow.domain.entities.users import UserCreate
+from museflow.domain.entities.users import UserUpdate
 
 
 class UserFactory(ModelFactory[User]):

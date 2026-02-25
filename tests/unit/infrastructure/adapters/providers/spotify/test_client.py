@@ -14,9 +14,9 @@ from pydantic import HttpUrl
 import pytest
 from pytest_httpx import HTTPXMock
 
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
-from spotifagent.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 
 
 class TestSpotifyOAuthClientAdapter:

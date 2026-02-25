@@ -3,11 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
-from spotifagent.infrastructure.entrypoints.cli.commands.users import user_update_logic
+from museflow.domain.entities.users import User
+from museflow.domain.entities.users import UserUpdate
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic
 
 
 class TestUserUpdateLogic:
@@ -18,7 +18,7 @@ class TestUserUpdateLogic:
         password_hasher: PasswordHasherPort,
         capsys: pytest.CaptureFixture,
     ) -> None:
-        email = "new@spotifagent.com"
+        email = "new@museflow.com"
         password = "new-password"
 
         await user_update_logic(user.id, user_data=UserUpdate(email=email, password=password))

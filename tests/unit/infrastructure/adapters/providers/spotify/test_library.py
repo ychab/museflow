@@ -6,14 +6,14 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
-from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
-from spotifagent.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
-from spotifagent.infrastructure.config.settings.app import app_settings
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
+from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.config.settings.app import app_settings
 
 from tests import ASSETS_DIR
 

@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
-from spotifagent.domain.ports.security import AccessTokenManagerPort
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
-from spotifagent.infrastructure.entrypoints.api.main import app
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.security import AccessTokenManagerPort
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.entrypoints.api.main import app
 
 from tests.integration.factories.users import UserModelFactory
 

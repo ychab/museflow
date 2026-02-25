@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/pypoetry \
     poetry install --only main --no-root
 
 # This is required so poetry can install the package metadata
-COPY spotifagent ./spotifagent
+COPY museflow ./museflow
 
 # Install the project package itself to create the .egg-info / dist-info metadata for importlib
 RUN --mount=type=cache,target=/root/.cache/pypoetry \
@@ -67,7 +67,7 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 
 COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser migrations ./migrations
-COPY --chown=appuser:appuser spotifagent ./spotifagent
+COPY --chown=appuser:appuser museflow ./museflow
 
 USER appuser
 
@@ -76,4 +76,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "spotifagent.infrastructure.entrypoints.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "museflow.infrastructure.entrypoints.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

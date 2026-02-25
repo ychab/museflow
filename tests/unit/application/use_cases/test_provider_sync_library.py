@@ -13,14 +13,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import pytest
 
-from spotifagent.application.use_cases.provider_sync_library import SyncConfig
-from spotifagent.application.use_cases.provider_sync_library import SyncReport
-from spotifagent.application.use_cases.provider_sync_library import sync_library
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.music import Artist
-from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.providers.library import ProviderLibraryPort
+from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncReport
+from museflow.application.use_cases.provider_sync_library import sync_library
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Track
+from museflow.domain.entities.users import User
+from museflow.domain.ports.providers.library import ProviderLibraryPort
 
 from tests.unit.factories.music import ArtistFactory
 from tests.unit.factories.music import TrackFactory

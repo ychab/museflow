@@ -1,4 +1,4 @@
-from spotifagent.domain.entities.users import User
+from museflow.domain.entities.users import User
 
 from tests.integration.factories.auth import AuthProviderStateModelFactory
 from tests.integration.factories.auth import AuthProviderTokenFactory

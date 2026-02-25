@@ -21,16 +21,16 @@ repos:
     rev: v0.15.2
     hooks:
       - id: ruff-check
-        files: (spotifagent|tests)
+        files: (museflow|tests)
         args: [ --fix ]
       - id: ruff-format
-        files: (spotifagent|tests)
+        files: (museflow|tests)
 
   - repo: local
     hooks:
       - id: mypy
         name: mypy
-        files: (spotifagent|tests)
+        files: (museflow|tests)
         entry: poetry run mypy
         language: system
         types: [python]

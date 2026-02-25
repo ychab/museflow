@@ -5,8 +5,8 @@ from typing import Any
 
 from polyfactory import Use
 
-from spotifagent.infrastructure.adapters.database.models import AuthProviderState
-from spotifagent.infrastructure.adapters.database.models import AuthProviderToken
+from museflow.infrastructure.adapters.database.models import AuthProviderState
+from museflow.infrastructure.adapters.database.models import AuthProviderToken
 
 from tests.integration.factories.base import BaseModelFactory
 from tests.integration.factories.users import UserModelFactory

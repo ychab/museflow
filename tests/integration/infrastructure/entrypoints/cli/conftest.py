@@ -15,6 +15,6 @@ def patch_session_scope(async_session_db: AsyncSession) -> Iterator[None]:
     async def mock_scope():
         yield async_session_db
 
-    target_path = "spotifagent.infrastructure.entrypoints.cli.dependencies.session_scope"
+    target_path = "museflow.infrastructure.entrypoints.cli.dependencies.session_scope"
     with patch(target_path, side_effect=mock_scope):
         yield

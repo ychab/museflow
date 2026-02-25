@@ -19,7 +19,7 @@ def anyio_backend() -> str:
 @pytest.fixture(scope="session", autouse=True)
 def configure_logging() -> Iterable[None]:
     """Configure logging for ALL tests before anything else"""
-    from spotifagent.infrastructure.config.loggers import configure_loggers
+    from museflow.infrastructure.config.loggers import configure_loggers
 
     # Configure with test-friendly settings
     configure_loggers(level="DEBUG", handlers=["null"], propagate=True)

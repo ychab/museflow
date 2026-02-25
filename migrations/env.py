@@ -2,7 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from spotifagent.infrastructure.config.settings.database import database_settings
+from museflow.infrastructure.config.settings.database import database_settings
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -20,7 +20,7 @@ if config.config_file_name is not None:
 
 config.set_main_option("sqlalchemy.url", str(database_settings.URI))
 
-from spotifagent.infrastructure.adapters.database.models import Base
+from museflow.infrastructure.adapters.database.models import Base
 
 target_metadata = Base.metadata
 

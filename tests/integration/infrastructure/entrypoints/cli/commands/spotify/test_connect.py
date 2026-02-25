@@ -10,18 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
+from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.entrypoints.cli.commands.spotify import connect_logic
 
 
 class TestSpotifyConnectLogic:
     @pytest.fixture(autouse=True)
     def mock_typer_launch(self) -> Iterable[mock.Mock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect.typer.launch"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect.typer.launch"
         with mock.patch(target_path) as patched:
             yield patched
 

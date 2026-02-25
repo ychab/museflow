@@ -7,10 +7,10 @@ from fastapi import HTTPException
 import pytest
 from jwt import InvalidTokenError
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.users import User
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_state
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.users import User
+from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
+from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 
 
 class TestGetCurrentUser:

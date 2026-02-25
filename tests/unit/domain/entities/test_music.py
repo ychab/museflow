@@ -4,10 +4,10 @@ from pydantic import ValidationError
 
 import pytest
 
-from spotifagent.domain.entities.music import Artist
-from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.music import TrackArtist
-from spotifagent.domain.entities.users import User
+from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Track
+from museflow.domain.entities.music import TrackArtist
+from museflow.domain.entities.users import User
 
 
 class TestArtist:

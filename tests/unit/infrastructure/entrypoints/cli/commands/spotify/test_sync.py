@@ -7,14 +7,14 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.application.use_cases.provider_sync_library import SyncConfig
-from spotifagent.application.use_cases.provider_sync_library import SyncReport
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import ProviderAuthTokenNotFoundError
-from spotifagent.domain.exceptions import UserNotFound
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
-from spotifagent.infrastructure.entrypoints.cli.commands.spotify import sync_logic
-from spotifagent.infrastructure.entrypoints.cli.main import app
+from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncReport
+from museflow.domain.entities.users import User
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
+from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
+from museflow.infrastructure.entrypoints.cli.commands.spotify import sync_logic
+from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -24,7 +24,7 @@ TIME_RANGE_OPTIONS_OUTPUT: Final[str] = ", ".join([f"'{tr}'" for tr in get_args(
 class TestSpotifySyncParserCommand:
     @pytest.fixture(autouse=True)
     def mock_sync_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             patched.return_value = SyncReport()
             yield patched
@@ -163,7 +163,7 @@ class TestSpotifySyncParserCommand:
 class TestSpotifySyncCommand:
     @pytest.fixture(autouse=True)
     def mock_sync_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -375,7 +375,7 @@ class TestSpotifySyncCommand:
     "mock_spotify_client",
 )
 class TestSpotifySyncLogic:
-    TARGET_PATH: Final[str] = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.sync"
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync"
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

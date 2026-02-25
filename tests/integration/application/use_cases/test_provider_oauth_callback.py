@@ -7,15 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 from pytest_httpx import HTTPXMock
 
-from spotifagent.application.use_cases.provider_oauth_callback import oauth_callback
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.application.use_cases.provider_oauth_callback import oauth_callback
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
 
 class TestSpotifyOauthCallbackUseCase:

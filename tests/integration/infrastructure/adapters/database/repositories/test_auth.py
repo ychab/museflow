@@ -8,17 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
+from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 
 
 class TestOAuthProviderStateRepository:

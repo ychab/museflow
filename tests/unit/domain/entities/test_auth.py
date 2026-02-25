@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
 
 
 class TestOAuthProviderUserToken:

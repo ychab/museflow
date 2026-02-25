@@ -2,7 +2,7 @@ from faker import Faker
 from polyfactory.factories.sqlalchemy_factory import SQLAlchemyFactory
 from polyfactory.factories.sqlalchemy_factory import T
 
-from spotifagent.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.config.settings.app import app_settings
 
 
 class BaseModelFactory(SQLAlchemyFactory[T]):

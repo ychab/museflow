@@ -1,8 +1,8 @@
 from pydantic import EmailStr
 from pydantic import TypeAdapter
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.security import PasswordHasherPort
+from museflow.domain.entities.users import User
+from museflow.domain.ports.security import PasswordHasherPort
 
 email_adapter = TypeAdapter(EmailStr)
 

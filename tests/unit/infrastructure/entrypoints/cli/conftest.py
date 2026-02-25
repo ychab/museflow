@@ -12,12 +12,12 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
-from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.music import ArtistRepositoryPort
+from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepositoryPort
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
 
@@ -43,7 +43,7 @@ def force_rich_terminal_env(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def block_cli_configure_loggers() -> Iterable[mock.Mock]:
     """Prevent the CLI 'main' callback from re-configuring logging during tests."""
-    with mock.patch("spotifagent.infrastructure.entrypoints.cli.main.configure_loggers") as patched:
+    with mock.patch("museflow.infrastructure.entrypoints.cli.main.configure_loggers") as patched:
         yield patched
 
 

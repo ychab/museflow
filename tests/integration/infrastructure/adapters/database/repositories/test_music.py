@@ -4,13 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.music import Artist
-from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import Artist as ArtistModel
-from spotifagent.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Track
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.music import ArtistRepositoryPort
+from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
+from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.music import ArtistModelFactory
 from tests.integration.factories.music import TrackModelFactory

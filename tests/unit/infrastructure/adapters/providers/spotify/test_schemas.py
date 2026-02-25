@@ -6,8 +6,8 @@ from pydantic import ValidationError
 
 import pytest
 
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
-from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 
 
 class TestSpotifyScope:

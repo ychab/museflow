@@ -2,11 +2,11 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.application.use_cases.user_authenticate import user_authenticate
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import UserInactive
-from spotifagent.domain.exceptions import UserInvalidCredentials
-from spotifagent.domain.exceptions import UserNotFound
+from museflow.application.use_cases.user_authenticate import user_authenticate
+from museflow.domain.entities.users import User
+from museflow.domain.exceptions import UserInactive
+from museflow.domain.exceptions import UserInvalidCredentials
+from museflow.domain.exceptions import UserNotFound
 
 
 class TestUserService:

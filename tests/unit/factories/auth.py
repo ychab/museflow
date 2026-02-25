@@ -5,11 +5,11 @@ from datetime import timedelta
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenCreate
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
+from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
 
 
 class OAuthProviderStateFactory(ModelFactory[OAuthProviderState]):

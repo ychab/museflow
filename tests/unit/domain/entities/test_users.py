@@ -2,8 +2,8 @@ from pydantic import ValidationError
 
 import pytest
 
-from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.entities.users import UserUpdate
+from museflow.domain.entities.users import UserCreate
+from museflow.domain.entities.users import UserUpdate
 
 
 class TestUserCreate:

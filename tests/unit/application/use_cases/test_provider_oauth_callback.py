@@ -2,10 +2,10 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.application.use_cases.provider_oauth_callback import oauth_callback
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import ProviderExchangeCodeError
+from museflow.application.use_cases.provider_oauth_callback import oauth_callback
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.domain.exceptions import ProviderExchangeCodeError
 
 
 class TestOauthCallbackUseCase:

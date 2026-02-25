@@ -6,11 +6,11 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.exceptions import UserNotFound
-from spotifagent.infrastructure.entrypoints.cli.commands.spotify import connect_logic
-from spotifagent.infrastructure.entrypoints.cli.main import app
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.users import User
+from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.entrypoints.cli.commands.spotify import connect_logic
+from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -18,7 +18,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestSpotifyConnectParserCommand:
     @pytest.fixture(autouse=True)
     def mock_connect_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -112,7 +112,7 @@ class TestSpotifyConnectParserCommand:
 class TestSpotifyConnectCommand:
     @pytest.fixture(autouse=True)
     def mock_connect_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -173,7 +173,7 @@ class TestSpotifyConnectCommand:
 
 @pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_auth_state_repository", "mock_spotify_client")
 class TestSpotifyConnectLogic:
-    TARGET_PATH: Final[str] = "spotifagent.infrastructure.entrypoints.cli.commands.spotify.connect"
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect"
 
     @pytest.fixture(autouse=True)
     def mock_typer_launch(self) -> Iterable[mock.Mock]:

@@ -1,7 +1,7 @@
 from polyfactory import Use
 from polyfactory.decorators import post_generated
 
-from spotifagent.infrastructure.adapters.database.models import User
+from museflow.infrastructure.adapters.database.models import User
 
 from tests.integration.factories.base import BaseModelFactory
 

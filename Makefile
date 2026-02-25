@@ -46,16 +46,16 @@ outdated: ## List outdated dependencies
 .PHONY: lint lint-format lint-check precommit
 
 lint-format:  ## Lint and format code
-	poetry run ruff check spotifagent tests
-	poetry run ruff format spotifagent tests
+	poetry run ruff check museflow tests
+	poetry run ruff format museflow tests
 	poetry run mypy
 	poetry run deptry .
 
 lint: lint-format
 
 lint-check: ## Lint and check code
-	poetry run ruff check --no-fix spotifagent tests
-	poetry run ruff format --check spotifagent tests
+	poetry run ruff check --no-fix museflow tests
+	poetry run ruff format --check museflow tests
 	poetry run mypy
 	poetry run deptry .
 
@@ -115,7 +115,7 @@ reset:  ## Remove volumes and images
 .PHONY: run app-shell
 
 run: ## Run the application
-	poetry run fastapi dev spotifagent/infrastructure/entrypoints/api/main.py
+	poetry run fastapi dev museflow/infrastructure/entrypoints/api/main.py
 
 app-shell: up ## Connect to the application shell
 	docker compose exec app /bin/bash

@@ -3,13 +3,13 @@ from pydantic import HttpUrl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.application.use_cases.provider_oauth_redirect import oauth_redirect
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.security import StateTokenGeneratorPort
-from spotifagent.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
 
 class TestSpotifyOAuthRedirectUseCase:

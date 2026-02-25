@@ -5,11 +5,11 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.users import User
-from spotifagent.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
-from spotifagent.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.users import User
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
+from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.unit.factories.auth import OAuthProviderTokenStateFactory
 from tests.unit.factories.auth import OAuthProviderUserTokenFactory

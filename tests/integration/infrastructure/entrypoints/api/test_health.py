@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 from fastapi import status
 from httpx import AsyncClient
 
-from spotifagent.infrastructure.entrypoints.api.main import app
+from museflow.infrastructure.entrypoints.api.main import app
 
 
 class TestHealthCheck:

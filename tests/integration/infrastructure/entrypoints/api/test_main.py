@@ -1,8 +1,8 @@
 from unittest import mock
 
-from spotifagent.infrastructure.config.settings.app import app_settings
-from spotifagent.infrastructure.entrypoints.api.main import app
-from spotifagent.infrastructure.entrypoints.api.main import lifespan
+from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.api.main import app
+from museflow.infrastructure.entrypoints.api.main import lifespan
 
 
 async def test_lifespan_configures_loggers(mock_api_logger: mock.Mock) -> None:

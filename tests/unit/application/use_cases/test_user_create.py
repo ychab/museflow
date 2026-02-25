@@ -2,10 +2,10 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.application.use_cases.user_create import user_create
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.exceptions import UserAlreadyExistsException
+from museflow.application.use_cases.user_create import user_create
+from museflow.domain.entities.users import User
+from museflow.domain.entities.users import UserCreate
+from museflow.domain.exceptions import UserAlreadyExistsException
 
 from tests.unit.factories.users import UserCreateFactory
 

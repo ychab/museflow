@@ -11,14 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
-from spotifagent.domain.ports.security import AccessTokenManagerPort
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_access_token_manager
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_db
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_password_hasher
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_spotify_client
-from spotifagent.infrastructure.entrypoints.api.main import app
+from museflow.domain.entities.users import User
+from museflow.domain.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.ports.security import AccessTokenManagerPort
+from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
+from museflow.infrastructure.entrypoints.api.dependencies import get_db
+from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
+from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_client
+from museflow.infrastructure.entrypoints.api.main import app
 
 from tests.integration.factories.users import UserModelFactory
 
@@ -26,7 +26,7 @@ from tests.integration.factories.users import UserModelFactory
 @pytest.fixture(name="mock_api_logger")
 def block_api_logging_reconfiguration() -> Iterator[mock.Mock]:
     """Prevents FastAPI lifespan from overwriting test logging config."""
-    with mock.patch("spotifagent.infrastructure.entrypoints.api.main.configure_loggers") as patched:
+    with mock.patch("museflow.infrastructure.entrypoints.api.main.configure_loggers") as patched:
         yield patched
 
 

@@ -1,9 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
-from spotifagent.infrastructure.entrypoints.cli.commands.users import user_create_logic
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.entrypoints.cli.commands.users import user_create_logic
 
 
 class TestUserCreateLogic:

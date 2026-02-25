@@ -4,9 +4,9 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent import __version__
-from spotifagent.infrastructure.entrypoints.cli.main import app
-from spotifagent.infrastructure.types import LogLevel
+from museflow import __version__
+from museflow.infrastructure.entrypoints.cli.main import app
+from museflow.infrastructure.types import LogLevel
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -17,7 +17,7 @@ class TestBaseCommand:
         result = runner.invoke(app, [cmd_arg])
 
         assert result.exit_code == 0
-        assert f"Spotifagent Version: {__version__}" in result.output
+        assert f"Museflow Version: {__version__}" in result.output
 
         block_cli_configure_loggers.assert_not_called()
 

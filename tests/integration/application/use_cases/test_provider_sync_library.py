@@ -12,19 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 from pytest_httpx import HTTPXMock
 
-from spotifagent.application.use_cases.provider_sync_library import SyncConfig
-from spotifagent.application.use_cases.provider_sync_library import SyncReport
-from spotifagent.application.use_cases.provider_sync_library import sync_library
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.music import Artist
-from spotifagent.domain.entities.music import Track
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.infrastructure.adapters.database.models import Artist as ArtistModel
-from spotifagent.infrastructure.adapters.database.models import Track as TrackModel
-from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
-from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncReport
+from museflow.application.use_cases.provider_sync_library import sync_library
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Track
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.music import ArtistRepositoryPort
+from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
+from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.factories.music import ArtistModelFactory

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from spotifagent.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.database.session import session_scope
 
 
 class TestSessionScope:
@@ -21,7 +21,7 @@ class TestSessionScope:
 
     @pytest.fixture
     def mock_session_factory(self, mock_session: mock.Mock) -> Iterator[mock.Mock]:
-        with mock.patch("spotifagent.infrastructure.adapters.database.session.async_session_factory") as factory:
+        with mock.patch("museflow.infrastructure.adapters.database.session.async_session_factory") as factory:
             factory.return_value = mock_session
             yield factory
 

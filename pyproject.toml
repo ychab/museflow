@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "spotifagent"
+name = "museflow"
 version = "0.1.0"
 description = "An assistant for your Spotify Account"
 authors = ["Yannick Chabbert <yannick.chabbert.it@gmail.com>"]
@@ -43,7 +43,7 @@ pydantic = {extras = ["dotenv"], version = "^2.12.5"}
 
 
 [tool.poetry.scripts]
-spotifagent = "spotifagent.infrastructure.entrypoints.cli.main:app"
+museflow = "museflow.infrastructure.entrypoints.cli.main:app"
 
 
 [build-system]
@@ -52,7 +52,7 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.ruff]
-src = ["spotifagent", "tests"]
+src = ["museflow", "tests"]
 target-version = "py313"
 line-length = 119
 fix = true
@@ -78,7 +78,7 @@ ignore = [
 
 [tool.ruff.lint.isort]
 force-single-line = true
-known-first-party = ["spotifagent"]
+known-first-party = ["museflow"]
 known-local-folder = ["tests"]
 section-order = [
     "future",
@@ -108,7 +108,7 @@ sections.sqlalchemy = [
 
 [tool.mypy]
 python_version = "3.13"
-files = ["spotifagent", "tests"]
+files = ["museflow", "tests"]
 plugins = "pydantic.mypy"
 
 [tool.deptry.per_rule_ignores]
@@ -121,7 +121,7 @@ DEP002 = [
 [tool.pytest.ini_options]
 junit_family = "legacy"
 addopts = [
-    "--cov=spotifagent",
+    "--cov=museflow",
     "--cov-report=xml",
     "--cov-report=term-missing",
     "--cov-report=html",
@@ -132,18 +132,18 @@ testpaths = ["tests"]
 pythonpath = ["."]
 env = [
     # App required settings
-    'SPOTIFAGENT_SECRET_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
+    'MUSEFLOW_SECRET_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
     # App settings optional but just in case (fixture override)
-    'SPOTIFAGENT_LOG_LEVEL_API=DEBUG',
-    'SPOTIFAGENT_LOG_LEVEL_CLI=DEBUG',
-    'SPOTIFAGENT_LOG_HANDLERS_API=["null"]',
-    'SPOTIFAGENT_LOG_HANDLERS_CLI=["null"]',
+    'MUSEFLOW_LOG_LEVEL_API=DEBUG',
+    'MUSEFLOW_LOG_LEVEL_CLI=DEBUG',
+    'MUSEFLOW_LOG_HANDLERS_API=["null"]',
+    'MUSEFLOW_LOG_HANDLERS_CLI=["null"]',
     # Database required settings (could be overriden)
     'D:DATABASE_HOST=127.0.0.1',
     'D:DATABASE_PORT=5432',
-    'D:DATABASE_USER=spotifagent',
-    'D:DATABASE_PASSWORD=spotifagent',
-    'D:DATABASE_PATH=spotifagent',
+    'D:DATABASE_USER=museflow',
+    'D:DATABASE_PASSWORD=museflow',
+    'D:DATABASE_PATH=museflow',
     # Spotify client adapter required settings
     'SPOTIFY_CLIENT_ID=dummy-client-id',
     'SPOTIFY_CLIENT_SECRET=dummy-client-secret',
@@ -155,7 +155,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = [
-    "spotifagent",
+    "museflow",
     "tests",
 ]
 branch = true

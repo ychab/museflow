@@ -5,14 +5,14 @@ from fastapi import HTTPException
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
-from spotifagent.domain.ports.security import AccessTokenManagerPort
-from spotifagent.infrastructure.config.settings.app import app_settings
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_current_user
-from spotifagent.infrastructure.entrypoints.api.dependencies import get_user_from_state
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.users import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.security import AccessTokenManagerPort
+from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
+from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 
 
 class TestGetCurrentUser:

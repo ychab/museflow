@@ -4,12 +4,12 @@ from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.entities.users import UserCreate
-from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.infrastructure.adapters.database.models import User as UserModel
+from museflow.domain.entities.users import User
+from museflow.domain.entities.users import UserCreate
+from museflow.domain.entities.users import UserUpdate
+from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.infrastructure.adapters.database.models import User as UserModel
 
 
 class TestUserRepository:

@@ -1,8 +1,8 @@
-# SpotifAgent
+# MuseFlow
 
 ![Python](https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white)
-[![CI](https://github.com/ychab/spotifagent/actions/workflows/ci.yml/badge.svg)](https://github.com/ychab/spotifagent/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ychab/spotifagent/graph/badge.svg)](https://codecov.io/gh/ychab/spotifagent)
+[![CI](https://github.com/ychab/museflow/actions/workflows/ci.yml/badge.svg)](https://github.com/ychab/museflow/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ychab/museflow/graph/badge.svg)](https://codecov.io/gh/ychab/museflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -10,7 +10,7 @@
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-SpotifAgent is an assistant for your music provider account, built with Python, FastAPI and Typer.
+MuseFlow is an assistant for your music provider account, built with Python, FastAPI and Typer.
 
 Its main goal is to provide you recommendations based on your listen history.
 These recommendations are pushed into new dedicated playlists.
@@ -37,8 +37,8 @@ Follow these steps to set up the project locally:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/ychab/spotifagent
-    cd spotifagent
+    git clone https://github.com/ychab/museflow
+    cd museflow
     ```
 
 2.  **Install dependencies:**
@@ -80,7 +80,7 @@ Before running the application, you need to configure the environment variables 
     Open `.env` and fill in the required values:
     *   `SPOTIFY_CLIENT_ID`: Your Spotify App Client ID.
     *   `SPOTIFY_CLIENT_SECRET`: Your Spotify App Client Secret.
-    *   `SPOTIFAGENT_SECRET_KEY`: A secret key for the application (min 32 characters).
+    *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters).
     *   Database settings if you want to customize them (defaults are usually fine for local development with Docker).
 
 2.  **Spotify App Configuration:**
@@ -113,12 +113,12 @@ docker compose up -d
 
 ## CLI User Guide
 
-SpotifAgent provides a Command Line Interface (CLI) to manage users and interact with Spotify.
+MuseFlow provides a Command Line Interface (CLI) to manage users and interact with Spotify.
 
-To use the CLI, you can use the `spotifagent` command if installed in your environment, or run it via Poetry:
+To use the CLI, you can use the `museflow` command if installed in your environment, or run it via Poetry:
 
 ```bash
-poetry run spotifagent [COMMAND]
+poetry run museflow [COMMAND]
 ```
 
 ### Global Options
@@ -135,14 +135,14 @@ Manage application users.
 **Create a user:**
 
 ```bash
-poetry run spotifagent users create --email <email>
+poetry run museflow users create --email <email>
 ```
 You will be prompted to enter and confirm the password.
 
 **Update a user:**
 
 ```bash
-poetry run spotifagent users update <user_id> --email <new_email> --password <new_password>
+poetry run museflow users update <user_id> --email <new_email> --password <new_password>
 ```
 
 ### Spotify Interaction (`spotify`)
@@ -157,7 +157,7 @@ Initiates the OAuth flow. You need to open the URL in a browser and authorize th
 Ensure you have started the application (e.g., using `make up`) before running this command.
 
 ```bash
-poetry run spotifagent spotify connect --email <email>
+poetry run museflow spotify connect --email <email>
 ```
 
 *   `--timeout`: Seconds to wait for authentication (default: 60.0).
@@ -168,7 +168,7 @@ poetry run spotifagent spotify connect --email <email>
 Synchronize the user's items (artists, tracks) into the database.
 
 ```bash
-poetry run spotifagent spotify sync --email <email> [OPTIONS]
+poetry run museflow spotify sync --email <email> [OPTIONS]
 ```
 
 **Sync Options:**
@@ -186,7 +186,7 @@ poetry run spotifagent spotify sync --email <email> [OPTIONS]
 Example: Sync everything for a user
 
 ```bash
-poetry run spotifagent spotify sync --email user@example.com --sync-all
+poetry run museflow spotify sync --email user@example.com --sync-all
 ```
 
 ## Development

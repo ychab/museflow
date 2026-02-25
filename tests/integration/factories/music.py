@@ -8,9 +8,9 @@ from polyfactory import Use
 from polyfactory.decorators import post_generated
 from slugify import slugify
 
-from spotifagent.domain.entities.music import MusicProvider
-from spotifagent.infrastructure.adapters.database.models import Artist
-from spotifagent.infrastructure.adapters.database.models import Track
+from museflow.domain.entities.music import MusicProvider
+from museflow.infrastructure.adapters.database.models import Artist
+from museflow.infrastructure.adapters.database.models import Track
 
 from tests.integration.factories.base import BaseModelFactory
 from tests.integration.factories.users import UserModelFactory

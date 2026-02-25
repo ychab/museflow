@@ -6,10 +6,10 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from spotifagent.domain.entities.users import UserUpdate
-from spotifagent.domain.exceptions import UserNotFound
-from spotifagent.infrastructure.entrypoints.cli.commands.users import user_update_logic
-from spotifagent.infrastructure.entrypoints.cli.main import app
+from museflow.domain.entities.users import UserUpdate
+from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic
+from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -17,7 +17,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestUserUpdateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_user_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.users.user_update_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -102,7 +102,7 @@ class TestUserUpdateParserCommand:
 class TestUserUpdateCommand:
     @pytest.fixture(autouse=True)
     def mock_user_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "spotifagent.infrastructure.entrypoints.cli.commands.users.user_update_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -165,7 +165,7 @@ class TestUserUpdateCommand:
 
 @pytest.mark.usefixtures("mock_get_db", "mock_user_repository")
 class TestUserUpdateLogic:
-    TARGET_PATH: Final[str] = "spotifagent.infrastructure.entrypoints.cli.commands.users.update"
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.users.update"
 
     @pytest.fixture
     def mock_user_update(self) -> Iterable[mock.AsyncMock]:

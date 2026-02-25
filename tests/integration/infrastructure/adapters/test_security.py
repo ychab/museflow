@@ -2,9 +2,9 @@ import uuid
 
 import pytest
 
-from spotifagent.domain.ports.security import AccessTokenManagerPort
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.ports.security import AccessTokenManagerPort
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.ports.security import StateTokenGeneratorPort
 
 
 class TestArgon2PasswordHasher:

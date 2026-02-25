@@ -2,19 +2,19 @@ from unittest import mock
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderState
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
-from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.users import User
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
-from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
-from spotifagent.domain.ports.repositories.music import TrackRepositoryPort
-from spotifagent.domain.ports.repositories.users import UserRepositoryPort
-from spotifagent.domain.ports.security import AccessTokenManagerPort
-from spotifagent.domain.ports.security import PasswordHasherPort
-from spotifagent.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.auth import OAuthProviderTokenState
+from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.users import User
+from museflow.domain.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.music import ArtistRepositoryPort
+from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.security import AccessTokenManagerPort
+from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.ports.security import StateTokenGeneratorPort
 
 from tests.unit.factories.auth import OAuthProviderStateFactory
 from tests.unit.factories.auth import OAuthProviderTokenStateFactory
