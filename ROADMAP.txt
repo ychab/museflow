@@ -5,7 +5,6 @@ This quick and dirty document just list the roadmap tasks.
 ## refacto hexa:
 
 - replace entity pydantic by dataclass instead (no parsing for domain)?
-- use case => use class when needed, like the sync
 
 ## Test
 
@@ -44,7 +43,3 @@ This quick and dirty document just list the roadmap tasks.
 ## Playlist (recommendations)
 
 - spotify: create a user playlist
-
-## AI agents
-
-Once the project is stable, try to auto-generate the agents scripts

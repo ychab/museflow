@@ -13,9 +13,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import pytest
 
+from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
-from museflow.application.use_cases.provider_sync_library import sync_library
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
@@ -97,19 +97,27 @@ class TestSyncMusic:
             get_saved_tracks=mock.AsyncMock(return_value=tracks),
         )
 
+    @pytest.fixture
+    def use_case(
+        self,
+        mock_provider_library: mock.Mock,
+        mock_artist_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> ProviderSyncLibraryUseCase:
+        return ProviderSyncLibraryUseCase(
+            provider_library=mock_provider_library,
+            artist_repository=mock_artist_repository,
+            track_repository=mock_track_repository,
+        )
+
     async def test__do_nothing(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        mock_provider_library: mock.Mock,
-        mock_artist_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
+        use_case: ProviderSyncLibraryUseCase,
     ) -> None:
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=mock_provider_library,
-            artist_repository=mock_artist_repository,
-            track_repository=mock_track_repository,
             config=SyncConfig(),
         )
         assert report == SyncReport()
@@ -121,7 +129,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         purge_all: bool,
         purge_artist_top: bool,
-        mock_provider_library: mock.Mock,
+        use_case: ProviderSyncLibraryUseCase,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -130,11 +138,8 @@ class TestSyncMusic:
         mock_track_repository.purge.return_value = 0
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     purge_all=purge_all,
                     purge_artist_top=purge_artist_top,
@@ -157,7 +162,7 @@ class TestSyncMusic:
         purge_track_top: bool,
         purge_track_saved: bool,
         purge_track_playlist: bool,
-        mock_provider_library: mock.Mock,
+        use_case: ProviderSyncLibraryUseCase,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -166,11 +171,8 @@ class TestSyncMusic:
         mock_track_repository.purge.side_effect = SQLAlchemyError("Boom")
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     purge_all=purge_all,
                     purge_track_top=purge_track_top,
@@ -196,20 +198,18 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_artist_top: bool,
-        exception_raised: Exception,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        exception_raised: Exception,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_provider_library.get_top_artists.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
@@ -233,6 +233,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_artist_top: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -242,11 +243,8 @@ class TestSyncMusic:
         mock_artist_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
@@ -270,6 +268,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_top: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -279,11 +278,8 @@ class TestSyncMusic:
         mock_provider_library.get_top_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_top=sync_track_top,
@@ -307,6 +303,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_top: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -316,11 +313,8 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_top=sync_track_top,
@@ -344,6 +338,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_saved: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -353,11 +348,8 @@ class TestSyncMusic:
         mock_provider_library.get_saved_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
@@ -381,6 +373,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_saved: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -390,11 +383,8 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
@@ -418,6 +408,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_playlist: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -427,11 +418,8 @@ class TestSyncMusic:
         mock_provider_library.get_playlist_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,
@@ -455,6 +443,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         sync_all: bool,
         sync_track_playlist: bool,
+        use_case: ProviderSyncLibraryUseCase,
         mock_provider_library: mock.Mock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -464,11 +453,8 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await sync_library(
+            report = await use_case.execute(
                 user=user,
-                provider_library=mock_provider_library,
-                artist_repository=mock_artist_repository,
-                track_repository=mock_track_repository,
                 config=SyncConfig(
                     sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,

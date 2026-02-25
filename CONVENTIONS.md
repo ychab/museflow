@@ -72,7 +72,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - **Configurable**: Allow overriding fixture attributes via `request.param`.
 - **Combination**: Build fixtures on top of others (e.g., `auth_token` depends on `user`).
 
-### Example: Configurable Async Fixture
+#### Example: Configurable Async Fixture
 ```python
 @pytest.fixture
 async def user(request) -> User:
@@ -80,3 +80,26 @@ async def user(request) -> User:
     params = getattr(request, "param", {})
     user_db = await UserModelFactory.create_async(**params)
     return User.model_validate(user_db)
+```
+
+### Mocking
+- **Target**: Use `unittest.mock.patch` to mock dependencies.
+- **Fixtures**: Wrap mocks in fixtures for reusability.
+- **Class Mocking**: When mocking a class, yield `patched.return_value` from the fixture to directly access the mocked instance in tests.
+- **Autospec**: Use `autospec=True` when patching classes to automatically create mocks that respect the class signature (including async methods).
+
+#### Example: Mocking a Use Case Class
+```python
+@pytest.fixture
+def mock_my_use_case() -> Iterable[mock.Mock]:
+    target_path = "path.to.MyUseCase"
+    # autospec=True ensures that async methods are mocked as AsyncMock
+    with mock.patch(target_path, autospec=True) as patched:
+        yield patched.return_value
+
+def test_something(mock_my_use_case: mock.Mock):
+    # mock_my_use_case is the mocked instance
+    # Since execute is async, the mock is automatically an AsyncMock
+    mock_my_use_case.execute.return_value = "mocked_result"
+    ...
+```

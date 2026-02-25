@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
-from museflow.application.use_cases.provider_sync_library import sync_library
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
@@ -267,22 +267,30 @@ class TestSpotifySyncMusic:
 
         return [Track.model_validate(track) for track in tracks_top + tracks_saved + tracks_playlist + tracks_other]
 
+    @pytest.fixture
+    def use_case(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        artist_repository: ArtistRepositoryPort,
+        track_repository: TrackRepositoryPort,
+    ) -> ProviderSyncLibraryUseCase:
+        return ProviderSyncLibraryUseCase(
+            provider_library=spotify_library,
+            artist_repository=artist_repository,
+            track_repository=track_repository,
+        )
+
     async def test__artists__purge(
         self,
         async_session_db: AsyncSession,
         user: User,
         auth_token: OAuthProviderUserToken,
         artists_top_delete: list[Artist],
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
     ) -> None:
         pass
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(purge_artist_top=True),
         )
         assert report == SyncReport(purge_artist=len(artists_top_delete))
@@ -311,18 +319,13 @@ class TestSpotifySyncMusic:
         purge_track_saved: bool,
         purge_track_playlist: bool,
         expected_purged_track: int,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
     ) -> None:
         expected_other = 1
         total_user = len(tracks_delete) - expected_other
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 purge_track_top=purge_track_top,
                 purge_track_saved=purge_track_saved,
@@ -342,9 +345,7 @@ class TestSpotifySyncMusic:
         user: User,
         auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
@@ -360,11 +361,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_artist_top=True,
                 page_limit=page_limit,
@@ -383,9 +381,7 @@ class TestSpotifySyncMusic:
         auth_token: OAuthProviderUserToken,
         artists_update: list[Artist],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -400,11 +396,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_artist_top=True,
                 page_limit=page_limit,
@@ -425,9 +418,7 @@ class TestSpotifySyncMusic:
         user: User,
         auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         tracks_top_response: dict[str, Any],
         tracks_top_response_paginated: list[dict[str, Any]],
@@ -443,11 +434,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_top=True,
                 page_limit=page_limit,
@@ -470,9 +458,7 @@ class TestSpotifySyncMusic:
         auth_token: OAuthProviderUserToken,
         tracks_top_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -487,11 +473,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_top=True,
                 page_limit=page_limit,
@@ -515,9 +498,7 @@ class TestSpotifySyncMusic:
         user: User,
         auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         tracks_saved_response: dict[str, Any],
         tracks_saved_response_paginated: list[dict[str, Any]],
@@ -533,11 +514,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_saved=True,
                 page_limit=page_limit,
@@ -560,9 +538,7 @@ class TestSpotifySyncMusic:
         auth_token: OAuthProviderUserToken,
         tracks_saved_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
@@ -577,11 +553,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_saved=True,
                 page_limit=page_limit,
@@ -605,9 +578,7 @@ class TestSpotifySyncMusic:
         user: User,
         auth_token: OAuthProviderUserToken,
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
         playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
@@ -634,11 +605,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_playlist=True,
                 page_limit=limit,
@@ -661,9 +629,7 @@ class TestSpotifySyncMusic:
         auth_token: OAuthProviderUserToken,
         tracks_playlist_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
         playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
@@ -686,11 +652,8 @@ class TestSpotifySyncMusic:
                 json=response,
             )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 sync_track_playlist=True,
                 page_limit=playlist_response_paginated[1],
@@ -717,9 +680,7 @@ class TestSpotifySyncMusic:
         artists_top_delete: list[Artist],
         tracks_delete: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
@@ -777,11 +738,8 @@ class TestSpotifySyncMusic:
         expected_tracks_playlist = playlist_response_paginated[2] * playlist_tracks_response_paginated[2]
         expect_tracks = expected_tracks_top + expected_tracks_saved + expected_tracks_playlist
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 purge_all=True,
                 sync_all=True,
@@ -830,9 +788,7 @@ class TestSpotifySyncMusic:
         tracks_saved_update: list[Track],
         tracks_playlist_update: list[Track],
         spotify_client: SpotifyOAuthClientAdapter,
-        spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        use_case: ProviderSyncLibraryUseCase,
         httpx_mock: HTTPXMock,
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
@@ -959,11 +915,8 @@ class TestSpotifySyncMusic:
             expect_tracks_top_updated + expect_tracks_saved_updated + expect_tracks_playlist_updated
         )
 
-        report = await sync_library(
+        report = await use_case.execute(
             user=user,
-            provider_library=spotify_library,
-            artist_repository=artist_repository,
-            track_repository=track_repository,
             config=SyncConfig(
                 purge_all=False,
                 sync_all=True,

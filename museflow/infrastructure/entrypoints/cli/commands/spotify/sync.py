@@ -2,9 +2,9 @@ from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
+from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
-from museflow.application.use_cases.provider_sync_library import sync_library
 from museflow.domain.entities.music import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
@@ -42,10 +42,12 @@ async def sync_logic(email: EmailStr, config: SyncConfig) -> SyncReport:
 
         spotify_library = spotify_library_factory.create(user=user, auth_token=auth_token)
 
-        return await sync_library(
-            user=user,
+        use_case = ProviderSyncLibraryUseCase(
             provider_library=spotify_library,
             artist_repository=artist_repository,
             track_repository=track_repository,
+        )
+        return await use_case.execute(
+            user=user,
             config=config,
         )

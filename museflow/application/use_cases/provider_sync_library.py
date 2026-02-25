@@ -89,183 +89,189 @@ class SyncConfig:
         )
 
 
-async def sync_library(
-    user: User,
-    provider_library: ProviderLibraryPort,
-    artist_repository: ArtistRepositoryPort,
-    track_repository: TrackRepositoryPort,
-    config: SyncConfig,
-) -> SyncReport:
-    """
-    For a given user, synchronize its provider items, including artists
-    and tracks, depending on the given flags.
+class ProviderSyncLibraryUseCase:
+    def __init__(
+        self,
+        provider_library: ProviderLibraryPort,
+        artist_repository: ArtistRepositoryPort,
+        track_repository: TrackRepositoryPort,
+    ) -> None:
+        self._provider_library = provider_library
+        self._artist_repository = artist_repository
+        self._track_repository = track_repository
 
-    :param user: A user entity to fetch its library
-    :param provider_library: A provider library
-    :param artist_repository: Artists repository
-    :param track_repository: Tracks repository
-    :param config: A configuration dataclass object
+    async def execute(
+        self,
+        user: User,
+        config: SyncConfig,
+    ) -> SyncReport:
+        """
+        For a given user, synchronize its provider items, including artists
+        and tracks, depending on the given flags.
 
-    :return: SyncReport
-    """
-    report = SyncReport()
+        :param user: A user entity to fetch its library
+        :param config: A configuration dataclass object
 
-    # First of all, purge items if required.
-    if config.has_purge():
-        if config.purge_all or config.purge_artist_top:
-            report = await _purge_entity(
+        :return: SyncReport
+        """
+        report = SyncReport()
+
+        # First of all, purge items if required.
+        if config.has_purge():
+            if config.purge_all or config.purge_artist_top:
+                report = await self._purge_entity(
+                    report=report,
+                    report_field_purge="purge_artist",
+                    user=user,
+                    entity_name="artists",
+                    purge_callback=lambda: self._artist_repository.purge(user_id=user.id),
+                )
+
+            if config.purge_all or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
+                report = await self._purge_entity(
+                    report=report,
+                    report_field_purge="purge_track",
+                    user=user,
+                    entity_name="tracks",
+                    purge_callback=lambda: self._track_repository.purge(
+                        user_id=user.id,
+                        is_top=config.purge_track_top and not config.purge_all,
+                        is_saved=config.purge_track_saved and not config.purge_all,
+                        is_playlist=config.purge_track_playlist and not config.purge_all,
+                    ),
+                )
+
+            if report.has_errors:
+                return report
+
+        # Then fetch and upsert top artists.
+        if config.sync_all or config.sync_artist_top:
+            report = await self._sync_entity(
                 report=report,
-                report_field_purge="purge_artist",
+                report_field_created="artist_created",
+                report_field_updated="artist_updated",
                 user=user,
-                entity_name="artists",
-                purge_callback=lambda: artist_repository.purge(user_id=user.id),
-            )
-
-        if config.purge_all or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
-            report = await _purge_entity(
-                report=report,
-                report_field_purge="purge_track",
-                user=user,
-                entity_name="tracks",
-                purge_callback=lambda: track_repository.purge(
-                    user_id=user.id,
-                    is_top=config.purge_track_top and not config.purge_all,
-                    is_saved=config.purge_track_saved and not config.purge_all,
-                    is_playlist=config.purge_track_playlist and not config.purge_all,
+                entity_name="top artists",
+                fetch_func=lambda: self._provider_library.get_top_artists(
+                    page_limit=config.page_limit,
+                    time_range=config.time_range,
+                ),
+                upsert_func=lambda items: self._artist_repository.bulk_upsert(
+                    artists=items,
+                    batch_size=config.batch_size,
                 ),
             )
 
-        if report.has_errors:
+        # Then fetch and upsert top tracks.
+        if config.sync_all or config.sync_track_top:
+            report = await self._sync_entity(
+                report=report,
+                report_field_created="track_created",
+                report_field_updated="track_updated",
+                user=user,
+                entity_name="top tracks",
+                fetch_func=lambda: self._provider_library.get_top_tracks(
+                    page_limit=config.page_limit,
+                    time_range=config.time_range,
+                ),
+                upsert_func=lambda items: self._track_repository.bulk_upsert(
+                    tracks=items,
+                    batch_size=config.batch_size,
+                ),
+            )
+
+        # Then fetch and upsert saved tracks.
+        if config.sync_all or config.sync_track_saved:
+            report = await self._sync_entity(
+                report=report,
+                report_field_created="track_created",
+                report_field_updated="track_updated",
+                user=user,
+                entity_name="saved tracks",
+                fetch_func=lambda: self._provider_library.get_saved_tracks(
+                    page_limit=config.page_limit,
+                ),
+                upsert_func=lambda items: self._track_repository.bulk_upsert(
+                    tracks=items,
+                    batch_size=config.batch_size,
+                ),
+            )
+
+        # Then fetch and upsert playlist tracks.
+        if config.sync_all or config.sync_track_playlist:
+            report = await self._sync_entity(
+                report=report,
+                report_field_created="track_created",
+                report_field_updated="track_updated",
+                user=user,
+                entity_name="playlist tracks",
+                fetch_func=lambda: self._provider_library.get_playlist_tracks(
+                    page_limit=config.page_limit,
+                ),
+                upsert_func=lambda items: self._track_repository.bulk_upsert(
+                    tracks=items,
+                    batch_size=config.batch_size,
+                ),
+            )
+
+        return report
+
+    async def _purge_entity(
+        self,
+        report: SyncReport,
+        report_field_purge: str,
+        user: User,
+        entity_name: str,
+        purge_callback: Callable[[], Awaitable[int]],
+    ) -> SyncReport:
+        logger.info(f"About purging {entity_name} for user {user.email}...")
+
+        try:
+            count = await purge_callback()
+        except Exception:
+            logger.exception(f"An error occurred while purging {entity_name} for user {user.email}")
+            report = replace(report, errors=report.errors + [f"An error occurred while purging your {entity_name}."])
+        else:
+            logger.info(f"Successfully purged {count} {entity_name} for user {user.email}")
+            report_updates: dict[str, Any] = {report_field_purge: count}
+            report = replace(report, **report_updates)
+
+        return report
+
+    async def _sync_entity[T](
+        self,
+        report: SyncReport,
+        report_field_created: str,
+        report_field_updated: str,
+        user: User,
+        entity_name: str,
+        fetch_func: Callable[[], Awaitable[list[T]]],
+        upsert_func: Callable[[list[T]], Awaitable[tuple[list[Any], int]]],
+    ) -> SyncReport:
+        logger.info(f"About synchronizing {entity_name} for user {user.email}...")
+
+        # Fetch step
+        try:
+            items = await fetch_func()
+        except Exception:
+            logger.exception(f"An error occurred while fetching {entity_name} for user {user.email}")
+            report = replace(report, errors=report.errors + [f"An error occurred while fetching {entity_name}."])
             return report
+        else:
+            logger.info(f"Fetched {len(items)} {entity_name} for user {user.email}")
 
-    # Then fetch and upsert top artists.
-    if config.sync_all or config.sync_artist_top:
-        report = await _sync_entity(
-            report=report,
-            report_field_created="artist_created",
-            report_field_updated="artist_updated",
-            user=user,
-            entity_name="top artists",
-            fetch_func=lambda: provider_library.get_top_artists(
-                page_limit=config.page_limit,
-                time_range=config.time_range,
-            ),
-            upsert_func=lambda items: artist_repository.bulk_upsert(
-                artists=items,
-                batch_size=config.batch_size,
-            ),
-        )
+        # Upsert step
+        try:
+            ids, created = await upsert_func(items)
+        except Exception:
+            logger.exception(f"An error occurred while upserting {entity_name} for user {user.email}")
+            report = replace(report, errors=report.errors + [f"An error occurred while saving {entity_name}."])
+            return report
+        else:
+            logger.info(f"Upserted {len(ids)} {entity_name} for user {user.email}")
 
-    # Then fetch and upsert top tracks.
-    if config.sync_all or config.sync_track_top:
-        report = await _sync_entity(
-            report=report,
-            report_field_created="track_created",
-            report_field_updated="track_updated",
-            user=user,
-            entity_name="top tracks",
-            fetch_func=lambda: provider_library.get_top_tracks(
-                page_limit=config.page_limit,
-                time_range=config.time_range,
-            ),
-            upsert_func=lambda items: track_repository.bulk_upsert(
-                tracks=items,
-                batch_size=config.batch_size,
-            ),
-        )
-
-    # Then fetch and upsert saved tracks.
-    if config.sync_all or config.sync_track_saved:
-        report = await _sync_entity(
-            report=report,
-            report_field_created="track_created",
-            report_field_updated="track_updated",
-            user=user,
-            entity_name="saved tracks",
-            fetch_func=lambda: provider_library.get_saved_tracks(
-                page_limit=config.page_limit,
-            ),
-            upsert_func=lambda items: track_repository.bulk_upsert(
-                tracks=items,
-                batch_size=config.batch_size,
-            ),
-        )
-
-    # Then fetch and upsert playlist tracks.
-    if config.sync_all or config.sync_track_playlist:
-        report = await _sync_entity(
-            report=report,
-            report_field_created="track_created",
-            report_field_updated="track_updated",
-            user=user,
-            entity_name="playlist tracks",
-            fetch_func=lambda: provider_library.get_playlist_tracks(
-                page_limit=config.page_limit,
-            ),
-            upsert_func=lambda items: track_repository.bulk_upsert(
-                tracks=items,
-                batch_size=config.batch_size,
-            ),
-        )
-
-    return report
-
-
-async def _purge_entity(
-    report: SyncReport,
-    report_field_purge: str,
-    user: User,
-    entity_name: str,
-    purge_callback: Callable[[], Awaitable[int]],
-) -> SyncReport:
-    logger.info(f"About purging {entity_name} for user {user.email}...")
-
-    try:
-        count = await purge_callback()
-    except Exception:
-        logger.exception(f"An error occurred while purging {entity_name} for user {user.email}")
-        report = replace(report, errors=report.errors + [f"An error occurred while purging your {entity_name}."])
-    else:
-        logger.info(f"Successfully purged {count} {entity_name} for user {user.email}")
-        report_updates: dict[str, Any] = {report_field_purge: count}
-        report = replace(report, **report_updates)
-
-    return report
-
-
-async def _sync_entity[T](
-    report: SyncReport,
-    report_field_created: str,
-    report_field_updated: str,
-    user: User,
-    entity_name: str,
-    fetch_func: Callable[[], Awaitable[list[T]]],
-    upsert_func: Callable[[list[T]], Awaitable[tuple[list[Any], int]]],
-) -> SyncReport:
-    logger.info(f"About synchronizing {entity_name} for user {user.email}...")
-
-    # Fetch step
-    try:
-        items = await fetch_func()
-    except Exception:
-        logger.exception(f"An error occurred while fetching {entity_name} for user {user.email}")
-        report = replace(report, errors=report.errors + [f"An error occurred while fetching {entity_name}."])
-        return report
-    else:
-        logger.info(f"Fetched {len(items)} {entity_name} for user {user.email}")
-
-    # Upsert step
-    try:
-        ids, created = await upsert_func(items)
-    except Exception:
-        logger.exception(f"An error occurred while upserting {entity_name} for user {user.email}")
-        report = replace(report, errors=report.errors + [f"An error occurred while saving {entity_name}."])
-        return report
-    else:
-        logger.info(f"Upserted {len(ids)} {entity_name} for user {user.email}")
-
-    report_updates: dict[str, Any] = {
-        report_field_created: getattr(report, report_field_created) + created,
-        report_field_updated: getattr(report, report_field_updated) + (len(ids) - created),
-    }
-    return replace(report, **report_updates)
+        report_updates: dict[str, Any] = {
+            report_field_created: getattr(report, report_field_created) + created,
+            report_field_updated: getattr(report, report_field_updated) + (len(ids) - created),
+        }
+        return replace(report, **report_updates)
