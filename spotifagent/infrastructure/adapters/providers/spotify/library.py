@@ -7,16 +7,14 @@ from typing import Any
 from pydantic import ValidationError
 
 from spotifagent.domain.entities.auth import OAuthProviderUserToken
-from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
 from spotifagent.domain.entities.music import Artist
 from spotifagent.domain.entities.music import BaseMusicItem
-from spotifagent.domain.entities.music import MusicProvider
 from spotifagent.domain.entities.music import Track
 from spotifagent.domain.entities.users import User
 from spotifagent.domain.exceptions import ProviderPageValidationError
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.providers.library import ProviderLibraryPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
@@ -27,6 +25,7 @@ from spotifagent.infrastructure.adapters.providers.spotify.schemas import Spotif
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTopArtistPage
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTopTrackPage
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
+from spotifagent.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from spotifagent.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
@@ -37,14 +36,17 @@ class SpotifyLibraryFactory:
     """Factory responsible for wiring up dependencies"""
 
     auth_token_repository: OAuthProviderTokenRepositoryPort
-    client: ProviderOAuthClientPort
+    client: SpotifyOAuthClientAdapter
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
         return SpotifyLibraryAdapter(
             user=user,
-            auth_token=auth_token,
-            auth_token_repository=self.auth_token_repository,
-            client=self.client,
+            session_client=SpotifyOAuthSessionClient(
+                user=user,
+                auth_token=auth_token,
+                auth_token_repository=self.auth_token_repository,
+                client=self.client,
+            ),
         )
 
 
@@ -52,19 +54,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     def __init__(
         self,
         user: User,
-        auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
-        client: ProviderOAuthClientPort,
+        session_client: SpotifyOAuthSessionClient,
         max_concurrency: int = app_settings.SYNC_SEMAPHORE_MAX_CONCURRENCY,
     ) -> None:
         self.user = user
-        self.auth_token = auth_token
-        self.auth_token_repository = auth_token_repository
-        self.client = client
+        self.session_client = session_client
         self.max_concurrency = max_concurrency
-
-        self._is_token_refreshed: bool = False
-        self._refresh_lock: asyncio.Lock = asyncio.Lock()
 
     # -------------------------------------------------------------------------
     # Public API
@@ -137,30 +132,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Core Logic
     # -------------------------------------------------------------------------
 
-    async def _refresh_token(self) -> None:
-        # Double-check locking pattern to be safe against concurrency
-        if self._is_token_refreshed:
-            return
-
-        async with self._refresh_lock:
-            # Check again inside lock
-            if self._is_token_refreshed:
-                return
-
-            token_state = await self.client.refresh_access_token(self.auth_token.token_refresh)
-
-            if token_state.access_token != self.auth_token.token_access:
-                # Update the token state in DB.
-                await self.auth_token_repository.update(
-                    user_id=self.user.id,
-                    provider=MusicProvider.SPOTIFY,
-                    auth_token_data=OAuthProviderUserTokenUpdate.from_token_state(token_state=token_state),
-                )
-                # Update also the token state in memory.
-                self.auth_token.refresh_from_token_state(token_state=token_state)
-
-            self._is_token_refreshed = True
-
     async def _fetch_playlist_tracks(self, playlist: SpotifyPlaylist, page_limit: int) -> list[Track]:
         tracks: list[Track] = []
 
@@ -232,17 +203,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        if not self._is_token_refreshed:
-            await self._refresh_token()
-
-        response_data = await self.client.make_user_api_call(
+        return await self.session_client.execute(
             method=method,
             endpoint=endpoint,
-            token_state=self.auth_token.to_token_state(),
             params=params,
             json_data=json_data,
         )
-        return response_data
 
     # -------------------------------------------------------------------------
     # Extractors

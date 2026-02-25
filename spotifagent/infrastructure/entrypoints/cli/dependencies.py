@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
 from spotifagent.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
 from spotifagent.domain.ports.repositories.music import ArtistRepositoryPort
@@ -39,7 +38,7 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 @asynccontextmanager
-async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
+async def get_spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
     async with SpotifyOAuthClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
@@ -72,7 +71,7 @@ def get_track_repository(session: AsyncSession) -> TrackRepositoryPort:
 
 def get_spotify_library_factory(
     session: AsyncSession,
-    spotify_client: ProviderOAuthClientPort,
+    spotify_client: SpotifyOAuthClientAdapter,
 ) -> SpotifyLibraryFactory:
     return SpotifyLibraryFactory(
         auth_token_repository=get_auth_token_repository(session),

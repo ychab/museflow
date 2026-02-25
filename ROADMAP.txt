@@ -6,8 +6,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - replace entity pydantic by dataclass instead (no parsing for domain)?
 - use case => use class when needed, like the sync
-- handling Token Refresh outside the ProviderLibraryPort
-- move sync cli command from spotify to music namespace instead (and set the provider arg)? but what about the time_rang arg?
 
 ## Test
 

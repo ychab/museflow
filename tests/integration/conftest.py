@@ -35,6 +35,7 @@ from spotifagent.infrastructure.adapters.database.repositories.users import User
 from spotifagent.infrastructure.adapters.database.session import async_session_factory
 from spotifagent.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from spotifagent.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from spotifagent.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from spotifagent.infrastructure.adapters.security import Argon2PasswordHasher
 from spotifagent.infrastructure.adapters.security import JwtAccessTokenManager
 from spotifagent.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -275,6 +276,21 @@ async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
         yield client
 
 
+@pytest.fixture
+def spotify_session_client(
+    user: User,
+    auth_token: OAuthProviderUserToken,
+    auth_token_repository: OAuthProviderTokenRepositoryPort,
+    spotify_client: SpotifyOAuthClientAdapter,
+) -> SpotifyOAuthSessionClient:
+    return SpotifyOAuthSessionClient(
+        user=user,
+        auth_token=auth_token,
+        auth_token_repository=auth_token_repository,
+        client=spotify_client,
+    )
+
+
 # --- Service impl ---
 
 
@@ -282,18 +298,14 @@ async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
 def spotify_library(
     request: pytest.FixtureRequest,
     user: User,
-    auth_token: OAuthProviderUserToken,
-    auth_token_repository: OAuthProviderTokenRepositoryPort,
-    spotify_client: SpotifyOAuthClientAdapter,
+    spotify_session_client: SpotifyOAuthSessionClient,
 ) -> SpotifyLibraryAdapter:
     params = getattr(request, "param", {})
     max_concurrency = params.get("max_concurrency", 20)
 
     return SpotifyLibraryAdapter(
         user=user,
-        auth_token=auth_token,
-        auth_token_repository=auth_token_repository,
-        client=spotify_client,
+        session_client=spotify_session_client,
         max_concurrency=max_concurrency,
     )
 
