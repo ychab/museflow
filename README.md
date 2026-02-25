@@ -12,8 +12,9 @@
 
 MuseFlow is an assistant for your music provider account, built with Python, FastAPI and Typer.
 
-Its main goal is to provide you recommendations based on your listen history.
-These recommendations are pushed into new dedicated playlists.
+Its main goal is to help you discover new music by providing recommendations based on your listening history.
+MuseFlow fetches suggestions from various providers and curates them into new dedicated playlists.
+A key feature is that it prioritizes artists and tracks that are **unknown to you**, ensuring true discovery rather than replaying your favorites.
 
 For now, **only [Spotify](https://open.spotify.com/) is supported**.
 
@@ -99,11 +100,16 @@ You can run the application and the database using Docker Compose or the provide
 
 **Using Makefile:**
 
-```bash
-make up
-```
+*   **Start the whole stack (DB + App):**
+    ```bash
+    make up
+    ```
 
-This command will start the database and the application containers.
+*   **Run the API server locally (with hot reload):**
+    ```bash
+    make run
+    ```
+    *Note: You need to have the database running (`make up-db`).*
 
 **Using Docker Compose directly:**
 
@@ -179,6 +185,10 @@ poetry run museflow spotify sync --email <email> [OPTIONS]
 *   `--sync-track-top`: Sync user's top tracks.
 *   `--sync-track-saved`: Sync user's saved tracks.
 *   `--sync-track-playlist`: Sync user's playlist tracks.
+*   `--purge-artist-top`: Purge user's top artists.
+*   `--purge-track-top`: Purge user's top tracks.
+*   `--purge-track-saved`: Purge user's saved tracks.
+*   `--purge-track-playlist`: Purge user's playlist tracks.
 *   `--page-limit`: Items to fetch per page (default: 50).
 *   `--time-range`: Time range for top items (short_term, medium_term, long_term).
 *   `--batch-size`: Number of items to bulk upsert (default: 300).
@@ -191,7 +201,13 @@ poetry run museflow spotify sync --email user@example.com --sync-all
 
 ## Development
 
-To run tests:
+**Linting and Formatting:**
+
+```bash
+make lint
+```
+
+**Running Tests:**
 
 ```bash
 make test
