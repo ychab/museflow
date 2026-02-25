@@ -18,19 +18,21 @@ from tenacity import wait_exponential
 
 from spotifagent.domain.entities.auth import OAuthProviderTokenState
 from spotifagent.domain.ports.providers.client import ProviderOAuthClientPort
+from spotifagent.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
 from spotifagent.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, httpx.RequestError):  # Retry network error
-        return True
+    if isinstance(exception, SpotifyTokenExpiredError):
+        return False  # Let the Session handler deal with this!
 
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
         return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
 
-    if isinstance(exception, TryAgain):  # Manual retry signal (used for 429 with header)
-        return True  # pragma: no cover (Tenacity may handle this internally, but required for safety)
+    # Retry network error OR manual retry signal (used for 429 with header)
+    if isinstance(exception, (httpx.RequestError, TryAgain)):
+        return True  # Tenacity may handle the TryAgain internally, but we keep it here for safety
 
     return False
 
@@ -73,7 +75,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
     def token_endpoint(self) -> HttpUrl:
         return self.TOKEN_ENDPOINT
 
-    def get_authorization_url(self, state: str) -> tuple[HttpUrl, str]:
+    def get_authorization_url(self, state: str) -> HttpUrl:
         params = {
             "client_id": self.client_id,
             "response_type": "code",
@@ -82,7 +84,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
             "state": state,
         }
 
-        return HttpUrl(f"{self.AUTH_ENDPOINT}?{urlencode(params)}"), state
+        return HttpUrl(f"{self.AUTH_ENDPOINT}?{urlencode(params)}")
 
     async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenState:
         response = await self._client.post(
@@ -130,13 +132,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         token_state: OAuthProviderTokenState,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
-        enforce_refresh_token: bool = False,
-    ) -> tuple[dict[str, Any], OAuthProviderTokenState]:
-        # Check if token needs refresh
-        if token_state.is_expired(self.token_buffer_seconds) or enforce_refresh_token:
-            token_state = await self.refresh_access_token(token_state.refresh_token)
-
-        # Make the API call
+    ) -> dict[str, Any]:
         try:
             response = await self._client.request(
                 method=method.upper(),
@@ -151,16 +147,9 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
             response.raise_for_status()
 
         except httpx.HTTPStatusError as e:
-            # Token might be invalid in between, so try just one refresh.
-            if e.response.status_code == codes.UNAUTHORIZED and not enforce_refresh_token:
-                return await self.make_user_api_call(
-                    method=method,
-                    endpoint=endpoint,
-                    token_state=token_state,
-                    params=params,
-                    json_data=json_data,
-                    enforce_refresh_token=True,
-                )
+            # Explicitly check for 401 first to bypass retry logic
+            if e.response.status_code == codes.UNAUTHORIZED:
+                raise SpotifyTokenExpiredError() from e
 
             # Special handling for 429 with Retry-After header returned by Spotify
             if e.response.status_code == codes.TOO_MANY_REQUESTS:
@@ -172,12 +161,12 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                     # TryAgain to prevent Tenacity to sleep again for nothing.
                     raise TryAgain() from e
 
-            raise
+            raise e
 
         if response.status_code == codes.NO_CONTENT:
-            return {}, token_state
+            return {}
 
-        return response.json(), token_state
+        return response.json()
 
     async def close(self) -> None:
         await self._client.aclose()

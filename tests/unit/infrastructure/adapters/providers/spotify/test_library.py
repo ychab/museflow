@@ -27,7 +27,7 @@ def paginate_response(
     limit: int,
     offset: int = 0,
     size: int | None = None,
-) -> list[tuple[dict[str, Any], OAuthProviderTokenState]]:
+) -> list[dict[str, Any]]:
     side_effects = []
 
     while offset + limit <= (size or total):
@@ -37,7 +37,7 @@ def paginate_response(
         response_chunk["total"] = total
         response_chunk["items"] = response_chunk["items"][offset : offset + limit]
 
-        side_effects += [(response_chunk, token_state)]
+        side_effects += [response_chunk]
         offset += limit
 
     return side_effects
@@ -163,25 +163,22 @@ class TestSpotifyLibrary:
         side_effects = list(mock_provider_client.make_user_api_call.side_effect)
 
         side_effects += [
-            (
-                {
-                    "items": [
-                        {
-                            "item": {
-                                "artists": [{"id": None, "name": ""}],
-                                "href": None,
-                                "id": None,
-                                "name": "my-custom-track-which-dont-exists-on-spotify-db",
-                                "popularity": 0,
-                            },
+            {
+                "items": [
+                    {
+                        "item": {
+                            "artists": [{"id": None, "name": ""}],
+                            "href": None,
+                            "id": None,
+                            "name": "my-custom-track-which-dont-exists-on-spotify-db",
+                            "popularity": 0,
                         },
-                    ],
-                    "limit": 50,
-                    "offset": 0,
-                    "total": 1,
-                },
-                token_state,
-            ),
+                    },
+                ],
+                "limit": 50,
+                "offset": 0,
+                "total": 1,
+            },
         ]
         mock_provider_client.make_user_api_call.side_effect = side_effects
 

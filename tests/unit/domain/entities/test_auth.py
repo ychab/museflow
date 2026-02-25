@@ -4,23 +4,26 @@ from typing import Any
 
 import pytest
 
-from spotifagent.domain.entities.auth import OAuthProviderTokenState
+from spotifagent.domain.entities.auth import OAuthProviderUserToken
 from spotifagent.domain.entities.auth import OAuthProviderUserTokenUpdate
 
 
-class TestOAuthProviderTokenState:
+class TestOAuthProviderUserToken:
     @pytest.mark.parametrize(
-        ("token_state", "expected_bool"),
+        ("auth_token", "expected_bool"),
         [
-            ({"expires_at": datetime(2026, 1, 1, 0, 1, 10, tzinfo=UTC)}, False),
-            ({"expires_at": datetime(2026, 1, 1, 0, 0, 50, tzinfo=UTC)}, True),
+            ({"token_expires_at": datetime(2026, 1, 1, 0, 1, 10, tzinfo=UTC)}, False),
+            ({"token_expires_at": datetime(2026, 1, 1, 0, 0, 50, tzinfo=UTC)}, True),
         ],
-        indirect=["token_state"],
+        indirect=["auth_token"],
     )
     def test__is_expired(
-        self, frozen_time: datetime, token_state: OAuthProviderTokenState, expected_bool: bool
+        self,
+        frozen_time: datetime,
+        auth_token: OAuthProviderUserToken,
+        expected_bool: bool,
     ) -> None:
-        assert token_state.is_expired(60) is expected_bool
+        assert auth_token.is_expired(60) is expected_bool
 
 
 class TestOAuthProviderUserTokenUpdate:

@@ -26,15 +26,12 @@ class OAuthProviderState(BaseEntity):
 
 
 class OAuthProviderTokenState(BaseEntity):
-    """User "volatile" token state with expiration tracking."""
+    """User non-persistent token state."""
 
     token_type: str
     access_token: str
     refresh_token: str
     expires_at: AwareDatetime
-
-    def is_expired(self, buffer_seconds: int = 60) -> bool:
-        return datetime.now(UTC) >= self.expires_at - timedelta(seconds=buffer_seconds)
 
 
 class BaseOAuthProviderUserToken(BaseEntity):
@@ -50,6 +47,9 @@ class OAuthProviderUserToken(BaseOAuthProviderUserToken):
     id: int
     user_id: uuid.UUID
     provider: MusicProvider
+
+    def is_expired(self, buffer_seconds: int = 60) -> bool:
+        return datetime.now(UTC) >= self.token_expires_at - timedelta(seconds=buffer_seconds)
 
     def refresh_from_token_state(self, token_state: OAuthProviderTokenState) -> None:
         self.token_type = token_state.token_type

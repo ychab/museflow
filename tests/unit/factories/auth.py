@@ -24,7 +24,8 @@ class OAuthProviderTokenStateFactory(ModelFactory[OAuthProviderTokenState]):
 
 class OAuthProviderUserTokenFactory(ModelFactory[OAuthProviderUserToken]):
     __model__ = OAuthProviderUserToken
-    __set_as_default_factory_for_type__ = True
+
+    token_expires_at = Use(lambda: datetime.now(UTC) + timedelta(seconds=3600))
 
 
 class OAuthProviderUserTokenCreateFactory(ModelFactory[OAuthProviderUserTokenCreate]):

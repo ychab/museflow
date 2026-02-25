@@ -8,7 +8,7 @@ from spotifagent.domain.entities.auth import OAuthProviderTokenState
 
 
 class ProviderOAuthClientPort(ABC):
-    """Port interface for OAuth provider API client."""
+    """Port interface for OAuth stateless provider API client."""
 
     @property
     @abstractmethod
@@ -19,7 +19,7 @@ class ProviderOAuthClientPort(ABC):
     def token_endpoint(self) -> HttpUrl: ...
 
     @abstractmethod
-    def get_authorization_url(self, state: str) -> tuple[HttpUrl, str]:
+    def get_authorization_url(self, state: str) -> HttpUrl:
         """Generate OAuth authorization URL."""
         ...
 
@@ -41,22 +41,8 @@ class ProviderOAuthClientPort(ABC):
         token_state: OAuthProviderTokenState,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
-    ) -> tuple[dict[str, Any], OAuthProviderTokenState]:
-        """
-        Make an authenticated user API call with automatic token refresh.
-
-        This method automatically refreshes the access token if it's expired or about to expire.
-
-        Args:
-            method: HTTP method (GET, POST, PUT, DELETE, etc.)
-            endpoint: User API endpoint path (must start with /me or /users/{user_id})
-            token_state: Current user token state
-            params: Query parameters
-            json_data: JSON body for POST/PUT requests
-
-        Returns:
-            Tuple of (response_data, OAuthProviderTokenState)
-        """
+    ) -> dict[str, Any]:
+        """Make an authenticated user API call."""
         ...
 
     @abstractmethod

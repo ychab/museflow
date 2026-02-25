@@ -235,7 +235,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         if not self._is_token_refreshed:
             await self._refresh_token()
 
-        response_data, _ = await self.client.make_user_api_call(
+        response_data = await self.client.make_user_api_call(
             method=method,
             endpoint=endpoint,
             token_state=self.auth_token.to_token_state(),
