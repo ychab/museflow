@@ -11,11 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.entrypoints.api.main import app
@@ -30,7 +30,7 @@ class TestSpotifyConnect:
     async def test_redirect(
         self,
         async_session_db: AsyncSession,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         user: User,
         access_token: str,
         async_client: AsyncClient,

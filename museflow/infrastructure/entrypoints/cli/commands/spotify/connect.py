@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import typer
 
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
-from museflow.domain.entities.music import MusicProvider
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
@@ -55,7 +55,7 @@ async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -
 
 async def _wait_for_authentication(
     session: AsyncSession,
-    auth_state_repository: OAuthProviderStateRepositoryPort,
+    auth_state_repository: OAuthProviderStateRepository,
     user_id: uuid.UUID,
     timeout: float,
     poll_interval: float,

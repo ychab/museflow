@@ -10,21 +10,21 @@ import pytest
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 
 
-class TestOAuthProviderStateRepository:
+class TestOAuthProviderStateSQLRepository:
     async def test_upsert__create(
         self,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         state_token_generator: StateTokenGeneratorPort,
         user: User,
     ) -> None:
@@ -43,7 +43,7 @@ class TestOAuthProviderStateRepository:
 
     async def test_upsert__update(
         self,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         state_token_generator: StateTokenGeneratorPort,
         auth_state: OAuthProviderState,
     ) -> None:
@@ -64,7 +64,7 @@ class TestOAuthProviderStateRepository:
 
     async def test_get__nominal(
         self,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
     ) -> None:
         auth_state_duplicate = await auth_state_repository.get(
@@ -79,7 +79,7 @@ class TestOAuthProviderStateRepository:
 
     async def test_get__invalid(
         self,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
     ) -> None:
         auth_state_invalid = await auth_state_repository.get(
@@ -91,7 +91,7 @@ class TestOAuthProviderStateRepository:
     async def test_consume__nominal(
         self,
         async_session_db: AsyncSession,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
     ) -> None:
         auth_state_consumed = await auth_state_repository.consume(state=auth_state.state)
@@ -107,7 +107,7 @@ class TestOAuthProviderStateRepository:
     async def test_consume__none(
         self,
         async_session_db: AsyncSession,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
     ) -> None:
         auth_state_unknown = await auth_state_repository.consume(state="dummy-state")
@@ -120,22 +120,22 @@ class TestOAuthProviderStateRepository:
         assert auth_state_db is not None
 
 
-class TestOAuthProviderTokenRepository:
+class TestOAuthProviderTokenSQLRepository:
     async def test_get__nominal(
         self,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider)
 
-    async def test_get__none(self, auth_token_repository: OAuthProviderTokenRepositoryPort) -> None:
+    async def test_get__none(self, auth_token_repository: OAuthProviderTokenRepository) -> None:
         assert await auth_token_repository.get(uuid.uuid4(), provider=MusicProvider.SPOTIFY) is None
 
     async def test_create__nominal(
         self,
         user: User,
         auth_token_create: OAuthProviderUserTokenCreate,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         auth_token_db = await auth_token_repository.create(
             user_id=user.id,
@@ -155,7 +155,7 @@ class TestOAuthProviderTokenRepository:
     async def test_update__partial(
         self,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         auth_token_data = OAuthProviderUserTokenUpdate(
             token_refresh="dummy-token-state",
@@ -178,7 +178,7 @@ class TestOAuthProviderTokenRepository:
         self,
         auth_token: OAuthProviderUserToken,
         auth_token_update: OAuthProviderUserTokenUpdate,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         auth_token_db = await auth_token_repository.update(
             user_id=auth_token.user_id,
@@ -197,7 +197,7 @@ class TestOAuthProviderTokenRepository:
         self,
         async_session_db: AsyncSession,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         await auth_token_repository.delete(user_id=auth_token.user_id, provider=auth_token.provider)
 

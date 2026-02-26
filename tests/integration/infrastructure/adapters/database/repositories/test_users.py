@@ -4,33 +4,33 @@ from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.entities.users import UserUpdate
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.schemas.user import UserCreate
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 
-class TestUserRepository:
-    async def test__get_by_id__nominal(self, user: User, user_repository: UserRepositoryPort) -> None:
+class TestUserSQLRepository:
+    async def test__get_by_id__nominal(self, user: User, user_repository: UserRepository) -> None:
         user_db = await user_repository.get_by_id(user.id)
         assert user_db is not None
 
-    async def test__get_by_id__none(self, user_repository: UserRepositoryPort) -> None:
+    async def test__get_by_id__none(self, user_repository: UserRepository) -> None:
         assert await user_repository.get_by_id(uuid.uuid4()) is None
 
-    async def test__get_by_email__nominal(self, user: User, user_repository: UserRepositoryPort) -> None:
+    async def test__get_by_email__nominal(self, user: User, user_repository: UserRepository) -> None:
         user_db = await user_repository.get_by_email(user.email)
         assert user_db is not None
 
-    async def test__get_by_email__none(self, user_repository: UserRepositoryPort) -> None:
+    async def test__get_by_email__none(self, user_repository: UserRepository) -> None:
         assert await user_repository.get_by_email("foo@example.com") is None
 
     async def test__create__nominal(
         self,
         user_create: UserCreate,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         hashed_password = password_hasher.hash(user_create.password)
@@ -48,7 +48,7 @@ class TestUserRepository:
         self,
         user: User,
         user_update: UserUpdate,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         assert user_update.email is not None and user_update.password is not None
@@ -69,7 +69,7 @@ class TestUserRepository:
         self,
         user: User,
         user_update: UserUpdate,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         assert user_update.email is not None and user_update.email != user.email
@@ -87,7 +87,7 @@ class TestUserRepository:
         self,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
     ) -> None:
         await user_repository.delete(user.id)
 

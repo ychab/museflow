@@ -19,11 +19,11 @@ from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.library import ProviderLibraryPort
 
-from tests.unit.factories.music import ArtistFactory
-from tests.unit.factories.music import TrackFactory
+from tests.unit.factories.entities.music import ArtistFactory
+from tests.unit.factories.entities.music import TrackFactory
 
 
 def validation_error() -> ValidationError:

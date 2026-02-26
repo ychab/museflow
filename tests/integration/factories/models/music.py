@@ -8,12 +8,12 @@ from polyfactory import Use
 from polyfactory.decorators import post_generated
 from slugify import slugify
 
-from museflow.domain.entities.music import MusicProvider
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import Artist
 from museflow.infrastructure.adapters.database.models import Track
 
-from tests.integration.factories.base import BaseModelFactory
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.base import BaseModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class BaseMusicItemModelFactory[T: (Artist | Track)](BaseModelFactory[T]):

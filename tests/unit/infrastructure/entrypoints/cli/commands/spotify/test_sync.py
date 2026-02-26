@@ -9,10 +9,10 @@ from typer.testing import CliRunner
 
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
+from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.entrypoints.cli.commands.spotify import sync_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

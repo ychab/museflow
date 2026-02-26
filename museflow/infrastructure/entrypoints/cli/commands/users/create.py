@@ -1,8 +1,8 @@
 from pydantic import EmailStr
 
 from museflow.application.use_cases.user_create import user_create
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
+from museflow.domain.entities.user import User
+from museflow.domain.schemas.user import UserCreate
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository

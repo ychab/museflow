@@ -3,18 +3,18 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenRepository
-from museflow.infrastructure.adapters.database.repositories.music import ArtistRepository
-from museflow.infrastructure.adapters.database.repositories.music import TrackRepository
-from museflow.infrastructure.adapters.database.repositories.users import UserRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
+from museflow.infrastructure.adapters.database.repositories.music import ArtistSQLRepository
+from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
@@ -49,24 +49,24 @@ async def get_spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
         yield client
 
 
-def get_user_repository(session: AsyncSession) -> UserRepositoryPort:
-    return UserRepository(session)
+def get_user_repository(session: AsyncSession) -> UserRepository:
+    return UserSQLRepository(session)
 
 
-def get_auth_state_repository(session: AsyncSession) -> OAuthProviderStateRepositoryPort:
-    return OAuthProviderStateRepository(session)
+def get_auth_state_repository(session: AsyncSession) -> OAuthProviderStateRepository:
+    return OAuthProviderStateSQLRepository(session)
 
 
-def get_auth_token_repository(session: AsyncSession) -> OAuthProviderTokenRepositoryPort:
-    return OAuthProviderTokenRepository(session)
+def get_auth_token_repository(session: AsyncSession) -> OAuthProviderTokenRepository:
+    return OAuthProviderTokenSQLRepository(session)
 
 
-def get_artist_repository(session: AsyncSession) -> ArtistRepositoryPort:
-    return ArtistRepository(session)
+def get_artist_repository(session: AsyncSession) -> ArtistRepository:
+    return ArtistSQLRepository(session)
 
 
-def get_track_repository(session: AsyncSession) -> TrackRepositoryPort:
-    return TrackRepository(session)
+def get_track_repository(session: AsyncSession) -> TrackRepository:
+    return TrackSQLRepository(session)
 
 
 def get_spotify_library_factory(

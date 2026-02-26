@@ -6,13 +6,13 @@ from fastapi.responses import RedirectResponse
 
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
@@ -27,7 +27,7 @@ router = APIRouter()
 @router.get("/connect", name="spotify_connect")
 async def connect(
     current_user: User = Depends(get_current_user),
-    auth_state_repository: OAuthProviderStateRepositoryPort = Depends(get_auth_state_repository),
+    auth_state_repository: OAuthProviderStateRepository = Depends(get_auth_state_repository),
     provider_client: ProviderOAuthClientPort = Depends(get_spotify_client),
     state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
 ) -> RedirectResponse:
@@ -46,7 +46,7 @@ async def spotify_callback(
     code: str | None = None,
     error: str | None = None,
     current_user: User = Depends(get_user_from_state),
-    auth_token_repository: OAuthProviderTokenRepositoryPort = Depends(get_auth_token_repository),
+    auth_token_repository: OAuthProviderTokenRepository = Depends(get_auth_token_repository),
     spotify_client: ProviderOAuthClientPort = Depends(get_spotify_client),
 ) -> SuccessResponse:
     if error:

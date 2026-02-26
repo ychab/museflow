@@ -3,23 +3,23 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.schemas.auth import OAuthProviderTokenState
 
-from tests.unit.factories.auth import OAuthProviderStateFactory
-from tests.unit.factories.auth import OAuthProviderTokenStateFactory
-from tests.unit.factories.auth import OAuthProviderUserTokenFactory
-from tests.unit.factories.users import UserFactory
+from tests.unit.factories.entities.auth import OAuthProviderStateFactory
+from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
+from tests.unit.factories.entities.user import UserFactory
+from tests.unit.factories.schemas.auth import OAuthProviderTokenStateFactory
 
 # --- Security Mocks ---
 
@@ -44,27 +44,27 @@ def mock_state_token_generator() -> mock.Mock:
 
 @pytest.fixture
 def mock_user_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=UserRepositoryPort)
+    return mock.AsyncMock(spec=UserRepository)
 
 
 @pytest.fixture
 def mock_auth_state_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=OAuthProviderStateRepositoryPort)
+    return mock.AsyncMock(spec=OAuthProviderStateRepository)
 
 
 @pytest.fixture
 def mock_auth_token_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=OAuthProviderTokenRepositoryPort)
+    return mock.AsyncMock(spec=OAuthProviderTokenRepository)
 
 
 @pytest.fixture
 def mock_artist_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=ArtistRepositoryPort)
+    return mock.AsyncMock(spec=ArtistRepository)
 
 
 @pytest.fixture
 def mock_track_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=TrackRepositoryPort)
+    return mock.AsyncMock(spec=TrackRepository)
 
 
 # --- Entity Mocks ---

@@ -1,3 +1,4 @@
+import dataclasses
 import uuid
 from typing import Any
 
@@ -13,14 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import BaseMusicItem
 from museflow.domain.entities.music import Track
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import MusicItemMixin
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 
-class ArtistRepository(ArtistRepositoryPort):
+class ArtistSQLRepository(ArtistRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -39,7 +40,7 @@ class ArtistRepository(ArtistRepositoryPort):
             stmt = stmt.limit(limit)
 
         results = await self.session.execute(stmt)
-        return [Artist.model_validate(artist_db) for artist_db in results.scalars().all()]
+        return [artist_db.to_entity() for artist_db in results.scalars().all()]
 
     async def bulk_upsert(self, artists: list[Artist], batch_size: int) -> tuple[list[uuid.UUID], int]:
         return await bulk_item_upsert(
@@ -55,7 +56,7 @@ class ArtistRepository(ArtistRepositoryPort):
         return int(result.rowcount)  # type: ignore
 
 
-class TrackRepository(TrackRepositoryPort):
+class TrackSQLRepository(TrackRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -74,7 +75,7 @@ class TrackRepository(TrackRepositoryPort):
             stmt = stmt.limit(limit)
 
         results = await self.session.execute(stmt)
-        return [Track.model_validate(tracks_db) for tracks_db in results.scalars().all()]
+        return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
 
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         return await bulk_item_upsert(
@@ -121,7 +122,7 @@ async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMusicItem]
     index_elements: list[str] = ["user_id", "provider_id"]
     index_excluded: list[str] = ["id"] + index_elements
 
-    items_dicts: list[dict[str, Any]] = [item.model_dump(mode="json") for item in items]
+    items_dicts: list[dict[str, Any]] = [dataclasses.asdict(item) for item in items]
 
     total: int = len(items_dicts)
     for offset in range(0, total, batch_size):

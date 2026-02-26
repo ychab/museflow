@@ -18,17 +18,17 @@ from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests import ASSETS_DIR
-from tests.integration.factories.music import ArtistModelFactory
-from tests.integration.factories.music import TrackModelFactory
+from tests.integration.factories.models.music import ArtistModelFactory
+from tests.integration.factories.models.music import TrackModelFactory
 
 DEFAULT_PAGINATION_LIMIT: Final[int] = 2
 DEFAULT_PAGINATION_TOTAL: Final[int] = 10
@@ -178,16 +178,13 @@ class TestSpotifySyncMusic:
         for page in artists_top_response_paginated[:page_max]:
             for item in page["items"]:
                 artist = await ArtistModelFactory.create_async(user_id=user.id, provider_id=item["id"])
-                artists.append(Artist.model_validate(artist))
+                artists.append(artist.to_entity())
 
         return artists
 
     @pytest.fixture
     async def artists_top_delete(self, user: User) -> list[Artist]:
-        return [
-            Artist.model_validate(artist)
-            for artist in await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)
-        ]
+        return [artist.to_entity() for artist in await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)]
 
     @pytest.fixture
     async def tracks_top_update(
@@ -207,7 +204,7 @@ class TestSpotifySyncMusic:
                     is_top=True,
                     is_saved=False,
                 )
-                tracks.append(Track.model_validate(track))
+                tracks.append(track.to_entity())
 
         return tracks
 
@@ -229,7 +226,7 @@ class TestSpotifySyncMusic:
                     is_top=False,
                     is_saved=True,
                 )
-                tracks.append(Track.model_validate(track))
+                tracks.append(track.to_entity())
 
         return tracks
 
@@ -252,7 +249,7 @@ class TestSpotifySyncMusic:
                     is_top=False,
                     is_saved=False,
                 )
-                tracks.append(Track.model_validate(track))
+                tracks.append(track.to_entity())
 
         return tracks
 
@@ -265,14 +262,14 @@ class TestSpotifySyncMusic:
         )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
-        return [Track.model_validate(track) for track in tracks_top + tracks_saved + tracks_playlist + tracks_other]
+        return [track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_other]
 
     @pytest.fixture
     def use_case(
         self,
         spotify_library: SpotifyLibraryAdapter,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        artist_repository: ArtistRepository,
+        track_repository: TrackRepository,
     ) -> ProviderSyncLibraryUseCase:
         return ProviderSyncLibraryUseCase(
             provider_library=spotify_library,

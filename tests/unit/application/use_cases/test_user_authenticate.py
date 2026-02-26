@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.use_cases.user_authenticate import user_authenticate
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
 from museflow.domain.exceptions import UserNotFound

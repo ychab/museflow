@@ -4,12 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.use_cases.user_create import user_create
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.schemas.user import UserCreate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
-from tests.unit.factories.users import UserCreateFactory
+from tests.unit.factories.schemas.user import UserCreateFactory
 
 
 class TestUserCreateUseCase:
@@ -21,7 +21,7 @@ class TestUserCreateUseCase:
         self,
         async_session_db: AsyncSession,
         user_create_data: UserCreate,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user = await user_create(user_create_data, user_repository, password_hasher)

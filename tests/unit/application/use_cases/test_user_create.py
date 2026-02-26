@@ -3,11 +3,11 @@ from unittest import mock
 import pytest
 
 from museflow.application.use_cases.user_create import user_create
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
+from museflow.domain.schemas.user import UserCreate
 
-from tests.unit.factories.users import UserCreateFactory
+from tests.unit.factories.schemas.user import UserCreateFactory
 
 
 class TestUserCreateUseCase:

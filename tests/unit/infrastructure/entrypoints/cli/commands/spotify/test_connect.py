@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.spotify import connect_logic
 from museflow.infrastructure.entrypoints.cli.main import app

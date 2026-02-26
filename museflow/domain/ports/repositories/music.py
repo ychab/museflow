@@ -6,7 +6,7 @@ from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 
 
-class ArtistRepositoryPort(ABC):
+class ArtistRepository(ABC):
     @abstractmethod
     async def get_list(
         self,
@@ -22,7 +22,7 @@ class ArtistRepositoryPort(ABC):
     async def purge(self, user_id: uuid.UUID) -> int: ...
 
 
-class TrackRepositoryPort(ABC):
+class TrackRepository(ABC):
     @abstractmethod
     async def get_list(
         self,

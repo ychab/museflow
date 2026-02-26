@@ -4,12 +4,12 @@ from abc import abstractmethod
 
 from pydantic import EmailStr
 
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.entities.users import UserUpdate
+from museflow.domain.entities.user import User
+from museflow.domain.schemas.user import UserCreate
+from museflow.domain.schemas.user import UserUpdate
 
 
-class UserRepositoryPort(ABC):
+class UserRepository(ABC):
     @abstractmethod
     async def get_by_id(self, user_id: uuid.UUID) -> User | None: ...
 

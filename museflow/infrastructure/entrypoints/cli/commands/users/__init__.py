@@ -5,9 +5,9 @@ from pydantic import ValidationError
 
 import typer
 
-from museflow.domain.entities.users import UserUpdate
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.cli.commands.users.create import user_create_logic
 from museflow.infrastructure.entrypoints.cli.commands.users.update import user_update_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email

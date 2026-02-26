@@ -12,16 +12,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 
 
-class OAuthProviderStateRepository(OAuthProviderStateRepositoryPort):
+class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -51,7 +51,7 @@ class OAuthProviderStateRepository(OAuthProviderStateRepositoryPort):
         auth_state_db, created = result.one()
         await self.session.commit()
 
-        return OAuthProviderState.model_validate(auth_state_db), created
+        return auth_state_db.to_entity(), created
 
     async def get(self, user_id: uuid.UUID, provider: MusicProvider) -> OAuthProviderState | None:
         stmt = select(AuthProviderStateModel).where(
@@ -61,7 +61,7 @@ class OAuthProviderStateRepository(OAuthProviderStateRepositoryPort):
         result = await self.session.execute(stmt)
         auth_state_db = result.scalar_one_or_none()
 
-        return OAuthProviderState.model_validate(auth_state_db) if auth_state_db else None
+        return auth_state_db.to_entity() if auth_state_db else None
 
     async def consume(self, state: str) -> OAuthProviderState | None:
         stmt_select = select(AuthProviderStateModel).where(AuthProviderStateModel.state == state)
@@ -73,10 +73,10 @@ class OAuthProviderStateRepository(OAuthProviderStateRepositoryPort):
             await self.session.execute(stmt_delete)
             await self.session.commit()
 
-        return OAuthProviderState.model_validate(auth_state_db) if auth_state_db else None
+        return auth_state_db.to_entity() if auth_state_db else None
 
 
-class OAuthProviderTokenRepository(OAuthProviderTokenRepositoryPort):
+class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -86,8 +86,8 @@ class OAuthProviderTokenRepository(OAuthProviderTokenRepositoryPort):
             AuthProviderTokenModel.provider == provider,
         )
         result = await self.session.execute(stmt)
-        auth_token = result.scalar_one_or_none()
-        return OAuthProviderUserToken.model_validate(auth_token) if auth_token else None
+        auth_token_db = result.scalar_one_or_none()
+        return auth_token_db.to_entity() if auth_token_db else None
 
     async def create(
         self,
@@ -99,12 +99,12 @@ class OAuthProviderTokenRepository(OAuthProviderTokenRepositoryPort):
         auth_token_dict["user_id"] = str(user_id)
         auth_token_dict["provider"] = provider
 
-        auth_token = AuthProviderTokenModel(**auth_token_dict)
-        self.session.add(auth_token)
+        auth_token_db = AuthProviderTokenModel(**auth_token_dict)
+        self.session.add(auth_token_db)
         await self.session.commit()
 
-        await self.session.refresh(auth_token)
-        return OAuthProviderUserToken.model_validate(auth_token)
+        await self.session.refresh(auth_token_db)
+        return auth_token_db.to_entity()
 
     async def update(
         self,
@@ -124,11 +124,11 @@ class OAuthProviderTokenRepository(OAuthProviderTokenRepositoryPort):
             .returning(AuthProviderTokenModel)
         )
         result = await self.session.execute(stmt)
-        auth_token = result.scalar_one()
+        auth_token_db = result.scalar_one()
         await self.session.commit()
 
-        await self.session.refresh(auth_token)
-        return OAuthProviderUserToken.model_validate(auth_token)
+        await self.session.refresh(auth_token_db)
+        return auth_token_db.to_entity()
 
     async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:
         stmt = delete(AuthProviderTokenModel).where(

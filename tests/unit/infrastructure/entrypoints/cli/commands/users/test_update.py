@@ -6,8 +6,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.users import UserUpdate
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

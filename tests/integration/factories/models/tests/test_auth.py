@@ -1,8 +1,8 @@
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 
-from tests.integration.factories.auth import AuthProviderStateModelFactory
-from tests.integration.factories.auth import AuthProviderTokenFactory
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.auth import AuthProviderStateModelFactory
+from tests.integration.factories.models.auth import AuthProviderTokenFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestAuthProviderStateModelFactory:

@@ -1,17 +1,17 @@
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.types import MusicProvider
 
 
 async def oauth_callback(
     code: str,
     user: User,
     provider: MusicProvider,
-    auth_token_repository: OAuthProviderTokenRepositoryPort,
+    auth_token_repository: OAuthProviderTokenRepository,
     provider_client: ProviderOAuthClientPort,
 ) -> None:
     try:

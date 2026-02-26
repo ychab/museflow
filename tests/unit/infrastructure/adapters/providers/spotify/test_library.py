@@ -6,10 +6,10 @@ from unittest import mock
 
 import pytest
 
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient

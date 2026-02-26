@@ -10,22 +10,22 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import BaseMusicItem
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.ports.providers.library import ProviderLibraryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
+from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
+from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrackPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifySavedTrackPage
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTopArtistPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTopTrackPage
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 class SpotifyLibraryFactory:
     """Factory responsible for wiring up dependencies"""
 
-    auth_token_repository: OAuthProviderTokenRepositoryPort
+    auth_token_repository: OAuthProviderTokenRepository
     client: SpotifyOAuthClientAdapter
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
@@ -218,51 +218,19 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         return list(page.items)
 
     def _extract_top_artists(self, page: SpotifyTopArtistPage, offset: int) -> list[Artist]:
-        return [self._map_top_artist(item, offset + i + 1) for i, item in enumerate(page.items)]
+        return [
+            to_domain_artist(item, user_id=self.user.id, is_top=True, position=offset + i + 1)
+            for i, item in enumerate(page.items)
+        ]
 
     def _extract_top_tracks(self, page: SpotifyTopTrackPage, offset: int) -> list[Track]:
-        return [self._map_top_track(item, offset + i + 1) for i, item in enumerate(page.items)]
+        return [
+            to_domain_track(item, user_id=self.user.id, is_top=True, position=offset + i + 1)
+            for i, item in enumerate(page.items)
+        ]
 
     def _extract_saved_tracks(self, page: SpotifySavedTrackPage, *_: Any) -> list[Track]:
-        return [self._map_saved_track(item.track) for item in page.items]
+        return [to_domain_track(item.track, user_id=self.user.id, is_saved=True) for item in page.items]
 
     def _extract_playlist_tracks(self, page: SpotifyPlaylistTrackPage, *_: Any) -> list[Track]:
-        return [self._map_track(item.item) for item in page.items if item.item]
-
-    # -------------------------------------------------------------------------
-    # Mappers (DTO)
-    # -------------------------------------------------------------------------
-
-    def _map_top_artist(self, item: SpotifyArtist, position: int) -> Artist:
-        return Artist.model_validate(
-            {
-                **item.model_dump(exclude={"id"}),
-                "provider_id": item.id,
-                "user_id": self.user.id,
-                "is_top": True,
-                "top_position": position,
-            }
-        )
-
-    def _map_top_track(self, item: SpotifyTrack, position: int) -> Track:
-        return self._map_track(item, is_top=True, top_position=position)
-
-    def _map_saved_track(self, item: SpotifyTrack) -> Track:
-        return self._map_track(item, is_saved=True)
-
-    def _map_track(self, item: SpotifyTrack, **extra_attributes: Any) -> Track:
-        return Track.model_validate(
-            {
-                **item.model_dump(exclude={"id", "artists"}),
-                "provider_id": item.id,
-                "user_id": self.user.id,
-                "artists": [
-                    {
-                        **artist.model_dump(exclude={"id"}),
-                        "provider_id": artist.id,
-                    }
-                    for artist in item.artists
-                ],
-                **extra_attributes,
-            }
-        )
+        return [to_domain_track(item.item, user_id=self.user.id) for item in page.items if item.item]

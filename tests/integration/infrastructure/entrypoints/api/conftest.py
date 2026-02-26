@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator
 from collections.abc import Iterator
-from typing import Any
 from unittest import mock
 from unittest.mock import AsyncMock
 
@@ -11,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
@@ -20,7 +19,7 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_password_ha
 from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.api.main import app
 
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 @pytest.fixture(name="mock_api_logger")
@@ -42,9 +41,8 @@ async def mock_spotify_client() -> AsyncMock:
 
 @pytest.fixture
 async def user(request: pytest.FixtureRequest) -> User:
-    params: dict[str, Any] = getattr(request, "param", {})
-    user_db = await UserModelFactory.create_async(**params)
-    return User.model_validate(user_db)
+    user_db = await UserModelFactory.create_async(**getattr(request, "param", {}))
+    return user_db.to_entity()
 
 
 @pytest.fixture

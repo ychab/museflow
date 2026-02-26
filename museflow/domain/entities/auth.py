@@ -1,61 +1,61 @@
 import uuid
+from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from typing import Self
 
-from pydantic import AwareDatetime
-from pydantic import Field
-from pydantic import model_validator
-
-from museflow.domain.entities.base import BaseEntity
-from museflow.domain.entities.music import MusicProvider
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.types import MusicProvider
 
 
-class OAuthProviderState(BaseEntity):
+@dataclass(frozen=True, kw_only=True)
+class OAuthProviderState:
     """User state send to music provider in order to get its oauth token."""
 
     id: int
 
     user_id: uuid.UUID
     provider: MusicProvider
-    state: str = Field(max_length=512)
+    state: str
 
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
-
-
-class OAuthProviderTokenState(BaseEntity):
-    """User non-persistent token state."""
-
-    token_type: str
-    access_token: str
-    refresh_token: str
-    expires_at: AwareDatetime
+    created_at: datetime
+    updated_at: datetime
 
 
-class BaseOAuthProviderUserToken(BaseEntity):
-    token_type: str = Field(..., max_length=512)
-    token_access: str = Field(..., max_length=512)
-    token_refresh: str = Field(..., max_length=512)
-    token_expires_at: AwareDatetime
-
-
-class OAuthProviderUserToken(BaseOAuthProviderUserToken):
+@dataclass(frozen=True, kw_only=True)
+class OAuthProviderUserToken:
     """User persistent auth token provider"""
 
     id: int
     user_id: uuid.UUID
     provider: MusicProvider
 
+    token_type: str
+    token_access: str
+    token_refresh: str
+    token_expires_at: datetime
+
     def is_expired(self, buffer_seconds: int = 60) -> bool:
         return datetime.now(UTC) >= self.token_expires_at - timedelta(seconds=buffer_seconds)
 
-    def refresh_from_token_state(self, token_state: OAuthProviderTokenState) -> None:
-        self.token_type = token_state.token_type
-        self.token_access = token_state.access_token
-        self.token_refresh = token_state.refresh_token
-        self.token_expires_at = token_state.expires_at
+    @classmethod
+    def from_token_state(
+        cls,
+        auth_token_id: int,
+        user_id: uuid.UUID,
+        provider: MusicProvider,
+        token_state: OAuthProviderTokenState,
+    ) -> Self:
+        return cls(
+            id=auth_token_id,
+            user_id=user_id,
+            provider=provider,
+            token_type=token_state.token_type,
+            token_access=token_state.access_token,
+            token_refresh=token_state.refresh_token,
+            token_expires_at=token_state.expires_at,
+        )
 
     def to_token_state(self) -> OAuthProviderTokenState:
         return OAuthProviderTokenState(
@@ -63,37 +63,4 @@ class OAuthProviderUserToken(BaseOAuthProviderUserToken):
             access_token=self.token_access,
             refresh_token=self.token_refresh,
             expires_at=self.token_expires_at,
-        )
-
-
-class OAuthProviderUserTokenCreate(BaseOAuthProviderUserToken):
-    @classmethod
-    def from_token_state(cls, token_state: OAuthProviderTokenState) -> Self:
-        return cls(
-            token_type=token_state.token_type,
-            token_access=token_state.access_token,
-            token_refresh=token_state.refresh_token,
-            token_expires_at=token_state.expires_at,
-        )
-
-
-class OAuthProviderUserTokenUpdate(BaseEntity):
-    token_type: str | None = Field(None, max_length=512)
-    token_access: str | None = Field(None, max_length=512)
-    token_refresh: str | None = Field(None, max_length=512)
-    token_expires_at: AwareDatetime | None = None
-
-    @model_validator(mode="after")
-    def validate_one_field_set(self):
-        if not self.model_fields_set:
-            raise ValueError("At least one field must be provided for update")
-        return self
-
-    @classmethod
-    def from_token_state(cls, token_state: OAuthProviderTokenState) -> Self:
-        return cls(
-            token_type=token_state.token_type,
-            token_access=token_state.access_token,
-            token_refresh=token_state.refresh_token,
-            token_expires_at=token_state.expires_at,
         )

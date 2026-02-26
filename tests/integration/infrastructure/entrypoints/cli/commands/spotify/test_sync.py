@@ -6,7 +6,7 @@ import pytest
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 
 

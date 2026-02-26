@@ -8,11 +8,11 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
@@ -25,7 +25,7 @@ class TestSpotifyOauthCallbackUseCase:
         frozen_time: datetime,
         user: User,
         token_state: OAuthProviderTokenState,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
@@ -77,7 +77,7 @@ class TestSpotifyOauthCallbackUseCase:
         user: User,
         token_state: OAuthProviderTokenState,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:

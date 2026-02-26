@@ -8,14 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.infrastructure.adapters.database.models import User as UserModel
 from museflow.infrastructure.entrypoints.api.main import app
 
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestUserRegister:
@@ -23,7 +23,7 @@ class TestUserRegister:
         self,
         password_hasher: PasswordHasherPort,
         access_token_manager: AccessTokenManagerPort,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         async_client: AsyncClient,
     ) -> None:
         payload: dict[str, Any] = {

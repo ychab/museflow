@@ -8,8 +8,8 @@ from polyfactory import Use
 from museflow.infrastructure.adapters.database.models import AuthProviderState
 from museflow.infrastructure.adapters.database.models import AuthProviderToken
 
-from tests.integration.factories.base import BaseModelFactory
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.base import BaseModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderState]):

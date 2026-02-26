@@ -1,14 +1,14 @@
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserUpdate
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.schemas.user import UserUpdate
 
 
 async def user_update(
     user: User,
     user_data: UserUpdate,
-    user_repository: UserRepositoryPort,
+    user_repository: UserRepository,
     password_hasher: PasswordHasherPort,
 ) -> User:
     # Check if email is being changed and if it's already taken

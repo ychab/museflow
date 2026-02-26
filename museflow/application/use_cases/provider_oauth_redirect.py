@@ -1,15 +1,15 @@
 from pydantic import HttpUrl
 
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.types import MusicProvider
 
 
 async def oauth_redirect(
     user: User,
-    auth_state_repository: OAuthProviderStateRepositoryPort,
+    auth_state_repository: OAuthProviderStateRepository,
     provider: MusicProvider,
     provider_client: ProviderOAuthClientPort,
     state_token_generator: StateTokenGeneratorPort,

@@ -5,9 +5,9 @@ from pydantic import EmailStr
 from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.application.use_cases.provider_sync_library import SyncReport
-from museflow.domain.entities.music import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.dependencies import get_artist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

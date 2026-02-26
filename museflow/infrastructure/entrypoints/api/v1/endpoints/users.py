@@ -7,17 +7,17 @@ from fastapi.security import OAuth2PasswordRequestForm
 from museflow.application.use_cases.user_authenticate import user_authenticate
 from museflow.application.use_cases.user_create import user_create
 from museflow.application.use_cases.user_update import user_update
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.entities.users import UserUpdate
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.schemas.user import UserCreate
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
@@ -31,7 +31,7 @@ router = APIRouter()
 @router.post("/register", name="user_register", status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
@@ -52,7 +52,7 @@ async def register(
 @router.post("/login", name="user_login")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
@@ -86,7 +86,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)) 
 async def update_current_user(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
 ) -> UserResponse:
     try:
@@ -105,7 +105,7 @@ async def update_current_user(
 @router.delete("/me", name="user", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_current_user(
     current_user: User = Depends(get_current_user),
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
 ) -> None:
     await user_repository.delete(current_user.id)
     return None

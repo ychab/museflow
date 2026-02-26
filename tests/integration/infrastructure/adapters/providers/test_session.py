@@ -10,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 from pytest_httpx import HTTPXMock
 
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import MusicProvider
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
-from tests.unit.factories.auth import OAuthProviderUserTokenFactory
+from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
 
 class TestSpotifyOAuthSessionClient:

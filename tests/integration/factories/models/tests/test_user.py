@@ -1,7 +1,7 @@
 from pydantic import EmailStr
 from pydantic import TypeAdapter
 
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.security import PasswordHasherPort
 
 email_adapter = TypeAdapter(EmailStr)

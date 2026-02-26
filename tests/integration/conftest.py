@@ -11,27 +11,27 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.entities.users import UserUpdate
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.schemas.user import UserCreate
+from museflow.domain.schemas.user import UserUpdate
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import Base
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenRepository
-from museflow.infrastructure.adapters.database.repositories.music import ArtistRepository
-from museflow.infrastructure.adapters.database.repositories.music import TrackRepository
-from museflow.infrastructure.adapters.database.repositories.users import UserRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
+from museflow.infrastructure.adapters.database.repositories.music import ArtistSQLRepository
+from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -41,14 +41,14 @@ from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.database import database_settings
 
-from tests.integration.factories.auth import AuthProviderStateModelFactory
-from tests.integration.factories.auth import AuthProviderTokenFactory
-from tests.integration.factories.base import BaseModelFactory
-from tests.integration.factories.users import UserModelFactory
-from tests.unit.factories.auth import OAuthProviderTokenStateFactory
-from tests.unit.factories.auth import OAuthProviderUserTokenCreateFactory
-from tests.unit.factories.users import UserCreateFactory
-from tests.unit.factories.users import UserUpdateFactory
+from tests.integration.factories.models.auth import AuthProviderStateModelFactory
+from tests.integration.factories.models.auth import AuthProviderTokenFactory
+from tests.integration.factories.models.base import BaseModelFactory
+from tests.integration.factories.models.user import UserModelFactory
+from tests.unit.factories.schemas.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.schemas.auth import OAuthProviderUserTokenCreateFactory
+from tests.unit.factories.schemas.user import UserCreateFactory
+from tests.unit.factories.schemas.user import UserUpdateFactory
 
 
 @pytest.fixture(scope="session")
@@ -73,7 +73,7 @@ async def create_test_database(anyio_backend: str, test_db_name: str) -> AsyncGe
     yield
 
     # Finally drop the test database
-    async with async_engine_admin.begin() as async_conn:
+    async with async_engine_admin.connect() as async_conn:
         await async_conn.execute(text(f"DROP DATABASE IF EXISTS {test_db_name}"))
     await async_engine_admin.dispose()
 
@@ -183,28 +183,28 @@ def state_token_generator() -> StateTokenGeneratorPort:
 
 
 @pytest.fixture
-def user_repository(async_session_db: AsyncSession) -> UserRepositoryPort:
-    return UserRepository(async_session_db)
+def user_repository(async_session_db: AsyncSession) -> UserRepository:
+    return UserSQLRepository(async_session_db)
 
 
 @pytest.fixture
-def auth_state_repository(async_session_db: AsyncSession) -> OAuthProviderStateRepositoryPort:
-    return OAuthProviderStateRepository(async_session_db)
+def auth_state_repository(async_session_db: AsyncSession) -> OAuthProviderStateRepository:
+    return OAuthProviderStateSQLRepository(async_session_db)
 
 
 @pytest.fixture
-def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenRepositoryPort:
-    return OAuthProviderTokenRepository(async_session_db)
+def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenRepository:
+    return OAuthProviderTokenSQLRepository(async_session_db)
 
 
 @pytest.fixture
-def artist_repository(async_session_db: AsyncSession) -> ArtistRepositoryPort:
-    return ArtistRepository(async_session_db)
+def artist_repository(async_session_db: AsyncSession) -> ArtistRepository:
+    return ArtistSQLRepository(async_session_db)
 
 
 @pytest.fixture
-def track_repository(async_session_db: AsyncSession) -> TrackRepositoryPort:
-    return TrackRepository(async_session_db)
+def track_repository(async_session_db: AsyncSession) -> TrackRepository:
+    return TrackSQLRepository(async_session_db)
 
 
 # --- Entity factories ---
@@ -241,7 +241,7 @@ def auth_token_update() -> OAuthProviderUserTokenCreate:
 @pytest.fixture
 async def user(request: pytest.FixtureRequest) -> User:
     user_db = await UserModelFactory.create_async(**getattr(request, "param", {}))
-    return User.model_validate(user_db)
+    return user_db.to_entity()
 
 
 @pytest.fixture
@@ -250,7 +250,7 @@ async def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProvide
     params.setdefault("user_id", user.id)
 
     auth_state_db = await AuthProviderStateModelFactory.create_async(**params)
-    return OAuthProviderState.model_validate(auth_state_db)
+    return auth_state_db.to_entity()
 
 
 @pytest.fixture
@@ -260,7 +260,7 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
     provider = params.pop("provider", MusicProvider.SPOTIFY)
 
     auth_token_db = await AuthProviderTokenFactory.create_async(user_id=user_id, provider=provider, **params)
-    return OAuthProviderUserToken.model_validate(auth_token_db)
+    return auth_token_db.to_entity()
 
 
 # --- Clients impl ---
@@ -280,7 +280,7 @@ async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
 def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
-    auth_token_repository: OAuthProviderTokenRepositoryPort,
+    auth_token_repository: OAuthProviderTokenRepository,
     spotify_client: SpotifyOAuthClientAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(

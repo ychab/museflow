@@ -8,7 +8,7 @@ from rich.table import Table
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTimeRange
+from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
 from museflow.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email

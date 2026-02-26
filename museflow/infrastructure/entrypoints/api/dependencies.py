@@ -11,17 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import jwt
 
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateRepository
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenRepository
-from museflow.infrastructure.adapters.database.repositories.users import UserRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
+from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
@@ -50,16 +50,16 @@ async def get_db() -> AsyncGenerator[AsyncSession]:  # pragma: no cover
         yield session
 
 
-def get_auth_state_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderStateRepositoryPort:
-    return OAuthProviderStateRepository(session)
+def get_auth_state_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderStateRepository:
+    return OAuthProviderStateSQLRepository(session)
 
 
-def get_auth_token_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderTokenRepositoryPort:
-    return OAuthProviderTokenRepository(session)
+def get_auth_token_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderTokenRepository:
+    return OAuthProviderTokenSQLRepository(session)
 
 
-def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepositoryPort:
-    return UserRepository(session)
+def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepository:
+    return UserSQLRepository(session)
 
 
 async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
@@ -75,7 +75,7 @@ async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> User:
     logger = logging.getLogger(f"{__name__}.get_current_user")
@@ -113,8 +113,8 @@ async def get_current_user(
 
 async def get_user_from_state(
     state: str,
-    auth_state_repository: OAuthProviderStateRepositoryPort = Depends(get_auth_state_repository),
-    user_repository: UserRepositoryPort = Depends(get_user_repository),
+    auth_state_repository: OAuthProviderStateRepository = Depends(get_auth_state_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
 ) -> User:
     if not state:
         raise HTTPException(status_code=400, detail="Missing state parameter")

@@ -1,7 +1,7 @@
 from unittest import mock
 
 from museflow.application.use_cases.user_authenticate import user_authenticate
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.security import PasswordHasherPort
 
 

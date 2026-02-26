@@ -1,23 +1,10 @@
-import uuid
 from typing import Annotated
 
-from pydantic import AwareDatetime
 from pydantic import EmailStr
 from pydantic import Field
 from pydantic import model_validator
 
-from museflow.domain.entities.base import BaseEntity
-
-
-class User(BaseEntity):
-    id: uuid.UUID
-    email: EmailStr
-    hashed_password: str
-
-    is_active: bool = True
-
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
+from museflow.domain.schemas.base import BaseEntity
 
 
 class UserCreate(BaseEntity):

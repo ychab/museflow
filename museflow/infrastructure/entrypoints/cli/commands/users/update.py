@@ -1,8 +1,8 @@
 import uuid
 
 from museflow.application.use_cases.user_update import user_update
-from museflow.domain.entities.users import UserUpdate
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository

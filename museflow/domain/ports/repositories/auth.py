@@ -4,12 +4,12 @@ from abc import abstractmethod
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
-from museflow.domain.entities.music import MusicProvider
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.types import MusicProvider
 
 
-class OAuthProviderStateRepositoryPort(ABC):
+class OAuthProviderStateRepository(ABC):
     @abstractmethod
     async def upsert(
         self,
@@ -25,7 +25,7 @@ class OAuthProviderStateRepositoryPort(ABC):
     async def consume(self, state: str) -> OAuthProviderState | None: ...
 
 
-class OAuthProviderTokenRepositoryPort(ABC):
+class OAuthProviderTokenRepository(ABC):
     @abstractmethod
     async def get(self, user_id: uuid.UUID, provider: MusicProvider) -> OAuthProviderUserToken | None: ...
 

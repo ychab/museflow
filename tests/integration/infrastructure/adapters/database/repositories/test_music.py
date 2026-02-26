@@ -1,3 +1,5 @@
+import dataclasses
+
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,28 +8,29 @@ import pytest
 
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.entities.music import TrackArtist
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
-from tests.integration.factories.music import ArtistModelFactory
-from tests.integration.factories.music import TrackModelFactory
-from tests.unit.factories.music import ArtistFactory
-from tests.unit.factories.music import TrackFactory
+from tests.integration.factories.models.music import ArtistModelFactory
+from tests.integration.factories.models.music import TrackModelFactory
+from tests.unit.factories.entities.music import ArtistFactory
+from tests.unit.factories.entities.music import TrackFactory
 
 
-class TestArtistRepository:
+class TestArtistSQLRepository:
     @pytest.fixture
     async def artists(self, user: User) -> list[Artist]:
         artists_db = await ArtistModelFactory.create_batch_async(size=10, user_id=user.id)
-        return [Artist.model_validate(artist_db) for artist_db in artists_db]
+        return [artist_db.to_entity() for artist_db in artists_db]
 
     @pytest.fixture
     async def artists_other(self) -> list[Artist]:
         artists_db = await ArtistModelFactory.create_batch_async(size=2)
-        return [Artist.model_validate(artist_db) for artist_db in artists_db]
+        return [artist_db.to_entity() for artist_db in artists_db]
 
     @pytest.fixture
     def artists_create(self, user: User) -> list[Artist]:
@@ -35,15 +38,13 @@ class TestArtistRepository:
 
     @pytest.fixture
     def artists_update(self, artists: list[Artist]) -> list[Artist]:
-        return [Artist.model_validate({**artist.model_dump(), "genres": ["foo"]}) for artist in artists]
+        return [dataclasses.replace(artist, genres=["foo"]) for artist in artists]
 
     @pytest.fixture
     def artists_mix(self, user: User, artists: list[Artist]) -> list[Artist]:
         return [
             *ArtistFactory.batch(size=5, user_id=user.id),  # 5 created
-            *[  # 5 updated
-                Artist.model_validate({**artist.model_dump(), "genres": ["foo"]}) for artist in artists[:5]
-            ],
+            *[dataclasses.replace(artist, genres=["foo"]) for artist in artists[:5]],  # 5 updated
         ]
 
     @pytest.fixture
@@ -51,7 +52,7 @@ class TestArtistRepository:
         artists_user = await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)
         artists_others = await ArtistModelFactory.create_batch_async(size=2)
 
-        return [Artist.model_validate(artist_db) for artist_db in artists_user + artists_others]
+        return [artist_db.to_entity() for artist_db in artists_user + artists_others]
 
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
     async def test__get_list__nominal(
@@ -61,7 +62,7 @@ class TestArtistRepository:
         limit: int | None,
         artists: list[Artist],
         artists_other: list[Artist],
-        artist_repository: ArtistRepositoryPort,
+        artist_repository: ArtistRepository,
     ) -> None:
         artists_expected = artists[offset : offset + limit] if offset is not None and limit is not None else artists
 
@@ -79,7 +80,7 @@ class TestArtistRepository:
         async_session_db: AsyncSession,
         user: User,
         artists_create: list[Artist],
-        artist_repository: ArtistRepositoryPort,
+        artist_repository: ArtistRepository,
     ) -> None:
         artist_ids, create_count = await artist_repository.bulk_upsert(
             artists_create,
@@ -106,7 +107,7 @@ class TestArtistRepository:
         user: User,
         artists: list[Artist],
         artists_update: list[Artist],
-        artist_repository: ArtistRepositoryPort,
+        artist_repository: ArtistRepository,
     ) -> None:
         artist_ids, create_count = await artist_repository.bulk_upsert(
             artists_update,
@@ -133,7 +134,7 @@ class TestArtistRepository:
         async_session_db: AsyncSession,
         user: User,
         artists_mix: list[Artist],
-        artist_repository: ArtistRepositoryPort,
+        artist_repository: ArtistRepository,
     ) -> None:
         artist_ids, create_count = await artist_repository.bulk_upsert(artists_mix, 300)
 
@@ -160,7 +161,7 @@ class TestArtistRepository:
         async_session_db: AsyncSession,
         user: User,
         artists_delete: list[Artist],
-        artist_repository: ArtistRepositoryPort,
+        artist_repository: ArtistRepository,
     ) -> None:
         count = await artist_repository.purge(user.id)
         assert count == 3
@@ -176,16 +177,16 @@ class TestArtistRepository:
         assert results.scalar() == 2
 
 
-class TestTrackRepository:
+class TestTrackSQLRepository:
     @pytest.fixture
     async def tracks(self, user: User) -> list[Track]:
         tracks_db = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
-        return [Track.model_validate(track_db) for track_db in tracks_db]
+        return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     async def tracks_other(self) -> list[Track]:
         tracks_db = await TrackModelFactory.create_batch_async(size=2)
-        return [Track.model_validate(track_db) for track_db in tracks_db]
+        return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     def tracks_create(self, user: User) -> list[Track]:
@@ -193,19 +194,18 @@ class TestTrackRepository:
 
     @pytest.fixture
     def tracks_update(self, tracks) -> list[Track]:
-        return [
-            Track.model_validate({**track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
-            for track in tracks
-        ]
+        return [dataclasses.replace(track, artists=[TrackArtist(name="SCH", provider_id="foo")]) for track in tracks]
 
     @pytest.fixture
     def tracks_mix(self, user: User, tracks) -> list[Track]:
         return [
-            *TrackFactory.batch(size=5, user_id=user.id),  # 5 created
+            # 5 created
+            *TrackFactory.batch(size=5, user_id=user.id),
+            # 5 updated
             *[
-                Track.model_validate({**track.model_dump(), "artists": [{"name": "SCH", "provider_id": "foo"}]})
+                dataclasses.replace(track, artists=[TrackArtist(name="SCH", provider_id="foo")])
                 for track in tracks[:5]
-            ],  # 5 updated
+            ],
         ]
 
     @pytest.fixture
@@ -230,9 +230,7 @@ class TestTrackRepository:
         )
         tracks_others = await TrackModelFactory.create_batch_async(size=1)
 
-        return [
-            Track.model_validate(track_db) for track_db in tracks_top + tracks_saved + tracks_playlist + tracks_others
-        ]
+        return [track_db.to_entity() for track_db in tracks_top + tracks_saved + tracks_playlist + tracks_others]
 
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
     async def test__get_list__nominal(
@@ -242,7 +240,7 @@ class TestTrackRepository:
         limit: int | None,
         tracks: list[Track],
         tracks_other: list[Track],
-        track_repository: TrackRepositoryPort,
+        track_repository: TrackRepository,
     ) -> None:
         tracks_expected = tracks[offset : offset + limit] if offset is not None and limit is not None else tracks
 
@@ -261,7 +259,7 @@ class TestTrackRepository:
         async_session_db: AsyncSession,
         user: User,
         tracks_create: list[Track],
-        track_repository: TrackRepositoryPort,
+        track_repository: TrackRepository,
     ) -> None:
         track_ids, create_count = await track_repository.bulk_upsert(
             tracks_create,
@@ -286,7 +284,7 @@ class TestTrackRepository:
         user: User,
         tracks: list[Track],
         tracks_update: list[Track],
-        track_repository: TrackRepositoryPort,
+        track_repository: TrackRepository,
     ) -> None:
         track_ids, create_count = await track_repository.bulk_upsert(
             tracks_update,
@@ -314,7 +312,7 @@ class TestTrackRepository:
         async_session_db: AsyncSession,
         user: User,
         tracks_mix: list[Track],
-        track_repository: TrackRepositoryPort,
+        track_repository: TrackRepository,
     ) -> None:
         track_ids, create_count = await track_repository.bulk_upsert(tracks_mix, 300)
 
@@ -358,7 +356,7 @@ class TestTrackRepository:
         is_saved: bool,
         is_playlist: bool,
         expected_count: int,
-        track_repository: TrackRepositoryPort,
+        track_repository: TrackRepository,
     ) -> None:
         expected_other_count = 1
         expected_total_user_count = len(tracks_delete) - expected_other_count

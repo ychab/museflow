@@ -14,7 +14,10 @@ from sqlalchemy.orm import MappedAsDataclass
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.orm import mapped_column
 
-from museflow.domain.entities.music import MusicProvider
+from museflow.domain.entities.music import Artist as ArtistEntity
+from museflow.domain.entities.music import Track as TrackEntity
+from museflow.domain.entities.music import TrackArtist
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
@@ -30,11 +33,9 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-
     popularity: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
     is_saved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
     is_top: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     top_position: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
@@ -56,6 +57,21 @@ class Artist(MusicItemMixin, Base):
         sort_order=50,
     )
 
+    def to_entity(self) -> ArtistEntity:
+        return ArtistEntity(
+            id=self.id,
+            provider=self.provider,
+            user_id=self.user_id,
+            provider_id=self.provider_id,
+            name=self.name,
+            slug=self.slug,
+            popularity=self.popularity,
+            is_saved=self.is_saved,
+            is_top=self.is_top,
+            top_position=self.top_position,
+            genres=self.genres,
+        )
+
 
 class Track(MusicItemMixin, Base):
     __tablename__ = "museflow_track"
@@ -66,3 +82,18 @@ class Track(MusicItemMixin, Base):
         default_factory=list,
         sort_order=50,
     )
+
+    def to_entity(self) -> TrackEntity:
+        return TrackEntity(
+            id=self.id,
+            provider=self.provider,
+            user_id=self.user_id,
+            provider_id=self.provider_id,
+            name=self.name,
+            slug=self.slug,
+            popularity=self.popularity,
+            is_saved=self.is_saved,
+            is_top=self.is_top,
+            top_position=self.top_position,
+            artists=[TrackArtist(provider_id=artist["provider_id"], name=artist["name"]) for artist in self.artists],
+        )

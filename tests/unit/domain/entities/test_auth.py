@@ -1,11 +1,9 @@
 from datetime import UTC
 from datetime import datetime
-from typing import Any
 
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
 
 
 class TestOAuthProviderUserToken:
@@ -24,14 +22,3 @@ class TestOAuthProviderUserToken:
         expected_bool: bool,
     ) -> None:
         assert auth_token.is_expired(60) is expected_bool
-
-
-class TestOAuthProviderUserTokenUpdate:
-    @pytest.mark.parametrize("data", [{"token_type": "bearer"}, {"token_type": None}])
-    def test_validate_one_field_set__nominal(self, data: dict[str, Any]) -> None:
-        auth_token_data = OAuthProviderUserTokenUpdate(**data)
-        assert auth_token_data is not None
-
-    def test_validate_one_field_set__error(self) -> None:
-        with pytest.raises(ValueError, match="At least one field must be provided for update"):
-            OAuthProviderUserTokenUpdate()

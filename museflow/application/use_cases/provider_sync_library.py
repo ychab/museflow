@@ -6,10 +6,10 @@ from dataclasses import field
 from dataclasses import replace
 from typing import Any
 
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
 from museflow.domain.ports.providers.library import ProviderLibraryPort
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +93,8 @@ class ProviderSyncLibraryUseCase:
     def __init__(
         self,
         provider_library: ProviderLibraryPort,
-        artist_repository: ArtistRepositoryPort,
-        track_repository: TrackRepositoryPort,
+        artist_repository: ArtistRepository,
+        track_repository: TrackRepository,
     ) -> None:
         self._provider_library = provider_library
         self._artist_repository = artist_repository

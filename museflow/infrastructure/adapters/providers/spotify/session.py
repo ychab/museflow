@@ -2,10 +2,10 @@ import asyncio
 from typing import Any
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.auth import OAuthProviderUserTokenUpdate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.config.settings.spotify import spotify_settings
@@ -23,7 +23,7 @@ class SpotifyOAuthSessionClient:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepositoryPort,
+        auth_token_repository: OAuthProviderTokenRepository,
         client: SpotifyOAuthClientAdapter,
         token_buffer_seconds: int = spotify_settings.TOKEN_BUFFER_SECONDS,
     ):
@@ -92,7 +92,12 @@ class SpotifyOAuthSessionClient:
             )
 
             # Update also in memory
-            self.auth_token.refresh_from_token_state(new_token_state)
+            self.auth_token = OAuthProviderUserToken.from_token_state(
+                auth_token_id=self.auth_token.id,
+                user_id=self.user.id,
+                provider=self.auth_token.provider,
+                token_state=new_token_state,
+            )
 
     def _should_skip_refresh(self, stale_access_token: str | None) -> bool:
         if stale_access_token is None:

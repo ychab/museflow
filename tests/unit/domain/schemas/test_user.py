@@ -2,8 +2,8 @@ from pydantic import ValidationError
 
 import pytest
 
-from museflow.domain.entities.users import UserCreate
-from museflow.domain.entities.users import UserUpdate
+from museflow.domain.schemas.user import UserCreate
+from museflow.domain.schemas.user import UserUpdate
 
 
 class TestUserCreate:

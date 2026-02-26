@@ -16,11 +16,12 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
-from museflow.domain.entities.auth import OAuthProviderTokenState
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.schemas.auth import OAuthProviderTokenState
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyScope
+from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_state
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
+from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScope
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -101,7 +102,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyToken(**response.json()).to_domain()
+        return to_domain_token_state(SpotifyToken(**response.json()))
 
     async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
         response = await self._client.post(
@@ -117,7 +118,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return SpotifyToken(**response.json()).to_domain(refresh_token)
+        return to_domain_token_state(SpotifyToken(**response.json()), refresh_token)
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),

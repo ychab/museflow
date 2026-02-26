@@ -6,9 +6,9 @@ from fastapi import HTTPException
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.users import User
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.entities.user import User
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
@@ -19,7 +19,7 @@ class TestGetCurrentUser:
     async def test__nominal(
         self,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         access_token_manager: AccessTokenManagerPort,
     ) -> None:
         current_user = await get_current_user(
@@ -32,7 +32,7 @@ class TestGetCurrentUser:
     async def test__error_expired_signature(
         self,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         access_token_manager: AccessTokenManagerPort,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -49,7 +49,7 @@ class TestGetCurrentUser:
 
     async def test__user_not_exists(
         self,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         access_token_manager: AccessTokenManagerPort,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -70,8 +70,8 @@ class TestGetUserFromState:
         self,
         user: User,
         auth_state: OAuthProviderState,
-        auth_state_repository: OAuthProviderStateRepositoryPort,
-        user_repository: UserRepositoryPort,
+        auth_state_repository: OAuthProviderStateRepository,
+        user_repository: UserRepository,
     ) -> None:
         current_user = await get_user_from_state(
             state=auth_state.state,

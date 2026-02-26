@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.domain.entities.auth import OAuthProviderUserTokenCreate
-from museflow.domain.entities.music import MusicProvider
-from museflow.domain.entities.users import User
+from museflow.domain.entities.user import User
+from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
+from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.entrypoints.cli.commands.spotify import connect_logic

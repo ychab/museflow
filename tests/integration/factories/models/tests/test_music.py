@@ -2,9 +2,9 @@ import uuid
 
 import pytest
 
-from tests.integration.factories.music import ArtistModelFactory
-from tests.integration.factories.music import TrackModelFactory
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.music import ArtistModelFactory
+from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestArtistModelFactory:

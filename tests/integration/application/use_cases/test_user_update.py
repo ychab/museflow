@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.use_cases.user_update import user_update
-from museflow.domain.entities.users import User
-from museflow.domain.entities.users import UserUpdate
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import PasswordHasherPort
+from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
-from tests.integration.factories.users import UserModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestUserUpdateUseCase:
@@ -19,7 +19,7 @@ class TestUserUpdateUseCase:
         self,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user_update_data = UserUpdate(email="foo@example.com")
@@ -42,7 +42,7 @@ class TestUserUpdateUseCase:
         self,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user_update_data = UserUpdate(email=user.email)
@@ -63,7 +63,7 @@ class TestUserUpdateUseCase:
     async def test_update_email__already_exists(
         self,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         other_user_db = await UserModelFactory.create_async()
@@ -81,7 +81,7 @@ class TestUserUpdateUseCase:
         self,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepositoryPort,
+        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         password = "blahblah"

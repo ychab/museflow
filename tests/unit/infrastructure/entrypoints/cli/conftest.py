@@ -13,11 +13,11 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepositoryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepositoryPort
-from museflow.domain.ports.repositories.music import ArtistRepositoryPort
-from museflow.domain.ports.repositories.music import TrackRepositoryPort
-from museflow.domain.ports.repositories.users import UserRepositoryPort
+from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.ports.repositories.music import ArtistRepository
+from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.ports.repositories.users import UserRepository
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
 
@@ -127,7 +127,7 @@ def mock_user_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=UserRepositoryPort)
+    repo = mock.AsyncMock(spec=UserRepository)
     with mock_dependency_factory(f"{target_path}.get_user_repository", repo) as mock_repo:
         yield mock_repo
 
@@ -137,7 +137,7 @@ def mock_auth_state_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=OAuthProviderStateRepositoryPort)
+    repo = mock.AsyncMock(spec=OAuthProviderStateRepository)
     with mock_dependency_factory(f"{target_path}.get_auth_state_repository", repo) as mock_repo:
         yield mock_repo
 
@@ -147,7 +147,7 @@ def mock_auth_token_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=OAuthProviderTokenRepositoryPort)
+    repo = mock.AsyncMock(spec=OAuthProviderTokenRepository)
     with mock_dependency_factory(f"{target_path}.get_auth_token_repository", repo) as mock_repo:
         yield mock_repo
 
@@ -157,7 +157,7 @@ def mock_artist_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=ArtistRepositoryPort)
+    repo = mock.AsyncMock(spec=ArtistRepository)
     with mock_dependency_factory(f"{target_path}.get_artist_repository", repo) as mock_repo:
         yield mock_repo
 
@@ -167,7 +167,7 @@ def mock_track_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=TrackRepositoryPort)
+    repo = mock.AsyncMock(spec=TrackRepository)
     with mock_dependency_factory(f"{target_path}.get_track_repository", repo) as mock_repo:
         yield mock_repo
 

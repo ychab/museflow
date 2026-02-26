@@ -3,7 +3,7 @@ from polyfactory.decorators import post_generated
 
 from museflow.infrastructure.adapters.database.models import User
 
-from tests.integration.factories.base import BaseModelFactory
+from tests.integration.factories.models.base import BaseModelFactory
 
 
 class UserModelFactory(BaseModelFactory[User]):
