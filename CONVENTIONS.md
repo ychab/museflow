@@ -3,12 +3,11 @@
 ## 1. Architecture Overview
 This project follows **Clean Architecture (Hexagonal)** principles.
 - **Domain (`museflow/domain`)**:
-  - **Entities**: Pure Python Dataclasses. Represent the "Truth" of the system.
-  - **Schemas**: Pydantic Models. Represent "Input/Output" contracts (DTOs/Commands).
+  - **Entities**: Pure Python Dataclasses (`frozen=True`). Represent the "Truth" of the system.
+  - **Schemas**: Pydantic Models. Represent "Input/Output" contracts (DTOs, Commands).
   - **Ports**: Interfaces (`abc.ABC`).
-  - **Exceptions**: Domain-specific errors.
 - **Application (`museflow/application`)**: Orchestrates business logic. Depends ONLY on Domain.
-- **Infrastructure (`museflow/infrastructure`)**: Implements details (SQLAlchemy, FastAPI).
+- **Infrastructure (`museflow/infrastructure`)**: Implements details (SQLAlchemy, FastAPI, Typer CLI commands, Spotify Client, etc).
 
 ## 2. Coding Rules by Layer
 
@@ -16,12 +15,12 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 
 #### A. Entities (`museflow/domain/entities/`)
 - **Technology**: Standard Python `@dataclass(frozen=True, kw_only=True)`.
-  - **Immutable**: Entities should not change after creation (use `frozen=True`).
+  - **Immutability**: Entities are read-only after creation.
   - **Validation**:
     - **Business Rules ONLY**: Use `__post_init__` to enforce logical consistency (e.g., `start_date < end_date`).
     - **No Tech Constraints**: Do NOT enforce DB limits (e.g., `varchar(255)`) here.
-  - **Computed Properties**: Use standard `@property`.
-- **Inheritance**: Inherit from `BaseEntity` (provides `id: UUID`, `created_at`, `updated_at`).
+  - **Computed Fields**: Use `__post_init__` with `object.__setattr__` for permanent computed fields, or `@property` for dynamic ones.
+  - **Slugs/UUIDs**: Should be treated as plain strings/UUIDs passed in during construction. Logic for generating them belongs in the Adapter/Mapper, not the Entity itself.
 
 #### B. Input Schemas / Commands (`museflow/domain/schemas/`)
 - **Technology**: `pydantic.BaseModel` (v2).
@@ -46,59 +45,67 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 - **Dependency Injection**: Accept Ports as arguments. DO NOT instantiate repositories inside use cases.
 
 ### Infrastructure Layer
-- **Database (SQLAlchemy 2.0)**:
-  - **Models**: Separate SQLAlchemy models.
-  - **Queries**: Use `stmt = select(Model).where(...)` pattern.
-  - **Writes**: Explicit `session.add()`, `session.commit()`, `session.refresh()`.
-  - **Mapping**: Explicitly map `DB Model -> Domain Entity` in the Repository implementation.
-- **API (FastAPI)**:
-  - **DTOs**: Separate Pydantic models for Requests/Responses if they differ from Domain Schemas.
-  - **Injection**: Use `fastapi.Depends` to inject Adapters.
-  - **Errors**: Catch Domain Exceptions -> Raise `fastapi.HTTPException`.
+
+#### A. Database (SQLAlchemy 2.0)
+- **Models**:
+  - Separate SQLAlchemy models (`MappedAsDataclass` + `Base`).
+  - Use `Enum` types directly in columns.
+- **Mapping (DB <-> Domain)**:
+  - **To Entity**: Implement `to_entity(self) -> Entity` method on the SQLAlchemy Model.
+  - **To DB**: Use helper `_entity_to_db_dict` in repositories to handle `dataclasses.asdict` + Enum/JSON conversion.
+- **Transactions**:
+  - Use `async_session.begin()` or context managers for atomicity.
+  - Repositories should accept an `AsyncSession`.
+
+#### B. External APIs (Spotify, etc.)
+- **DTOs**: Define Pydantic models matching the *external* API shape exactly.
+- **Mapping (DTO <-> Domain)**:
+  - Use **standalone Mapper functions** (e.g., `to_domain_track(dto: SpotifyTrack) -> Track`).
+  - **Logic**: Complex transformation rules (like slug generation from title) belong here.
 
 ## 3. General Python Standards
 - **Python Version**: Target **Python 3.13**.
-- **Formatting & Linting**:
-  - Follow **Ruff** configuration (`pyproject.toml`).
-  - **Line Length**: 119 characters.
-  - **Imports**: Sorted via `isort`. Grouping: Future > StdLib > FastAPI > Pydantic > SQLAlchemy > ThirdParty > FirstParty (MuseFlow).
+- **Formatting**: Ruff (Line length 119).
 - **Typing**:
   - **Strict Type Hints** for ALL arguments and return values.
-  - Use native union syntax: `str | None` (NOT `Optional[str]`).
+  - Use native union syntax: `str | None`.
   - Use `uuid.UUID` for IDs.
-- **Naming Conventions**:
+- **Naming**:
   - `user` = Domain Entity (Dataclass)
   - `user_db` = SQLAlchemy Model
   - `user_in` = Input Schema (Pydantic)
-  - SQL Statements: `stmt`
-  - DB Results: `result`
+  - `user_dto` = External API DTO
 
 ## 4. Testing Strategy
 
 ### Philosophy
+- **Coverage Goal**: **100% Branch Coverage (or Nothing)**.
+  - Every `if/else`, loop, and exception path must be tested.
+  - Use `pytest-cov` with `--cov-fail-under=100` to enforce this in CI.
 - **Integration Tests (`tests/integration`)**: **Primary Focus.**
   - Test full flows (DB + API).
-  - Use real DB (via `create_test_database` fixture) and `AsyncSession`.
-  - Mock external APIs (e.g., Spotify) but NOT the database.
+  - Mock external APIs (Spotify) but use real DB.
 - **Unit Tests (`tests/unit`)**: **Gap Filling.**
-  - Focus on complex domain logic (`__post_init__` rules) and edge cases.
-  - Extensive mocking allowed.
+  - Focus on complex domain logic and edge cases that are hard to reach via integration (e.g., specific error handling branches).
 
-### Fixtures & Setup
-- **Scope**: Use `conftest.py` hierarchies (`tests/`, `tests/integration/`, `tests/unit/`).
-- **Data Creation**:
-  - **Always use fixtures**.
-  - **Factories**: Use `polyfactory` for generating both Dataclasses (Entities) and Pydantic Models (Schemas).
-  - **Configurable**: Allow overriding fixture attributes via `request.param`.
-- **Combination**: Build fixtures on top of others (e.g., `auth_token` depends on `user`).
+### Database Fixtures
+- **Default**: Use `async_session_db` fixture.
+  - **Why**: Faster. Wraps test in a transaction and rolls back at the end. No data persists.
+- **Exception**: Use `async_session_trans` fixture ONLY for testing explicit transaction logic (commits/rollbacks inside application code).
+  - **Why**: Slower. Commits data and cleans up via TRUNCATE.
 
-#### Example: Configurable Async Fixture
-```python
-@pytest.fixture
-async def user(request) -> User:
-    # Allows @pytest.mark.parametrize("user", [{"email": "..."}], indirect=True)
-    params = getattr(request, "param", {})
-    # Note: Use Entity Factory here, not DB Model Factory directly if possible,
-    # or Create DB Model -> Convert to Entity
-    user_db = await UserModelFactory.create_async(**params)
-    return User(id=user_db.id, email=user_db.email, ...) # Manual map or helper
+### Assertion Standards
+- **Loop Assertions**:
+  - **Avoid**: Try to avoid loops for assertions if `assert list == expected_list` works.
+  - **Identified**: If you MUST loop, include an identifier in the assert message so failures are debuggable.
+    - **Bad**: `for item in items: assert item.active`
+    - **Good**: `for i, item in enumerate(items): assert item.active, f"Item {i} (id={item.id}) failed"`
+
+### Fixtures & Factories
+- **Technology**: `polyfactory`.
+  - Use `DataclassFactory` for Entities.
+  - Use `ModelFactory` for Pydantic Schemas/Models.
+  - Use `SQLAlchemyFactory` for SQLAlchemy Models.
+- **DB Interaction in Tests**:
+  - Use `async_engine.connect()` for DB admin tasks (DROP/CREATE).
+  - Use `async_engine.begin()` for Schema operations (Create Tables).
