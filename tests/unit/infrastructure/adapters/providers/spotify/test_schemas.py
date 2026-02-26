@@ -127,7 +127,7 @@ class TestSpotifyToken:
 
     def test_expires_at__nominal(self, frozen_time: datetime) -> None:
         expires_in = 3600
-        token_state = SpotifyToken(
+        spotify_token = SpotifyToken(
             **{
                 "token_type": "bearer",
                 "access_token": "dummy-access-token",
@@ -135,4 +135,4 @@ class TestSpotifyToken:
                 "expires_in": expires_in,
             }
         )
-        assert token_state.expires_at == frozen_time + timedelta(seconds=expires_in)
+        assert spotify_token.expires_at == frozen_time + timedelta(seconds=expires_in)

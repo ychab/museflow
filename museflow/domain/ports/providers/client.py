@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 
 
 class ProviderOAuthClientPort(ABC):
@@ -24,12 +24,12 @@ class ProviderOAuthClientPort(ABC):
         ...
 
     @abstractmethod
-    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenState:
+    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenPayload:
         """Exchange authorization code for access token."""
         ...
 
     @abstractmethod
-    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
+    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenPayload:
         """Refresh an expired access token."""
         ...
 
@@ -38,7 +38,7 @@ class ProviderOAuthClientPort(ABC):
         self,
         method: str,
         endpoint: str,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:

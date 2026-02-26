@@ -14,12 +14,12 @@ from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 from tests.unit.factories.entities.user import UserFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
 
 # --- Security Mocks ---
 
@@ -76,8 +76,8 @@ def user(request: pytest.FixtureRequest) -> User:
 
 
 @pytest.fixture
-def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
-    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
+def token_payload(request: pytest.FixtureRequest) -> OAuthProviderTokenPayload:
+    return OAuthProviderTokenPayloadFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture
@@ -100,8 +100,8 @@ def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserT
 
 
 @pytest.fixture
-def mock_provider_client(token_state: OAuthProviderTokenState) -> mock.AsyncMock:
+def mock_provider_client(token_payload: OAuthProviderTokenPayload) -> mock.AsyncMock:
     return mock.AsyncMock(
         spec=ProviderOAuthClientPort,
-        refresh_access_token=mock.AsyncMock(return_value=token_state),
+        refresh_access_token=mock.AsyncMock(return_value=token_payload),
     )

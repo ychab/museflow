@@ -3,8 +3,10 @@ from typing import Any
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.mappers.auth import auth_token_from_token_payload
+from museflow.domain.mappers.auth import auth_token_to_token_payload
+from museflow.domain.mappers.auth import auth_token_update_from_token_payload
 from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
@@ -52,7 +54,7 @@ class SpotifyOAuthSessionClient:
             response = await self.client.make_user_api_call(
                 method=method,
                 endpoint=endpoint,
-                token_state=self.auth_token.to_token_state(),
+                token_payload=auth_token_to_token_payload(self.auth_token),
                 params=params,
                 json_data=json_data,
             )
@@ -65,7 +67,7 @@ class SpotifyOAuthSessionClient:
             return await self.client.make_user_api_call(
                 method=method,
                 endpoint=endpoint,
-                token_state=self.auth_token.to_token_state(),
+                token_payload=auth_token_to_token_payload(self.auth_token),
                 params=params,
                 json_data=json_data,
             )
@@ -82,21 +84,21 @@ class SpotifyOAuthSessionClient:
             if self._should_skip_refresh(stale_access_token):
                 return
 
-            new_token_state = await self.client.refresh_access_token(self.auth_token.token_refresh)
+            token_payload = await self.client.refresh_access_token(self.auth_token.token_refresh)
 
             # Update in DB
             await self.auth_token_repository.update(
                 user_id=self.user.id,
                 provider=MusicProvider.SPOTIFY,
-                auth_token_data=OAuthProviderUserTokenUpdate.from_token_state(new_token_state),
+                auth_token_data=auth_token_update_from_token_payload(token_payload),
             )
 
             # Update also in memory
-            self.auth_token = OAuthProviderUserToken.from_token_state(
+            self.auth_token = auth_token_from_token_payload(
                 auth_token_id=self.auth_token.id,
                 user_id=self.user.id,
                 provider=self.auth_token.provider,
-                token_state=new_token_state,
+                token_payload=token_payload,
             )
 
     def _should_skip_refresh(self, stale_access_token: str | None) -> bool:

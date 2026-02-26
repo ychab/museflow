@@ -11,7 +11,7 @@ from museflow.application.use_cases.provider_oauth_callback import oauth_callbac
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -19,12 +19,12 @@ from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAu
 
 
 class TestSpotifyOauthCallbackUseCase:
-    async def test__token_state__create(
+    async def test__token_payload__create(
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
         httpx_mock: HTTPXMock,
@@ -33,9 +33,9 @@ class TestSpotifyOauthCallbackUseCase:
             url=str(spotify_client.token_endpoint),
             method="POST",
             json={
-                "token_type": token_state.token_type,
-                "access_token": token_state.access_token,
-                "refresh_token": token_state.refresh_token,
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
@@ -64,18 +64,18 @@ class TestSpotifyOauthCallbackUseCase:
         auth_token_db = result_token.scalar_one_or_none()
 
         assert auth_token_db is not None
-        assert auth_token_db.token_type == token_state.token_type
-        assert auth_token_db.token_access == token_state.access_token
-        assert auth_token_db.token_refresh == token_state.refresh_token
+        assert auth_token_db.token_type == token_payload.token_type
+        assert auth_token_db.token_access == token_payload.access_token
+        assert auth_token_db.token_refresh == token_payload.refresh_token
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     @pytest.mark.parametrize("auth_token", [{"provider": MusicProvider.SPOTIFY}], indirect=["auth_token"])
-    async def test__token_state__update(
+    async def test__token_payload__update(
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
@@ -85,9 +85,9 @@ class TestSpotifyOauthCallbackUseCase:
             url=str(spotify_client.token_endpoint),
             method="POST",
             json={
-                "token_type": token_state.token_type,
-                "access_token": token_state.access_token,
-                "refresh_token": token_state.refresh_token,
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
@@ -116,7 +116,7 @@ class TestSpotifyOauthCallbackUseCase:
         auth_token_db = result_token.scalar_one_or_none()
 
         assert auth_token_db is not None
-        assert auth_token_db.token_type == token_state.token_type
-        assert auth_token_db.token_access == token_state.access_token
-        assert auth_token_db.token_refresh == token_state.refresh_token
+        assert auth_token_db.token_type == token_payload.token_type
+        assert auth_token_db.token_access == token_payload.access_token
+        assert auth_token_db.token_refresh == token_payload.refresh_token
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)

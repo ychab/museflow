@@ -5,13 +5,13 @@ from datetime import timedelta
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
 from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
 
 
-class OAuthProviderTokenStateFactory(ModelFactory[OAuthProviderTokenState]):
-    __model__ = OAuthProviderTokenState
+class OAuthProviderTokenPayloadFactory(ModelFactory[OAuthProviderTokenPayload]):
+    __model__ = OAuthProviderTokenPayload
 
     expires_at = Use(lambda: datetime.now(UTC) + timedelta(seconds=3600))
 

@@ -2,11 +2,6 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## refacto hexa:
-
-- OAuthProviderUserToken => from_token_state and to_token_state: should be the opposite no? Or mappers?
-- rename or review the schema OAuthProviderTokenState: delete it (used only for the client provider)? Rename it?
-
 ## doc code
 
 - improve the doc code for domain / critical stuff: entities, etc

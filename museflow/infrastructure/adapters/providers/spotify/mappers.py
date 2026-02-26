@@ -5,21 +5,21 @@ from slugify import slugify
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 
 
-def to_domain_token_state(
+def to_domain_token_payload(
     spotify_token: SpotifyToken, existing_refresh_token: str | None = None
-) -> OAuthProviderTokenState:
+) -> OAuthProviderTokenPayload:
     refresh_token = spotify_token.refresh_token or existing_refresh_token
     if not refresh_token:
         raise ValueError("Refresh token is missing from both response and existing state.")
 
-    return OAuthProviderTokenState(
+    return OAuthProviderTokenPayload(
         token_type=spotify_token.token_type,
         access_token=spotify_token.access_token,
         refresh_token=refresh_token,

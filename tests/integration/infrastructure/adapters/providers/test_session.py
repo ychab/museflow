@@ -11,7 +11,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -40,7 +40,7 @@ class TestSpotifyOAuthSessionClient:
         frozen_time: datetime,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
         httpx_mock: HTTPXMock,
     ) -> None:
@@ -48,9 +48,9 @@ class TestSpotifyOAuthSessionClient:
             url=str(spotify_session_client.client.token_endpoint),
             method="POST",
             json={
-                "token_type": token_state.token_type,
-                "access_token": token_state.access_token,
-                "refresh_token": token_state.refresh_token,
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
@@ -64,9 +64,9 @@ class TestSpotifyOAuthSessionClient:
         await spotify_session_client.execute("GET", "/test")
 
         # Check that user token is refresh in memory.
-        assert spotify_session_client.auth_token.token_type == token_state.token_type
-        assert spotify_session_client.auth_token.token_access == token_state.access_token
-        assert spotify_session_client.auth_token.token_refresh == token_state.refresh_token
+        assert spotify_session_client.auth_token.token_type == token_payload.token_type
+        assert spotify_session_client.auth_token.token_access == token_payload.access_token
+        assert spotify_session_client.auth_token.token_refresh == token_payload.refresh_token
         assert spotify_session_client.auth_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
         # Check that user token is refresh in DB.
@@ -78,9 +78,9 @@ class TestSpotifyOAuthSessionClient:
         auth_token_db = result.scalar_one()
 
         assert auth_token_db is not None
-        assert auth_token_db.token_type == token_state.token_type
-        assert auth_token_db.token_access == token_state.access_token
-        assert auth_token_db.token_refresh == token_state.refresh_token
+        assert auth_token_db.token_type == token_payload.token_type
+        assert auth_token_db.token_access == token_payload.access_token
+        assert auth_token_db.token_refresh == token_payload.refresh_token
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__execute__reactive_refresh_on_401(
@@ -89,7 +89,7 @@ class TestSpotifyOAuthSessionClient:
         frozen_time: datetime,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
         httpx_mock: HTTPXMock,
     ) -> None:
@@ -103,9 +103,9 @@ class TestSpotifyOAuthSessionClient:
             url=str(spotify_session_client.client.token_endpoint),
             method="POST",
             json={
-                "token_type": token_state.token_type,
-                "access_token": token_state.access_token,
-                "refresh_token": token_state.refresh_token,
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
@@ -118,9 +118,9 @@ class TestSpotifyOAuthSessionClient:
         await spotify_session_client.execute("GET", "/test")
 
         # Check that user token is refresh in memory.
-        assert spotify_session_client.auth_token.token_type == token_state.token_type
-        assert spotify_session_client.auth_token.token_access == token_state.access_token
-        assert spotify_session_client.auth_token.token_refresh == token_state.refresh_token
+        assert spotify_session_client.auth_token.token_type == token_payload.token_type
+        assert spotify_session_client.auth_token.token_access == token_payload.access_token
+        assert spotify_session_client.auth_token.token_refresh == token_payload.refresh_token
         assert spotify_session_client.auth_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
         # Check that user token is refresh in DB.
@@ -132,7 +132,7 @@ class TestSpotifyOAuthSessionClient:
         auth_token_db = result.scalar_one()
 
         assert auth_token_db is not None
-        assert auth_token_db.token_type == token_state.token_type
-        assert auth_token_db.token_access == token_state.access_token
-        assert auth_token_db.token_refresh == token_state.refresh_token
+        assert auth_token_db.token_type == token_payload.token_type
+        assert auth_token_db.token_access == token_payload.access_token
+        assert auth_token_db.token_refresh == token_payload.refresh_token
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)

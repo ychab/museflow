@@ -21,7 +21,7 @@ from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
 from museflow.domain.schemas.user import UserCreate
 from museflow.domain.schemas.user import UserUpdate
@@ -45,7 +45,7 @@ from tests.integration.factories.models.auth import AuthProviderStateModelFactor
 from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
 from tests.unit.factories.schemas.auth import OAuthProviderUserTokenCreateFactory
 from tests.unit.factories.schemas.user import UserCreateFactory
 from tests.unit.factories.schemas.user import UserUpdateFactory
@@ -221,8 +221,8 @@ def user_update(request: pytest.FixtureRequest) -> UserUpdate:
 
 
 @pytest.fixture
-def token_state(request: pytest.FixtureRequest) -> OAuthProviderTokenState:
-    return OAuthProviderTokenStateFactory.build(**getattr(request, "param", {}))
+def token_payload(request: pytest.FixtureRequest) -> OAuthProviderTokenPayload:
+    return OAuthProviderTokenPayloadFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture

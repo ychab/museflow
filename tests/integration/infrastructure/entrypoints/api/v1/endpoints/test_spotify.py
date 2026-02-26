@@ -14,7 +14,7 @@ from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -58,7 +58,7 @@ class TestSpotifyCallback:
         mock_spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
     ) -> None:
-        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
+        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenPayload(
             token_type="Bearer",
             access_token="mock_access_token",
             refresh_token="mock_refresh_token",
@@ -109,7 +109,7 @@ class TestSpotifyCallback:
         mock_spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
     ) -> None:
-        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenState(
+        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenPayload(
             token_type="Bearer",
             access_token="mock_access_token",
             refresh_token="mock_refresh_token",

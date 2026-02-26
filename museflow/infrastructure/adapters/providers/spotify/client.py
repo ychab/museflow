@@ -17,9 +17,9 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
-from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_state
+from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScope
 
@@ -87,7 +87,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
 
         return HttpUrl(f"{self.AUTH_ENDPOINT}?{urlencode(params)}")
 
-    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenState:
+    async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenPayload:
         response = await self._client.post(
             str(self.token_endpoint),
             headers={
@@ -102,9 +102,9 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return to_domain_token_state(SpotifyToken(**response.json()))
+        return to_domain_token_payload(SpotifyToken(**response.json()))
 
-    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenState:
+    async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenPayload:
         response = await self._client.post(
             str(self.token_endpoint),
             headers={
@@ -118,7 +118,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         )
         response.raise_for_status()
 
-        return to_domain_token_state(SpotifyToken(**response.json()), refresh_token)
+        return to_domain_token_payload(SpotifyToken(**response.json()), refresh_token)
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),
@@ -130,7 +130,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         self,
         method: str,
         endpoint: str,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -139,7 +139,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                 method=method.upper(),
                 url=f"{self.BASE_URL}{endpoint}",
                 headers={
-                    "Authorization": f"{token_state.token_type} {token_state.access_token}",
+                    "Authorization": f"{token_payload.token_type} {token_payload.access_token}",
                     "Content-Type": "application/json",
                 },
                 params=params,

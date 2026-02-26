@@ -7,12 +7,12 @@ import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenStateFactory
+from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
 
 
 class TestSpotifyOAuthSessionClient:
@@ -50,10 +50,10 @@ class TestSpotifyOAuthSessionClient:
         self,
         session_client: SpotifyOAuthSessionClient,
         mock_provider_client: mock.AsyncMock,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
     ) -> None:
         mock_provider_client.make_user_api_call.side_effect = SpotifyTokenExpiredError()
-        mock_provider_client.refresh_access_token.return_value = token_state
+        mock_provider_client.refresh_access_token.return_value = token_payload
 
         with pytest.raises(SpotifyTokenExpiredError):
             await session_client.execute("GET", "/test")
@@ -81,13 +81,13 @@ class TestSpotifyOAuthSessionClient:
         mock_provider_client: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         auth_token_expired: OAuthProviderUserToken,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
     ) -> None:
         session_client.auth_token = auth_token_expired
 
         async def slow_refresh(*args, **kwargs):
             await asyncio.sleep(0.05)
-            return token_state
+            return token_payload
 
         mock_provider_client.refresh_access_token.side_effect = slow_refresh
         mock_provider_client.make_user_api_call.return_value = {}
@@ -101,7 +101,7 @@ class TestSpotifyOAuthSessionClient:
 
         assert mock_provider_client.make_user_api_call.call_count == 10
         for i, call in enumerate(mock_provider_client.make_user_api_call.call_args_list):
-            assert call.kwargs["token_state"].access_token == token_state.access_token, i
+            assert call.kwargs["token_payload"].access_token == token_payload.access_token, i
 
     async def test__concurrency__reactive_refresh_locking(
         self,
@@ -115,19 +115,19 @@ class TestSpotifyOAuthSessionClient:
         Test locking when multiple requests hit 401 simultaneously.
         """
         session_client.auth_token = auth_token
-        new_token_state = OAuthProviderTokenStateFactory.build(
+        new_token_payload = OAuthProviderTokenPayloadFactory.build(
             expires_at=auth_token.token_expires_at + timedelta(seconds=3600)
         )
 
         async def slow_refresh(*args):
             await asyncio.sleep(0.05)
-            return new_token_state
+            return new_token_payload
 
         mock_provider_client.refresh_access_token.side_effect = slow_refresh
 
-        async def mock_api_call(token_state, **kwargs):
+        async def mock_api_call(token_payload, **kwargs):
             # If using the NEW token -> Success
-            if token_state.access_token == new_token_state.access_token:
+            if token_payload.access_token == new_token_payload.access_token:
                 return {}
 
             # If using the OLD token (auth_token) -> 401

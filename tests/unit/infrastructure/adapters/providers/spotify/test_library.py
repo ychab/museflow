@@ -8,7 +8,7 @@ import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenState
+from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
@@ -19,7 +19,7 @@ from tests import ASSETS_DIR
 
 
 def paginate_response(
-    token_state: OAuthProviderTokenState,
+    token_payload: OAuthProviderTokenPayload,
     response: dict[str, Any],
     total: int,
     limit: int,
@@ -111,7 +111,7 @@ class TestSpotifyLibrary:
         self,
         request: pytest.FixtureRequest,
         spotify_response: dict[str, Any],
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         mock_provider_client: mock.AsyncMock,
     ) -> tuple[int, int]:
         params = getattr(request, "param", {})
@@ -119,7 +119,7 @@ class TestSpotifyLibrary:
         limit: int = params.get("limit", 5)
 
         mock_provider_client.make_user_api_call.side_effect = paginate_response(
-            token_state=token_state,
+            token_payload=token_payload,
             response=spotify_response,
             total=total,
             limit=limit,
@@ -132,7 +132,7 @@ class TestSpotifyLibrary:
         self,
         request: pytest.FixtureRequest,
         spotify_response_pages: tuple[int, int],
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         mock_provider_client: mock.AsyncMock,
     ) -> tuple[int, int]:
         side_effects = list(mock_provider_client.make_user_api_call.side_effect)
@@ -149,7 +149,7 @@ class TestSpotifyLibrary:
         offset: int = 0
         for _ in range(playlist_total):
             side_effects += paginate_response(
-                token_state=token_state,
+                token_payload=token_payload,
                 response=spotify_response,
                 total=total,
                 limit=playlist_limit,
@@ -166,7 +166,7 @@ class TestSpotifyLibrary:
     @pytest.fixture
     def spotify_response_playlist_items_invalid_pages(
         self,
-        token_state: OAuthProviderTokenState,
+        token_payload: OAuthProviderTokenPayload,
         mock_provider_client: mock.AsyncMock,
     ) -> None:
         side_effects = list(mock_provider_client.make_user_api_call.side_effect)
