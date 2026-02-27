@@ -33,12 +33,26 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SpotifyLibraryFactory:
-    """Factory responsible for wiring up dependencies"""
+    """Factory responsible for creating `SpotifyLibraryAdapter` instances.
+
+    This factory handles the dependency injection required to create a
+    `SpotifyLibraryAdapter`, specifically wiring up the `SpotifyOAuthSessionClient`
+    with the necessary repositories and clients.
+    """
 
     auth_token_repository: OAuthProviderTokenRepository
     client: SpotifyOAuthClientAdapter
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
+        """Creates a new `SpotifyLibraryAdapter` for a specific user.
+
+        Args:
+            user: The user for whom the adapter is being created.
+            auth_token: The user's OAuth token.
+
+        Returns:
+            A configured `ProviderLibraryPort` implementation for Spotify.
+        """
         return SpotifyLibraryAdapter(
             user=user,
             session_client=SpotifyOAuthSessionClient(
@@ -51,6 +65,13 @@ class SpotifyLibraryFactory:
 
 
 class SpotifyLibraryAdapter(ProviderLibraryPort):
+    """Adapter for interacting with the Spotify Web API to retrieve library data.
+
+    This class implements the `ProviderLibraryPort` interface, providing methods
+    to fetch top artists, top tracks, saved tracks, and playlist tracks from
+    Spotify. It handles pagination and concurrent fetching where appropriate.
+    """
+
     def __init__(
         self,
         user: User,
@@ -103,6 +124,11 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         )
 
     async def get_playlist_tracks(self, page_limit: int = 50) -> list[Track]:
+        """Retrieves tracks from all of the user's playlists.
+
+        This method first fetches all playlists and then fetches the tracks for
+        each playlist concurrently, respecting the `max_concurrency` limit.
+        """
         playlists = await self._fetch_pages(
             endpoint="/me/playlists",
             page_model=SpotifyPlaylistPage,
@@ -165,6 +191,10 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         limit: int = 50,
         prefix_log: str = "",
     ) -> list[MusicItemType]:
+        """
+        Generic method to fetch paginated resources from Spotify.
+        Iterates through pages until all items are retrieved or the limit is reached.
+        """
         items: list[MusicItemType] = []
 
         logger.info(f"{prefix_log} Start fetching endpoint: {endpoint}")

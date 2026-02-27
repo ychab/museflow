@@ -30,6 +30,12 @@ class Artist(BaseMusicItem):
 
 @dataclass(frozen=True, kw_only=True)
 class TrackArtist:
+    """Represents an artist associated with a specific track.
+
+    This is a simplified representation used within a track context, primarily
+    for display and linking purposes.
+    """
+
     provider_id: str
     name: str
 

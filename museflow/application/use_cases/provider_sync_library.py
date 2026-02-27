@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, kw_only=True)
 class SyncReport:
+    """Reports the outcome of a library synchronization operation.
+
+    Contains counts of purged, created, and updated entities, as well as any
+    errors encountered during the synchronization process.
+    """
+
     purge_artist: int = 0
     purge_track: int = 0
 
@@ -34,22 +40,10 @@ class SyncReport:
 
 @dataclass(frozen=True)
 class SyncConfig:
-    """
-    A synchronization configuration object.
+    """Configuration for a library synchronization operation.
 
-    :param purge_all: Whether to purge all
-    :param purge_artist_top: Whether to purge top artists
-    :param purge_track_top: Whether to purge top tracks
-    :param purge_track_saved: Whether to purge saved tracks
-    :param purge_track_playlist: Whether to purge playlist tracks
-    :param sync_all: Whether to sync all
-    :param sync_artist_top: Whether to sync top artists
-    :param sync_track_top: Whether to sync top tracks
-    :param sync_track_saved: Whether to sync saved tracks
-    :param sync_track_playlist: Whether to sync playlist tracks
-    :param page_limit: The number of items to fetch
-    :param time_range: The time range to fetch for top artists/ top tracks
-    :param batch_size: The number of items to bulk upsert in DB
+    This dataclass specifies which types of data (artists, tracks, etc.) should be
+    purged or synchronized, along with pagination and time range settings.
     """
 
     purge_all: bool = False
@@ -90,6 +84,14 @@ class SyncConfig:
 
 
 class ProviderSyncLibraryUseCase:
+    """Synchronizes a user's music library with a music provider.
+
+    This use case orchestrates the fetching of music data (artists, tracks) from
+    an external music provider and persists it into the application's database.
+    It supports purging existing data before synchronization and provides a detailed
+    report of the operation.
+    """
+
     def __init__(
         self,
         provider_library: ProviderLibraryPort,
@@ -105,15 +107,6 @@ class ProviderSyncLibraryUseCase:
         user: User,
         config: SyncConfig,
     ) -> SyncReport:
-        """
-        For a given user, synchronize its provider items, including artists
-        and tracks, depending on the given flags.
-
-        :param user: A user entity to fetch its library
-        :param config: A configuration dataclass object
-
-        :return: SyncReport
-        """
         report = SyncReport()
 
         # First of all, purge items if required.

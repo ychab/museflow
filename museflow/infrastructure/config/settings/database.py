@@ -9,6 +9,15 @@ from museflow import BASE_DIR
 
 
 class DatabaseSettings(BaseSettings):
+    """Database connection settings loaded from environment variables.
+
+    This class supports two ways of configuring the database connection:
+    1. Providing a complete connection URI (`DATABASE_URI`).
+    2. Providing individual components (host, port, user, password, path).
+
+    If the URI is not provided, it is constructed from the individual components.
+    """
+
     model_config = SettingsConfigDict(
         env_prefix="DATABASE_",
         env_file=[BASE_DIR / ".env"],

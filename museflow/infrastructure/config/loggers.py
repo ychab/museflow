@@ -95,6 +95,17 @@ default_conf: Final[dict[str, Any]] = {
 
 
 def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bool = False) -> None:
+    """Configures the application's loggers based on the provided level and handlers.
+
+    This function takes a default logging configuration, modifies the log level and
+    handlers for the application's main logger, and applies the same handlers
+    to other defined loggers and the root logger.
+
+    Args:
+        level: The minimum logging level to set (e.g., "INFO", "DEBUG").
+        handlers: A list of handler names (e.g., ["console"], ["rich"]) to use.
+        propagate: Whether messages should be propagated to ancestor loggers.
+    """
     conf = deepcopy(default_conf)
 
     # Change level and propagate only for our logger for now.

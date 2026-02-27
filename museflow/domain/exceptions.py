@@ -1,30 +1,22 @@
-class UserNotFound(Exception):
-    pass
+class UserNotFound(Exception): ...
 
 
-class UserAlreadyExistsException(Exception):
-    pass
+class UserAlreadyExistsException(Exception): ...
 
 
-class UserEmailAlreadyExistsException(Exception):
-    pass
+class UserEmailAlreadyExistsException(Exception): ...
 
 
-class UserInactive(Exception):
-    pass
+class UserInactive(Exception): ...
 
 
-class UserInvalidCredentials(Exception):
-    pass
+class UserInvalidCredentials(Exception): ...
 
 
-class ProviderAuthTokenNotFoundError(Exception):
-    pass
+class ProviderAuthTokenNotFoundError(Exception): ...
 
 
-class ProviderExchangeCodeError(Exception):
-    pass
+class ProviderExchangeCodeError(Exception): ...
 
 
-class ProviderPageValidationError(Exception):
-    pass
+class ProviderPageValidationError(Exception): ...

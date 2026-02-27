@@ -39,7 +39,11 @@ def _is_retryable_error(exception: BaseException) -> bool:
 
 
 class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
-    """Async Spotify user API client with OAuth and automatic token refresh."""
+    """An asynchronous Spotify API client with OAuth and automatic token refresh.
+
+    This adapter includes robust retry logic for handling transient network errors and
+    rate limiting (429 Too Many Requests).
+    """
 
     BASE_URL: Final[ClassVar[HttpUrl]] = HttpUrl("https://api.spotify.com/v1")
     AUTH_ENDPOINT: Final[ClassVar[HttpUrl]] = HttpUrl("https://accounts.spotify.com/authorize")
@@ -134,6 +138,11 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Makes an authenticated API call to the Spotify API.
+
+        This method includes retry logic for transient errors and rate limiting.
+        It specifically handles the `Retry-After` header from Spotify for 429 responses.
+        """
         try:
             response = await self._client.request(
                 method=method.upper(),

@@ -10,6 +10,22 @@ async def user_create(
     user_repository: UserRepository,
     password_hasher: PasswordHasherPort,
 ) -> User:
+    """Creates a new user.
+
+    This use case orchestrates the creation of a new user, including checking for
+    existing users with the same email, hashing the password, and persisting the user.
+
+    Args:
+        user_data: The data for the new user.
+        user_repository: The repository to store the user data.
+        password_hasher: The password hasher.
+
+    Returns:
+        The newly created user.
+
+    Raises:
+        UserAlreadyExistsException: If a user with the same email already exists.
+    """
     existing_user = await user_repository.get_by_email(user_data.email)
     if existing_user:
         raise UserAlreadyExistsException("Email already registered")

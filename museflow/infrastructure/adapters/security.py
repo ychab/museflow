@@ -17,8 +17,10 @@ from museflow.infrastructure.config.settings.app import app_settings
 
 
 class Argon2PasswordHasher(PasswordHasherPort):
-    """
-    Implementation of PasswordHasher port using Argon2.
+    """An implementation of the `PasswordHasherPort` using the Argon2 algorithm.
+
+    This class provides a secure way to hash and verify passwords, using the
+    `argon2-cffi` library.
     """
 
     def __init__(self) -> None:
@@ -35,8 +37,10 @@ class Argon2PasswordHasher(PasswordHasherPort):
 
 
 class JwtAccessTokenManager(AccessTokenManagerPort):
-    """
-    Implementation of TokenManager port using PyJWT.
+    """An implementation of the `AccessTokenManagerPort` using JSON Web Tokens (JWT).
+
+    This class handles the creation and decoding of JWTs for user authentication,
+    relying on the `PyJWT` library.
     """
 
     def create(self, data: dict[str, Any]) -> str:
@@ -52,8 +56,10 @@ class JwtAccessTokenManager(AccessTokenManagerPort):
 
 
 class SystemStateTokenGenerator(StateTokenGeneratorPort):
-    """
-    Implementation of RandomTokenGenerator port using random.SystemRandom.
+    """An implementation of `StateTokenGeneratorPort` using `random.SystemRandom`.
+
+    This class generates cryptographically secure random strings suitable for use as
+    state tokens in OAuth flows.
     """
 
     UNICODE_ASCII_CHARACTER_SET = string.ascii_letters + string.digits

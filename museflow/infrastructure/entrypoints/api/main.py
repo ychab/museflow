@@ -40,6 +40,7 @@ app.include_router(api_v1_router, prefix=app_settings.API_V1_PREFIX)
 
 @app.get("/health", name="health_check", tags=["health"])
 async def health_check(db: AsyncSession = Depends(get_db)) -> HealthCheckResponse:
+    """Health check endpoint to verify application and database status."""
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:

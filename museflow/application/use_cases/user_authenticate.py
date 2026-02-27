@@ -18,6 +18,25 @@ async def user_authenticate(
     user_repository: UserRepository,
     password_hasher: PasswordHasherPort,
 ) -> User:
+    """Authenticates a user based on their email and password.
+
+    This use case retrieves a user by email, verifies their password, and checks
+    if the user account is active.
+
+    Args:
+        email: The user's email address.
+        password: The user's plain text password.
+        user_repository: The repository for user data.
+        password_hasher: The password hasher.
+
+    Returns:
+        The authenticated `User` entity.
+
+    Raises:
+        UserNotFound: If no user with the given email exists.
+        UserInvalidCredentials: If the provided password does not match.
+        UserInactive: If the user account is not active.
+    """
     user = await user_repository.get_by_email(email)
 
     if not user:

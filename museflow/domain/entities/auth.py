@@ -9,7 +9,11 @@ from museflow.domain.types import MusicProvider
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthProviderState:
-    """User state send to library provider in order to get its oauth token."""
+    """Represents the state sent to an OAuth music provider during the authorization flow.
+
+    This state is used to maintain context between the authorization request and the callback,
+    ensuring security and associating the response with the correct user and provider.
+    """
 
     id: int
 
@@ -23,7 +27,12 @@ class OAuthProviderState:
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthProviderUserToken:
-    """User persistent auth token provider"""
+    """Represents a user's persistent OAuth token for a specific music provider.
+
+    This entity stores the necessary tokens (access and refresh) and their expiration
+    information, allowing the application to interact with the music provider on behalf
+    of the user.
+    """
 
     id: int
     user_id: uuid.UUID
@@ -35,4 +44,15 @@ class OAuthProviderUserToken:
     token_expires_at: datetime
 
     def is_expired(self, buffer_seconds: int = 60) -> bool:
+        """Checks if the access token is expired, considering a buffer period.
+
+        Args:
+            buffer_seconds: An integer representing a buffer in seconds. The token
+                            will be considered expired if its expiration time is
+                            within this buffer from the current time. This helps
+                            to refresh tokens proactively before they actually expire.
+
+        Returns:
+            True if the token is expired or will expire within the buffer, False otherwise.
+        """
         return datetime.now(UTC) >= self.token_expires_at - timedelta(seconds=buffer_seconds)

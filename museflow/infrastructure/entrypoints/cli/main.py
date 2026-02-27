@@ -52,6 +52,10 @@ def main(
         is_eager=True,
     ),
 ):
+    """Main entry point for the Museflow CLI application.
+
+    This function initializes the logging configuration.
+    """
     configure_loggers(level=log_level, handlers=cast(list[LogHandler], log_handlers))
 
 

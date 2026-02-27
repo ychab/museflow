@@ -14,11 +14,13 @@ from museflow.infrastructure.config.settings.spotify import spotify_settings
 
 
 class SpotifyOAuthSessionClient:
-    """
-    Stateful provider API client which handles user session lifecycle:
-    - Proactive token refresh (if close to expiry)
-    - Reactive token refresh (if 401 occurs)
-    - Thread-safe DB updates (Locking)
+    """A stateful client for managing a user's Spotify session.
+
+    This client handles the complexities of the user's session lifecycle, including:
+    - Proactive token refresh: Refreshes the token if it's close to expiring.
+    - Reactive token refresh: Refreshes the token upon receiving a 401 Unauthorized error.
+    - Thread-safe updates: Uses a lock to prevent race conditions when multiple
+      coroutines try to refresh the token simultaneously.
     """
 
     def __init__(
@@ -44,6 +46,24 @@ class SpotifyOAuthSessionClient:
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Executes an authenticated API call, handling token refreshes automatically.
+
+        This method first checks if the token needs a proactive refresh. If the API
+        call fails with a token expiration error, it performs a reactive refresh
+        and retries the call once.
+
+        Args:
+            method: The HTTP method for the API call.
+            endpoint: The API endpoint to call.
+            params: Optional query parameters.
+            json_data: Optional JSON body for the request.
+
+        Returns:
+            The JSON response from the API.
+
+        Raises:
+            SpotifyTokenExpiredError: If the token is still expired after a refresh attempt.
+        """
         # Proactive refresh check: prevents unnecessary 401s if we already know it's expired
         if self.auth_token.is_expired(buffer_seconds=self.token_buffer_seconds):
             await self._refresh_token_safely()
@@ -75,6 +95,16 @@ class SpotifyOAuthSessionClient:
         return response
 
     async def _refresh_token_safely(self, stale_access_token: str | None = None) -> None:
+        """Refreshes the access token in a thread-safe manner.
+
+        Uses a lock to ensure that only one coroutine attempts to refresh the
+        token at a time, preventing race conditions.
+
+        Args:
+            stale_access_token: The access token that was found to be expired.
+                                This is used to ensure the token hasn't already
+                                been refreshed by another coroutine.
+        """
         # Fast check (outside lock)
         if self._should_skip_refresh(stale_access_token):
             return

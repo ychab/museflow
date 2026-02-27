@@ -14,6 +14,21 @@ async def oauth_redirect(
     provider_client: ProviderOAuthClientPort,
     state_token_generator: StateTokenGeneratorPort,
 ) -> HttpUrl:
+    """Generates a URL to redirect the user for OAuth provider authentication.
+
+    This function generates a state token, constructs the authorization URL,
+    and stores the state in the repository to be verified at the callback stage.
+
+    Args:
+        user: The user entity initiating the authentication.
+        auth_state_repository: The repository for storing OAuth state.
+        provider: The music provider to authenticate with.
+        provider_client: The client for the OAuth provider.
+        state_token_generator: The generator for creating a state token.
+
+    Returns:
+        The URL to redirect the user to for authentication.
+    """
     state = state_token_generator.generate()
     authorization_url = provider_client.get_authorization_url(state=state)
 

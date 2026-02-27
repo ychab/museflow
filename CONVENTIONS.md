@@ -76,7 +76,44 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - `user_in` = Input Schema (Pydantic)
   - `user_dto` = External API DTO
 
-## 4. Testing Strategy
+## 4. Documentation & Comments
+
+### Philosophy: "Signal over Noise"
+- **Code is the Documentation**: Use descriptive variable/function names and strict type hints first.
+- **Avoid Redundancy**: Do NOT write docstrings that just repeat the function name or signature.
+  - **Bad**: `def get_user(id): """Gets the user by id."""`
+  - **Good**: `def get_user(id): ...` (No docstring needed if obvious)
+- **Target Audience**: Write docstrings for **Public Interfaces** (Ports, Abstract Classes) and **Complex Logic** (Algorithms, Regex) where the "Why" or "How" isn't obvious from the code itself.
+
+### Style Guide
+- **Format**: **Google Style**.
+- **Type Hints**: **Do NOT duplicate types** in the docstring. The function signature is the source of truth for types.
+- **Content**: Focus on:
+  - **Behavior**: What does it do that isn't obvious?
+  - **Arguments**: Only if their purpose isn't clear (e.g., flags, specific formats).
+  - **Returns**: What does it return? (e.g., "None if user not found").
+  - **Raises**: Crucial! Document exceptions that the caller must handle.
+
+#### Example
+```python
+def calculate_score(track: Track, user_weight: float = 1.0) -> float:
+    """
+    Computes the relevance score based on listening history and user preference.
+
+    Args:
+        user_weight: Multiplier for user-specific affinity (default 1.0).
+                     Values > 1.0 boost the score for favorite genres.
+
+    Returns:
+        A normalized score between 0.0 and 100.0.
+
+    Raises:
+        ValueError: If user_weight is negative.
+    """
+    ...
+```
+
+## 5. Testing Strategy
 
 ### Philosophy
 - **Coverage Goal**: **100% Branch Coverage (or Nothing)**.

@@ -18,6 +18,12 @@ from museflow.infrastructure.adapters.database.models.base import NumericIdMixin
 
 
 class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+    """SQLAlchemy model for storing OAuth provider state.
+
+    This model is used to persist the state token generated during the OAuth flow,
+    linking it to a user and a specific music provider.
+    """
+
     __tablename__ = "museflow_auth_state"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -42,6 +48,12 @@ class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
 
 class AuthProviderToken(NumericIdMixin, Base, kw_only=True):
+    """SQLAlchemy model for storing OAuth provider user tokens.
+
+    This model persists the access and refresh tokens for a user, allowing the
+    application to make authenticated API calls to the music provider on their behalf.
+    """
+
     __tablename__ = "museflow_auth_token"
 
     user_id: Mapped[uuid.UUID] = mapped_column(

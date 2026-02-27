@@ -58,6 +58,12 @@ class SpotifyPlaylistTrack(BaseModel):
 
 
 class SpotifyPage[T: SpotifyItem | SpotifySavedTrack | SpotifyPlaylistTrack](BaseModel):
+    """Generic Pydantic model for paginated Spotify API responses.
+
+    This model is used to parse responses that contain a list of items,
+    along with pagination metadata such as total count, limit, and offset.
+    """
+
     items: Sequence[T]
     total: Annotated[int, Field(ge=0)]
     limit: Annotated[int, Field(ge=0)]

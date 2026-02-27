@@ -43,6 +43,7 @@ class SpotifyScope(StrEnum):
 
     @classmethod
     def required_scopes(cls) -> str:
+        """Returns a space-separated string of required scopes for the application."""
         scopes = [
             cls.USER_TOP_READ,
             cls.USER_LIBRARY_READ,

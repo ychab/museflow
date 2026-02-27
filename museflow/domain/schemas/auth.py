@@ -6,15 +6,11 @@ from museflow.domain.schemas.base import BaseEntity
 
 
 class OAuthProviderTokenPayload(BaseEntity):
-    """
-    Represents the raw, transient OAuth2 token data exchanged with an external provider.
+    """Represents the raw, transient OAuth2 token data from an external provider.
 
-    This schema acts as a Value Object within the Domain Layer, primarily used by
-    Ports (ProviderClientPort) to define the structure of authentication credentials
-    received from or sent to third-party services.
-
-    Unlike the `OAuthProviderUserToken` Entity, this object has no identity or persistence;
-    it is purely a data container for access tokens, refresh tokens, and expiry information.
+    This schema is a Value Object used by provider clients to structure authentication
+    credentials. It is not persisted and has no identity, serving purely as a data
+    container for tokens and expiry information.
     """
 
     token_type: str
@@ -24,6 +20,12 @@ class OAuthProviderTokenPayload(BaseEntity):
 
 
 class OAuthProviderUserTokenCreate(BaseEntity):
+    """Schema for creating a new `OAuthProviderUserToken` entity.
+
+    Defines the required fields for creating a persistent record of a user's OAuth
+    token for a music provider.
+    """
+
     token_type: str = Field(..., max_length=512)
     token_access: str = Field(..., max_length=512)
     token_refresh: str = Field(..., max_length=512)
@@ -31,6 +33,12 @@ class OAuthProviderUserTokenCreate(BaseEntity):
 
 
 class OAuthProviderUserTokenUpdate(BaseEntity):
+    """Schema for updating an existing `OAuthProviderUserToken` entity.
+
+    Allows for partial updates of a user's OAuth token, such as refreshing the
+    access token or extending its expiration.
+    """
+
     token_type: str | None = Field(None, max_length=512)
     token_access: str | None = Field(None, max_length=512)
     token_refresh: str | None = Field(None, max_length=512)

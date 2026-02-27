@@ -15,6 +15,11 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTr
 def to_domain_token_payload(
     spotify_token: SpotifyToken, existing_refresh_token: str | None = None
 ) -> OAuthProviderTokenPayload:
+    """Converts a SpotifyToken schema object to a domain OAuthProviderTokenPayload.
+
+    This function maps the raw token data received from Spotify into the application's
+    domain representation, ensuring that a refresh token is always present.
+    """
     refresh_token = spotify_token.refresh_token or existing_refresh_token
     if not refresh_token:
         raise ValueError("Refresh token is missing from both response and existing state.")
@@ -34,6 +39,7 @@ def to_domain_artist(
     is_saved: bool = False,
     position: int | None = None,
 ) -> Artist:
+    """Converts a SpotifyArtist schema object to a domain Artist entity."""
     return Artist(
         user_id=user_id,
         name=spotify_artist.name,
@@ -55,6 +61,7 @@ def to_domain_track(
     is_saved: bool = False,
     position: int | None = None,
 ) -> Track:
+    """Converts a SpotifyTrack schema object to a domain Track entity."""
     return Track(
         user_id=user_id,
         name=spotify_track.name,
