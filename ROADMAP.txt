@@ -4,11 +4,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## doc code
 
-- improve the doc code for domain / critical stuff: entities, etc
-
-## Test
-
-- review integration test on api endpoint with spotify to use httpx mock instead of mock (two test only)...?
+- improve the doc code for tests
 
 ## Dependencies
 
@@ -19,23 +15,20 @@ This quick and dirty document just list the roadmap tasks.
 ### Music
 
 - should we add a relationship between the track with the (top) artist?
-
-## Renaming project
-
-- replace museflow occurrences almost everywhere...
+- should we have a slug based on the track name + artist name?
 
 ## Logging
 
-- Review to improve it! We have almost nothing!
+- Review to improve it! We have almost nothing + update CONVENTIONS.md on that point
 
 ## Sync
 
-- review it for a top level batch handling (to release memory yb saving in DB before) + atomicity?
+- review it for performance (small chunks to upsert into DB) and atomicity?
 - spotify: import the extended streaming history?
 
 ## Recommendations / Suggestions
 
-- spotify: search endpoint to discover new musics?
+- spotify: get corresponding matching + search endpoint to discover new musics?
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => last.fm: works pretty great with latino sounds, but only :/ hip-hop/rap FR not supported at all
     => tastedive API

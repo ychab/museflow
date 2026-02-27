@@ -1,5 +1,6 @@
 from datetime import datetime
 from datetime import timedelta
+from typing import Any
 from unittest import mock
 
 from fastapi import status
@@ -9,12 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
+from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -55,14 +56,20 @@ class TestSpotifyCallback:
         frozen_time: datetime,
         user: User,
         auth_state: OAuthProviderState,
-        mock_spotify_client: mock.AsyncMock,
+        spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
+        httpx_mock: HTTPXMock,
     ) -> None:
-        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenPayload(
-            token_type="Bearer",
-            access_token="mock_access_token",
-            refresh_token="mock_refresh_token",
-            expires_at=frozen_time + timedelta(seconds=3600),
+        response_json: dict[str, Any] = {
+            "token_type": "Bearer",
+            "access_token": "dummy-access-token",
+            "refresh_token": "dummy-refresh-token",
+            "expires_in": 3600,
+        }
+        httpx_mock.add_response(
+            url=str(spotify_client.token_endpoint),
+            method="POST",
+            json=response_json,
         )
 
         url = app.url_path_for("spotify_callback")
@@ -94,8 +101,8 @@ class TestSpotifyCallback:
 
         assert auth_token_db is not None
         assert auth_token_db.token_type == "Bearer"
-        assert auth_token_db.token_access == "mock_access_token"
-        assert auth_token_db.token_refresh == "mock_refresh_token"
+        assert auth_token_db.token_access == "dummy-access-token"
+        assert auth_token_db.token_refresh == "dummy-refresh-token"
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     @pytest.mark.parametrize("auth_token", [{"provider": MusicProvider.SPOTIFY}], indirect=["auth_token"])
@@ -106,14 +113,20 @@ class TestSpotifyCallback:
         user: User,
         auth_state: OAuthProviderState,
         auth_token: OAuthProviderUserToken,
-        mock_spotify_client: mock.AsyncMock,
+        spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
+        httpx_mock: HTTPXMock,
     ) -> None:
-        mock_spotify_client.exchange_code_for_token.return_value = OAuthProviderTokenPayload(
-            token_type="Bearer",
-            access_token="mock_access_token",
-            refresh_token="mock_refresh_token",
-            expires_at=frozen_time + timedelta(seconds=3600),
+        response_json: dict[str, Any] = {
+            "token_type": "Bearer",
+            "access_token": "dummy-access-token",
+            "refresh_token": "dummy-refresh-token",
+            "expires_in": 3600,
+        }
+        httpx_mock.add_response(
+            url=str(spotify_client.token_endpoint),
+            method="POST",
+            json=response_json,
         )
 
         url = app.url_path_for("spotify_callback")
@@ -145,8 +158,8 @@ class TestSpotifyCallback:
 
         assert auth_token_db is not None
         assert auth_token_db.token_type == "Bearer"
-        assert auth_token_db.token_access == "mock_access_token"
-        assert auth_token_db.token_refresh == "mock_refresh_token"
+        assert auth_token_db.token_access == "dummy-access-token"
+        assert auth_token_db.token_refresh == "dummy-refresh-token"
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__state__missing(self, async_client: AsyncClient) -> None:
