@@ -76,7 +76,32 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - `user_in` = Input Schema (Pydantic)
   - `user_dto` = External API DTO
 
-## 4. Documentation & Comments
+## 4. Logging Strategy
+
+### Philosophy: "Signal over Noise"
+- **Goal**: Logs are for **Operators** (to fix incidents) and **Developers** (to debug), not for storing data.
+- **Privacy**: **NEVER** log secrets (passwords, access tokens, refresh tokens). Log `user_id` instead.
+
+### Log Levels
+- **ERROR**: System cannot recover or a critical operation failed.
+  - *Examples*: DB connection failed, External API 500/401, Unhandled Exception.
+  - *Must include*: Stack trace (use `logger.exception` inside catch blocks).
+- **WARNING**: Unexpected but handled events, or "Business Errors" that require attention.
+  - *Examples*: Login failed (bad credentials), Rate limit hit (429), Deprecated API usage.
+- **INFO**: High-level milestones. **Keep it minimal**.
+  - *Examples*: "Server started", "Migration applied", "User created".
+- **DEBUG**: Low-level logic flow. Off by default in Prod.
+  - *Examples*: "Payload sent to Spotify", "Entering function X".
+
+### Best Practices & Implementation
+- **Logger**: Use `logger = logging.getLogger(__name__)`.
+- **Exceptions**: Use `logger.exception("Message")` inside `except` blocks to auto-attach tracebacks.
+- **Structured Context**: Avoid f-strings for IDs. Pass context via `extra` dict (or rely on `structlog` if available later).
+  - **Bad**: `logger.error(f"Failed to sync library for user {user.id}")`
+  - **Good**: `logger.error("Failed to sync library", extra={"user_id": str(user.id)})`
+  - *Why?* Better aggregation in tools like Datadog/Sentry (message template is static).
+
+## 5. Documentation & Comments
 
 ### Philosophy: "Signal over Noise"
 - **Code is the Documentation**: Use descriptive variable/function names and strict type hints first.
@@ -113,7 +138,7 @@ def calculate_score(track: Track, user_weight: float = 1.0) -> float:
     ...
 ```
 
-## 5. Testing Strategy
+## 6. Testing Strategy
 
 ### Philosophy
 - **Coverage Goal**: **100% Branch Coverage (or Nothing)**.

@@ -217,15 +217,15 @@ class ProviderSyncLibraryUseCase:
         entity_name: str,
         purge_callback: Callable[[], Awaitable[int]],
     ) -> SyncReport:
-        logger.info(f"About purging {entity_name} for user {user.email}...")
+        logger.info(f"About purging {entity_name} for user {user.id}...")
 
         try:
             count = await purge_callback()
         except Exception:
-            logger.exception(f"An error occurred while purging {entity_name} for user {user.email}")
+            logger.exception(f"An error occurred while purging {entity_name} for user {user.id}")
             report = replace(report, errors=report.errors + [f"An error occurred while purging your {entity_name}."])
         else:
-            logger.info(f"Successfully purged {count} {entity_name} for user {user.email}")
+            logger.info(f"Successfully purged {count} {entity_name} for user {user.id}")
             report_updates: dict[str, Any] = {report_field_purge: count}
             report = replace(report, **report_updates)
 
@@ -241,27 +241,27 @@ class ProviderSyncLibraryUseCase:
         fetch_func: Callable[[], Awaitable[list[T]]],
         upsert_func: Callable[[list[T]], Awaitable[tuple[list[Any], int]]],
     ) -> SyncReport:
-        logger.info(f"About synchronizing {entity_name} for user {user.email}...")
+        logger.info(f"About synchronizing {entity_name} for user {user.id}...")
 
         # Fetch step
         try:
             items = await fetch_func()
         except Exception:
-            logger.exception(f"An error occurred while fetching {entity_name} for user {user.email}")
+            logger.exception(f"An error occurred while fetching {entity_name} for user {user.id}")
             report = replace(report, errors=report.errors + [f"An error occurred while fetching {entity_name}."])
             return report
         else:
-            logger.info(f"Fetched {len(items)} {entity_name} for user {user.email}")
+            logger.info(f"Fetched {len(items)} {entity_name} for user {user.id}")
 
         # Upsert step
         try:
             ids, created = await upsert_func(items)
         except Exception:
-            logger.exception(f"An error occurred while upserting {entity_name} for user {user.email}")
+            logger.exception(f"An error occurred while upserting {entity_name} for user {user.id}")
             report = replace(report, errors=report.errors + [f"An error occurred while saving {entity_name}."])
             return report
         else:
-            logger.info(f"Upserted {len(ids)} {entity_name} for user {user.email}")
+            logger.info(f"Upserted {len(ids)} {entity_name} for user {user.id}")
 
         report_updates: dict[str, Any] = {
             report_field_created: getattr(report, report_field_created) + created,

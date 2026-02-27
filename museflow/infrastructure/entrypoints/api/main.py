@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -15,6 +16,8 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.spotify import router as spotify_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -44,6 +47,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthCheckRespons
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:
+        logger.exception(f"Health Check Failed: {e}")
         return HealthCheckResponse(status="unhealthy", database=f"error: {str(e)}")
     else:
         return HealthCheckResponse(status="healthy", database="connected")

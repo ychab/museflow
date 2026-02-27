@@ -105,7 +105,7 @@ async def get_current_user(
 
     user = await user_repository.get_by_id(uuid.UUID(user_id))
     if user is None:
-        logger.debug("No user associated to the token")
+        logger.debug("No user associated to the token", extra={"user_id": str(user_id)})
         raise credentials_exception
 
     return user

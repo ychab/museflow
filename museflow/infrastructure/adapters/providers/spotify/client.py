@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import logging
 from typing import Any
 from typing import ClassVar
 from typing import Final
@@ -22,6 +23,8 @@ from museflow.infrastructure.adapters.providers.spotify.exceptions import Spotif
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScope
+
+logger = logging.getLogger(__name__)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -104,6 +107,16 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                 "redirect_uri": str(self.redirect_uri),
             },
         )
+        if response.is_error:
+            logger.error(
+                "Spotify Token Exchange Failed",
+                extra={
+                    "status_code": response.status_code,
+                    "response_text": response.text,
+                    "redirect_uri": str(self.redirect_uri),
+                },
+            )
+
         response.raise_for_status()
 
         return to_domain_token_payload(SpotifyToken(**response.json()))
@@ -120,6 +133,12 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                 "refresh_token": refresh_token,
             },
         )
+        if response.is_error:
+            logger.error(
+                "Spotify Token Refresh Failed",
+                extra={"status_code": response.status_code, "response_text": response.text},
+            )
+
         response.raise_for_status()
 
         return to_domain_token_payload(SpotifyToken(**response.json()), refresh_token)
@@ -171,6 +190,15 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                     # TryAgain to prevent Tenacity to sleep again for nothing.
                     raise TryAgain() from e
 
+            logger.exception(
+                "Spotify API Error",
+                extra={
+                    "status_code": e.response.status_code,
+                    "method": method,
+                    "endpoint": endpoint,
+                    "response_text": e.response.text,
+                },
+            )
             raise e
 
         if response.status_code == codes.NO_CONTENT:

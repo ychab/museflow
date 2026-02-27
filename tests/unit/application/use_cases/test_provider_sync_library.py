@@ -148,7 +148,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=[mock.ANY])
         assert "An error occurred while purging your artists." in report.errors
-        assert f"An error occurred while purging artists for user {user.email}" in caplog.text
+        assert f"An error occurred while purging artists for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("purge_all", "purge_track_top", "purge_track_saved", "purge_track_playlist"),
@@ -183,7 +183,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=[mock.ANY])
         assert "An error occurred while purging your tracks." in report.errors
-        assert f"An error occurred while purging tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while purging tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_artist_top", "exception_raised"),
@@ -218,7 +218,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while fetching top artists." in report.errors
-        assert f"An error occurred while fetching top artists for user {user.email}" in caplog.text
+        assert f"An error occurred while fetching top artists for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_artist_top", "exception_raised"),
@@ -253,7 +253,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while saving top artists." in report.errors
-        assert f"An error occurred while upserting top artists for user {user.email}" in caplog.text
+        assert f"An error occurred while upserting top artists for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_top", "exception_raised"),
@@ -288,7 +288,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while fetching top tracks." in report.errors
-        assert f"An error occurred while fetching top tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while fetching top tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_top", "exception_raised"),
@@ -323,7 +323,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while saving top tracks." in report.errors
-        assert f"An error occurred while upserting top tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while upserting top tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_saved", "exception_raised"),
@@ -358,7 +358,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while fetching saved tracks." in report.errors
-        assert f"An error occurred while fetching saved tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while fetching saved tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_saved", "exception_raised"),
@@ -393,7 +393,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while saving saved tracks." in report.errors
-        assert f"An error occurred while upserting saved tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while upserting saved tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_playlist", "exception_raised"),
@@ -428,7 +428,7 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while fetching playlist tracks." in report.errors
-        assert f"An error occurred while fetching playlist tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while fetching playlist tracks for user {user.id}" in caplog.text
 
     @pytest.mark.parametrize(
         ("sync_all", "sync_track_playlist", "exception_raised"),
@@ -463,4 +463,4 @@ class TestSyncMusic:
 
         assert report == SyncReport(errors=mock.ANY)
         assert "An error occurred while saving playlist tracks." in report.errors
-        assert f"An error occurred while upserting playlist tracks for user {user.email}" in caplog.text
+        assert f"An error occurred while upserting playlist tracks for user {user.id}" in caplog.text

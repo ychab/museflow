@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -20,6 +22,8 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_cli
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 from museflow.infrastructure.entrypoints.api.schemas import SuccessResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -50,8 +54,10 @@ async def spotify_callback(
     spotify_client: ProviderOAuthClientPort = Depends(get_spotify_client),
 ) -> SuccessResponse:
     if error:
+        logger.warning("Spotify Callback Error received", extra={"user_id": str(current_user.id), "error": error})
         raise HTTPException(status_code=400, detail=f"OAuth error: {error}")
     if not code:
+        logger.warning("Spotify Callback received without code", extra={"user_id": str(current_user.id)})
         raise HTTPException(status_code=400, detail="No authorization code received")
 
     try:
@@ -63,6 +69,7 @@ async def spotify_callback(
             provider_client=spotify_client,
         )
     except ProviderExchangeCodeError as e:
+        logger.exception("Failed to exchange Spotify code", extra={"user_id": str(current_user.id)})
         raise HTTPException(status_code=400, detail="Failed to exchange code") from e
 
     return SuccessResponse(message="Spotify account linked successfully")
