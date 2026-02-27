@@ -144,10 +144,10 @@ env = [
     'D:DATABASE_USER=museflow',
     'D:DATABASE_PASSWORD=museflow',
     'D:DATABASE_PATH=museflow',
-    # Spotify client adapter required settings
-    'SPOTIFY_CLIENT_ID=dummy-client-id',
-    'SPOTIFY_CLIENT_SECRET=dummy-client-secret',
-    'SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+    # Spotify client adapter required settings (could be overriden)
+    'D:SPOTIFY_CLIENT_ID=dummy-client-id',
+    'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
+    'D:SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
 ]
 filterwarnings = [
     "always",  # Equivalent to -W always
