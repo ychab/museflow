@@ -91,7 +91,7 @@ class OAuthProviderTokenRepository(ABC):
         user_id: uuid.UUID,
         provider: MusicProvider,
         auth_token_data: OAuthProviderUserTokenCreate,
-    ) -> OAuthProviderUserToken | None:
+    ) -> OAuthProviderUserToken:
         """Creates and stores a new auth token for a user and provider.
 
         Args:

@@ -94,7 +94,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         user_id: uuid.UUID,
         provider: MusicProvider,
         auth_token_data: OAuthProviderUserTokenCreate,
-    ) -> OAuthProviderUserToken | None:
+    ) -> OAuthProviderUserToken:
         auth_token_dict: dict[str, Any] = auth_token_data.model_dump()
         auth_token_dict["user_id"] = str(user_id)
         auth_token_dict["provider"] = provider
