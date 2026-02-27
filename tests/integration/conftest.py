@@ -60,6 +60,13 @@ def test_db_name() -> str:
 
 @pytest.fixture(scope="session")
 async def create_test_database(anyio_backend: str, test_db_name: str) -> AsyncGenerator[None]:
+    """
+    Creates a dedicated test database at the start of the session and drops it at the end.
+
+    This fixture operates in AUTOCOMMIT mode to allow CREATE/DROP DATABASE commands.
+    It ensures tests run in a clean, isolated environment separate from development/production DBs.
+    """
+
     # Establish a connection to the current DB with admin role.
     async_engine_admin: AsyncEngine = create_async_engine(
         url=str(database_settings.URI),
@@ -97,13 +104,15 @@ async def async_engine(create_test_database, test_db_name: str) -> AsyncGenerato
 @pytest.fixture(scope="function")
 async def async_session_trans(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
     """
-    Provides an async session that commits data and cleans up via TRUNCATE.
+    Provides an async session for tests requiring explicit transaction commits.
 
-    Use this fixture when you need to test actual database commits or when the
-    application code manages its own transactions/connections extensively.
+    Use this fixture ONLY when testing logic that calls `session.commit()` directly
+    (e.g., Use Cases that must persist data).
 
-    Pros: Tests 'real' commit behavior.
-    Cons: Slower than transaction rollback because of the TRUNCATE operations.
+    Behavior:
+        - Yields a session.
+        - Commits data to the DB.
+        - Cleans up via TRUNCATE after the test (slower than rollback).
     """
     async_session_factory.configure(bind=async_engine)
 
@@ -129,10 +138,14 @@ async def async_session_db(
     request: pytest.FixtureRequest,
 ) -> AsyncGenerator[AsyncSession | None]:
     """
-    Provides an async session wrapped in a transaction that rolls back after the test.
+    Provides the default async session wrapped in a transaction that rolls back.
 
-    This is the default fixture (autouse=True). It is faster than truncation because
-    data is never permanently written to disk.
+    This is the standard fixture for 99% of tests. It allows code to "commit" (flush),
+    but ultimately rolls back the entire transaction at the end of the test function.
+
+    Behavior:
+        - Faster than `async_session_trans` (no disk writes/truncate).
+        - Monkeypatches `session.commit` to `session.flush`.
     """
     # Check if the conflicting fixture is requested for this test
     if "async_session_trans" in request.fixturenames:

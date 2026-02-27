@@ -15,11 +15,22 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_cli
 @pytest.mark.spotify_live
 class TestSpotifyLibraryLive:
     """
-    This optional live test class checks the integration of the Spotify Client against a live Spotify server.
+    Live integration tests against the real Spotify API.
 
-    To run it manually:
-    * first run the database
-    * connect a user account to Spotify and manually copy its real refresh token from the DB
+    These tests verify that the Spotify API contract hasn't changed and that our
+    Client Adapter correctly handles real-world responses.
+
+    Requirements:
+        - A valid `SPOTIFY_REFRESH_TOKEN` provided via CLI flag or env var.
+        - Real `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` configured.
+        - Network access to api.spotify.com.
+
+    Warning:
+        These tests are slow and depend on external services. They are NOT run by default.
+
+    To run them manually:
+    * run the database
+    * connect a user account with Spotify and manually copy its real refresh token from the DB
 
     Then execute:
     > SPOTIFY_CLIENT_ID=<REAL_CLIENT_ID> SPOTIFY_CLIENT_SECRET=<REAL_CLIENT_SECRET> poetry run pytest ./tests/integration/live --spotify-refresh-token=<REFRESH_TOKEN>
