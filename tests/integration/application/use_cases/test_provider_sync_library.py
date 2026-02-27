@@ -30,7 +30,7 @@ from tests import ASSETS_DIR
 from tests.integration.factories.models.music import ArtistModelFactory
 from tests.integration.factories.models.music import TrackModelFactory
 
-DEFAULT_PAGINATION_LIMIT: Final[int] = 2
+DEFAULT_PAGINATION_SIZE: Final[int] = 2
 DEFAULT_PAGINATION_TOTAL: Final[int] = 10
 
 
@@ -74,7 +74,7 @@ class TestSpotifySyncMusic:
     ) -> list[dict[str, Any]]:
         params = getattr(request, "param", {})
         total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_LIMIT)
+        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
 
         return paginate_spotify_response(artists_top_response, limit=limit, total=total)
 
@@ -90,7 +90,7 @@ class TestSpotifySyncMusic:
     ) -> list[dict[str, Any]]:
         params = getattr(request, "param", {})
         total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_LIMIT)
+        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
 
         return paginate_spotify_response(tracks_top_response, limit=limit, total=total)
 
@@ -106,7 +106,7 @@ class TestSpotifySyncMusic:
     ) -> list[dict[str, Any]]:
         params = getattr(request, "param", {})
         total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_LIMIT)
+        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
 
         return paginate_spotify_response(tracks_saved_response, limit=limit, total=total)
 
@@ -122,7 +122,7 @@ class TestSpotifySyncMusic:
     ) -> tuple[list[dict[str, Any]], int, int]:
         params = getattr(request, "param", {})
         total: int = params.get("total", 4)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_LIMIT)
+        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
 
         return paginate_spotify_response(playlist_response, limit=limit, total=total), limit, total
 
@@ -347,7 +347,7 @@ class TestSpotifySyncMusic:
         artists_top_response: dict[str, Any],
         artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
         url_pattern = re.compile(r".*/me/top/artists.*")
@@ -362,7 +362,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_artist_top=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(artist_created=expected_count)
@@ -382,7 +382,7 @@ class TestSpotifySyncMusic:
         httpx_mock: HTTPXMock,
         artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(artists_update)
 
         url_pattern = re.compile(r".*/me/top/artists.*")
@@ -397,7 +397,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_artist_top=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(artist_updated=expected_count)
@@ -420,7 +420,7 @@ class TestSpotifySyncMusic:
         tracks_top_response: dict[str, Any],
         tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
         url_pattern = re.compile(r".*/me/top/tracks.*")
@@ -435,7 +435,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_top=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_created=expected_count)
@@ -459,7 +459,7 @@ class TestSpotifySyncMusic:
         httpx_mock: HTTPXMock,
         tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_top_update)
 
         url_pattern = re.compile(r".*/me/top/tracks.*")
@@ -474,7 +474,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_top=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_updated=expected_count)
@@ -500,7 +500,7 @@ class TestSpotifySyncMusic:
         tracks_saved_response: dict[str, Any],
         tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
         url_pattern = re.compile(r".*/me/tracks.*")
@@ -515,7 +515,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_saved=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_created=expected_count)
@@ -539,7 +539,7 @@ class TestSpotifySyncMusic:
         httpx_mock: HTTPXMock,
         tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_saved_update)
 
         url_pattern = re.compile(r".*/me/tracks.*")
@@ -554,7 +554,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_saved=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_updated=expected_count)
@@ -606,7 +606,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
-                page_limit=limit,
+                page_size=limit,
             ),
         )
         assert report == SyncReport(track_created=expected_count)
@@ -653,7 +653,7 @@ class TestSpotifySyncMusic:
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
-                page_limit=playlist_response_paginated[1],
+                page_size=playlist_response_paginated[1],
             ),
         )
         assert report == SyncReport(track_updated=expected_count)
@@ -740,7 +740,7 @@ class TestSpotifySyncMusic:
             config=SyncConfig(
                 purge_all=True,
                 sync_all=True,
-                page_limit=playlist_tracks_response_paginated[1],
+                page_size=playlist_tracks_response_paginated[1],
             ),
         )
         assert report == SyncReport(
@@ -836,7 +836,7 @@ class TestSpotifySyncMusic:
             - 7 (initial) + 30 (created) = 37 tracks
               (Note: Initial = 4 top + 2 saved + 1 playlist = 7 pre-existing tracks)
         """
-        page_limit = DEFAULT_PAGINATION_LIMIT
+        page_size = DEFAULT_PAGINATION_SIZE
 
         url_artist_pattern = re.compile(r".*/me/top/artists.*")
         url_track_top_pattern = re.compile(r".*/me/top/tracks.*")
@@ -917,7 +917,7 @@ class TestSpotifySyncMusic:
             config=SyncConfig(
                 purge_all=False,
                 sync_all=True,
-                page_limit=page_limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(

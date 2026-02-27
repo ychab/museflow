@@ -47,7 +47,7 @@ class TestSpotifySyncParserCommand:
                 "--no-sync-track-top",
                 "--no-sync-track-saved",
                 "--no-sync-track-playlist",
-                "--page-limit", "20",
+                "--page-size", "20",
                 "--time-range", "medium_term",
                 "--batch-size", "100",
             ],
@@ -84,24 +84,24 @@ class TestSpotifySyncParserCommand:
         assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
 
     @pytest.mark.parametrize(
-        ("page_limit", "expected_msg"),
+        ("page_size", "expected_msg"),
         [
-            pytest.param(0, "Invalid value for '--page-limit': 0 is not in the range", id="zero"),
-            pytest.param(-15, "Invalid value for '--page-limit': -15 is not in the range", id="min_exceed"),
-            pytest.param(55, "Invalid value for '--page-limit': 55 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--page-limit': 'foo' is not a valid integer", id="string"),
+            pytest.param(0, "Invalid value for '--page-size': 0 is not in the range", id="zero"),
+            pytest.param(-15, "Invalid value for '--page-size': -15 is not in the range", id="min_exceed"),
+            pytest.param(55, "Invalid value for '--page-size': 55 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--page-size': 'foo' is not a valid integer", id="string"),
         ],
     )
-    def test__page_limit__invalid(
+    def test__page_size__invalid(
         self,
         runner: CliRunner,
-        page_limit: Any,
+        page_size: Any,
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "sync", "--email", "test@example.com", "--page-limit", page_limit],
+            ["spotify", "sync", "--email", "test@example.com", "--page-size", page_size],
         )
         assert result.exit_code != 0
 

@@ -56,7 +56,7 @@ class SyncConfig:
     sync_track_top: bool = False
     sync_track_saved: bool = False
     sync_track_playlist: bool = False
-    page_limit: int = 50
+    page_size: int = 50
     time_range: str | None = None
     batch_size: int = 300
 
@@ -146,7 +146,7 @@ class ProviderSyncLibraryUseCase:
                 user=user,
                 entity_name="top artists",
                 fetch_func=lambda: self._provider_library.get_top_artists(
-                    page_limit=config.page_limit,
+                    page_size=config.page_size,
                     time_range=config.time_range,
                 ),
                 upsert_func=lambda items: self._artist_repository.bulk_upsert(
@@ -164,7 +164,7 @@ class ProviderSyncLibraryUseCase:
                 user=user,
                 entity_name="top tracks",
                 fetch_func=lambda: self._provider_library.get_top_tracks(
-                    page_limit=config.page_limit,
+                    page_size=config.page_size,
                     time_range=config.time_range,
                 ),
                 upsert_func=lambda items: self._track_repository.bulk_upsert(
@@ -182,7 +182,7 @@ class ProviderSyncLibraryUseCase:
                 user=user,
                 entity_name="saved tracks",
                 fetch_func=lambda: self._provider_library.get_saved_tracks(
-                    page_limit=config.page_limit,
+                    page_size=config.page_size,
                 ),
                 upsert_func=lambda items: self._track_repository.bulk_upsert(
                     tracks=items,
@@ -199,7 +199,7 @@ class ProviderSyncLibraryUseCase:
                 user=user,
                 entity_name="playlist tracks",
                 fetch_func=lambda: self._provider_library.get_playlist_tracks(
-                    page_limit=config.page_limit,
+                    page_size=config.page_size,
                 ),
                 upsert_func=lambda items: self._track_repository.bulk_upsert(
                     tracks=items,

@@ -198,7 +198,7 @@ class TestSpotifyLibrary:
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        top_artists = await spotify_library.get_top_artists(page_limit=spotify_response_pages[1])
+        top_artists = await spotify_library.get_top_artists(page_size=spotify_response_pages[1])
         assert len(top_artists) == 20
 
         top_artist_first = top_artists[0]
@@ -225,6 +225,19 @@ class TestSpotifyLibrary:
         assert top_artist_last.provider == MusicProvider.SPOTIFY
         assert top_artist_last.provider_id == "4q3ewBCX7sLwd24euuV69X"
 
+    @pytest.mark.parametrize("spotify_response", ["top_artists"], indirect=["spotify_response"])
+    async def test__get_top_artists__max_pages(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[int, int],
+    ) -> None:
+        page_size = spotify_response_pages[1]
+        max_pages = 1
+
+        top_artists = await spotify_library.get_top_artists(page_size=page_size, max_pages=max_pages)
+        assert len(top_artists) == page_size * max_pages
+
     @pytest.mark.parametrize("spotify_response", ["top_tracks"], indirect=["spotify_response"])
     async def test__get_top_tracks__nominal(
         self,
@@ -232,7 +245,7 @@ class TestSpotifyLibrary:
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        top_tracks = await spotify_library.get_top_tracks(page_limit=spotify_response_pages[1])
+        top_tracks = await spotify_library.get_top_tracks(page_size=spotify_response_pages[1])
         assert len(top_tracks) == 20
 
         top_track_first = top_tracks[0]
@@ -263,6 +276,19 @@ class TestSpotifyLibrary:
         assert top_track_last.provider == MusicProvider.SPOTIFY
         assert top_track_last.provider_id == "03LDM6VoTJbfdw1L7USDU8"
 
+    @pytest.mark.parametrize("spotify_response", ["top_tracks"], indirect=["spotify_response"])
+    async def test__get_top_tracks__max_pages(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[int, int],
+    ) -> None:
+        page_size = spotify_response_pages[1]
+        max_pages = 1
+
+        top_tracks = await spotify_library.get_top_tracks(page_size=page_size, max_pages=max_pages)
+        assert len(top_tracks) == page_size * max_pages
+
     @pytest.mark.parametrize("spotify_response", ["saved_tracks"], indirect=["spotify_response"])
     async def test__get_saved_tracks__nominal(
         self,
@@ -270,7 +296,7 @@ class TestSpotifyLibrary:
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[int, int],
     ) -> None:
-        tracks_saved = await spotify_library.get_saved_tracks(page_limit=spotify_response_pages[1])
+        tracks_saved = await spotify_library.get_saved_tracks(page_size=spotify_response_pages[1])
         assert len(tracks_saved) == 20
 
         track_saved_first = tracks_saved[0]
@@ -301,6 +327,19 @@ class TestSpotifyLibrary:
         assert track_saved_last.provider == MusicProvider.SPOTIFY
         assert track_saved_last.provider_id == "4nKcfnZ2Qj5urw0ekrnF2M"
 
+    @pytest.mark.parametrize("spotify_response", ["saved_tracks"], indirect=["spotify_response"])
+    async def test__get_saved_tracks__max_pages(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[int, int],
+    ) -> None:
+        page_size = spotify_response_pages[1]
+        max_pages = 1
+
+        tracks_saved = await spotify_library.get_saved_tracks(page_size=page_size, max_pages=max_pages)
+        assert len(tracks_saved) == page_size * max_pages
+
     @pytest.mark.parametrize(
         ("spotify_response", "spotify_response_pages"),
         [("playlists", {"total": 4, "limit": 2})],
@@ -316,7 +355,7 @@ class TestSpotifyLibrary:
         playlist_total = spotify_response_pages[0]
         playlist_tracks_total = spotify_response_playlist_items_pages[0]
 
-        tracks = await spotify_library.get_playlist_tracks(page_limit=spotify_response_pages[1])
+        tracks = await spotify_library.get_playlist_tracks(page_size=spotify_response_pages[1])
         assert len(tracks) == playlist_total * playlist_tracks_total
 
         track_first = tracks[0]
@@ -361,7 +400,7 @@ class TestSpotifyLibrary:
     ) -> None:
         playlist_tracks_total = spotify_response_playlist_items_pages[0]
 
-        tracks = await spotify_library.get_playlist_tracks(page_limit=spotify_response_pages[1])
+        tracks = await spotify_library.get_playlist_tracks(page_size=spotify_response_pages[1])
         assert len(tracks) == playlist_tracks_total
 
         track_first = tracks[0]
@@ -396,6 +435,27 @@ class TestSpotifyLibrary:
 
     @pytest.mark.parametrize(
         ("spotify_response", "spotify_response_pages"),
+        [("playlists", {"total": 2, "limit": 2})],
+        indirect=["spotify_response", "spotify_response_pages"],
+    )
+    async def test__get_playlist_tracks__max_pages(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[int, int],
+        spotify_response_playlist_items_pages: tuple[int, int],
+    ) -> None:
+        page_size = spotify_response_pages[1]
+        max_pages = 1
+
+        playlist_total = page_size * max_pages
+        playlist_tracks_total = page_size * max_pages
+
+        tracks = await spotify_library.get_playlist_tracks(page_size=page_size, max_pages=max_pages)
+        assert len(tracks) == playlist_total * playlist_tracks_total
+
+    @pytest.mark.parametrize(
+        ("spotify_response", "spotify_response_pages"),
         [("playlists", {"total": 1, "limit": 1})],
         indirect=["spotify_response", "spotify_response_pages"],
     )
@@ -410,7 +470,7 @@ class TestSpotifyLibrary:
         playlist = spotify_response["items"][0]
 
         with caplog.at_level(logging.ERROR):
-            tracks = await spotify_library.get_playlist_tracks(page_limit=1)
+            tracks = await spotify_library.get_playlist_tracks(page_size=1)
         assert len(tracks) == 0
 
         prefix_log = f"[PlaylistTracks({playlist['name']})]"

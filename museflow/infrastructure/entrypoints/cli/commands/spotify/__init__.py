@@ -100,9 +100,9 @@ def sync(
         "--sync-track-playlist/--no-sync-track-playlist",
         help="Whether to sync user's playlist tracks",
     ),
-    page_limit: int = typer.Option(
+    page_size: int = typer.Option(
         50,
-        "--page-limit",
+        "--page-size",
         help="How many items to fetch per page",
         min=1,
         max=50,
@@ -136,7 +136,7 @@ def sync(
         sync_track_top=sync_track_top,
         sync_track_saved=sync_track_saved,
         sync_track_playlist=sync_track_playlist,
-        page_limit=page_limit,
+        page_size=page_size,
         time_range=time_range,
         batch_size=batch_size,
     )

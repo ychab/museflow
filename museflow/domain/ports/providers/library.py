@@ -13,11 +13,17 @@ class ProviderLibraryPort(ABC):
     """
 
     @abstractmethod
-    async def get_top_artists(self, page_limit: int, time_range: str | None = None) -> list[Artist]:
+    async def get_top_artists(
+        self,
+        page_size: int,
+        max_pages: int | None = None,
+        time_range: str | None = None,
+    ) -> list[Artist]:
         """Retrieves a list of the user's top artists from the music provider.
 
         Args:
-            page_limit: The maximum number of artists to retrieve per page.
+            page_size: The maximum number of artists to retrieve per page.
+            max_pages: The maximum number of playlist tracks pages to retrieve.
             time_range: An optional time frame for which to retrieve top artists
 
         Returns:
@@ -26,11 +32,17 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_top_tracks(self, page_limit: int, time_range: str | None = None) -> list[Track]:
+    async def get_top_tracks(
+        self,
+        page_size: int,
+        max_pages: int | None = None,
+        time_range: str | None = None,
+    ) -> list[Track]:
         """Retrieves a list of the user's top tracks from the music provider.
 
         Args:
-            page_limit: The maximum number of tracks to retrieve per page.
+            page_size: The maximum number of tracks to retrieve per page.
+            max_pages: The maximum number of playlist tracks pages to retrieve.
             time_range: An optional time frame for which to retrieve top tracks
 
         Returns:
@@ -39,11 +51,12 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_saved_tracks(self, page_limit: int) -> list[Track]:
+    async def get_saved_tracks(self, page_size: int, max_pages: int | None = None) -> list[Track]:
         """Retrieves a list of tracks saved (liked) by the user in their music library.
 
         Args:
-            page_limit: The maximum number of saved tracks to retrieve per page.
+            page_size: The maximum number of saved tracks to retrieve per page.
+            max_pages: The maximum number of playlist tracks pages to retrieve.
 
         Returns:
             A list of `Track` entities.
@@ -51,11 +64,12 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_playlist_tracks(self, page_limit: int) -> list[Track]:
+    async def get_playlist_tracks(self, page_size: int, max_pages: int | None = None) -> list[Track]:
         """Retrieves a list of tracks from the user's playlists.
 
         Args:
-            page_limit: The maximum number of playlist tracks to retrieve per page.
+            page_size: The maximum number of playlist tracks to retrieve per page.
+            max_pages: The maximum number of playlist tracks pages to retrieve.
 
         Returns:
             A list of `Track` entities.
