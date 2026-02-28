@@ -2,6 +2,11 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## ports
+
+- remove make_api_call from ports?
+
+
 ## doc code
 
 - improve the doc code for tests
@@ -20,8 +25,10 @@ This quick and dirty document just list the roadmap tasks.
 - review it for performance (small chunks to upsert into DB) and atomicity?
 - spotify: import the extended streaming history?
 
-## Recommendations / Suggestions
+## advisor
 
+- provider / advisor / reconciler (provider method) / filtering (app logic)
+- openai?
 - spotify: get corresponding matching + search endpoint to discover new musics?
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => last.fm: works pretty great with latino sounds, but only :/ hip-hop/rap FR not supported at all

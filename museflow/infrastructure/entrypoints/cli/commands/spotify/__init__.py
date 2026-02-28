@@ -8,8 +8,10 @@ from rich.table import Table
 from museflow.application.use_cases.provider_sync_library import SyncConfig
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import MusicAdvisor
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
+from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
 from museflow.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -179,3 +181,22 @@ def sync(
     table.add_row("Tracks updated", str(report.track_updated))
 
     console.print(table)
+
+
+@app.command("discover", help="Discover new musics for a Spotify's user account.")
+def discover(
+    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    advisor: MusicAdvisor = typer.Option(default=MusicAdvisor.LASTFM, help="The advisor to discover new musics"),
+) -> None:
+    """
+    Discover new musics for a Spotify's user account.
+    """
+    try:
+        asyncio.run(discover_logic(email=email, advisor=advisor))
+    except UserNotFound as e:
+        raise typer.BadParameter(f"User not found with email: {email}") from e
+    except Exception as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+
+    typer.secho("\n\nSuggested tracks successfully saved into playlist! \u2705", fg=typer.colors.GREEN)

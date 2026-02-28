@@ -43,3 +43,14 @@ class TrackArtist:
 @dataclass(frozen=True, kw_only=True)
 class Track(BaseMusicItem):
     artists: list[TrackArtist] = field(default_factory=list)
+
+
+@dataclass(frozen=True, kw_only=True)
+class SuggestedTrack:
+    name: str
+    artists: list[str]
+    advisor_id: str | None = None
+    score: float | None = None
+
+    # def to_search_query(self) -> str:
+    #     return f"{self.name} artist:{self.artist_name}"
