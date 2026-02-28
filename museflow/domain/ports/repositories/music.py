@@ -4,6 +4,8 @@ from abc import abstractmethod
 
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
+from museflow.domain.types import SortOrder
+from museflow.domain.types import TrackOrderBy
 
 
 class ArtistRepository(ABC):
@@ -65,6 +67,10 @@ class TrackRepository(ABC):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        is_top: bool | None = None,
+        is_saved: bool | None = None,
+        order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
+        sort_order: SortOrder = SortOrder.ASC,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
@@ -72,6 +78,10 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose tracks are to be retrieved.
+            is_top: Whether to include, exclude, or ignore top tracks.
+            is_saved: Whether to include, exclude, or ignore saved tracks.
+            order_by: The column on which to order.
+            sort_order: The sort order.
             offset: The number of tracks to skip before starting to collect the result set.
             limit: The maximum number of tracks to return.
 

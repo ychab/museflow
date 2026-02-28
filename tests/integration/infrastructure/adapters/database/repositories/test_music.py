@@ -1,4 +1,6 @@
+import asyncio
 import dataclasses
+import operator
 
 from sqlalchemy import func
 from sqlalchemy import select
@@ -12,6 +14,8 @@ from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.user import User
 from museflow.domain.ports.repositories.music import ArtistRepository
 from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.types import SortOrder
+from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
@@ -232,8 +236,99 @@ class TestTrackSQLRepository:
 
         return [track_db.to_entity() for track_db in tracks_top + tracks_saved + tracks_playlist + tracks_others]
 
+    @pytest.mark.parametrize("is_saved", [True, False, None])
+    @pytest.mark.parametrize("is_top", [True, False, None])
+    async def test__get_list__filtering(
+        self,
+        user: User,
+        is_top: bool | None,
+        is_saved: bool | None,
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        top_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, is_top=True, is_saved=False)
+        saved_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, is_top=False, is_saved=True)
+        playlist_tracks = await TrackModelFactory.create_batch_async(
+            size=2,
+            user_id=user.id,
+            is_top=False,
+            is_saved=False,
+        )
+
+        expected_tracks = []
+        for t in top_tracks + saved_tracks + playlist_tracks:
+            match_top = (is_top is None) or (t.is_top == is_top)
+            match_saved = (is_saved is None) or (t.is_saved == is_saved)
+            if match_top and match_saved:
+                expected_tracks.append(t)
+
+        track_list = await track_repository.get_list(user.id, is_top=is_top, is_saved=is_saved)
+
+        # Check that we have the expected items.
+        assert len(track_list) == len(expected_tracks)
+        assert {t.id for t in track_list} == {t.id for t in expected_tracks}
+
+    @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM])
+    @pytest.mark.parametrize("sort_order", list(SortOrder))
+    async def test__get_list__ordering(
+        self,
+        user: User,
+        order_by: TrackOrderBy,
+        sort_order: SortOrder,
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        t1 = await TrackModelFactory.create_async(user_id=user.id, popularity=10, top_position=3)
+        await asyncio.sleep(0.01)
+
+        t2 = await TrackModelFactory.create_async(user_id=user.id, popularity=50, top_position=2)
+        await asyncio.sleep(0.01)
+
+        t3 = await TrackModelFactory.create_async(user_id=user.id, popularity=90, top_position=1)
+
+        tracks = [t1, t2, t3]
+
+        key_func = None
+        match order_by:
+            case TrackOrderBy.CREATED_AT:
+                key_func = operator.attrgetter("created_at")
+            case TrackOrderBy.UPDATED_AT:
+                key_func = operator.attrgetter("updated_at")
+            case TrackOrderBy.POPULARITY:
+                key_func = operator.attrgetter("popularity")
+            case TrackOrderBy.TOP_POSITION:
+                key_func = operator.attrgetter("top_position")
+            case _:
+                pytest.fail(f"Unhandled sort key: {order_by}")
+
+        expected_tracks = sorted(tracks, key=key_func, reverse=(sort_order == SortOrder.DESC))
+
+        track_list = await track_repository.get_list(user.id, order_by=order_by, sort_order=sort_order)
+
+        # Check that we have the expected items.
+        assert len(track_list) == len(expected_tracks)
+        assert [t.id for t in track_list] == [t.id for t in expected_tracks]
+
+    async def test__get_list__ordering__random(
+        self,
+        user: User,
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        tracks = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
+        track_ids = {t.id for t in tracks}
+
+        random_list_1 = await track_repository.get_list(user.id, order_by=TrackOrderBy.RANDOM)
+        random_list_2 = await track_repository.get_list(user.id, order_by=TrackOrderBy.RANDOM)
+
+        assert len(random_list_1) == len(random_list_2) == 10
+        assert {t.id for t in random_list_1} == {t.id for t in random_list_2} == track_ids
+
+        # There is a "tiny chance" (1 in 10! ~= 1 in 3.6 million) this fails... If it happens, I will be a millionaire!
+        assert [t.id for t in random_list_1] != [t.id for t in random_list_2]
+
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
-    async def test__get_list__nominal(
+    async def test__get_list__pagination(
         self,
         user: User,
         offset: int | None,

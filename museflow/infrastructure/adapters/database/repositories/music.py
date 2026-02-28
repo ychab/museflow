@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import ColumnElement
 from sqlalchemy import and_
 from sqlalchemy import delete
+from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
@@ -16,6 +17,8 @@ from museflow.domain.entities.music import BaseMusicItem
 from museflow.domain.entities.music import Track
 from museflow.domain.ports.repositories.music import ArtistRepository
 from museflow.domain.ports.repositories.music import TrackRepository
+from museflow.domain.types import SortOrder
+from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import MusicItemMixin
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
@@ -63,14 +66,33 @@ class TrackSQLRepository(TrackRepository):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        is_top: bool | None = None,
+        is_saved: bool | None = None,
+        order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
+        sort_order: SortOrder = SortOrder.ASC,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
-        stmt = select(TrackModel).where(TrackModel.user_id == user_id).order_by("created_at")
+        stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
+        # Filtering
+        if is_top is not None:
+            stmt = stmt.where(TrackModel.is_top == is_top)
+        if is_saved is not None:
+            stmt = stmt.where(TrackModel.is_saved == is_saved)
+
+        # Ordering
+        column = getattr(TrackModel, order_by.value, TrackModel.created_at)
+        if order_by == TrackOrderBy.RANDOM:
+            stmt = stmt.order_by(func.random())
+        elif sort_order == SortOrder.DESC:
+            stmt = stmt.order_by(column.desc())
+        else:
+            stmt = stmt.order_by(column.asc())
+
+        # Pagination
         if offset is not None:
             stmt = stmt.offset(offset)
-
         if limit is not None:
             stmt = stmt.limit(limit)
 
