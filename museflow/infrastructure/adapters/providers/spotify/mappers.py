@@ -3,11 +3,13 @@ import uuid
 from slugify import slugify
 
 from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 
@@ -73,4 +75,15 @@ def to_domain_track(
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_track.id,
         artists=[TrackArtist(provider_id=artist.id, name=artist.name) for artist in spotify_track.artists],
+    )
+
+
+def to_domain_playlist(spotify_playlist: SpotifyPlaylist, user_id: uuid.UUID, tracks: list[Track]) -> Playlist:
+    return Playlist(
+        user_id=user_id,
+        name=spotify_playlist.name,
+        slug=slugify(spotify_playlist.name),
+        provider=MusicProvider.SPOTIFY,
+        provider_id=spotify_playlist.id,
+        tracks=tracks,
     )

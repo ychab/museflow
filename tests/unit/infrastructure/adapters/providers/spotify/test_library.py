@@ -7,11 +7,15 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
+from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrackPage
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.config.settings.app import app_settings
 
@@ -190,6 +194,17 @@ class TestSpotifyLibrary:
             },
         ]
         mock_provider_client.make_user_api_call.side_effect = side_effects
+
+    @pytest.fixture
+    def playlist_tracks(self, user: User) -> list[Track]:
+        filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlist_items.json"
+        playlist_tracks_response = json.loads(filepath.read_text())
+        playlist_tracks = SpotifyPlaylistTrackPage.model_validate(playlist_tracks_response)
+
+        return [
+            to_domain_track(SpotifyTrack.model_validate(item.item), user_id=user.id)
+            for item in playlist_tracks.items[:3]
+        ]
 
     @pytest.mark.parametrize("spotify_response", ["top_artists"], indirect=["spotify_response"])
     async def test__get_top_artists__nominal(
@@ -480,3 +495,25 @@ class TestSpotifyLibrary:
         assert "items.0.item.id\n  Input should be a valid string" in caplog.text
         assert "items.0.item.href\n  URL input should be a string or URL" in caplog.text
         assert "items.0.item.artists.0.id\n  Input should be a valid string" in caplog.text
+
+    async def test__create_playlist__nominal(
+        self,
+        user: User,
+        playlist_tracks: list[Track],
+        mock_provider_client: mock.AsyncMock,
+        spotify_library: SpotifyLibraryAdapter,
+    ) -> None:
+        filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlists.json"
+        playlist_data = json.loads(filepath.read_text())["items"][0]
+
+        mock_provider_client.make_user_api_call.side_effect = [playlist_data, {"snapshot_id": "new-snapshot-id"}]
+
+        playlist = await spotify_library.create_playlist(name="Salsa ", tracks=playlist_tracks)
+
+        assert playlist.id is not None
+        assert playlist.user_id == user.id
+        assert playlist.name == "Salsa "
+        assert playlist.slug == "salsa"
+        assert playlist.provider == MusicProvider.SPOTIFY
+        assert playlist.provider_id == "0wKgiV47itigJyxBgFxAu1"
+        assert playlist.tracks == playlist_tracks

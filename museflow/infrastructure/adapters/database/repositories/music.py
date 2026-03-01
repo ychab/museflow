@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.domain.entities.music import Artist
-from museflow.domain.entities.music import BaseMusicItem
+from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Track
 from museflow.domain.ports.repositories.music import ArtistRepository
 from museflow.domain.ports.repositories.music import TrackRepository
@@ -132,7 +132,7 @@ class TrackSQLRepository(TrackRepository):
         return int(result.rowcount)  # type: ignore
 
 
-async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMusicItem](
+async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMediaItem](
     session: AsyncSession,
     sql_model: type[ItemModel],
     items: list[ItemEntity],

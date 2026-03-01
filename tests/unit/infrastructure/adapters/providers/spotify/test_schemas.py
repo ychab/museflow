@@ -17,7 +17,15 @@ from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScop
 
 class TestSpotifyScope:
     def test_required_scopes(self) -> None:
-        assert SpotifyScope.required_scopes() == "user-top-read user-library-read playlist-read-private"
+        assert SpotifyScope.required_scopes() == " ".join(
+            [
+                "user-top-read",
+                "user-library-read",
+                "playlist-read-private",
+                "playlist-modify-public",
+                "playlist-modify-private",
+            ]
+        )
 
 
 class TestSpotifyArtist:

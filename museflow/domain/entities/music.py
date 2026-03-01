@@ -7,24 +7,28 @@ from museflow.domain.types import MusicProvider
 
 
 @dataclass(frozen=True, kw_only=True)
-class BaseMusicItem(ABC):
+class BaseProviderEntity(ABC):
     id: uuid.UUID = field(default_factory=uuid.uuid4)
     user_id: uuid.UUID
 
     name: str
     slug: str
-    popularity: int | None = None
-
-    is_saved: bool = False
-    is_top: bool = False
-    top_position: int | None = None
 
     provider: MusicProvider = MusicProvider.SPOTIFY
     provider_id: str
 
 
 @dataclass(frozen=True, kw_only=True)
-class Artist(BaseMusicItem):
+class BaseMediaItem(BaseProviderEntity):
+    popularity: int | None = None
+
+    is_saved: bool = False
+    is_top: bool = False
+    top_position: int | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class Artist(BaseMediaItem):
     genres: list[str] = field(default_factory=list)
 
 
@@ -41,5 +45,10 @@ class TrackArtist:
 
 
 @dataclass(frozen=True, kw_only=True)
-class Track(BaseMusicItem):
+class Track(BaseMediaItem):
     artists: list[TrackArtist] = field(default_factory=list)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Playlist(BaseProviderEntity):
+    tracks: list[Track]

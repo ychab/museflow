@@ -35,7 +35,9 @@ class SpotifyItem(BaseModel):
 
 
 class SpotifyPlaylist(SpotifyItem):
-    pass
+    snapshot_id: str
+    public: bool
+    collaborative: bool
 
 
 class SpotifyArtist(SpotifyItem):

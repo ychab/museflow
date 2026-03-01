@@ -51,7 +51,7 @@ class TestSpotifyOAuthClientAdapter:
             f"client_id=dummy-client-id"
             f"&response_type=code"
             f"&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
-            f"&scope=user-top-read+user-library-read+playlist-read-private"
+            f"&scope=user-top-read+user-library-read+playlist-read-private+playlist-modify-public+playlist-modify-private"
             f"&state={spotify_token_payload}"
         )
         assert url == HttpUrl(f"{base_url}?{query}")
