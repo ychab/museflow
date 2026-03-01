@@ -1,10 +1,12 @@
 import copy
 import json
 import logging
+import re
 from typing import Any
 from unittest import mock
 
 import pytest
+from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Track
@@ -16,8 +18,6 @@ from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLi
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrackPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
-from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
-from museflow.infrastructure.config.settings.app import app_settings
 
 from tests import ASSETS_DIR
 
@@ -71,40 +71,6 @@ class TestSpotifyLibraryFactory:
 
 class TestSpotifyLibrary:
     @pytest.fixture
-    def patch_max_concurrency(self, monkeypatch: pytest.MonkeyPatch) -> int:
-        max_concurrency: int = 10
-        monkeypatch.setattr(app_settings, "SYNC_SEMAPHORE_MAX_CONCURRENCY", max_concurrency)
-        return max_concurrency
-
-    @pytest.fixture
-    def spotify_session_client(
-        self,
-        user: User,
-        auth_token: OAuthProviderUserToken,
-        mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_client: mock.AsyncMock,
-    ) -> SpotifyOAuthSessionClient:
-        return SpotifyOAuthSessionClient(
-            user=user,
-            auth_token=auth_token,
-            auth_token_repository=mock_auth_token_repository,
-            client=mock_provider_client,
-        )
-
-    @pytest.fixture
-    def spotify_library(
-        self,
-        user: User,
-        spotify_session_client: SpotifyOAuthSessionClient,
-        patch_max_concurrency: int,
-    ) -> SpotifyLibraryAdapter:
-        return SpotifyLibraryAdapter(
-            user=user,
-            session_client=spotify_session_client,
-            max_concurrency=patch_max_concurrency,
-        )
-
-    @pytest.fixture
     def spotify_response(self, request: pytest.FixtureRequest) -> dict[str, Any]:
         filename: str = getattr(request, "param", "top_artists")
         filepath = ASSETS_DIR / "httpmock" / "spotify" / f"{filename}.json"
@@ -116,30 +82,28 @@ class TestSpotifyLibrary:
         request: pytest.FixtureRequest,
         spotify_response: dict[str, Any],
         token_payload: OAuthProviderTokenPayload,
-        mock_provider_client: mock.AsyncMock,
-    ) -> tuple[int, int]:
+    ) -> tuple[list[dict[str, Any]], int, int]:
         params = getattr(request, "param", {})
         total: int = params.get("total", 20)
         limit: int = params.get("limit", 5)
 
-        mock_provider_client.make_user_api_call.side_effect = paginate_response(
+        responses = paginate_response(
             token_payload=token_payload,
             response=spotify_response,
             total=total,
             limit=limit,
         )
 
-        return total, limit
+        return responses, total, limit
 
     @pytest.fixture
     def spotify_response_playlist_items_pages(
         self,
         request: pytest.FixtureRequest,
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
         token_payload: OAuthProviderTokenPayload,
-        mock_provider_client: mock.AsyncMock,
-    ) -> tuple[int, int]:
-        side_effects = list(mock_provider_client.make_user_api_call.side_effect)
+    ) -> tuple[list[dict[str, Any]], int, int]:
+        _, playlist_total, playlist_page_size = spotify_response_pages
 
         params: dict[str, Any] = getattr(request, "param", {})
         has_duplicates = params.get("has_duplicates", False)
@@ -147,16 +111,15 @@ class TestSpotifyLibrary:
         filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlist_items.json"
         spotify_response = json.loads(filepath.read_text())
 
-        playlist_total = spotify_response_pages[0]
-        playlist_limit = spotify_response_pages[1]
-        total: int = playlist_limit * 3
+        total: int = playlist_page_size * 3
         offset: int = 0
+        responses: list[dict[str, Any]] = []
         for _ in range(playlist_total):
-            side_effects += paginate_response(
+            responses += paginate_response(
                 token_payload=token_payload,
                 response=spotify_response,
                 total=total,
-                limit=playlist_limit,
+                limit=playlist_page_size,
                 offset=offset,
                 size=total + offset,
             )
@@ -164,18 +127,14 @@ class TestSpotifyLibrary:
             if not has_duplicates:
                 offset += total
 
-        mock_provider_client.make_user_api_call.side_effect = side_effects
-        return total, playlist_limit
+        return responses, total, playlist_page_size
 
     @pytest.fixture
     def spotify_response_playlist_items_invalid_pages(
         self,
         token_payload: OAuthProviderTokenPayload,
-        mock_provider_client: mock.AsyncMock,
-    ) -> None:
-        side_effects = list(mock_provider_client.make_user_api_call.side_effect)
-
-        side_effects += [
+    ) -> list[dict[str, Any]]:
+        return [
             {
                 "items": [
                     {
@@ -193,7 +152,6 @@ class TestSpotifyLibrary:
                 "total": 1,
             },
         ]
-        mock_provider_client.make_user_api_call.side_effect = side_effects
 
     @pytest.fixture
     def playlist_tracks(self, user: User) -> list[Track]:
@@ -211,9 +169,20 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        top_artists = await spotify_library.get_top_artists(page_size=spotify_response_pages[1])
+        responses, total, page_size = spotify_response_pages
+
+        url_pattern = re.compile(r".*/me/top/artists.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        top_artists = await spotify_library.get_top_artists(page_size=page_size)
         assert len(top_artists) == 20
 
         top_artist_first = top_artists[0]
@@ -245,10 +214,19 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        page_size = spotify_response_pages[1]
+        responses, total, page_size = spotify_response_pages
         max_pages = 1
+
+        url_pattern = re.compile(r".*/me/top/artists.*")
+        for response_json in responses[:max_pages]:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
 
         top_artists = await spotify_library.get_top_artists(page_size=page_size, max_pages=max_pages)
         assert len(top_artists) == page_size * max_pages
@@ -258,9 +236,20 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        top_tracks = await spotify_library.get_top_tracks(page_size=spotify_response_pages[1])
+        responses, total, page_size = spotify_response_pages
+
+        url_pattern = re.compile(r".*/me/top/tracks.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        top_tracks = await spotify_library.get_top_tracks(page_size=page_size)
         assert len(top_tracks) == 20
 
         top_track_first = top_tracks[0]
@@ -296,10 +285,19 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        page_size = spotify_response_pages[1]
+        responses, total, page_size = spotify_response_pages
         max_pages = 1
+
+        url_pattern = re.compile(r".*/me/top/tracks.*")
+        for response_json in responses[:max_pages]:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
 
         top_tracks = await spotify_library.get_top_tracks(page_size=page_size, max_pages=max_pages)
         assert len(top_tracks) == page_size * max_pages
@@ -309,9 +307,20 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        tracks_saved = await spotify_library.get_saved_tracks(page_size=spotify_response_pages[1])
+        responses, total, page_size = spotify_response_pages
+
+        url_pattern = re.compile(r".*/me/tracks.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        tracks_saved = await spotify_library.get_saved_tracks(page_size=page_size)
         assert len(tracks_saved) == 20
 
         track_saved_first = tracks_saved[0]
@@ -347,10 +356,19 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        page_size = spotify_response_pages[1]
+        responses, total, page_size = spotify_response_pages
         max_pages = 1
+
+        url_pattern = re.compile(r".*/me/tracks.*")
+        for response_json in responses[:max_pages]:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
 
         tracks_saved = await spotify_library.get_saved_tracks(page_size=page_size, max_pages=max_pages)
         assert len(tracks_saved) == page_size * max_pages
@@ -364,13 +382,30 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
-        spotify_response_playlist_items_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_response_playlist_items_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        playlist_total = spotify_response_pages[0]
-        playlist_tracks_total = spotify_response_playlist_items_pages[0]
+        responses, playlist_total, playlist_page_size = spotify_response_pages
 
-        tracks = await spotify_library.get_playlist_tracks(page_size=spotify_response_pages[1])
+        url_pattern = re.compile(r".*/me/playlists.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        responses, playlist_tracks_total, page_size = spotify_response_playlist_items_pages
+        url_pattern = re.compile(r".*/playlists/.*/items.*")
+        for response in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response,
+            )
+
+        tracks = await spotify_library.get_playlist_tracks(page_size=playlist_page_size)
         assert len(tracks) == playlist_total * playlist_tracks_total
 
         track_first = tracks[0]
@@ -410,12 +445,30 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
-        spotify_response_playlist_items_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_response_playlist_items_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        playlist_tracks_total = spotify_response_playlist_items_pages[0]
+        responses, playlist_total, playlist_page_size = spotify_response_pages
 
-        tracks = await spotify_library.get_playlist_tracks(page_size=spotify_response_pages[1])
+        url_pattern = re.compile(r".*/me/playlists.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        responses, playlist_tracks_total, page_size = spotify_response_playlist_items_pages
+        url_pattern = re.compile(r".*/playlists/.*/items.*")
+        for response in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response,
+            )
+
+        tracks = await spotify_library.get_playlist_tracks(page_size=playlist_page_size)
         assert len(tracks) == playlist_tracks_total
 
         track_first = tracks[0]
@@ -457,11 +510,29 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
-        spotify_response_playlist_items_pages: tuple[int, int],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_response_playlist_items_pages: tuple[list[dict[str, Any]], int, int],
+        httpx_mock: HTTPXMock,
     ) -> None:
-        page_size = spotify_response_pages[1]
         max_pages = 1
+
+        responses, playlist_total, playlist_page_size = spotify_response_pages
+        url_pattern = re.compile(r".*/me/playlists.*")
+        for response_json in responses[:max_pages]:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        responses, playlist_tracks_total, page_size = spotify_response_playlist_items_pages
+        url_pattern = re.compile(r".*/playlists/.*/items.*")
+        for response in responses[: playlist_total * max_pages]:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response,
+            )
 
         playlist_total = page_size * max_pages
         playlist_tracks_total = page_size * max_pages
@@ -478,11 +549,30 @@ class TestSpotifyLibrary:
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
-        spotify_response_pages: tuple[int, int],
-        spotify_response_playlist_items_invalid_pages: None,
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_response_playlist_items_invalid_pages: list[dict[str, Any]],
+        httpx_mock: HTTPXMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        playlist = spotify_response["items"][0]
+        responses, playlist_total, playlist_page_size = spotify_response_pages
+        playlist = responses[0]["items"][0]
+
+        url_pattern = re.compile(r".*/me/playlists.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        responses = spotify_response_playlist_items_invalid_pages
+        url_pattern = re.compile(r".*/playlists/.*/items.*")
+        for response in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response,
+            )
 
         with caplog.at_level(logging.ERROR):
             tracks = await spotify_library.get_playlist_tracks(page_size=1)
@@ -500,13 +590,25 @@ class TestSpotifyLibrary:
         self,
         user: User,
         playlist_tracks: list[Track],
-        mock_provider_client: mock.AsyncMock,
         spotify_library: SpotifyLibraryAdapter,
+        httpx_mock: HTTPXMock,
     ) -> None:
         filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlists.json"
         playlist_data = json.loads(filepath.read_text())["items"][0]
 
-        mock_provider_client.make_user_api_call.side_effect = [playlist_data, {"snapshot_id": "new-snapshot-id"}]
+        url_pattern = re.compile(r".*/me/playlists.*")
+        httpx_mock.add_response(
+            url=url_pattern,
+            method="POST",
+            json=playlist_data,
+        )
+
+        url_pattern = re.compile(r".*/playlists/.*/items.*")
+        httpx_mock.add_response(
+            url=url_pattern,
+            method="POST",
+            json={"snapshot_id": "new-snapshot-id"},
+        )
 
         playlist = await spotify_library.create_playlist(name="Salsa ", tracks=playlist_tracks)
 

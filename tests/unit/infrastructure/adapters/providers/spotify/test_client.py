@@ -1,15 +1,14 @@
-from collections.abc import AsyncGenerator
 from collections.abc import Iterable
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
 from unittest import mock
+from urllib.parse import parse_qs
 from urllib.parse import urlencode
+from urllib.parse import urlparse
 
 import httpx
 from httpx import codes
-
-from pydantic import HttpUrl
 
 import pytest
 from pytest_httpx import HTTPXMock
@@ -29,32 +28,24 @@ class TestSpotifyOAuthClientAdapter:
         yield
         retry_controller.sleep = original_sleep
 
-    @pytest.fixture
-    async def spotify_client(self) -> AsyncGenerator[SpotifyOAuthClientAdapter]:
-        spotify_client = SpotifyOAuthClientAdapter(
-            client_id="dummy-client-id",
-            client_secret="dummy-client-secret",
-            redirect_uri=HttpUrl("https://example.com/callback"),
-        )
-
-        yield spotify_client
-
-        await spotify_client.close()
-
     def test__get_authorization_url(self, spotify_client: SpotifyOAuthClientAdapter) -> None:
         spotify_token_payload = "dummy-token-payload"
 
         url = spotify_client.get_authorization_url(state=spotify_token_payload)
 
-        base_url = "https://accounts.spotify.com/authorize"
-        query = (
-            f"client_id=dummy-client-id"
-            f"&response_type=code"
-            f"&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
-            f"&scope=user-top-read+user-library-read+playlist-read-private+playlist-modify-public+playlist-modify-private"
-            f"&state={spotify_token_payload}"
-        )
-        assert url == HttpUrl(f"{base_url}?{query}")
+        parsed = urlparse(str(url))
+        query_params = parse_qs(parsed.query)
+
+        assert parsed.scheme == "https"
+        assert parsed.netloc == "accounts.spotify.com"
+        assert parsed.path == "/authorize"
+        assert query_params["client_id"] == ["dummy-client-id"]
+        assert query_params["response_type"] == ["code"]
+        assert query_params["redirect_uri"] == ["http://127.0.0.1:8000/api/v1/spotify/callback"]
+        assert query_params["scope"] == [
+            "user-top-read user-library-read playlist-read-private playlist-modify-public playlist-modify-private"
+        ]
+        assert query_params["state"] == [spotify_token_payload]
 
     async def test__exchange_code_for_token__nominal(
         self,

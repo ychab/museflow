@@ -1,4 +1,7 @@
+from collections.abc import AsyncGenerator
 from unittest import mock
+
+from pydantic import HttpUrl
 
 import pytest
 
@@ -15,6 +18,9 @@ from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -104,4 +110,44 @@ def mock_provider_client(token_payload: OAuthProviderTokenPayload) -> mock.Async
     return mock.AsyncMock(
         spec=ProviderOAuthClientPort,
         refresh_access_token=mock.AsyncMock(return_value=token_payload),
+    )
+
+
+# --- Adapters ---
+
+
+@pytest.fixture
+async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+    async with SpotifyOAuthClientAdapter(
+        client_id="dummy-client-id",
+        client_secret="dummy-client-secret",
+        redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+def spotify_session_client(
+    user: User,
+    auth_token: OAuthProviderUserToken,
+    mock_auth_token_repository: mock.AsyncMock,
+    spotify_client: SpotifyOAuthClientAdapter,
+) -> SpotifyOAuthSessionClient:
+    return SpotifyOAuthSessionClient(
+        user=user,
+        auth_token=auth_token,
+        auth_token_repository=mock_auth_token_repository,
+        client=spotify_client,
+    )
+
+
+@pytest.fixture
+def spotify_library(
+    user: User,
+    spotify_session_client: SpotifyOAuthSessionClient,
+) -> SpotifyLibraryAdapter:
+    return SpotifyLibraryAdapter(
+        user=user,
+        session_client=spotify_session_client,
+        max_concurrency=10,
     )

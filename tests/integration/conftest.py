@@ -304,9 +304,6 @@ def spotify_session_client(
     )
 
 
-# --- Service impl ---
-
-
 @pytest.fixture
 def spotify_library(
     request: pytest.FixtureRequest,

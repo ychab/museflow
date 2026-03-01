@@ -4,7 +4,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## test
 
-- add test spotify library integration with httpx_mock (and not just live + unit)
+- integration: replace httpx_mock by wiremock (docker compose)?
 
 ## doc code
 
