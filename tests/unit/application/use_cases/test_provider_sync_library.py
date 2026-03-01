@@ -1,6 +1,8 @@
+import dataclasses
 import itertools
 import logging
 from typing import Any
+from typing import Final
 from unittest import mock
 
 from httpx import HTTPError
@@ -25,6 +27,17 @@ from museflow.domain.ports.providers.library import ProviderLibraryPort
 from tests.unit.factories.entities.music import ArtistFactory
 from tests.unit.factories.entities.music import TrackFactory
 
+PURGE_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfig) if f.name.startswith("purge_")]
+PURGE_ARGS_COMBINATIONS: Final[list[tuple[dict[str, bool], bool]]] = [({}, False)] + [
+    ({field: True}, True) for field in PURGE_FIELDS
+]
+
+
+SYNC_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfig) if f.name.startswith("sync_")]
+SYNC_ARGS_COMBINATIONS: Final[list[tuple[dict[str, bool], bool]]] = [({}, False)] + [
+    ({field: True}, True) for field in SYNC_FIELDS
+]
+
 
 def validation_error() -> ValidationError:
     """
@@ -48,32 +61,12 @@ def validation_error() -> ValidationError:
 
 
 class TestSyncConfig:
-    @pytest.mark.parametrize(
-        ("attributes", "expected_bool"),
-        [
-            ({}, False),
-            ({"purge_all": True}, True),
-            ({"purge_artist_top": True}, True),
-            ({"purge_track_top": True}, True),
-            ({"purge_track_saved": True}, True),
-            ({"purge_track_playlist": True}, True),
-        ],
-    )
+    @pytest.mark.parametrize(("attributes", "expected_bool"), PURGE_ARGS_COMBINATIONS)
     def test_has_purge(self, attributes: dict[str, Any], expected_bool: bool) -> None:
         config = SyncConfig(**attributes)
         assert config.has_purge() is expected_bool
 
-    @pytest.mark.parametrize(
-        ("attributes", "expected_bool"),
-        [
-            ({}, False),
-            ({"sync_all": True}, True),
-            ({"sync_artist_top": True}, True),
-            ({"sync_track_top": True}, True),
-            ({"sync_track_saved": True}, True),
-            ({"sync_track_playlist": True}, True),
-        ],
-    )
+    @pytest.mark.parametrize(("attributes", "expected_bool"), SYNC_ARGS_COMBINATIONS)
     def test_has_sync(self, attributes: dict[str, Any], expected_bool: bool) -> None:
         config = SyncConfig(**attributes)
         assert config.has_sync() is expected_bool

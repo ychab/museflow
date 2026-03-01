@@ -6,10 +6,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - improve the doc code for tests
 
-## test
-
-- review complex test parametrize to use cartesian instead (multiple parametrize) just like test__get_list__filters
-
 ## Dependencies
 
 - replace poetry by UV?

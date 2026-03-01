@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from itertools import combinations
 from typing import Any
 from typing import Final
 from typing import get_args
@@ -19,6 +20,26 @@ from museflow.infrastructure.entrypoints.cli.main import app
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TIME_RANGE_OPTIONS_OUTPUT: Final[str] = ", ".join([f"'{tr}'" for tr in get_args(SpotifyTimeRange)])
+
+PURGE_FLAGS: Final[list[str]] = [
+    "--purge-all",
+    "--purge-track-top",
+    "--purge-track-saved",
+    "--purge-track-playlist",
+]
+PURGE_ARGS_COMBINATIONS: Final[list[list[str]]] = [
+    list(combo) for r in range(1, len(PURGE_FLAGS) + 1) for combo in combinations(PURGE_FLAGS, r)
+]
+
+SYNC_FLAGS: Final[list[str]] = [
+    "--purge-all",
+    "--purge-track-top",
+    "--purge-track-saved",
+    "--purge-track-playlist",
+]
+SYNC_ARGS_COMBINATIONS: Final[list[list[str]]] = [
+    list(combo) for r in range(1, len(SYNC_FLAGS) + 1) for combo in combinations(SYNC_FLAGS, r)
+]
 
 
 class TestSpotifySyncParserCommand:
@@ -261,26 +282,7 @@ class TestSpotifySyncCommand:
         assert "Synchronization successful in " in output
         assert "Artists purged 330" in output
 
-    @pytest.mark.parametrize(
-        "cmd_args",
-        [
-            ["--purge-all"],
-            ["--purge-track-top"],
-            ["--purge-track-saved"],
-            ["--purge-track-playlist"],
-            ["--purge-all", "--purge-track-top"],
-            ["--purge-all", "--purge-track-saved"],
-            ["--purge-all", "--purge-track-playlist"],
-            ["--purge-track-top", "--purge-track-saved"],
-            ["--purge-track-top", "--purge-track-playlist"],
-            ["--purge-track-saved", "--purge-track-playlist"],
-            ["--purge-all", "--purge-track-top", "--purge-track-saved"],
-            ["--purge-all", "--purge-track-top", "--purge-track-playlist"],
-            ["--purge-all", "--purge-track-saved", "--purge-track-playlist"],
-            ["--purge-track-top", "--purge-track-saved", "--purge-track-playlist"],
-            ["--purge-all", "--purge-track-top", "--purge-track-saved", "--purge-track-playlist"],
-        ],
-    )
+    @pytest.mark.parametrize("cmd_args", PURGE_ARGS_COMBINATIONS)
     def test__output__purge_tracks(
         self,
         cmd_args: list[str],
@@ -325,26 +327,7 @@ class TestSpotifySyncCommand:
         assert "Artists created 100" in output
         assert "Artists updated 250" in output
 
-    @pytest.mark.parametrize(
-        "cmd_args",
-        [
-            ["--sync-all"],
-            ["--sync-track-top"],
-            ["--sync-track-saved"],
-            ["--sync-track-playlist"],
-            ["--sync-all", "--sync-track-top"],
-            ["--sync-all", "--sync-track-saved"],
-            ["--sync-all", "--sync-track-playlist"],
-            ["--sync-track-top", "--sync-track-saved"],
-            ["--sync-track-top", "--sync-track-playlist"],
-            ["--sync-track-saved", "--sync-track-playlist"],
-            ["--sync-all", "--sync-track-top", "--sync-track-saved"],
-            ["--sync-all", "--sync-track-top", "--sync-track-playlist"],
-            ["--sync-all", "--sync-track-saved", "--sync-track-playlist"],
-            ["--sync-track-top", "--sync-track-saved", "--sync-track-playlist"],
-            ["--sync-all", "--sync-track-top", "--sync-track-saved", "--sync-track-playlist"],
-        ],
-    )
+    @pytest.mark.parametrize("cmd_args", SYNC_ARGS_COMBINATIONS)
     def test__output__sync_tracks(
         self,
         cmd_args: list[str],
