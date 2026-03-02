@@ -11,6 +11,7 @@ from pytest_httpx import HTTPXMock
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -111,7 +112,7 @@ class TestSpotifyLibrary:
         filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlist_items.json"
         spotify_response = json.loads(filepath.read_text())
 
-        total: int = playlist_page_size * 3
+        total: int = params.get("total", playlist_page_size * 3)
         offset: int = 0
         responses: list[dict[str, Any]] = []
         for _ in range(playlist_total):
@@ -130,28 +131,15 @@ class TestSpotifyLibrary:
         return responses, total, playlist_page_size
 
     @pytest.fixture
-    def spotify_response_playlist_items_invalid_pages(
-        self,
-        token_payload: OAuthProviderTokenPayload,
-    ) -> list[dict[str, Any]]:
-        return [
-            {
-                "items": [
-                    {
-                        "item": {
-                            "artists": [{"id": None, "name": ""}],
-                            "href": None,
-                            "id": None,
-                            "name": "my-custom-track-which-dont-exists-on-spotify-db",
-                            "popularity": 0,
-                        },
-                    },
-                ],
-                "limit": 50,
-                "offset": 0,
-                "total": 1,
-            },
-        ]
+    def spotify_track_local_response(self) -> dict[str, Any]:
+        return {
+            "artists": [{"id": None, "name": ""}],
+            "href": None,
+            "id": None,
+            "name": "my-custom-track-which-dont-exists-on-spotify-db",
+            "popularity": 0,
+            "is_local": True,
+        }
 
     @pytest.fixture
     def playlist_tracks(self, user: User) -> list[Track]:
@@ -302,6 +290,36 @@ class TestSpotifyLibrary:
         top_tracks = await spotify_library.get_top_tracks(page_size=page_size, max_pages=max_pages)
         assert len(top_tracks) == page_size * max_pages
 
+    @pytest.mark.parametrize(
+        ("spotify_response", "spotify_response_pages"),
+        [("top_tracks", {"total": 3, "limit": 3})],
+        indirect=["spotify_response", "spotify_response_pages"],
+    )
+    async def test__get_top_tracks__local_files(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_track_local_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        responses, total, page_size = spotify_response_pages
+
+        for response_page in responses:
+            response_page["items"][0] = spotify_track_local_response
+
+        url_pattern = re.compile(r".*/me/top/tracks.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        with pytest.raises(ProviderPageValidationError, match="Unsupported local files") as exc_info:
+            await spotify_library.get_top_tracks(page_size=page_size)
+        assert exc_info.value.code == "unsupported_local_files"
+
     @pytest.mark.parametrize("spotify_response", ["saved_tracks"], indirect=["spotify_response"])
     async def test__get_saved_tracks__nominal(
         self,
@@ -375,6 +393,36 @@ class TestSpotifyLibrary:
 
     @pytest.mark.parametrize(
         ("spotify_response", "spotify_response_pages"),
+        [("saved_tracks", {"total": 3, "limit": 3})],
+        indirect=["spotify_response", "spotify_response_pages"],
+    )
+    async def test__get_saved_tracks__local_files(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_response: dict[str, Any],
+        spotify_response_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_track_local_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        responses, total, page_size = spotify_response_pages
+
+        for response_page in responses:
+            response_page["items"][0]["track"] = spotify_track_local_response
+
+        url_pattern = re.compile(r".*/me/tracks.*")
+        for response_json in responses:
+            httpx_mock.add_response(
+                url=url_pattern,
+                method="GET",
+                json=response_json,
+            )
+
+        with pytest.raises(ProviderPageValidationError, match="Unsupported local files") as exc_info:
+            await spotify_library.get_saved_tracks(page_size=page_size)
+        assert exc_info.value.code == "unsupported_local_files"
+
+    @pytest.mark.parametrize(
+        ("spotify_response", "spotify_response_pages"),
         [("playlists", {"total": 4, "limit": 2})],
         indirect=["spotify_response", "spotify_response_pages"],
     )
@@ -426,7 +474,7 @@ class TestSpotifyLibrary:
         assert track_last.id is not None
         assert track_last.user_id == spotify_library.user.id
         assert track_last.name == "Con la Punta del Pie"
-        assert track_last.popularity == 56
+        assert track_last.popularity == 55
         assert track_last.is_saved is False
         assert track_last.is_top is False
         assert track_last.top_position is None
@@ -541,16 +589,17 @@ class TestSpotifyLibrary:
         assert len(tracks) == playlist_total * playlist_tracks_total
 
     @pytest.mark.parametrize(
-        ("spotify_response", "spotify_response_pages"),
-        [("playlists", {"total": 1, "limit": 1})],
-        indirect=["spotify_response", "spotify_response_pages"],
+        ("spotify_response", "spotify_response_pages", "spotify_response_playlist_items_pages"),
+        [("playlists", {"total": 2, "limit": 2}, {"total": 2})],
+        indirect=["spotify_response", "spotify_response_pages", "spotify_response_playlist_items_pages"],
     )
-    async def test__get_playlist_tracks__page_validation_error(
+    async def test__get_playlist_tracks__local_files(
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_response: dict[str, Any],
         spotify_response_pages: tuple[list[dict[str, Any]], int, int],
-        spotify_response_playlist_items_invalid_pages: list[dict[str, Any]],
+        spotify_response_playlist_items_pages: tuple[list[dict[str, Any]], int, int],
+        spotify_track_local_response: dict[str, Any],
         httpx_mock: HTTPXMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -565,7 +614,11 @@ class TestSpotifyLibrary:
                 json=response_json,
             )
 
-        responses = spotify_response_playlist_items_invalid_pages
+        responses, playlist_tracks_total, page_size = spotify_response_playlist_items_pages
+
+        for response_page in responses:
+            response_page["items"][0]["item"] = spotify_track_local_response
+
         url_pattern = re.compile(r".*/playlists/.*/items.*")
         for response in responses:
             httpx_mock.add_response(
@@ -575,16 +628,10 @@ class TestSpotifyLibrary:
             )
 
         with caplog.at_level(logging.ERROR):
-            tracks = await spotify_library.get_playlist_tracks(page_size=1)
-        assert len(tracks) == 0
+            await spotify_library.get_playlist_tracks(page_size=page_size)
 
-        prefix_log = f"[PlaylistTracks({playlist['name']})]"
-        exc_msg = f"{prefix_log} - Page validation error on /playlists/{playlist['id']}/items (offset: 0): "
-        assert f"Skip playlist {playlist['name'].strip()} with error: {exc_msg}" in caplog.text
-        assert "3 validation errors for SpotifyPlaylistTrackPage" in caplog.text
-        assert "items.0.item.id\n  Input should be a valid string" in caplog.text
-        assert "items.0.item.href\n  URL input should be a string or URL" in caplog.text
-        assert "items.0.item.artists.0.id\n  Input should be a valid string" in caplog.text
+        assert f"Skip playlist {playlist['name'].strip()} with error" in caplog.text
+        assert "Unsupported local files" in caplog.text
 
     async def test__create_playlist__nominal(
         self,

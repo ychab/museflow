@@ -28,6 +28,7 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifySa
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTopArtistPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTopTrackPage
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.config.settings.app import app_settings
 
@@ -207,7 +208,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 page_model=SpotifyPlaylistTrackPage,
                 page_processor=self._extract_playlist_tracks,
                 params={
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,artists(id,name)))",
+                    "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
                     "additional_types": "track",
                 },
                 page_size=page_size,
@@ -215,8 +216,8 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 prefix_log=f"[PlaylistTracks({playlist.name})]",
             )
         except ProviderPageValidationError as e:
-            # Some playlist pages can return invalid data, like missing ID's.
-            # Indeed, it could happen when manually uploading custom tracks not known by Spotify.
+            # Some playlist pages can return invalid data, like missing ID's due to local files.
+            # Anyway, we don't want to break the entire loop of playlists so we catch it here.
             logger.error(f"Skip playlist {playlist.name.strip()} with error: {e}")
 
         return tracks
@@ -258,8 +259,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             try:
                 page = page_model.model_validate(data)
             except ValidationError as e:
+                has_local_files = any([error["type"] == LocalUnsupported for error in e.errors()])
+                exc_msg = "Unsupported local files" if has_local_files else str(e)
+
                 raise ProviderPageValidationError(
-                    f"{prefix_log} - Page validation error on {endpoint} (offset: {offset}): {e}"
+                    msg=f"{prefix_log} - Page validation error on {endpoint} (offset: {offset}): {exc_msg}",
+                    code="unsupported_local_files" if has_local_files else None,
                 ) from e
 
             items += page_processor(page, offset)

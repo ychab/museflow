@@ -1,3 +1,8 @@
+from typing import Literal
+
+ProviderPageErrorCodes = Literal["unsupported_local_files"]
+
+
 class UserNotFound(Exception): ...
 
 
@@ -19,4 +24,7 @@ class ProviderAuthTokenNotFoundError(Exception): ...
 class ProviderExchangeCodeError(Exception): ...
 
 
-class ProviderPageValidationError(Exception): ...
+class ProviderPageValidationError(Exception):
+    def __init__(self, msg: str, code: ProviderPageErrorCodes | None = None) -> None:
+        self.code = code
+        super().__init__(msg)

@@ -3,6 +3,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from typing import Annotated
+from typing import Any
 
 from pydantic import AwareDatetime
 from pydantic import BaseModel
@@ -10,6 +11,11 @@ from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import NonNegativeInt
 from pydantic import computed_field
+from pydantic import model_validator
+
+from pydantic_core import PydanticCustomError
+
+from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
 
 
 class SpotifyToken(BaseModel):
@@ -47,7 +53,18 @@ class SpotifyArtist(SpotifyItem):
 
 class SpotifyTrack(SpotifyItem):
     popularity: int = Field(..., ge=0, le=100)
+    is_local: bool
     artists: list[SpotifyTrackArtist]
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_is_local(cls, data: Any) -> Any:
+        if isinstance(data, dict) and data.get("is_local") is True:
+            raise PydanticCustomError(
+                LocalUnsupported,
+                "Unsupported local file",
+            )
+        return data
 
 
 class SpotifySavedTrack(BaseModel):

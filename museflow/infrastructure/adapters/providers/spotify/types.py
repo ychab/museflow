@@ -1,7 +1,11 @@
 from enum import StrEnum
+from typing import Final
 from typing import Literal
+from typing import LiteralString
 
 SpotifyTimeRange = Literal["short_term", "medium_term", "long_term"]
+
+LocalUnsupported: Final[LiteralString] = "local_unsupported"
 
 
 class SpotifyScope(StrEnum):

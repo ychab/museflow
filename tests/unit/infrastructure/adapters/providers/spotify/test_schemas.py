@@ -12,6 +12,7 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyAr
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrackArtist
+from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScope
 
 
@@ -81,6 +82,7 @@ class TestSpotifyTrack:
                 name="Yé hô",
                 href=HttpUrl("https://spotify.com/foo"),
                 popularity=50,
+                is_local=False,
                 artists=[SpotifyTrackArtist(id="foo", name="foo")],
             )
         assert "1 validation error for SpotifyTrack\nid" in str(exc_info.value)
@@ -93,6 +95,7 @@ class TestSpotifyTrack:
                 name="".join(["a" for _ in range(256)]),
                 href=HttpUrl("https://spotify.com/foo"),
                 popularity=50,
+                is_local=False,
                 artists=[SpotifyTrackArtist(id="foo", name="foo")],
             )
         assert "1 validation error for SpotifyTrack\nname" in str(exc_info.value)
@@ -112,10 +115,25 @@ class TestSpotifyTrack:
                 name="Yé hô",
                 href=HttpUrl("https://spotify.com/foo"),
                 popularity=popularity,
+                is_local=False,
                 artists=[SpotifyTrackArtist(id="foo", name="foo")],
             )
         assert "1 validation error for SpotifyTrack\npopularity" in str(exc_info.value)
         assert expected_msg in str(exc_info.value)
+
+    def test__is_local__validation_error(self, user: User) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            SpotifyTrack(
+                id="foo",
+                name="Yé hô",
+                href=HttpUrl("https://spotify.com/foo"),
+                popularity=50,
+                is_local=True,
+                artists=[SpotifyTrackArtist(id="foo", name="foo")],
+            )
+        assert exc_info.value.errors()[0]["type"] == LocalUnsupported
+        assert "1 validation error for SpotifyTrack" in str(exc_info.value)
+        assert "Unsupported local file" in str(exc_info.value)
 
 
 class TestSpotifyToken:
