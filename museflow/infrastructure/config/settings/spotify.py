@@ -18,6 +18,10 @@ class SpotifySettings(BaseSettings):
     CLIENT_ID: str
     CLIENT_SECRET: str
 
+    BASE_URL: HttpUrl = Field(default=HttpUrl("https://api.spotify.com/v1"))
+    AUTH_ENDPOINT: HttpUrl = Field(default=HttpUrl("https://accounts.spotify.com/authorize"))
+    TOKEN_ENDPOINT: HttpUrl = Field(default=HttpUrl("https://accounts.spotify.com/api/token"))
+
     REDIRECT_URI: HttpUrl = Field(default=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"))
 
     HTTP_TIMEOUT: float = 30.0

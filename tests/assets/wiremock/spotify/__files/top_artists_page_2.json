@@ -1,0 +1,188 @@
+{
+  "items": [
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/54kCbQZaZWHnwwj9VP2hn4"
+      },
+      "followers": {
+        "href": null,
+        "total": 2581070
+      },
+      "genres": [
+        "rap français",
+        "r&b français"
+      ],
+      "href": "https://api.spotify.com/v1/artists/54kCbQZaZWHnwwj9VP2hn4",
+      "id": "54kCbQZaZWHnwwj9VP2hn4",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebbceb0b4fabbf8639d20ffc42",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174bceb0b4fabbf8639d20ffc42",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178bceb0b4fabbf8639d20ffc42",
+          "width": 160
+        }
+      ],
+      "name": "Zola",
+      "popularity": 61,
+      "type": "artist",
+      "uri": "spotify:artist:54kCbQZaZWHnwwj9VP2hn4"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/0QcZD8V0Ug1KINWBSyG0dB"
+      },
+      "followers": {
+        "href": null,
+        "total": 249968
+      },
+      "genres": [
+        "rap français"
+      ],
+      "href": "https://api.spotify.com/v1/artists/0QcZD8V0Ug1KINWBSyG0dB",
+      "id": "0QcZD8V0Ug1KINWBSyG0dB",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2d14e35f8f24c9a3fbb37c46",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051742d14e35f8f24c9a3fbb37c46",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1782d14e35f8f24c9a3fbb37c46",
+          "width": 160
+        }
+      ],
+      "name": "Alkpote",
+      "popularity": 51,
+      "type": "artist",
+      "uri": "spotify:artist:0QcZD8V0Ug1KINWBSyG0dB"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/3DCWeG2J1fZeu0Oe6i5Q6m"
+      },
+      "followers": {
+        "href": null,
+        "total": 2555604
+      },
+      "genres": [
+        "rap français",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/3DCWeG2J1fZeu0Oe6i5Q6m",
+      "id": "3DCWeG2J1fZeu0Oe6i5Q6m",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebc0b860256b49e3f681d491eb",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174c0b860256b49e3f681d491eb",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178c0b860256b49e3f681d491eb",
+          "width": 160
+        }
+      ],
+      "name": "PLK",
+      "popularity": 72,
+      "type": "artist",
+      "uri": "spotify:artist:3DCWeG2J1fZeu0Oe6i5Q6m"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/1mMUzAMrNqoTHgtxA0dZi6"
+      },
+      "followers": {
+        "href": null,
+        "total": 345745
+      },
+      "genres": [
+        "rap français"
+      ],
+      "href": "https://api.spotify.com/v1/artists/1mMUzAMrNqoTHgtxA0dZi6",
+      "id": "1mMUzAMrNqoTHgtxA0dZi6",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebbc17ac2f9ed41684682ac6d1",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174bc17ac2f9ed41684682ac6d1",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178bc17ac2f9ed41684682ac6d1",
+          "width": 160
+        }
+      ],
+      "name": "Caballero & JeanJass",
+      "popularity": 50,
+      "type": "artist",
+      "uri": "spotify:artist:1mMUzAMrNqoTHgtxA0dZi6"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2kXKa3aAFngGz2P4GjG5w2"
+      },
+      "followers": {
+        "href": null,
+        "total": 2842499
+      },
+      "genres": [
+        "rap français",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2kXKa3aAFngGz2P4GjG5w2",
+      "id": "2kXKa3aAFngGz2P4GjG5w2",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4ed985f33e971801dae4e24d",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744ed985f33e971801dae4e24d",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784ed985f33e971801dae4e24d",
+          "width": 160
+        }
+      ],
+      "name": "SCH",
+      "popularity": 70,
+      "type": "artist",
+      "uri": "spotify:artist:2kXKa3aAFngGz2P4GjG5w2"
+    }
+  ],
+  "total": 15,
+  "limit": 5,
+  "offset": 5,
+  "href": "https://api.spotify.com/v1/me/top/artists?offset=5&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "next": "https://api.spotify.com/v1/me/top/artists?offset=10&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "previous": "https://api.spotify.com/v1/me/top/artists?offset=0&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5"
+}

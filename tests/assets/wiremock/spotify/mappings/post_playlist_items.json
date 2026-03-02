@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/playlists/5ta70oLZcXLReU7bEEXQXy/items"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "playlist_items_added.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

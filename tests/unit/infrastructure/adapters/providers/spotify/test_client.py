@@ -154,7 +154,7 @@ class TestSpotifyOAuthClientAdapter:
         response_json: dict[str, Any] = {"succeed": True}
 
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method=method.upper(),
             match_headers={
                 "Authorization": f"{token_payload.token_type} {token_payload.access_token}",
@@ -192,7 +192,7 @@ class TestSpotifyOAuthClientAdapter:
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.UNAUTHORIZED,
         )
@@ -212,7 +212,7 @@ class TestSpotifyOAuthClientAdapter:
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.NOT_FOUND,
         )
@@ -250,17 +250,17 @@ class TestSpotifyOAuthClientAdapter:
         mock_tenacity_sleep: None,
     ) -> None:
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.INTERNAL_SERVER_ERROR,  # 500
         )
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.SERVICE_UNAVAILABLE,  # 503
         )
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.OK,  # 200
             json={"success": True},
@@ -283,7 +283,7 @@ class TestSpotifyOAuthClientAdapter:
     ) -> None:
         httpx_mock.add_exception(httpx.ConnectError("Network down"))
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.OK,
             json={"success": True},
@@ -306,7 +306,7 @@ class TestSpotifyOAuthClientAdapter:
     ) -> None:
         for _ in range(5):
             httpx_mock.add_response(
-                url=f"{spotify_client.BASE_URL}/foo/bar",
+                url=f"{spotify_client.base_url}/foo/bar",
                 method="GET",
                 status_code=codes.INTERNAL_SERVER_ERROR,
             )
@@ -333,13 +333,13 @@ class TestSpotifyOAuthClientAdapter:
         expected_wait: int = retry_after + 1  # Slept for 1 + 1 = 2 seconds
 
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.TOO_MANY_REQUESTS,
             headers={"Retry-After": f"{retry_after}"},
         )
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.OK,
             json={"success": True},
@@ -365,12 +365,12 @@ class TestSpotifyOAuthClientAdapter:
         mock_tenacity_sleep: None,
     ) -> None:
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.TOO_MANY_REQUESTS,
         )
         httpx_mock.add_response(
-            url=f"{spotify_client.BASE_URL}/foo/bar",
+            url=f"{spotify_client.base_url}/foo/bar",
             method="GET",
             status_code=codes.OK,
             json={"success": True},

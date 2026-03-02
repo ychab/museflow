@@ -33,6 +33,7 @@ pytest-reverse = "^1.9.0"
 coverage = {version = ">=7.2", extras = ["toml"]}
 polyfactory = "^3.2.0"
 time-machine = "^3.2.0"
+wiremock = "^2.7.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -112,6 +113,10 @@ python_version = "3.13"
 files = ["museflow", "tests"]
 plugins = "pydantic.mypy"
 
+[[tool.mypy.overrides]]
+module = "wiremock.*"
+ignore_missing_imports = true
+
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     # Used as a driver for SQLAlchemy.
@@ -149,6 +154,9 @@ env = [
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
     'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
     'D:SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+    # Wiremock settings (could be overriden)
+    'D:WIREMOCK_SPOTIFY_ADMIN_URL=http://localhost:8081',
+    'D:WIREMOCK_SPOTIFY_BASE_URL=https://localhost:8444',
 ]
 filterwarnings = [
     "always",  # Equivalent to -W always

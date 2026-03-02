@@ -2,9 +2,9 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## test
+## direnv
 
-- integration: replace httpx_mock by wiremock (docker compose)?
+- add support?
 
 ## doc code
 
@@ -13,6 +13,9 @@ This quick and dirty document just list the roadmap tasks.
 ## Dependencies
 
 - replace poetry by UV?
+    => review pyproject.toml
+    => review Makefile
+    => Dockerfile
 
 ## Entities/ models Music
 

@@ -11,15 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.domain.entities.user import User
-from museflow.domain.ports.providers.client import ProviderOAuthClientPort
 from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.api.main import app
-
-from tests.integration.factories.models.user import UserModelFactory
 
 
 @pytest.fixture(name="mock_api_logger")
@@ -32,17 +29,6 @@ def block_api_logging_reconfiguration() -> Iterator[mock.Mock]:
 @pytest.fixture
 async def mock_db_session() -> AsyncMock:
     return AsyncMock(spec=AsyncSession)
-
-
-@pytest.fixture
-async def mock_spotify_client() -> AsyncMock:
-    return AsyncMock(spec=ProviderOAuthClientPort)
-
-
-@pytest.fixture
-async def user(request: pytest.FixtureRequest) -> User:
-    user_db = await UserModelFactory.create_async(**getattr(request, "param", {}))
-    return user_db.to_entity()
 
 
 @pytest.fixture
@@ -60,9 +46,9 @@ async def async_client(
     AsyncClient with optional authentication.
 
     IMPORTANT: Place fixtures dependencies first:
-        async def test_XXX(user, access_token, mock_spotify_client, async_client):
+        async def test_XXX(user, access_token, spotify_client, async_client):
     NOT: async_client BEFORE:
-        async def test_XXX(async_client, user, access_token, mock_spotify_client):
+        async def test_XXX(async_client, user, access_token, spotify_client):
 
     Usage:
         # Anonymous
@@ -72,7 +58,7 @@ async def async_client(
         async def test_protected(access_token, async_client): ...
 
         # Authenticated with spotify_mock (note the order!)
-        async def test_protected(access_token, mock_spotify_client, async_client): ...
+        async def test_protected(access_token, spotify_client, async_client): ...
 
         etc.
     """
@@ -93,9 +79,9 @@ async def async_client(
         app.dependency_overrides[get_db] = override_get_db
 
     # Override Spotify client if fixture is used
-    if "mock_spotify_client" in request.fixturenames:
-        mock_client = request.getfixturevalue("mock_spotify_client")
-        app.dependency_overrides[get_spotify_client] = lambda: mock_client
+    if "spotify_client" in request.fixturenames:
+        spotify_client_fixture = request.getfixturevalue("spotify_client")
+        app.dependency_overrides[get_spotify_client] = lambda: spotify_client_fixture
 
     # Override security password hasher ports
     if "password_hasher" in request.fixturenames:

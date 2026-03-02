@@ -1,0 +1,60 @@
+{
+  "href": "https://api.spotify.com/v1/users/yannick.chabbert/playlists?offset=0&limit=1&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "limit": 1,
+  "next": "https://api.spotify.com/v1/users/yannick.chabbert/playlists?offset=1&limit=1&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "offset": 0,
+  "previous": null,
+  "total": 2,
+  "items": [
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/0wKgiV47itigJyxBgFxAu1"
+      },
+      "href": "https://api.spotify.com/v1/playlists/0wKgiV47itigJyxBgFxAu1",
+      "id": "0wKgiV47itigJyxBgFxAu1",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0225fa3658db77c1253651a84dab67616d00001e02858794a4e292dedf24136160ab67616d00001e02a5f7b2772304b04928c4d851ab67616d00001e02d7d64e79cfdf01d037efd0e9",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0225fa3658db77c1253651a84dab67616d00001e02858794a4e292dedf24136160ab67616d00001e02a5f7b2772304b04928c4d851ab67616d00001e02d7d64e79cfdf01d037efd0e9",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0225fa3658db77c1253651a84dab67616d00001e02858794a4e292dedf24136160ab67616d00001e02a5f7b2772304b04928c4d851ab67616d00001e02d7d64e79cfdf01d037efd0e9",
+          "width": 60
+        }
+      ],
+      "name": "Salsa ",
+      "owner": {
+        "display_name": "alex@",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/alexandra8828"
+        },
+        "href": "https://api.spotify.com/v1/users/alexandra8828",
+        "id": "alexandra8828",
+        "type": "user",
+        "uri": "spotify:user:alexandra8828"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAt5I9LhS2xFYsvxEHDdk63iK2f83x",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/0wKgiV47itigJyxBgFxAu1/tracks",
+        "total": 180
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/0wKgiV47itigJyxBgFxAu1/items",
+        "total": 180
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:0wKgiV47itigJyxBgFxAu1"
+    }
+  ]
+}

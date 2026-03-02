@@ -2,20 +2,19 @@ from datetime import datetime
 from datetime import timedelta
 from unittest import mock
 
-from httpx import codes
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
+from tests.integration.utils.wiremock import WireMockContext
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
 
@@ -38,26 +37,29 @@ class TestSpotifyOAuthSessionClient:
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        httpx_mock.add_response(
-            url=str(spotify_session_client.client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json={
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
                 "token_type": token_payload.token_type,
                 "access_token": token_payload.access_token,
                 "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
-        httpx_mock.add_response(
-            url=f"{spotify_session_client.client.base_url}/test",
+        spotify_wiremock.create_mapping(
             method="GET",
-            json={},
+            url_path="/test",
+            status=200,
+            json_body={},
         )
         spotify_session_client.auth_token = auth_token_expired
 
@@ -87,32 +89,40 @@ class TestSpotifyOAuthSessionClient:
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
+        spotify_client: SpotifyOAuthClientAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
         # Mock: First call fails (401), second call refresh succeeds, Second call succeeds
-        httpx_mock.add_response(
-            url=f"{spotify_session_client.client.base_url}/test",
+        spotify_wiremock.create_mapping(
             method="GET",
-            status_code=codes.UNAUTHORIZED,
+            url_path="/test",
+            status=401,
+            scenario_name="reactive_refresh",
+            required_state="Started",
+            new_state="Authorized",
         )
-        httpx_mock.add_response(
-            url=str(spotify_session_client.client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json={
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
                 "token_type": token_payload.token_type,
                 "access_token": token_payload.access_token,
                 "refresh_token": token_payload.refresh_token,
                 "expires_in": 3600,
             },
         )
-        httpx_mock.add_response(
-            url=f"{spotify_session_client.client.base_url}/test",
+        spotify_wiremock.create_mapping(
             method="GET",
-            json={},
+            url_path="/test",
+            status=200,
+            scenario_name="reactive_refresh",
+            required_state="Authorized",
+            json_body={},
         )
 
         await spotify_session_client.execute("GET", "/test")

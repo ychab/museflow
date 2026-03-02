@@ -1,0 +1,60 @@
+{
+  "href": "https://api.spotify.com/v1/users/yannick.chabbert/playlists?offset=1&limit=1&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "limit": 1,
+  "next": "https://api.spotify.com/v1/users/yannick.chabbert/playlists?offset=2&limit=1&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "offset": 1,
+  "previous": "https://api.spotify.com/v1/users/yannick.chabbert/playlists?offset=0&limit=1&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "total": 2,
+  "items": [
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/1xnKqEZDpMWvrts4M9I9GC"
+      },
+      "href": "https://api.spotify.com/v1/playlists/1xnKqEZDpMWvrts4M9I9GC",
+      "id": "1xnKqEZDpMWvrts4M9I9GC",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e02144e0de96b81bf167b23c536ab67616d00001e0285141f12480a9725b80c1c72ab67616d00001e02a5b741e167ba462c7a10f513ab67616d00001e02b72a5c0be578ad5b229bf0c2",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e02144e0de96b81bf167b23c536ab67616d00001e0285141f12480a9725b80c1c72ab67616d00001e02a5b741e167ba462c7a10f513ab67616d00001e02b72a5c0be578ad5b229bf0c2",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e02144e0de96b81bf167b23c536ab67616d00001e0285141f12480a9725b80c1c72ab67616d00001e02a5b741e167ba462c7a10f513ab67616d00001e02b72a5c0be578ad5b229bf0c2",
+          "width": 60
+        }
+      ],
+      "name": "Rap FR latino",
+      "owner": {
+        "display_name": "yannick.chabbert",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/yannick.chabbert"
+        },
+        "href": "https://api.spotify.com/v1/users/yannick.chabbert",
+        "id": "yannick.chabbert",
+        "type": "user",
+        "uri": "spotify:user:yannick.chabbert"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAKqcn1hINcG75Rlvl/TTDQ7RmnTFB",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/1xnKqEZDpMWvrts4M9I9GC/tracks",
+        "total": 40
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/1xnKqEZDpMWvrts4M9I9GC/items",
+        "total": 40
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:1xnKqEZDpMWvrts4M9I9GC"
+    }
+  ]
+}

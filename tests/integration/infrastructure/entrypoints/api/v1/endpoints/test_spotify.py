@@ -1,6 +1,5 @@
 from datetime import datetime
 from datetime import timedelta
-from typing import Any
 from unittest import mock
 
 from fastapi import status
@@ -10,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -20,6 +18,8 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.entrypoints.api.main import app
+
+from tests.integration.utils.wiremock import WireMockContext
 
 
 class TestSpotifyConnect:
@@ -58,18 +58,18 @@ class TestSpotifyCallback:
         auth_state: OAuthProviderState,
         spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        response_json: dict[str, Any] = {
-            "token_type": "Bearer",
-            "access_token": "dummy-access-token",
-            "refresh_token": "dummy-refresh-token",
-            "expires_in": 3600,
-        }
-        httpx_mock.add_response(
-            url=str(spotify_client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json=response_json,
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
+                "token_type": "Bearer",
+                "access_token": "dummy-access-token",
+                "refresh_token": "dummy-refresh-token",
+                "expires_in": 3600,
+            },
         )
 
         url = app.url_path_for("spotify_callback")
@@ -115,18 +115,18 @@ class TestSpotifyCallback:
         auth_token: OAuthProviderUserToken,
         spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        response_json: dict[str, Any] = {
-            "token_type": "Bearer",
-            "access_token": "dummy-access-token",
-            "refresh_token": "dummy-refresh-token",
-            "expires_in": 3600,
-        }
-        httpx_mock.add_response(
-            url=str(spotify_client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json=response_json,
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
+                "token_type": "Bearer",
+                "access_token": "dummy-access-token",
+                "refresh_token": "dummy-refresh-token",
+                "expires_in": 3600,
+            },
         )
 
         url = app.url_path_for("spotify_callback")
@@ -198,10 +198,15 @@ class TestSpotifyCallback:
         self,
         user: User,
         auth_state: OAuthProviderState,
-        mock_spotify_client: mock.AsyncMock,
+        spotify_client: mock.AsyncMock,
         async_client: AsyncClient,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        mock_spotify_client.exchange_code_for_token.side_effect = Exception("Boom")
+        spotify_wiremock.create_mapping(
+            method="POST",
+            url_path=spotify_client.token_endpoint.path or "",
+            status=500,
+        )
 
         url = app.url_path_for("spotify_callback")
         response = await async_client.get(url, params={"state": auth_state.state, "code": "my_secret_code"})

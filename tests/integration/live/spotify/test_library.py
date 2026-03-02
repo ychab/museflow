@@ -12,7 +12,7 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrackPage
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTopTrackPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
@@ -86,14 +86,13 @@ class TestSpotifyLibraryLive:
         return SpotifyLibraryAdapter(user=user, session_client=spotify_session_live)
 
     @pytest.fixture
-    def playlist_tracks(self, user: User) -> list[Track]:
-        filepath = ASSETS_DIR / "httpmock" / "spotify" / "playlist_items.json"
-        playlist_tracks_response = json.loads(filepath.read_text())
-        playlist_tracks = SpotifyPlaylistTrackPage.model_validate(playlist_tracks_response)
+    def tracks(self, user: User) -> list[Track]:
+        filepath = ASSETS_DIR / "wiremock" / "spotify" / "__files" / "top_tracks_page_1.json"
+        top_tracks_response = json.loads(filepath.read_text())
+        top_track_page = SpotifyTopTrackPage.model_validate(top_tracks_response)
 
         return [
-            to_domain_track(SpotifyTrack.model_validate(item.item), user_id=user.id)
-            for item in playlist_tracks.items[:3]
+            to_domain_track(SpotifyTrack.model_validate(item), user_id=user.id) for item in top_track_page.items[:3]
         ]
 
     async def test_top_artists(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
@@ -115,11 +114,11 @@ class TestSpotifyLibraryLive:
     async def test_playlist_create(
         self,
         spotify_library_live: SpotifyLibraryAdapter,
-        playlist_tracks: list[Track],
+        tracks: list[Track],
     ) -> None:
         playlist = await spotify_library_live.create_playlist(
             name=f"[{__project_name__}] - LIVE INTEGRATION TEST",
-            tracks=playlist_tracks,
+            tracks=tracks,
         )
         assert playlist.id is not None
         assert playlist.provider == MusicProvider.SPOTIFY

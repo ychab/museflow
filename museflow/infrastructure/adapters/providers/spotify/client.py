@@ -2,8 +2,6 @@ import asyncio
 import base64
 import logging
 from typing import Any
-from typing import ClassVar
-from typing import Final
 from urllib.parse import urlencode
 
 import httpx
@@ -48,24 +46,30 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
     rate limiting (429 Too Many Requests).
     """
 
-    BASE_URL: Final[ClassVar[HttpUrl]] = HttpUrl("https://api.spotify.com/v1")
-    AUTH_ENDPOINT: Final[ClassVar[HttpUrl]] = HttpUrl("https://accounts.spotify.com/authorize")
-    TOKEN_ENDPOINT: Final[ClassVar[HttpUrl]] = HttpUrl("https://accounts.spotify.com/api/token")
-
     def __init__(
         self,
         client_id: str,
         client_secret: str,
         redirect_uri: HttpUrl,
+        base_url: HttpUrl | None = None,
+        auth_endpoint: HttpUrl | None = None,
+        token_endpoint: HttpUrl | None = None,
+        verify_ssl: bool = True,
         timeout: float = 30.0,
         token_buffer_seconds: int = 300,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
+
+        self._base_url = base_url or HttpUrl("https://api.spotify.com/v1")
+        self._auth_endpoint = auth_endpoint or HttpUrl("https://accounts.spotify.com/authorize")
+        self._token_endpoint = token_endpoint or HttpUrl("https://accounts.spotify.com/api/token")
+
         self.token_buffer_seconds = token_buffer_seconds
 
         self._client: httpx.AsyncClient = httpx.AsyncClient(
+            verify=verify_ssl,
             timeout=timeout,
             follow_redirects=True,
         )
@@ -77,11 +81,11 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
 
     @property
     def base_url(self) -> HttpUrl:
-        return self.BASE_URL
+        return self._base_url
 
     @property
     def token_endpoint(self) -> HttpUrl:
-        return self.TOKEN_ENDPOINT
+        return self._token_endpoint
 
     def get_authorization_url(self, state: str) -> HttpUrl:
         params = {
@@ -92,11 +96,11 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
             "state": state,
         }
 
-        return HttpUrl(f"{self.AUTH_ENDPOINT}?{urlencode(params)}")
+        return HttpUrl(f"{self._auth_endpoint}?{urlencode(params)}")
 
     async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenPayload:
         response = await self._client.post(
-            str(self.token_endpoint),
+            url=str(self.token_endpoint),
             headers={
                 "Authorization": self._get_basic_auth_header(),
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -123,7 +127,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
 
     async def refresh_access_token(self, refresh_token: str) -> OAuthProviderTokenPayload:
         response = await self._client.post(
-            str(self.token_endpoint),
+            url=str(self.token_endpoint),
             headers={
                 "Authorization": self._get_basic_auth_header(),
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -165,7 +169,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         try:
             response = await self._client.request(
                 method=method.upper(),
-                url=f"{self.BASE_URL}{endpoint}",
+                url=f"{str(self.base_url).rstrip('/')}{endpoint}",
                 headers={
                     "Authorization": f"{token_payload.token_type} {token_payload.access_token}",
                     "Content-Type": "application/json",

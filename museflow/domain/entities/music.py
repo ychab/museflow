@@ -51,4 +51,6 @@ class Track(BaseMediaItem):
 
 @dataclass(frozen=True, kw_only=True)
 class Playlist(BaseProviderEntity):
+    snapshot_id: str | None = None
+
     tracks: list[Track]

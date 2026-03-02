@@ -1,4 +1,6 @@
+import os
 from collections.abc import AsyncGenerator
+from collections.abc import Iterable
 
 from pydantic import HttpUrl
 
@@ -45,6 +47,7 @@ from tests.integration.factories.models.auth import AuthProviderStateModelFactor
 from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
+from tests.integration.utils.wiremock import WireMockContext
 from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
 from tests.unit.factories.schemas.auth import OAuthProviderUserTokenCreateFactory
 from tests.unit.factories.schemas.user import UserCreateFactory
@@ -281,10 +284,18 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
 @pytest.fixture
 async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+    base_url: str | None = os.getenv("WIREMOCK_SPOTIFY_BASE_URL")
+
     async with SpotifyOAuthClientAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+        base_url=HttpUrl(base_url) if base_url else None,
+        # For simplicity, we are using the same WireMock server for these two dedicated endpoints
+        auth_endpoint=HttpUrl(f"{base_url}/authorize") if base_url else None,
+        token_endpoint=HttpUrl(f"{base_url}/api/token") if base_url else None,
+        # Don't verify the self-signed cert of WireMock
+        verify_ssl=False,
     ) as client:
         yield client
 
@@ -318,6 +329,15 @@ def spotify_library(
         session_client=spotify_session_client,
         max_concurrency=max_concurrency,
     )
+
+
+# --- Wiremock ---
+
+
+@pytest.fixture
+def spotify_wiremock() -> Iterable[WireMockContext]:
+    with WireMockContext(base_url=os.getenv("WIREMOCK_SPOTIFY_ADMIN_URL", "")) as wiremock_context:
+        yield wiremock_context
 
 
 # --- Security impl helper ---

@@ -5,7 +5,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -17,6 +16,8 @@ from museflow.infrastructure.adapters.database.models import AuthProviderState a
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 
+from tests.integration.utils.wiremock import WireMockContext
+
 
 class TestSpotifyOauthCallbackUseCase:
     async def test__token_payload__create(
@@ -27,12 +28,13 @@ class TestSpotifyOauthCallbackUseCase:
         token_payload: OAuthProviderTokenPayload,
         auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        httpx_mock.add_response(
-            url=str(spotify_client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json={
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
                 "token_type": token_payload.token_type,
                 "access_token": token_payload.access_token,
                 "refresh_token": token_payload.refresh_token,
@@ -41,7 +43,7 @@ class TestSpotifyOauthCallbackUseCase:
         )
 
         await oauth_callback(
-            code="foo",
+            code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,
             auth_token_repository=auth_token_repository,
@@ -79,12 +81,13 @@ class TestSpotifyOauthCallbackUseCase:
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
         spotify_client: SpotifyOAuthClientAdapter,
-        httpx_mock: HTTPXMock,
+        spotify_wiremock: WireMockContext,
     ) -> None:
-        httpx_mock.add_response(
-            url=str(spotify_client.token_endpoint),
+        spotify_wiremock.create_mapping(
             method="POST",
-            json={
+            url_path=spotify_client.token_endpoint.path or "",
+            status=200,
+            json_body={
                 "token_type": token_payload.token_type,
                 "access_token": token_payload.access_token,
                 "refresh_token": token_payload.refresh_token,
@@ -93,7 +96,7 @@ class TestSpotifyOauthCallbackUseCase:
         )
 
         await oauth_callback(
-            code="foo",
+            code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,
             auth_token_repository=auth_token_repository,

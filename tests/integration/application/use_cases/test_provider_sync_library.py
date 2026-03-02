@@ -1,7 +1,4 @@
-import copy
 import json
-import re
-import uuid
 from typing import Any
 from typing import Final
 
@@ -10,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
 from museflow.application.use_cases.provider_sync_library import SyncConfig
@@ -23,160 +19,83 @@ from museflow.domain.ports.repositories.music import ArtistRepository
 from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.factories.models.music import ArtistModelFactory
 from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.utils.wiremock import WireMockContext
 
-DEFAULT_PAGINATION_SIZE: Final[int] = 2
-DEFAULT_PAGINATION_TOTAL: Final[int] = 10
+# As defined by wiremock hardcoded templates.
+DEFAULT_PAGINATION_SIZE: Final[int] = 5
+DEFAULT_PAGINATION_MAX: Final[int] = 3
+DEFAULT_PAGINATION_TOTAL: Final[int] = 15
 
 
-def load_spotify_response(filename: str) -> dict[str, Any]:
-    filepath = ASSETS_DIR / "httpmock" / "spotify" / f"{filename}.json"
+def wiremock_response(filename: str) -> dict[str, Any]:
+    filepath = ASSETS_DIR / "wiremock" / "spotify" / "__files" / f"{filename}.json"
     return json.loads(filepath.read_text())
-
-
-def paginate_spotify_response(
-    spotify_response: dict[str, Any],
-    limit: int,
-    total: int,
-    offset: int = 0,
-    size: int | None = None,
-) -> list[dict[str, Any]]:
-    response_chunks: list[dict[str, Any]] = []
-
-    while offset + limit <= (size or total):
-        response_chunk = copy.deepcopy(spotify_response)
-        response_chunk["offset"] = offset
-        response_chunk["limit"] = limit
-        response_chunk["total"] = total
-        response_chunk["items"] = response_chunk["items"][offset : offset + limit]
-
-        response_chunks.append(response_chunk)
-        offset += limit
-
-    return response_chunks
 
 
 class TestSpotifySyncMusic:
     @pytest.fixture
-    def artists_top_response(self) -> dict[str, Any]:
-        return load_spotify_response(filename="top_artists")
+    def patch_playlist_tracks_response(self, spotify_wiremock: WireMockContext) -> None:
+        playlist_items = []
+        for page_number in range(1, 3):
+            playlist_items += wiremock_response(f"playlists_page_{page_number}")["items"]
 
-    @pytest.fixture
-    def artists_top_response_paginated(
-        self,
-        request: pytest.FixtureRequest,
-        artists_top_response: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        params = getattr(request, "param", {})
-        total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
+        wiremock_playlist_response = wiremock_response("playlists_page_1")
+        wiremock_playlist_response["items"] = playlist_items
+        wiremock_playlist_response["total"] = len(playlist_items)
+        wiremock_playlist_response["limit"] = DEFAULT_PAGINATION_SIZE
 
-        return paginate_spotify_response(artists_top_response, limit=limit, total=total)
+        # Instead of having 2 pages of 1 playlist, convert it into 1 page of 2 playlists
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/me/playlists",
+            status=200,
+            query_params={
+                "offset": 0,
+                "limit": DEFAULT_PAGINATION_SIZE,
+            },
+            json_body=wiremock_playlist_response,
+        )
 
-    @pytest.fixture
-    def tracks_top_response(self) -> dict[str, Any]:
-        return load_spotify_response(filename="top_tracks")
+        playlist_track_map: dict[str, Any] = {
+            "playlist_items_rap": wiremock_playlist_response["items"][0],
+            "playlist_items_salsa": wiremock_playlist_response["items"][1],
+        }
+        for template, playlist in playlist_track_map.items():
+            playlist_track_items = []
+            for page_number in range(1, 3):
+                playlist_track_items += wiremock_response(f"{template}_page_{page_number}")["items"]
 
-    @pytest.fixture
-    def tracks_top_response_paginated(
-        self,
-        request: pytest.FixtureRequest,
-        tracks_top_response: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        params = getattr(request, "param", {})
-        total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
+            wiremock_playlist_track_response = wiremock_response(f"{template}_page_1")
+            wiremock_playlist_track_response["items"] = playlist_track_items
+            wiremock_playlist_track_response["total"] = len(playlist_track_items)
+            wiremock_playlist_track_response["limit"] = DEFAULT_PAGINATION_SIZE
 
-        return paginate_spotify_response(tracks_top_response, limit=limit, total=total)
-
-    @pytest.fixture
-    def tracks_saved_response(self) -> dict[str, Any]:
-        return load_spotify_response(filename="saved_tracks")
-
-    @pytest.fixture
-    def tracks_saved_response_paginated(
-        self,
-        request: pytest.FixtureRequest,
-        tracks_saved_response: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        params = getattr(request, "param", {})
-        total: int = params.get("total", DEFAULT_PAGINATION_TOTAL)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
-
-        return paginate_spotify_response(tracks_saved_response, limit=limit, total=total)
-
-    @pytest.fixture
-    def playlist_response(self) -> dict[str, Any]:
-        return load_spotify_response(filename="playlists")
-
-    @pytest.fixture
-    def playlist_response_paginated(
-        self,
-        request: pytest.FixtureRequest,
-        playlist_response: dict[str, Any],
-    ) -> tuple[list[dict[str, Any]], int, int]:
-        params = getattr(request, "param", {})
-        total: int = params.get("total", 4)
-        limit: int = params.get("limit", DEFAULT_PAGINATION_SIZE)
-
-        return paginate_spotify_response(playlist_response, limit=limit, total=total), limit, total
-
-    @pytest.fixture
-    def playlist_tracks_response(self) -> dict[str, Any]:
-        return load_spotify_response(filename="playlist_items")
-
-    @pytest.fixture
-    def playlist_tracks_response_paginated(
-        self,
-        request: pytest.FixtureRequest,
-        playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
-        playlist_tracks_response: dict[str, Any],
-    ) -> tuple[list[dict[str, Any]], int, int]:
-        responses: list[dict[str, Any]] = []
-
-        params = getattr(request, "param", {})
-        prevent_collision: bool = params.get("prevent_collision", False)
-
-        playlist_limit = playlist_response_paginated[1]
-        playlist_total = playlist_response_paginated[2]
-
-        total: int = playlist_limit * 3
-        offset: int = 0
-        for _ in range(playlist_total):
-            responses += paginate_spotify_response(
-                playlist_tracks_response,
-                limit=playlist_limit,
-                total=total,
-                offset=offset,
-                size=total + offset,
+            # Instead of having 2 playlist items pages of 1 track, convert it into 1 page of 2 tracks
+            spotify_wiremock.create_mapping(
+                method="GET",
+                url_path=f"/playlists/{playlist['id']}/items",
+                status=200,
+                query_params={
+                    "offset": 0,
+                    "limit": DEFAULT_PAGINATION_SIZE,
+                    "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
+                    "additional_types": "track",
+                },
+                json_body=wiremock_playlist_track_response,
             )
-            offset += total
-
-        # For creation tests, we can't have duplicate with other sources (top and saved)
-        if prevent_collision:
-            for response in responses:
-                for page in response["items"]:
-                    page["item"]["id"] = f"fake-provider-id-{uuid.uuid4()}"
-
-        return responses, playlist_limit, total
 
     @pytest.fixture
-    async def artists_update(
-        self,
-        request: pytest.FixtureRequest,
-        user: User,
-        artists_top_response_paginated: list[dict[str, Any]],
-    ) -> list[Artist]:
-        page_max = getattr(request, "param", len(artists_top_response_paginated))
+    async def artists_update(self, request: pytest.FixtureRequest, user: User) -> list[Artist]:
         artists: list[Artist] = []
 
-        for page in artists_top_response_paginated[:page_max]:
-            for item in page["items"]:
+        page_max = getattr(request, "param", DEFAULT_PAGINATION_MAX)
+        for page_number in range(1, page_max + 1):
+            for item in wiremock_response(f"top_artists_page_{page_number}")["items"]:
                 artist = await ArtistModelFactory.create_async(user_id=user.id, provider_id=item["id"])
                 artists.append(artist.to_entity())
 
@@ -187,17 +106,12 @@ class TestSpotifySyncMusic:
         return [artist.to_entity() for artist in await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)]
 
     @pytest.fixture
-    async def tracks_top_update(
-        self,
-        request: pytest.FixtureRequest,
-        user: User,
-        tracks_top_response_paginated: list[dict[str, Any]],
-    ) -> list[Track]:
-        page_max = getattr(request, "param", len(tracks_top_response_paginated))
+    async def tracks_top_update(self, request: pytest.FixtureRequest, user: User) -> list[Track]:
         tracks: list[Track] = []
+        page_max = getattr(request, "param", DEFAULT_PAGINATION_MAX)
 
-        for page in tracks_top_response_paginated[:page_max]:
-            for item in page["items"]:
+        for page_number in range(1, page_max + 1):
+            for item in wiremock_response(f"top_tracks_page_{page_number}")["items"]:
                 track = await TrackModelFactory.create_async(
                     user_id=user.id,
                     provider_id=item["id"],
@@ -209,17 +123,12 @@ class TestSpotifySyncMusic:
         return tracks
 
     @pytest.fixture
-    async def tracks_saved_update(
-        self,
-        request: pytest.FixtureRequest,
-        user: User,
-        tracks_saved_response_paginated: list[dict[str, Any]],
-    ) -> list[Track]:
-        page_max = getattr(request, "param", len(tracks_saved_response_paginated))
+    async def tracks_saved_update(self, request: pytest.FixtureRequest, user: User) -> list[Track]:
         tracks: list[Track] = []
+        page_max = getattr(request, "param", DEFAULT_PAGINATION_MAX)
 
-        for page in tracks_saved_response_paginated[:page_max]:
-            for item in page["items"]:
+        for page_number in range(1, page_max + 1):
+            for item in wiremock_response(f"saved_tracks_page_{page_number}")["items"]:
                 track = await TrackModelFactory.create_async(
                     user_id=user.id,
                     provider_id=item["track"]["id"],
@@ -231,25 +140,20 @@ class TestSpotifySyncMusic:
         return tracks
 
     @pytest.fixture
-    async def tracks_playlist_update(
-        self,
-        request: pytest.FixtureRequest,
-        user: User,
-        playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int],
-    ) -> list[Track]:
+    async def tracks_playlist_update(self, request: pytest.FixtureRequest, user: User) -> list[Track]:
         tracks: list[Track] = []
+        page_max = getattr(request, "param", 2)
 
-        page_max = getattr(request, "param", len(playlist_tracks_response_paginated[0]))
-
-        for page in playlist_tracks_response_paginated[0][:page_max]:
-            for item in page["items"]:
-                track, _ = await TrackModelFactory.get_or_create(
-                    user_id=user.id,
-                    provider_id=item["item"]["id"],
-                    is_top=False,
-                    is_saved=False,
-                )
-                tracks.append(track.to_entity())
+        for page_number in range(1, page_max + 1):
+            for template in ["playlist_items_rap", "playlist_items_salsa"]:
+                for item in wiremock_response(f"{template}_page_{page_number}")["items"]:
+                    track = await TrackModelFactory.create_async(
+                        user_id=user.id,
+                        provider_id=item["item"]["id"],
+                        is_top=False,
+                        is_saved=False,
+                    )
+                    tracks.append(track.to_entity())
 
         return tracks
 
@@ -340,23 +244,10 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        artists_top_response: dict[str, Any],
-        artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
-
-        url_pattern = re.compile(r".*/me/top/artists.*")
-        for response in artists_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -375,23 +266,11 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         artists_update: list[Artist],
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        artists_top_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(artists_update)
-
-        url_pattern = re.compile(r".*/me/top/artists.*")
-        for response in artists_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -406,30 +285,17 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt)
         artists_db = result.scalars().all()
 
-        assert len(artists_db) == expected_count
+        assert len(artists_db) == expected_count == 15
         assert sorted([a.id for a in artists_db]) == sorted([a.id for a in artists_update])
 
     async def test__tracks_top__sync__create(
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        tracks_top_response: dict[str, Any],
-        tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
-
-        url_pattern = re.compile(r".*/me/top/tracks.*")
-        for response in tracks_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -452,23 +318,11 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         tracks_top_update: list[Track],
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        tracks_top_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_top_update)
-
-        url_pattern = re.compile(r".*/me/top/tracks.*")
-        for response in tracks_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -483,7 +337,7 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt)
         tracks_db = result.scalars().all()
 
-        assert len(tracks_db) == expected_count
+        assert len(tracks_db) == expected_count == 15
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_top_update])
 
         assert all([track.is_top for track in tracks_db])
@@ -493,23 +347,10 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        tracks_saved_response: dict[str, Any],
-        tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
-
-        url_pattern = re.compile(r".*/me/tracks.*")
-        for response in tracks_saved_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -532,23 +373,11 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         tracks_saved_update: list[Track],
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        tracks_saved_response_paginated: list[dict[str, Any]],
     ) -> None:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_saved_update)
-
-        url_pattern = re.compile(r".*/me/tracks.*")
-        for response in tracks_saved_response_paginated:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
@@ -563,7 +392,7 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt)
         tracks_db = result.scalars().all()
 
-        assert len(tracks_db) == expected_count
+        assert len(tracks_db) == expected_count == 15
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_saved_update])
 
         assert not all([track.is_top for track in tracks_db])
@@ -573,40 +402,19 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
-        playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
     ) -> None:
-        limit = playlist_response_paginated[1]
-        playlist_total = playlist_response_paginated[2]
-        playlist_tracks_total = playlist_tracks_response_paginated[2]
+        page_size = 1
+        playlist_total = 2 * 1
+        playlist_tracks_total = 2 * 1
 
         expected_count = playlist_total * playlist_tracks_total
-
-        url_pattern = re.compile(r".*/me/playlists.*")
-        for response in playlist_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
-
-        url_pattern = re.compile(r".*/playlists/.*/items.*")
-        for response in playlist_tracks_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
-                page_size=limit,
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_created=expected_count)
@@ -623,37 +431,17 @@ class TestSpotifySyncMusic:
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         tracks_playlist_update: list[Track],
-        spotify_client: SpotifyOAuthClientAdapter,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
-        playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
     ) -> None:
+        page_size = 1
         expected_count = len(tracks_playlist_update)
-
-        url_pattern = re.compile(r".*/me/playlists.*")
-        for response in playlist_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
-
-        url_pattern = re.compile(r".*/playlists/.*/items.*")
-        for response in playlist_tracks_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_pattern,
-                method="GET",
-                json=response,
-            )
 
         report = await use_case.execute(
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
-                page_size=playlist_response_paginated[1],
+                page_size=page_size,
             ),
         )
         assert report == SyncReport(track_updated=expected_count)
@@ -662,77 +450,25 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt)
         tracks_db = result.scalars().all()
 
-        assert len(tracks_db) == expected_count
+        assert len(tracks_db) == expected_count == 4
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_playlist_update])
 
         assert not all([track.is_top for track in tracks_db])
         assert not all([track.is_saved for track in tracks_db])
 
-    @pytest.mark.parametrize("playlist_tracks_response_paginated", [{"prevent_collision": True}], indirect=True)
     async def test__all__purge__sync(
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         artists_top_delete: list[Artist],
         tracks_delete: list[Track],
-        spotify_client: SpotifyOAuthClientAdapter,
+        patch_playlist_tracks_response: None,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        artists_top_response: dict[str, Any],
-        artists_top_response_paginated: list[dict[str, Any]],
-        tracks_top_response: dict[str, Any],
-        tracks_top_response_paginated: list[dict[str, Any]],
-        tracks_saved_response: dict[str, Any],
-        tracks_saved_response_paginated: list[dict[str, Any]],
-        playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
-        playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
     ) -> None:
-        url_artist_pattern = re.compile(r".*/me/top/artists.*")
-        url_track_top_pattern = re.compile(r".*/me/top/tracks.*")
-        url_track_saved_pattern = re.compile(r".*/me/tracks.*")
-        url_playlist_pattern = re.compile(r".*/me/playlists.*")
-        url_playlist_items_pattern = re.compile(r".*/playlists/.*/items.*")
-
-        for response in artists_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_artist_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in tracks_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_track_top_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in tracks_saved_response_paginated:
-            httpx_mock.add_response(
-                url=url_track_saved_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in playlist_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_playlist_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in playlist_tracks_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_playlist_items_pattern,
-                method="GET",
-                json=response,
-            )
-
         expect_artists = DEFAULT_PAGINATION_TOTAL
         expected_tracks_top = DEFAULT_PAGINATION_TOTAL
         expected_tracks_saved = DEFAULT_PAGINATION_TOTAL
-        expected_tracks_playlist = playlist_response_paginated[2] * playlist_tracks_response_paginated[2]
+        expected_tracks_playlist = 2 * 2
         expect_tracks = expected_tracks_top + expected_tracks_saved + expected_tracks_playlist
 
         report = await use_case.execute(
@@ -740,7 +476,7 @@ class TestSpotifySyncMusic:
             config=SyncConfig(
                 purge_all=True,
                 sync_all=True,
-                page_size=playlist_tracks_response_paginated[1],
+                page_size=DEFAULT_PAGINATION_SIZE,
             ),
         )
         assert report == SyncReport(
@@ -772,143 +508,76 @@ class TestSpotifySyncMusic:
 
     @pytest.mark.parametrize(
         ("artists_update", "tracks_top_update", "tracks_saved_update", "tracks_playlist_update"),
-        [(3, 2, 1, 1)],
+        [(2, 2, 1, 1)],
         indirect=["artists_update", "tracks_top_update", "tracks_saved_update", "tracks_playlist_update"],
     )
     async def test__all__sync__update(
         self,
         async_session_db: AsyncSession,
         user: User,
-        auth_token: OAuthProviderUserToken,
         artists_update: list[Artist],
         tracks_top_update: list[Track],
         tracks_saved_update: list[Track],
         tracks_playlist_update: list[Track],
-        spotify_client: SpotifyOAuthClientAdapter,
+        patch_playlist_tracks_response: None,
         use_case: ProviderSyncLibraryUseCase,
-        httpx_mock: HTTPXMock,
-        artists_top_response: dict[str, Any],
-        artists_top_response_paginated: list[dict[str, Any]],
-        tracks_top_response: dict[str, Any],
-        tracks_top_response_paginated: list[dict[str, Any]],
-        tracks_saved_response: dict[str, Any],
-        tracks_saved_response_paginated: list[dict[str, Any]],
-        playlist_response_paginated: tuple[list[dict[str, Any]], int, int],
-        playlist_tracks_response_paginated: tuple[list[dict[str, Any]], int, int],
     ) -> None:
         """
         Given
-          - A pagination of 5 pages of 2 top artists with 3 pages of top artists which already exists in DB
-            -> 2 pages * 2 items = 4 top artists created
-            -> 3 pages * 2 items = 6 top artists updated
-            -> total = 4 + 6 = 10 artists processed
+          - A pagination of 3 pages of 5 top artists with 2 pages of top artists which already exists in DB
+            -> 1 page * 5 items = 5 top artists created
+            -> 2 pages * 5 items = 10 top artists updated
+            -> total = 5 + 10 = 15 artists processed
 
-          - A pagination of 5 pages of 2 top tracks with 2 pages of top tracks which already exists in DB
-            -> 3 pages * 2 items = 6 top tracks created
-            -> 2 pages * 2 items = 4 top tracks updated
-            -> total = 6 + 4 = 10 top tracks processed
+          - A pagination of 3 pages of 5 top tracks with 2 pages of top tracks which already exists in DB
+            -> 1 page * 5 items = 5 top tracks created
+            -> 2 pages * 5 items = 10 top tracks updated
+            -> total = 5 + 10 = 15 top tracks processed
 
-          - A pagination of 5 pages of 2 saved tracks with 1 pages of saved tracks which already exists in DB
-            -> 4 pages * 2 items = 8 saved tracks created
-            -> 1 pages * 2 items = 2 saved tracks updated
-            -> total = 8 + 2 = 10 saved tracks processed
+          - A pagination of 3 pages of 5 saved tracks with 1 page of saved tracks which already exists in DB
+            -> 2 pages * 5 items = 10 saved tracks created
+            -> 1 page * 5 items = 5 saved tracks updated
+            -> total = 10 + 5 = 15 saved tracks processed
 
-          - A pagination of 2 pages of 2 playlists
-            -> 2 pages * 2 items = 4 playlists
+          - A pagination of 1 page of 5 playlists
+            -> 1 page * 2 items = 2 playlists
 
-            - And for each playlist, 3 pages of 2 playlist tracks with 2 duplicate tracks over the 6 tracks
-              -> 4 playlists * 3 pages * 2 items = 24 playlist tracks processed total
-              -> 4 playlists * 2 duplicates (over 6 tracks) = 8 duplicates
-              -> Then, it results to:
-                -> 24 tracks - 8 duplicates = 16 playlist tracks created
-                -> 8 duplicates found = 8 playlist tracks updated
+            - And for each playlist, 1 pages of 2 playlist tracks with 1 updated track (over the 2 tracks)
+              -> 2 playlists * 1 page * 2 item = 4 playlist tracks processed total
+              -> 2 playlists * 1 = 2 tracks created
+              -> 2 playlists * 1 = 2 tracks updated
         When
           executing the sync with existing data in DB
         Then
           it will:
-            - create 4 top artists
-            - update 6 top artists
-            - create 30 tracks (6 top + 8 saved + 16 playlist)
-            - update 14 tracks (4 top + 2 saved + 8 playlist)
+            - create 5 top artists
+            - update 10 top artists
+            - create 17 tracks (5 top + 10 saved + 2 playlist)
+            - update 17 tracks (10 top + 5 saved + 2 playlist)
 
-          and finally in the DB, we will have:
-            - 4 (initial) + 6 (created) = 10 top artists
-            - 7 (initial) + 30 (created) = 37 tracks
-              (Note: Initial = 4 top + 2 saved + 1 playlist = 7 pre-existing tracks)
+          and finally, in the DB, we will have:
+            - 5 (created) + 10 (updated) = 15 top artists
+            - 17 (created) + 17 (updated) = 34 tracks
         """
         page_size = DEFAULT_PAGINATION_SIZE
 
-        url_artist_pattern = re.compile(r".*/me/top/artists.*")
-        url_track_top_pattern = re.compile(r".*/me/top/tracks.*")
-        url_track_saved_pattern = re.compile(r".*/me/tracks.*")
-        url_playlist_pattern = re.compile(r".*/me/playlists.*")
-        url_playlist_items_pattern = re.compile(r".*/playlists/.*/items.*")
-
-        for response in artists_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_artist_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in tracks_top_response_paginated:
-            httpx_mock.add_response(
-                url=url_track_top_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in tracks_saved_response_paginated:
-            httpx_mock.add_response(
-                url=url_track_saved_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in playlist_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_playlist_pattern,
-                method="GET",
-                json=response,
-            )
-
-        for response in playlist_tracks_response_paginated[0]:
-            httpx_mock.add_response(
-                url=url_playlist_items_pattern,
-                method="GET",
-                json=response,
-            )
-
-        # Gather duplicate ids.
-        track_top_created_ids = [item["id"] for page in tracks_top_response_paginated for item in page["items"]]
-        track_saved_created_ids = [
-            item["track"]["id"] for page in tracks_saved_response_paginated for item in page["items"]
-        ]
-        track_playlist_created_ids = [
-            item["item"]["id"] for page in playlist_tracks_response_paginated[0] for item in page["items"]
-        ]
-        track_updated_ids = [t.provider_id for t in tracks_top_update + tracks_saved_update + tracks_playlist_update]
-        track_existing_ids = set(track_updated_ids + track_top_created_ids + track_saved_created_ids)
-
         # Then collects expectations.
-        expect_artists_updated = len(artists_update)  # 6
-        expect_artists_created = DEFAULT_PAGINATION_TOTAL - expect_artists_updated  # 4
+        expect_artists_updated = len(artists_update)  # 10
+        expect_artists_created = DEFAULT_PAGINATION_TOTAL - expect_artists_updated  # 5
 
-        expect_tracks_top_updated = len(tracks_top_update)  # 4
-        expect_tracks_top_created = DEFAULT_PAGINATION_TOTAL - expect_tracks_top_updated  # 6
+        expect_tracks_top_updated = len(tracks_top_update)  # 10
+        expect_tracks_top_created = DEFAULT_PAGINATION_TOTAL - expect_tracks_top_updated  # 5
 
-        expect_tracks_saved_updated = len(tracks_saved_update)  # 2
-        expect_tracks_saved_created = DEFAULT_PAGINATION_TOTAL - expect_tracks_saved_updated  # 8
+        expect_tracks_saved_updated = len(tracks_saved_update)  # 5
+        expect_tracks_saved_created = DEFAULT_PAGINATION_TOTAL - expect_tracks_saved_updated  # 10
 
-        expect_tracks_playlist_created = len(
-            [pid for pid in track_playlist_created_ids if pid not in track_existing_ids]  # 16
-        )
-        expect_tracks_playlist_updated = len(track_playlist_created_ids) - expect_tracks_playlist_created  # 8
+        expect_tracks_playlist_updated = len(tracks_playlist_update)  # 2
+        expect_tracks_playlist_created = 4 - len(tracks_playlist_update)  # 2
 
-        expect_tracks_created = (
+        expect_tracks_created = (  # 17
             expect_tracks_top_created + expect_tracks_saved_created + expect_tracks_playlist_created
         )
-        expect_tracks_updated = (
+        expect_tracks_updated = (  # 17
             expect_tracks_top_updated + expect_tracks_saved_updated + expect_tracks_playlist_updated
         )
 
@@ -935,5 +604,4 @@ class TestSpotifySyncMusic:
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
         result = await async_session_db.execute(stmt)
         count = result.scalar()
-        # Exclude tracks updated multiple times or were already in the DB.
-        assert count == expect_tracks_created + len(set(track_updated_ids))
+        assert count == expect_tracks_created + expect_tracks_updated

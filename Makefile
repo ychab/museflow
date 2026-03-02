@@ -39,30 +39,6 @@ outdated: ## List outdated dependencies
 	poetry show --outdated
 
 
-###################
-# Local Development
-###################
-
-.PHONY: lint lint-format lint-check precommit
-
-lint-format:  ## Lint and format code
-	poetry run ruff check museflow tests
-	poetry run ruff format museflow tests
-	poetry run mypy
-	poetry run deptry .
-
-lint: lint-format
-
-lint-check: ## Lint and check code
-	poetry run ruff check --no-fix museflow tests
-	poetry run ruff format --check museflow tests
-	poetry run mypy
-	poetry run deptry .
-
-precommit: ## Run pre-commit hooks
-	poetry run pre-commit run --all-files
-
-
 ############
 # Versioning
 ############
@@ -82,7 +58,7 @@ $(BUMP_TARGETS): bump-%:
 # Docker
 ########
 
-.PHONY: ps logs up up-db down restart reload reset
+.PHONY: ps logs up up-db up-wiremock dev down restart reload reset
 
 ps:  ## List containers
 	docker compose ps --all
@@ -95,6 +71,11 @@ up: ## Start containers
 
 up-db:  ## Start database container only
 	docker compose up --detach --wait db
+
+up-wiremock:  ## Start wiremock containers only
+	docker compose up --detach --wait wiremock-spotify
+
+dev: up-db up-wiremock  ## Start DB and Wiremock containers
 
 down: ## Stop containers
 	docker compose down --remove-orphans
@@ -146,13 +127,36 @@ db-shell: up-db ## Connect to the database shell
 
 .PHONY: test test-unit test-integration
 
-test: up-db ## Run all the testsuite
+test: up-db up-wiremock ## Run all the testsuite
 	poetry run pytest ./tests || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
 test-unit: ## Run unit tests
 	poetry run pytest ./tests/unit -v
 
-test-integration: up-db ## Run integration tests
+test-integration: up-db up-wiremock ## Run integration tests
 	poetry run pytest ./tests/integration -v || ($(MAKE) down && exit 1)
 	@$(MAKE) down
+
+###################
+# Local Development
+###################
+
+.PHONY: lint lint-format lint-check precommit
+
+lint-format:  ## Lint and format code
+	poetry run ruff check museflow tests
+	poetry run ruff format museflow tests
+	poetry run mypy
+	poetry run deptry .
+
+lint: lint-format
+
+lint-check: ## Lint and check code
+	poetry run ruff check --no-fix museflow tests
+	poetry run ruff format --check museflow tests
+	poetry run mypy
+	poetry run deptry .
+
+precommit: ## Run pre-commit hooks
+	poetry run pre-commit run --all-files

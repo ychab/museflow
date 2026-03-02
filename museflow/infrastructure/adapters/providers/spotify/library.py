@@ -186,7 +186,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 "uris": [f"spotify:track:{track.provider_id}" for track in tracks],
             },
         )
-        spotify_playlist.snapshot_id = data.get("snapshot_id", "")
+        spotify_playlist.snapshot_id = data["snapshot_id"]
 
         return to_domain_playlist(spotify_playlist, user_id=self.user.id, tracks=tracks)
 

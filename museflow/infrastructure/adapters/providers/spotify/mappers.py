@@ -85,5 +85,6 @@ def to_domain_playlist(spotify_playlist: SpotifyPlaylist, user_id: uuid.UUID, tr
         slug=slugify(spotify_playlist.name),
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_playlist.id,
+        snapshot_id=spotify_playlist.snapshot_id,
         tracks=tracks,
     )

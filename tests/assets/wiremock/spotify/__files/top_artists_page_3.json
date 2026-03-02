@@ -1,0 +1,197 @@
+{
+  "items": [
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/6L34dW6SKMSDaGIfYDU19j"
+      },
+      "followers": {
+        "href": null,
+        "total": 3734807
+      },
+      "genres": [
+        "rap français",
+        "pop urbaine"
+      ],
+      "href": "https://api.spotify.com/v1/artists/6L34dW6SKMSDaGIfYDU19j",
+      "id": "6L34dW6SKMSDaGIfYDU19j",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb94d3aff5f84dfc8bf111f157",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517494d3aff5f84dfc8bf111f157",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17894d3aff5f84dfc8bf111f157",
+          "width": 160
+        }
+      ],
+      "name": "Maes",
+      "popularity": 70,
+      "type": "artist",
+      "uri": "spotify:artist:6L34dW6SKMSDaGIfYDU19j"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/0zhMujl1yB8pkB023Qm4Y2"
+      },
+      "followers": {
+        "href": null,
+        "total": 250326
+      },
+      "genres": [
+        "rap français"
+      ],
+      "href": "https://api.spotify.com/v1/artists/0zhMujl1yB8pkB023Qm4Y2",
+      "id": "0zhMujl1yB8pkB023Qm4Y2",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb43379c09ef34d7669d8e7920",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517443379c09ef34d7669d8e7920",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17843379c09ef34d7669d8e7920",
+          "width": 160
+        }
+      ],
+      "name": "Green Montana",
+      "popularity": 56,
+      "type": "artist",
+      "uri": "spotify:artist:0zhMujl1yB8pkB023Qm4Y2"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2VviFtXYreO6Zn9n8Ibk6C"
+      },
+      "followers": {
+        "href": null,
+        "total": 238894
+      },
+      "genres": [
+        "jazz latino",
+        "salsa",
+        "jazz afro-cubain",
+        "son cubano",
+        "cha-cha-cha",
+        "mambo"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2VviFtXYreO6Zn9n8Ibk6C",
+      "id": "2VviFtXYreO6Zn9n8Ibk6C",
+      "images": [
+        {
+          "height": 1000,
+          "url": "https://i.scdn.co/image/3379207a21ec6bc412184687a941bd30c5af0920",
+          "width": 1000
+        },
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/32e943fe5916c04101ec144a7c6bece4de9a9754",
+          "width": 640
+        },
+        {
+          "height": 200,
+          "url": "https://i.scdn.co/image/b837f74950427c80860fd536253037383a3b5fb9",
+          "width": 200
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/e445abc352059e68d431116486e0c3089e9adfe4",
+          "width": 64
+        }
+      ],
+      "name": "Eddie Palmieri",
+      "popularity": 43,
+      "type": "artist",
+      "uri": "spotify:artist:2VviFtXYreO6Zn9n8Ibk6C"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/2ktpq7bp4m1quizyEmp4r1"
+      },
+      "followers": {
+        "href": null,
+        "total": 200629
+      },
+      "genres": [
+        "rap français"
+      ],
+      "href": "https://api.spotify.com/v1/artists/2ktpq7bp4m1quizyEmp4r1",
+      "id": "2ktpq7bp4m1quizyEmp4r1",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb685443ccd8e2f0573b7c875d",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174685443ccd8e2f0573b7c875d",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178685443ccd8e2f0573b7c875d",
+          "width": 160
+        }
+      ],
+      "name": "A2h",
+      "popularity": 46,
+      "type": "artist",
+      "uri": "spotify:artist:2ktpq7bp4m1quizyEmp4r1"
+    },
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/1zng9JZpblpk48IPceRWs8"
+      },
+      "followers": {
+        "href": null,
+        "total": 4753366
+      },
+      "genres": [
+        "salsa",
+        "merengue"
+      ],
+      "href": "https://api.spotify.com/v1/artists/1zng9JZpblpk48IPceRWs8",
+      "id": "1zng9JZpblpk48IPceRWs8",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb74a0064f0d1d4c849d0e249b",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517474a0064f0d1d4c849d0e249b",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17874a0064f0d1d4c849d0e249b",
+          "width": 160
+        }
+      ],
+      "name": "Grupo Niche",
+      "popularity": 69,
+      "type": "artist",
+      "uri": "spotify:artist:1zng9JZpblpk48IPceRWs8"
+    }
+  ],
+  "total": 15,
+  "limit": 5,
+  "offset": 10,
+  "href": "https://api.spotify.com/v1/me/top/artists?offset=10&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "next": "https://api.spotify.com/v1/me/top/artists?offset=15&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5",
+  "previous": "https://api.spotify.com/v1/me/top/artists?offset=5&limit=5&time_range=long_term&locale=fr-FR,fr;q%3D0.9,en-US;q%3D0.8,en;q%3D0.7,es-419;q%3D0.6,es;q%3D0.5"
+}

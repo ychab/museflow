@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/me/playlists",
+    "bodyPatterns": [
+      {
+        "equalToJson": "{\"name\": \"test\"}",
+        "ignoreArrayOrder": true,
+        "ignoreExtraElements": true
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "playlist_created.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
