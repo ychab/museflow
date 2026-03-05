@@ -1,45 +1,48 @@
 ARG PYTHON_VERSION=3.13
+ARG UV_VERSION=0.10.8
+
+# ---------------------------
+# UV Image Alias Stage
+# ---------------------------
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_image
 
 # ---------------------------
 # Builder Stage
 # ---------------------------
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-ARG POETRY_VERSION=1.8.5
+WORKDIR /app
 
-ENV POETRY_HOME="/opt/poetry" \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1 \
-    PIP_NO_CACHE_DIR=1
-
-ENV PATH="$POETRY_HOME/bin:$PATH"
+# Enable bytecode compilation and ensure uv creates the venv
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 # Use cache mounts to speed up re-builds
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     build-essential \
     libpq-dev
 
-RUN curl -sSL https://install.python-poetry.org | python3 -
+# Copy uv binary directly from the official image
+COPY --from=uv_image /uv /uvx /bin/
 
-WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
 
-COPY pyproject.toml poetry.lock ./
+# Install dependencies
+# --frozen: assert uv.lock is valid
+# --no-dev: exclude dev deps (only main)
+# --no-install-project: install only deps first (better layer caching)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-# Mount poetry cache to speed up dependency installation (excluding the project itself first)
-RUN --mount=type=cache,target=/root/.cache/pypoetry \
-    poetry install --only main --no-root
-
-# This is required so poetry can install the package metadata
+# This is required so the package manager can install the package metadata
 COPY museflow ./museflow
 
-# Install the project package itself to create the .egg-info / dist-info metadata for importlib
-RUN --mount=type=cache,target=/root/.cache/pypoetry \
-    poetry install --only main
+# Install the project package itself to create the .egg-info / dist-info metadata for importlib (name, version)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 # ---------------------------
 # Final Stage

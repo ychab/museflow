@@ -7,7 +7,7 @@
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
-[![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 MuseFlow is an assistant for your music provider account, built with Python, FastAPI and Typer.
@@ -23,7 +23,7 @@ For now, **only [Spotify](https://open.spotify.com/) is supported**.
 To work with this project, you will need the following tools installed on your machine:
 
 *   **Python**: 3.13
-*   **Poetry**: 1.8.5
+*   **UV**: 0.10.8
 *   **Docker Compose**: v2
 
 For the Spotify connector:
@@ -56,14 +56,14 @@ Follow these steps to set up the project locally:
         ```bash
         make install-deps
         # OR
-        poetry install
+        uv sync --all-groups
         ```
 
     *   **Install pre-commit hooks:**
         ```bash
         make install-precommit
         # OR
-        poetry run pre-commit install
+        uv run pre-commit install
         ```
 
 ## Configuration
@@ -121,10 +121,10 @@ docker compose up -d
 
 MuseFlow provides a Command Line Interface (CLI) to manage users and interact with Spotify.
 
-To use the CLI, you can use the `museflow` command if installed in your environment, or run it via Poetry:
+To use the CLI, you can use the `museflow` command if installed in your environment, or run it via UV:
 
 ```bash
-poetry run museflow [COMMAND]
+uv run museflow [COMMAND]
 ```
 
 ### Global Options
@@ -141,14 +141,14 @@ Manage application users.
 **Create a user:**
 
 ```bash
-poetry run museflow users create --email <email>
+uv run museflow users create --email <email>
 ```
 You will be prompted to enter and confirm the password.
 
 **Update a user:**
 
 ```bash
-poetry run museflow users update <user_id> --email <new_email> --password <new_password>
+uv run museflow users update <user_id> --email <new_email> --password <new_password>
 ```
 
 ### Spotify Interaction (`spotify`)
@@ -163,7 +163,7 @@ Initiates the OAuth flow. You need to open the URL in a browser and authorize th
 Ensure you have started the application (e.g., using `make up`) before running this command.
 
 ```bash
-poetry run museflow spotify connect --email <email>
+uv run museflow spotify connect --email <email>
 ```
 
 *   `--timeout`: Seconds to wait for authentication (default: 60.0).
@@ -174,7 +174,7 @@ poetry run museflow spotify connect --email <email>
 Synchronize the user's items (artists, tracks) into the database.
 
 ```bash
-poetry run museflow spotify sync --email <email> [OPTIONS]
+uv run museflow spotify sync --email <email> [OPTIONS]
 ```
 
 **Sync Options:**
@@ -196,7 +196,7 @@ poetry run museflow spotify sync --email <email> [OPTIONS]
 Example: Sync everything for a user
 
 ```bash
-poetry run museflow spotify sync --email user@example.com --sync-all
+uv run museflow spotify sync --email user@example.com --sync-all
 ```
 
 ## Development

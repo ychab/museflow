@@ -41,7 +41,7 @@ class TestSpotifyLibraryLive:
     * connect a user account with Spotify and manually copy its real refresh token from the DB
 
     Then execute:
-    > SPOTIFY_CLIENT_ID=<REAL_CLIENT_ID> SPOTIFY_CLIENT_SECRET=<REAL_CLIENT_SECRET> poetry run pytest ./tests/integration/live --spotify-refresh-token=<REFRESH_TOKEN>
+    > SPOTIFY_CLIENT_ID=<REAL_CLIENT_ID> SPOTIFY_CLIENT_SECRET=<REAL_CLIENT_SECRET> uv run pytest ./tests/integration/live --spotify-refresh-token=<REFRESH_TOKEN>
     """
 
     @pytest.fixture

@@ -1,57 +1,63 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "museflow"
 version = "0.1.0"
-description = "An assistant for your Spotify Account"
-authors = ["Yannick Chabbert <yannick.chabbert.it@gmail.com>"]
-license = "MIT"
+description = "MuseFlow helps you discover new music by offering recommendations based on your listening history."
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+  { name = "Yannick Chabbert", email = "yannick.chabbert.it@gmail.com" }
+]
 
+dependencies = [
+    "fastapi[standard]>=0.128.0",
+    "pydantic[email]>=2.12.5",
+    "pydantic-core>=2.41.5",
+    "pydantic-settings>=2.12.0",
+    "sqlalchemy[asyncio]>=2.0.45",
+    "alembic>=1.18.0",
+    "asyncpg>=0.31.0",
+    "typer>=0.21.1",
+    "rich>=14.3.2",
+    "httpx>=0.28.1",
+    "argon2-cffi>=25.1.0",
+    "pyjwt>=2.10.1",
+    "tenacity>=9.1.4",
+    "python-slugify>=8.0.4",
+]
 
-[tool.poetry.dependencies]
-python = "^3.13"
-fastapi = {extras = ["standard"], version = "^0.128.0"}
-pydantic = {extras = ["email"], version = "^2.12.5"}
-pydantic-core = "^2.42.0"
-pydantic-settings = "^2.12.0"
-sqlalchemy = {extras = ["asyncio"], version = "^2.0.45"}
-alembic = "^1.18.0"
-asyncpg = "^0.31.0"
-typer = "^0.21.1"
-rich = "^14.3.2"
-httpx = "^0.28.1"
-argon2-cffi = "^25.1.0"
-pyjwt = "^2.10.1"
-tenacity = "^9.1.4"
-python-slugify = "^8.0.4"
-
-
-[tool.poetry.group.test.dependencies]
-pytest = "^9.0.2"
-pytest-cov = "^7.0.0"
-pytest-env = "^1.2.0"
-pytest-httpx = "^0.36.0"
-pytest-reverse = "^1.9.0"
-coverage = {version = ">=7.2", extras = ["toml"]}
-polyfactory = "^3.2.0"
-time-machine = "^3.2.0"
-wiremock = "^2.7.0"
-
-
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^4.5.1"
-deptry = "^0.24.0"
-ruff = "^0.14.11"
-mypy = "^1.19.1"
-pydantic = {extras = ["dotenv"], version = "^2.12.5"}
-
-
-[tool.poetry.scripts]
+[project.scripts]
 museflow = "museflow.infrastructure.entrypoints.cli.main:app"
 
+[dependency-groups]
+test = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-env>=1.2.0",
+    "pytest-httpx>=0.36.0",
+    "pytest-reverse>=1.9.0",
+    "coverage[toml]>=7.2",
+    "polyfactory>=3.2.0",
+    "time-machine>=3.2.0",
+    "wiremock>=2.7.0",
+]
 
-[build-system]
-requires = ["poetry-core>=1.8.5"]
-build-backend = "poetry.core.masonry.api"
+dev = [
+    "pre-commit>=4.5.1",
+    "deptry>=0.24.0",
+    "ruff>=0.14.11",
+    "mypy>=1.19.1",
+    # Note: pydantic[dotenv] is usually redundant if you have python-dotenv or pydantic-settings,
+    # but kept here to match your original request.
+    # "pydantic[dotenv]>=2.12.5",
+]
 
+[tool.hatch.build.targets.wheel]
+packages = ["museflow"]
 
 [tool.ruff]
 src = ["museflow", "tests"]

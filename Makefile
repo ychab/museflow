@@ -17,41 +17,42 @@ help:
 .PHONY: install install-deps install-precommit update update-deps update-precommit lock outdated
 
 install-deps:  ## Install python dependencies
-	poetry install
+	uv sync --all-groups
 
 install-precommit:  ## Install pre-commit hooks
-	poetry run pre-commit install
+	uv run pre-commit install
 
 install: install-deps install-precommit ## Install python dependencies and pre-commit hooks
 
 update-deps:  ## Update python dependencies
-	poetry update
+	uv lock --upgrade
+	uv sync --all-groups
 
 update-precommit:  ## Update pre-commit hooks
-	poetry run pre-commit autoupdate
+	uv run pre-commit autoupdate
 
 update: update-deps update-precommit ## Update python dependencies and pre-commit hooks
 
 lock:  ## Lock dependencies
-	poetry lock --no-update
+	uv lock
 
 outdated: ## List outdated dependencies
-	poetry show --outdated
+	uv pip list --outdated
 
 
 ############
 # Versioning
 ############
 
-BUMP_TARGETS = bump-patch bump-minor bump-major bump-prepatch bump-preminor bump-premajor bump-prerelease
+BUMP_TARGETS = bump-patch bump-minor bump-major
 
 # This "phantom" target exists only to appear in 'make help'
-bump: ## Bump version (options: bump-patch, bump-minor, bump-major, etc.)
+bump: ## Bump version (options: bump-patch, bump-minor, bump-major)
 
 .PHONY: $(BUMP_TARGETS) bump
 $(BUMP_TARGETS): bump-%:
-	poetry version $*
-	poetry install
+	uvx bump-my-version bump $*
+	uv sync
 
 
 ########
@@ -96,7 +97,7 @@ reset:  ## Remove volumes and images
 .PHONY: run app-shell
 
 run: ## Run the application
-	poetry run fastapi dev museflow/infrastructure/entrypoints/api/main.py
+	uv run fastapi dev museflow/infrastructure/entrypoints/api/main.py
 
 app-shell: up ## Connect to the application shell
 	docker compose exec app /bin/bash
@@ -109,13 +110,13 @@ app-shell: up ## Connect to the application shell
 .PHONY: db-upgrade db-downgrade db-revision db-shell
 
 db-upgrade: up-db  ## Upgrade database
-	poetry run alembic upgrade head
+	uv run alembic upgrade head
 
 db-downgrade: up-db  ## Downgrade database
-	poetry run alembic downgrade base
+	uv run alembic downgrade base
 
 db-revision: up-db ## Create a new migration
-	poetry run alembic revision --autogenerate
+	uv run alembic revision --autogenerate
 
 db-shell: up-db ## Connect to the database shell
 	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
@@ -128,14 +129,14 @@ db-shell: up-db ## Connect to the database shell
 .PHONY: test test-unit test-integration
 
 test: up-db up-wiremock ## Run all the testsuite
-	poetry run pytest ./tests || ($(MAKE) down && exit 1)
+	uv run pytest ./tests || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
 test-unit: ## Run unit tests
-	poetry run pytest ./tests/unit -v
+	uv run pytest ./tests/unit -v
 
 test-integration: up-db up-wiremock ## Run integration tests
-	poetry run pytest ./tests/integration -v || ($(MAKE) down && exit 1)
+	uv run pytest ./tests/integration -v || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
 ###################
@@ -145,18 +146,26 @@ test-integration: up-db up-wiremock ## Run integration tests
 .PHONY: lint lint-format lint-check precommit
 
 lint-format:  ## Lint and format code
-	poetry run ruff check museflow tests
-	poetry run ruff format museflow tests
-	poetry run mypy
-	poetry run deptry .
+	uv run ruff check museflow tests
+	uv run ruff format museflow tests
+	uv run mypy
+	uv run deptry .
 
 lint: lint-format
 
 lint-check: ## Lint and check code
-	poetry run ruff check --no-fix museflow tests
-	poetry run ruff format --check museflow tests
-	poetry run mypy
-	poetry run deptry .
+	uv run ruff check --no-fix museflow tests
+	uv run ruff format --check museflow tests
+	uv run mypy
+	uv run deptry .
 
 precommit: ## Run pre-commit hooks
-	poetry run pre-commit run --all-files
+	uv run pre-commit run --all-files
+
+clean: ## Cleanup cache files
+	rm -rf .pytest_cache
+	rm -rf .mypy_cache
+	rm -rf .ruff_cache
+	rm -rf htmlcov coverage.xml junit.xml
+	rm -f .coverage
+	find . -type d -name "__pycache__" -exec rm -rf {} +

@@ -2,6 +2,9 @@ __pycache__
 *.pyc
 *.egg-info
 
+.python-version
+.venv
+
 .env
 
 .coverage
