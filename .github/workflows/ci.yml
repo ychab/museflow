@@ -15,6 +15,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Just
+        uses: extractions/setup-just@v2
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -26,13 +29,13 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: make install-deps
+        run: just install-deps
 
       - name: Lint Check
-        run: make lint-check
+        run: just lint-check
 
       - name: Run Tests
-        run: make test
+        run: just test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

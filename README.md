@@ -47,21 +47,21 @@ Follow these steps to set up the project locally:
     You can install dependencies and pre-commit hooks in one go using the Makefile:
 
     ```bash
-    make install
+    just install
     ```
 
     Alternatively, you can install them manually:
 
     *   **Install dependencies:**
         ```bash
-        make install-deps
+        just install-deps
         # OR
         uv sync --all-groups
         ```
 
     *   **Install pre-commit hooks:**
         ```bash
-        make install-precommit
+        just install-precommit
         # OR
         uv run pre-commit install
         ```
@@ -102,14 +102,14 @@ You can run the application and the database using Docker Compose or the provide
 
 *   **Start the whole stack (DB + App):**
     ```bash
-    make up
+    just up
     ```
 
 *   **Run the API server locally (with hot reload):**
     ```bash
-    make run
+    just run
     ```
-    *Note: You need to have the database running (`make up-db`).*
+    *Note: You need to have the database running (`just up-db`).*
 
 **Using Docker Compose directly:**
 
@@ -160,7 +160,7 @@ Interact with Spotify data.
 Initiates the OAuth flow. You need to open the URL in a browser and authorize the app.
 
 **Prerequisite:** The FastAPI application must be running to handle the Spotify callback.
-Ensure you have started the application (e.g., using `make up`) before running this command.
+Ensure you have started the application (e.g., using `just up`) before running this command.
 
 ```bash
 uv run museflow spotify connect --email <email>
@@ -204,11 +204,11 @@ uv run museflow spotify sync --email user@example.com --sync-all
 **Linting and Formatting:**
 
 ```bash
-make lint
+just lint
 ```
 
 **Running Tests:**
 
 ```bash
-make test
+just test
 ```
