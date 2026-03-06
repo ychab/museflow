@@ -271,7 +271,9 @@ class TestSpotifyLibrary:
         tracks = await spotify_library.get_playlist_tracks(page_size=page_size, max_pages=max_pages)
         assert len(tracks) == playlist_total * playlist_tracks_total
 
-    @pytest.mark.parametrize("wiremock_response", ["playlist_items_rap_page_1"], indirect=["wiremock_response"])
+    @pytest.mark.parametrize(
+        "wiremock_response", ["playlist_items_0wKgiV47itigJyxBgFxAu1_page_1"], indirect=["wiremock_response"]
+    )
     async def test__get_playlist_tracks__duplicates(
         self,
         spotify_library: SpotifyLibraryAdapter,
@@ -314,7 +316,9 @@ class TestSpotifyLibrary:
         tracks = await spotify_library.get_playlist_tracks(page_size=page_size)
         assert len(tracks) == 1
 
-    @pytest.mark.parametrize("wiremock_response", ["playlist_items_rap_page_1"], indirect=["wiremock_response"])
+    @pytest.mark.parametrize(
+        "wiremock_response", ["playlist_items_0wKgiV47itigJyxBgFxAu1_page_1"], indirect=["wiremock_response"]
+    )
     async def test__get_playlist_tracks__local_files(
         self,
         spotify_library: SpotifyLibraryAdapter,
