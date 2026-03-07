@@ -29,6 +29,7 @@ from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
 from museflow.domain.schemas.user import UserCreate
 from museflow.domain.schemas.user import UserUpdate
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
@@ -335,12 +336,33 @@ def spotify_library(
     )
 
 
+@pytest.fixture
+async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmClientAdapter]:
+    base_url: str | None = os.getenv("WIREMOCK_LASTFM_BASE_URL")
+
+    retry_method = LastFmClientAdapter.make_api_call
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+
+    async with LastFmClientAdapter(
+        client_api_key="dummy-api-key",
+        client_secret="dummy-client-secret",
+        base_url=HttpUrl(base_url) if base_url else None,
+    ) as client:
+        yield client
+
+
 # --- Wiremock ---
 
 
 @pytest.fixture
 def spotify_wiremock() -> Iterable[WireMockContext]:
     with WireMockContext(base_url=os.getenv("WIREMOCK_SPOTIFY_ADMIN_URL", "")) as wiremock_context:
+        yield wiremock_context
+
+
+@pytest.fixture
+def lastfm_wiremock() -> Iterable[WireMockContext]:
+    with WireMockContext(base_url=os.getenv("WIREMOCK_LASTFM_ADMIN_URL", "")) as wiremock_context:
         yield wiremock_context
 
 

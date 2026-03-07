@@ -17,6 +17,7 @@ class LastFMSettings(BaseSettings):
     CLIENT_SECRET: str
 
     HTTP_TIMEOUT: float = 30.0
+    HTTP_MAX_RETRIES: int = 5
 
 
 lastfm_settings = LastFMSettings()

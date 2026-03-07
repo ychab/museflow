@@ -74,6 +74,15 @@ services:
       - ./tests/assets/wiremock/spotify:/home/wiremock
     command: ["--verbose", "--https-port", "8443", "--global-response-templating"]
 
+  wiremock-lastfm:
+    image: wiremock/wiremock:3.12.0
+    container_name: museflow-wiremock-lastfm
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./tests/assets/wiremock/lastfm:/home/wiremock
+    command: ["--verbose", "--global-response-templating"]
+
 volumes:
   db_data:
 

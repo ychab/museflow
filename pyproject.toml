@@ -156,16 +156,19 @@ env = [
     'D:DATABASE_USER=museflow',
     'D:DATABASE_PASSWORD=museflow',
     'D:DATABASE_PATH=museflow',
-    # Spotify client adapter required settings (could be overriden for live tests)
+    # Spotify client required settings (could be overriden for live tests)
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
     'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
-    'D:SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
-    # Wiremock settings (could be overriden)
-    'D:WIREMOCK_SPOTIFY_ADMIN_URL=http://localhost:8081',
-    'D:WIREMOCK_SPOTIFY_BASE_URL=https://localhost:8444',
-    # Last FM client adapter required settings
+    'SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+    # Wiremock spotify settings
+    'WIREMOCK_SPOTIFY_ADMIN_URL=http://localhost:8081',
+    'WIREMOCK_SPOTIFY_BASE_URL=https://localhost:8444',
+    # LastFM client required settings (could be overriden for live tests)
     'D:LASTFM_CLIENT_API_KEY=dummy-client-id',
     'D:LASTFM_CLIENT_SECRET=dummy-client-secret',
+    # Wiremock lastfm settings
+    'WIREMOCK_LASTFM_ADMIN_URL=http://localhost:8082',
+    'WIREMOCK_LASTFM_BASE_URL=http://localhost:8082',
 ]
 filterwarnings = [
     "always",  # Equivalent to -W always

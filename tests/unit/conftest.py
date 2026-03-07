@@ -18,6 +18,7 @@ from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -151,3 +152,12 @@ def spotify_library(
         session_client=spotify_session_client,
         max_concurrency=10,
     )
+
+
+@pytest.fixture
+async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
+    async with LastFmClientAdapter(
+        client_api_key="dummy-api-key",
+        client_secret="dummy-client-secret",
+    ) as client:
+        yield client
