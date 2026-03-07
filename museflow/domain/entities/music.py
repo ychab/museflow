@@ -50,6 +50,14 @@ class Track(BaseMediaItem):
 
 
 @dataclass(frozen=True, kw_only=True)
+class TrackSuggested:
+    name: str
+    artists: list[str]
+    advisor_id: str | None = None
+    score: float | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class Playlist(BaseProviderEntity):
     snapshot_id: str | None = None
 
