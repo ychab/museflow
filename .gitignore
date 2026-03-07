@@ -13,3 +13,7 @@ junit.xml
 /htmlcov
 
 .idea
+.vscode/
+*.swp
+
+repomix-output.md
