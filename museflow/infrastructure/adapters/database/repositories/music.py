@@ -99,6 +99,14 @@ class TrackSQLRepository(TrackRepository):
         results = await self.session.execute(stmt)
         return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
 
+    async def get_by_ids(self, user_id: uuid.UUID, track_ids: list[uuid.UUID]) -> list[Track]:
+        stmt = select(TrackModel).where(
+            TrackModel.user_id == user_id,
+            TrackModel.id.in_(track_ids),
+        )
+        results = await self.session.execute(stmt)
+        return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
+
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         return await bulk_item_upsert(
             session=self.session,

@@ -91,6 +91,9 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_ids(self, user_id: uuid.UUID, track_ids: list[uuid.UUID]) -> list[Track]: ...
+
+    @abstractmethod
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         """Performs a bulk "upsert" (insert or update) of track records.
 
