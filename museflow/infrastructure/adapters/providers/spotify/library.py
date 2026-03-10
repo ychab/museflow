@@ -163,6 +163,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         # Gather all tracks first.
         tracks = [track for task in tasks for track in task.result()]
         # Then remove duplicates due to multiple playlists with the same tracks.
+        # @todo - improve it to don't only rely on spotify ID's
         return list({track.provider_id: track for track in tracks}.values())
 
     async def search_tracks(
@@ -243,7 +244,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 page_model=SpotifyPage[SpotifyPlaylistTrack],
                 page_processor=self._extract_playlist_tracks,
                 params={
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
+                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 page_size=page_size,

@@ -1,7 +1,6 @@
 import uuid
 
-from slugify import slugify
-
+from museflow.domain.entities.music import Album
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
@@ -45,7 +44,6 @@ def to_domain_artist(
     return Artist(
         user_id=user_id,
         name=spotify_artist.name,
-        slug=slugify(spotify_artist.name),
         popularity=spotify_artist.popularity,
         is_saved=is_saved,
         is_top=is_top,
@@ -67,7 +65,6 @@ def to_domain_track(
     return Track(
         user_id=user_id,
         name=spotify_track.name,
-        slug=slugify(spotify_track.name),
         popularity=spotify_track.popularity,
         is_saved=is_saved,
         is_top=is_top,
@@ -75,6 +72,9 @@ def to_domain_track(
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_track.id,
         artists=[TrackArtist(provider_id=artist.id, name=artist.name) for artist in spotify_track.artists],
+        album=Album(**spotify_track.album.model_dump(by_alias=True)) if spotify_track.album else None,
+        isrc=spotify_track.isrc,
+        duration_ms=spotify_track.duration_ms,
     )
 
 
@@ -82,7 +82,6 @@ def to_domain_playlist(spotify_playlist: SpotifyPlaylist, user_id: uuid.UUID, tr
     return Playlist(
         user_id=user_id,
         name=spotify_playlist.name,
-        slug=slugify(spotify_playlist.name),
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_playlist.id,
         snapshot_id=spotify_playlist.snapshot_id,

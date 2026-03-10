@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from museflow.domain.types import MusicProvider
+from museflow.domain.utils.text import generate_fingerprint
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -12,7 +13,6 @@ class BaseProviderEntity(ABC):
     user_id: uuid.UUID
 
     name: str
-    slug: str
 
     provider: MusicProvider = MusicProvider.SPOTIFY
     provider_id: str
@@ -21,6 +21,7 @@ class BaseProviderEntity(ABC):
 @dataclass(frozen=True, kw_only=True)
 class BaseMediaItem(BaseProviderEntity):
     popularity: int | None = None
+    genres: list[str] = field(default_factory=list)
 
     is_saved: bool = False
     is_top: bool = False
@@ -29,7 +30,7 @@ class BaseMediaItem(BaseProviderEntity):
 
 @dataclass(frozen=True, kw_only=True)
 class Artist(BaseMediaItem):
-    genres: list[str] = field(default_factory=list)
+    pass
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,8 +46,29 @@ class TrackArtist:
 
 
 @dataclass(frozen=True, kw_only=True)
+class Album:
+    provider_id: str
+    name: str
+    album_type: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class Track(BaseMediaItem):
     artists: list[TrackArtist] = field(default_factory=list)
+    album: Album | None = None
+
+    isrc: str | None = None
+    fingerprint: str = ""
+
+    duration_ms: int
+
+    def __post_init__(self):
+        if not self.fingerprint:
+            fingerprint_val = generate_fingerprint(
+                name=self.name,
+                artist_names=[artist.name for artist in self.artists],
+            )
+            object.__setattr__(self, "fingerprint", fingerprint_val)
 
 
 @dataclass(frozen=True, kw_only=True)

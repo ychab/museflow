@@ -5,11 +5,12 @@ from typing import cast
 from sqlalchemy import select
 
 from polyfactory import Use
-from polyfactory.decorators import post_generated
-from slugify import slugify
+from polyfactory.factories import TypedDictFactory
 
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.adapters.database.models import AlbumDict
 from museflow.infrastructure.adapters.database.models import Artist
+from museflow.infrastructure.adapters.database.models import ArtistDict
 from museflow.infrastructure.adapters.database.models import Track
 
 from tests.integration.factories.models.base import BaseModelFactory
@@ -24,12 +25,9 @@ class BaseMusicItemModelFactory[T: (Artist | Track)](BaseModelFactory[T]):
     popularity = Use(BaseModelFactory.__faker__.random_int, min=0, max=100)
     top_position = Use(BaseModelFactory.__faker__.random_int, min=1)
 
-    provider = MusicProvider.SPOTIFY
+    genres = Use(lambda: ["Pop", "Rock", "Rap", "Indie", "Alternative"])
 
-    @post_generated
-    @classmethod
-    def slug(cls, name: str) -> str:
-        return slugify(name)
+    provider = MusicProvider.SPOTIFY
 
     @classmethod
     async def create_async(cls, **kwargs: Any) -> T:
@@ -51,7 +49,13 @@ class BaseMusicItemModelFactory[T: (Artist | Track)](BaseModelFactory[T]):
 class ArtistModelFactory(BaseMusicItemModelFactory[Artist]):
     __model__ = Artist
 
-    genres = Use(lambda: ["Pop", "Rock", "Rap", "Indie", "Alternative"])
+
+class ArtistDictFactory(TypedDictFactory[ArtistDict]):
+    __model__ = ArtistDict
+
+
+class AlbumDictFactory(TypedDictFactory[AlbumDict]):
+    __model__ = AlbumDict
 
 
 class TrackModelFactory(BaseMusicItemModelFactory[Track]):
@@ -59,12 +63,16 @@ class TrackModelFactory(BaseMusicItemModelFactory[Track]):
 
     artists = Use(
         lambda: [
-            {
-                "name": BaseMusicItemModelFactory.__faker__.name(),
-                "provider_id": str(uuid.uuid4()),
-            }
-            for _ in range(BaseMusicItemModelFactory.__faker__.random_int(min=1, max=3))
+            ArtistDictFactory.build() for _ in range(BaseMusicItemModelFactory.__faker__.random_int(min=1, max=3))
         ]
+    )
+
+    album = Use(
+        lambda: (
+            AlbumDictFactory.build()
+            if BaseMusicItemModelFactory.__faker__.boolean(chance_of_getting_true=70)
+            else None
+        )
     )
 
     @classmethod

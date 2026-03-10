@@ -1,5 +1,6 @@
 import uuid
-from typing import Any
+from typing import NotRequired
+from typing import TypedDict
 
 from sqlalchemy import ARRAY
 from sqlalchemy import Boolean
@@ -14,6 +15,7 @@ from sqlalchemy.orm import MappedAsDataclass
 from sqlalchemy.orm import declared_attr
 from sqlalchemy.orm import mapped_column
 
+from museflow.domain.entities.music import Album
 from museflow.domain.entities.music import Artist as ArtistEntity
 from museflow.domain.entities.music import Track as TrackEntity
 from museflow.domain.entities.music import TrackArtist
@@ -21,6 +23,17 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
+
+
+class ArtistDict(TypedDict):
+    provider_id: str
+    name: str
+
+
+class AlbumDict(TypedDict):
+    provider_id: str
+    name: str
+    album_type: NotRequired[str]
 
 
 class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only=True):
@@ -32,12 +45,18 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
     )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), nullable=False)
     popularity: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
     is_saved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_top: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     top_position: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+
+    genres: Mapped[list[str]] = mapped_column(
+        ARRAY(String),
+        nullable=False,
+        default_factory=list,
+        sort_order=300,
+    )
 
     provider: Mapped[MusicProvider] = mapped_column(Enum(MusicProvider), nullable=False, sort_order=990)
     provider_id: Mapped[str] = mapped_column(String(512), nullable=False, sort_order=991)
@@ -50,13 +69,6 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
 class Artist(MusicItemMixin, Base):
     __tablename__ = "museflow_artist"
 
-    genres: Mapped[list[str]] = mapped_column(
-        ARRAY(String),
-        nullable=False,
-        default_factory=list,
-        sort_order=50,
-    )
-
     def to_entity(self) -> ArtistEntity:
         return ArtistEntity(
             id=self.id,
@@ -64,7 +76,6 @@ class Artist(MusicItemMixin, Base):
             user_id=self.user_id,
             provider_id=self.provider_id,
             name=self.name,
-            slug=self.slug,
             popularity=self.popularity,
             is_saved=self.is_saved,
             is_top=self.is_top,
@@ -73,15 +84,16 @@ class Artist(MusicItemMixin, Base):
         )
 
 
-class Track(MusicItemMixin, Base):
+class Track(MusicItemMixin, Base, kw_only=True):
     __tablename__ = "museflow_track"
 
-    artists: Mapped[list[dict[str, Any]]] = mapped_column(
-        JSONB,
-        nullable=False,
-        default_factory=list,
-        sort_order=50,
-    )
+    artists: Mapped[list[ArtistDict]] = mapped_column(JSONB, nullable=False, default_factory=list)
+    album: Mapped[AlbumDict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    isrc: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
 
     def to_entity(self) -> TrackEntity:
         return TrackEntity(
@@ -90,10 +102,14 @@ class Track(MusicItemMixin, Base):
             user_id=self.user_id,
             provider_id=self.provider_id,
             name=self.name,
-            slug=self.slug,
             popularity=self.popularity,
             is_saved=self.is_saved,
             is_top=self.is_top,
             top_position=self.top_position,
             artists=[TrackArtist(provider_id=artist["provider_id"], name=artist["name"]) for artist in self.artists],
+            genres=self.genres,
+            album=Album(**self.album) if self.album else None,
+            duration_ms=self.duration_ms,
+            isrc=self.isrc,
+            fingerprint=self.fingerprint,
         )

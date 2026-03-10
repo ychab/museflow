@@ -5,7 +5,7 @@
     "queryParameters": {
       "offset": { "matches": "[0-9]+" },
       "limit": { "equalTo": "1" },
-      "fields": { "equalTo": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))" },
+      "fields": { "equalTo": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))" },
       "additional_types": { "equalTo": "track" }
     }
   },

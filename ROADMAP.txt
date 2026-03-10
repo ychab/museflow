@@ -2,6 +2,20 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## track entity
+
+- remove slug field
+- add new fields:
+    => fingerprint
+    => duration_ms
+    => album
+    => isrc
+    => genre (copied from the artists?)
+
+## test
+
+- fix flaky test: FAILED tests/integration/infrastructure/adapters/providers/spotify/test_library.py::TestSpotifyLibrary::test__get_saved_tracks__nominal - httpx.LocalProtocolError: Illegal header value b'bearer '
+
 ## direnv
 
 - add support?

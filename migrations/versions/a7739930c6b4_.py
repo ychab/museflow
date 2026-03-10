@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: cf11a07693bf
+Revision ID: a7739930c6b4
 Revises:
-Create Date: 2026-02-25 15:22:12.490862
+Create Date: 2026-03-10 19:17:02.753566
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'cf11a07693bf'
+revision: str = 'a7739930c6b4'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,7 +35,6 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('slug', sa.String(length=255), nullable=False),
     sa.Column('popularity', sa.Integer(), nullable=True),
     sa.Column('is_saved', sa.Boolean(), nullable=False),
     sa.Column('is_top', sa.Boolean(), nullable=False),
@@ -77,13 +76,17 @@ def upgrade() -> None:
     op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('artists', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('album', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('duration_ms', sa.Integer(), nullable=False),
+    sa.Column('isrc', sa.String(length=512), nullable=True),
+    sa.Column('fingerprint', sa.String(length=512), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('slug', sa.String(length=255), nullable=False),
     sa.Column('popularity', sa.Integer(), nullable=True),
     sa.Column('is_saved', sa.Boolean(), nullable=False),
     sa.Column('is_top', sa.Boolean(), nullable=False),
     sa.Column('top_position', sa.Integer(), nullable=True),
-    sa.Column('artists', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('genres', sa.ARRAY(sa.String()), nullable=False),
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
     sa.Column('provider_id', sa.String(length=512), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

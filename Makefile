@@ -59,7 +59,7 @@ $(BUMP_TARGETS): bump-%:
 # Docker
 ########
 
-.PHONY: ps logs up up-db up-wiremock dev down restart reload reset
+.PHONY: ps logs up up-db up-wiremock up-test down restart reload reset
 
 ps:  ## List containers
 	docker compose ps --all
@@ -76,7 +76,7 @@ up-db:  ## Start database container only
 up-wiremock:  ## Start wiremock containers only
 	docker compose up --detach --wait wiremock-spotify
 
-dev: up-db up-wiremock  ## Start DB and Wiremock containers
+up-test: up-db up-wiremock  ## Start DB and Wiremock containers
 
 down: ## Stop containers
 	docker compose down --remove-orphans
@@ -135,7 +135,7 @@ test: up-db up-wiremock ## Run all the testsuite
 test-unit: ## Run unit tests
 	uv run pytest ./tests/unit -v
 
-test-integration: up-db up-wiremock ## Run integration tests
+test-integration: up-test ## Run integration tests
 	uv run pytest ./tests/integration -v || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
@@ -170,5 +170,5 @@ clean: ## Cleanup cache files
 	rm -f .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
-export-ai:
-	uvx repomix
+repomix:
+	uvx repomix --no-security-check

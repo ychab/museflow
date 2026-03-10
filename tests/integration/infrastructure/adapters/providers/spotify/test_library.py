@@ -234,32 +234,30 @@ class TestSpotifyLibrary:
         track_first = tracks[0]
         assert track_first.id is not None
         assert track_first.user_id == spotify_library.user.id
-        assert track_first.name == "Rolls (feat. Lacrim)"
-        assert track_first.popularity == 44
+        assert track_first.name == "A Buenaventura"
+        assert track_first.popularity == 4
         assert track_first.is_saved is False
         assert track_first.is_top is False
         assert track_first.top_position is None
-        assert len(track_first.artists) == 2
-        assert track_first.artists[0].provider_id == "1kwzW1IszUiq4Gs9BFesvW"
-        assert track_first.artists[0].name == "Hornet La Frappe"
-        assert track_first.artists[1].provider_id == "7DUTsWY3RBd64vh8UtgtYA"
-        assert track_first.artists[1].name == "Lacrim"
+        assert len(track_first.artists) == 1
+        assert track_first.artists[0].provider_id == "6DGyKmbV7zJrnjlNmpA0j9"
+        assert track_first.artists[0].name == "Piper Pimienta"
         assert track_first.provider == MusicProvider.SPOTIFY
-        assert track_first.provider_id == "3iYv5nIthPXesF0DeuhmVL"
+        assert track_first.provider_id == "3L1kaOVoLhNphFfByd5b5m"
 
         track_last = tracks[-1]
         assert track_last.id is not None
         assert track_last.user_id == spotify_library.user.id
-        assert track_last.name == "Yo Te Canto"
-        assert track_last.popularity == 2
+        assert track_last.name == "Late Nights"
+        assert track_last.popularity == 49
         assert track_last.is_saved is False
         assert track_last.is_top is False
         assert track_last.top_position is None
         assert len(track_last.artists) == 1
-        assert track_last.artists[0].provider_id == "6DGyKmbV7zJrnjlNmpA0j9"
-        assert track_last.artists[0].name == "Piper Pimienta"
+        assert track_last.artists[0].provider_id == "5gs4Sm2WQUkcGeikMcVHbh"
+        assert track_last.artists[0].name == "Hamza"
         assert track_last.provider == MusicProvider.SPOTIFY
-        assert track_last.provider_id == "7CmDeBNvuklb5WvErkDkTj"
+        assert track_last.provider_id == "01S5aiC3Q5bt84EiGaCVwP"
 
     async def test__get_playlist_tracks__max_pages(self, spotify_library: SpotifyLibraryAdapter) -> None:
         page_size = 1
@@ -272,7 +270,7 @@ class TestSpotifyLibrary:
         assert len(tracks) == playlist_total * playlist_tracks_total
 
     @pytest.mark.parametrize(
-        "wiremock_response", ["playlist_items_0wKgiV47itigJyxBgFxAu1_page_1"], indirect=["wiremock_response"]
+        "wiremock_response", ["playlist_items_1xnKqEZDpMWvrts4M9I9GC_page_1"], indirect=["wiremock_response"]
     )
     async def test__get_playlist_tracks__duplicates(
         self,
@@ -295,7 +293,7 @@ class TestSpotifyLibrary:
                 query_params={
                     "offset": offset,
                     "limit": page_size,
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
+                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 json_body=wiremock_response,
@@ -307,7 +305,7 @@ class TestSpotifyLibrary:
                 query_params={
                     "offset": offset,
                     "limit": page_size,
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
+                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 json_body=wiremock_response,
@@ -317,7 +315,7 @@ class TestSpotifyLibrary:
         assert len(tracks) == 1
 
     @pytest.mark.parametrize(
-        "wiremock_response", ["playlist_items_0wKgiV47itigJyxBgFxAu1_page_1"], indirect=["wiremock_response"]
+        "wiremock_response", ["playlist_items_1xnKqEZDpMWvrts4M9I9GC_page_1"], indirect=["wiremock_response"]
     )
     async def test__get_playlist_tracks__local_files(
         self,
@@ -339,7 +337,7 @@ class TestSpotifyLibrary:
             query_params={
                 "offset": 0,
                 "limit": page_size,
-                "fields": "total,limit,offset,items(item(id,name,href,popularity,is_local,artists(id,name)))",
+                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                 "additional_types": "track",
             },
             json_body=wiremock_response,
@@ -403,7 +401,6 @@ class TestSpotifyLibrary:
         assert playlist.id is not None
         assert playlist.user_id == spotify_library.user.id
         assert playlist.name == "test"
-        assert playlist.slug == "test"
         assert playlist.provider == MusicProvider.SPOTIFY
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert playlist.snapshot_id == "AAAAAsNYTkn8k2rpWWck/VOdy+GiqV1c"
