@@ -10,11 +10,11 @@ def normalize_text(text: str) -> str:
     # 1. Remove accents and convert to lowercase
     text = unidecode(text).lower()
 
-    # 2. Remove "feat.", "ft.", "remaster", "radio edit" in brackets or parentheses
-    text = re.sub(r"[\(\[].*?(feat\.|ft\.|remaster|live|edit|version).*?[\)\]]", "", text)
+    # 2. Remove "feat", "feat.", "ft", "ft.", "remaster", "radio edit" in brackets or parentheses
+    text = re.sub(r"[\(\[].*?(feat\.?|ft\.?|remaster|live|edit|version).*?[\)\]]", "", text)
 
     # 3. Remove trailing suffixes after hyphens
-    text = re.sub(r"\s*-\s*.*?(remaster|live|edit|version|mono|stereo).*", "", text)
+    text = re.sub(r"\s*-\s*.*?(feat\.?|ft\.?|remaster|live|edit|version|mono|stereo).*", "", text)
 
     # 4. Remove purely non-alphanumeric noise and extra whitespace
     text = re.sub(r"[^\w\s]", "", text)
