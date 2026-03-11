@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.inputs.user import UserCreateInput
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.user import UserCreate
-from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 
@@ -33,7 +33,7 @@ class UserSQLRepository(UserRepository):
 
         return user_db.to_entity() if user_db else None
 
-    async def create(self, user_data: UserCreate, hashed_password: str) -> User:
+    async def create(self, user_data: UserCreateInput, hashed_password: str) -> User:
         user_dict: dict[str, Any] = user_data.model_dump(exclude={"password"})
         user_dict["hashed_password"] = hashed_password
 
@@ -45,7 +45,7 @@ class UserSQLRepository(UserRepository):
 
         return user_db.to_entity()
 
-    async def update(self, user_id: uuid.UUID, user_data: UserUpdate, hashed_password: str | None = None) -> User:
+    async def update(self, user_id: uuid.UUID, user_data: UserUpdateInput, hashed_password: str | None = None) -> User:
         update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True, exclude={"password"})
 
         if hashed_password:

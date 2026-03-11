@@ -1,13 +1,13 @@
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
-from museflow.domain.schemas.user import UserUpdate
 
 
 async def user_update(
     user: User,
-    user_data: UserUpdate,
+    user_data: UserUpdateInput,
     user_repository: UserRepository,
     password_hasher: PasswordHasherPort,
 ) -> User:

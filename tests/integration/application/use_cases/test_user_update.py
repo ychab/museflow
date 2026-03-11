@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.use_cases.user_update import user_update
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
-from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 from tests.integration.factories.models.user import UserModelFactory
@@ -22,7 +22,7 @@ class TestUserUpdateUseCase:
         user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
-        user_update_data = UserUpdate(email="foo@example.com")
+        user_update_data = UserUpdateInput(email="foo@example.com")
 
         await user_update(
             user=user,
@@ -45,7 +45,7 @@ class TestUserUpdateUseCase:
         user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
-        user_update_data = UserUpdate(email=user.email)
+        user_update_data = UserUpdateInput(email=user.email)
 
         await user_update(
             user=user,
@@ -67,7 +67,7 @@ class TestUserUpdateUseCase:
         password_hasher: PasswordHasherPort,
     ) -> None:
         other_user_db = await UserModelFactory.create_async()
-        user_update_data = UserUpdate(email=other_user_db.email)
+        user_update_data = UserUpdateInput(email=other_user_db.email)
 
         with pytest.raises(UserEmailAlreadyExistsException):
             await user_update(
@@ -85,7 +85,7 @@ class TestUserUpdateUseCase:
         password_hasher: PasswordHasherPort,
     ) -> None:
         password = "blahblah"
-        user_update_data = UserUpdate(password=password)
+        user_update_data = UserUpdateInput(password=password)
 
         user_updated = await user_update(
             user=user,

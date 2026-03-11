@@ -5,9 +5,9 @@ from pydantic import ValidationError
 
 import typer
 
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.cli.commands.users.create import user_create_logic
 from museflow.infrastructure.entrypoints.cli.commands.users.update import user_update_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -42,7 +42,7 @@ def update(
     # Set only explicit values to update.
     attributes = {k: v for k, v in {"email": email, "password": password}.items() if v is not None}
     try:
-        user_data = UserUpdate(**attributes)
+        user_data = UserUpdateInput(**attributes)
     except ValidationError as e:
         raise typer.BadParameter(str(e)) from e
 

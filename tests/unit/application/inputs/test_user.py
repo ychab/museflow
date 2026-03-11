@@ -2,11 +2,11 @@ from pydantic import ValidationError
 
 import pytest
 
-from museflow.domain.schemas.user import UserCreate
-from museflow.domain.schemas.user import UserUpdate
+from museflow.application.inputs.user import UserCreateInput
+from museflow.application.inputs.user import UserUpdateInput
 
 
-class TestUserCreate:
+class TestUserCreateInput:
     @pytest.mark.parametrize(
         ("length", "error_msg"),
         [
@@ -16,12 +16,12 @@ class TestUserCreate:
     )
     def test_password__length(self, length: int, error_msg: str) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(email="foo@example.com", password="".join("a" for _ in range(0, length)))
-        assert "1 validation error for UserCreate\npassword" in str(exc_info.value)
+            UserCreateInput(email="foo@example.com", password="".join("a" for _ in range(0, length)))
+        assert "1 validation error for UserCreateInput\npassword" in str(exc_info.value)
         assert error_msg in str(exc_info.value)
 
 
-class TestUserUpdate:
+class TestUserUpdateInput:
     @pytest.mark.parametrize(
         ("length", "error_msg"),
         [
@@ -31,21 +31,21 @@ class TestUserUpdate:
     )
     def test_password__length(self, length: int, error_msg: str) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            UserUpdate(email="foo@example.com", password="".join("a" for _ in range(0, length)))
-        assert "1 validation error for UserUpdate\npassword" in str(exc_info.value)
+            UserUpdateInput(email="foo@example.com", password="".join("a" for _ in range(0, length)))
+        assert "1 validation error for UserUpdateInput\npassword" in str(exc_info.value)
         assert error_msg in str(exc_info.value)
 
     def test_model_validator__one_value_set__exception(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            UserUpdate()
+            UserUpdateInput()
 
-        assert "1 validation error for UserUpdate" in str(exc_info.value)
+        assert "1 validation error for UserUpdateInput" in str(exc_info.value)
         assert "At least one field must be provided for update" in str(exc_info.value)
 
     @pytest.mark.parametrize("field", ["email", "password"])
     def test_model_validator__cannot_be_none(self, field: str) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            UserUpdate(**{field: None})
+            UserUpdateInput(**{field: None})
 
-        assert "1 validation error for UserUpdate" in str(exc_info.value)
+        assert "1 validation error for UserUpdateInput" in str(exc_info.value)
         assert f"The field '{field}' cannot be set to None" in str(exc_info.value)

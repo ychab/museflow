@@ -6,8 +6,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -130,7 +130,7 @@ class TestUserUpdateCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "1 validation error for UserUpdate" in output
+        assert "1 validation error for UserUpdateInput" in output
         assert "At least one field must be provided for update" in output
 
     def test__user_not_found(
@@ -181,4 +181,4 @@ class TestUserUpdateLogic:
 
         user_id = uuid.uuid4()
         with pytest.raises(UserNotFound):
-            await user_update_logic(user_id, UserUpdate(email="new@example.com"))
+            await user_update_logic(user_id, UserUpdateInput(email="new@example.com"))

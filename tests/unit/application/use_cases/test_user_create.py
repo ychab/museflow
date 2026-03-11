@@ -2,23 +2,23 @@ from unittest import mock
 
 import pytest
 
+from museflow.application.inputs.user import UserCreateInput
 from museflow.application.use_cases.user_create import user_create
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
-from museflow.domain.schemas.user import UserCreate
 
-from tests.unit.factories.schemas.user import UserCreateFactory
+from tests.unit.factories.inputs.user import UserCreateInputFactory
 
 
 class TestUserCreateUseCase:
     @pytest.fixture
-    def user_create_data(self) -> UserCreate:
-        return UserCreateFactory.build(password="testtest")
+    def user_create_data(self) -> UserCreateInput:
+        return UserCreateInputFactory.build(password="testtest")
 
     async def test_create_user__already_exists(
         self,
         user: User,
-        user_create_data: UserCreate,
+        user_create_data: UserCreateInput,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
     ) -> None:

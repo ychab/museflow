@@ -7,10 +7,10 @@ from pydantic import ValidationError
 
 import typer
 
-from museflow.domain.schemas.user import UserCreate
+from museflow.application.inputs.user import UserCreateInput
 from museflow.infrastructure.types import LogHandler
 
-password_field_info = UserCreate.model_fields["password"]
+password_field_info = UserCreateInput.model_fields["password"]
 
 EmailAdapter = TypeAdapter(EmailStr)
 PasswordAdapter: TypeAdapter[str] = TypeAdapter(Annotated[password_field_info.annotation, password_field_info])

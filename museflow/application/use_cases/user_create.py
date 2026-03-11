@@ -1,12 +1,12 @@
+from museflow.application.inputs.user import UserCreateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
-from museflow.domain.schemas.user import UserCreate
 
 
 async def user_create(
-    user_data: UserCreate,
+    user_data: UserCreateInput,
     user_repository: UserRepository,
     password_hasher: PasswordHasherPort,
 ) -> User:

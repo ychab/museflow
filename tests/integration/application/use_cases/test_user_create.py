@@ -3,24 +3,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.inputs.user import UserCreateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.use_cases.user_create import user_create
-from museflow.domain.schemas.user import UserCreate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
-from tests.unit.factories.schemas.user import UserCreateFactory
+from tests.unit.factories.inputs.user import UserCreateInputFactory
 
 
 class TestUserCreateUseCase:
     @pytest.fixture
-    def user_create_data(self) -> UserCreate:
-        return UserCreateFactory.build(password="testtest")
+    def user_create_data(self) -> UserCreateInput:
+        return UserCreateInputFactory.build(password="testtest")
 
     async def test__nominal(
         self,
         async_session_db: AsyncSession,
-        user_create_data: UserCreate,
+        user_create_data: UserCreateInput,
         user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:

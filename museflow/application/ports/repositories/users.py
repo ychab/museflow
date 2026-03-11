@@ -4,9 +4,9 @@ from abc import abstractmethod
 
 from pydantic import EmailStr
 
+from museflow.application.inputs.user import UserCreateInput
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.user import UserCreate
-from museflow.domain.schemas.user import UserUpdate
 
 
 class UserRepository(ABC):
@@ -41,7 +41,7 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def create(self, user_data: UserCreate, hashed_password: str) -> User:
+    async def create(self, user_data: UserCreateInput, hashed_password: str) -> User:
         """Creates a new user in the database.
 
         Args:
@@ -54,7 +54,7 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def update(self, user_id: uuid.UUID, user_data: UserUpdate, hashed_password: str | None = None) -> User:
+    async def update(self, user_id: uuid.UUID, user_data: UserUpdateInput, hashed_password: str | None = None) -> User:
         """Updates an existing user's information.
 
         Args:

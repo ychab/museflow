@@ -4,6 +4,8 @@ from fastapi import HTTPException
 from fastapi import status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from museflow.application.inputs.user import UserCreateInput
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -16,8 +18,6 @@ from museflow.domain.exceptions import UserEmailAlreadyExistsException
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.schemas.user import UserCreate
-from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
@@ -30,7 +30,7 @@ router = APIRouter()
 
 @router.post("/register", name="user_register", status_code=status.HTTP_201_CREATED)
 async def register(
-    user_data: UserCreate,
+    user_data: UserCreateInput,
     user_repository: UserRepository = Depends(get_user_repository),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
@@ -84,7 +84,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)) 
 
 @router.patch("/me", name="user_me")
 async def update_current_user(
-    user_data: UserUpdate,
+    user_data: UserUpdateInput,
     current_user: User = Depends(get_current_user),
     user_repository: UserRepository = Depends(get_user_repository),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),

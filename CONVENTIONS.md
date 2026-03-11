@@ -24,7 +24,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 
 #### B. Input Schemas / Commands (`museflow/domain/schemas/`)
 - **Technology**: `pydantic.BaseModel` (v2).
-- **Purpose**: Define data entering the domain (e.g., `UserCreate`, `UserUpdate`, `TrackFilter`).
+- **Purpose**: Define data entering the domain (e.g., `UserCreate`, `UserUpdateInput`, `TrackFilter`).
 - **Validation**: Strict validation (Length, Regex, Enums) happens here.
 - **Naming**: `[Entity]Create`, `[Entity]Update`, `[Entity]Filter`.
 

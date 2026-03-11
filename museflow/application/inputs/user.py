@@ -4,10 +4,10 @@ from pydantic import EmailStr
 from pydantic import Field
 from pydantic import model_validator
 
-from museflow.domain.schemas.base import BaseEntity
+from museflow.application.inputs.base import BaseInput
 
 
-class UserCreate(BaseEntity):
+class UserCreateInput(BaseInput):
     """Schema for creating a new user.
 
     Requires an email address and a password, with password length constraints.
@@ -17,7 +17,7 @@ class UserCreate(BaseEntity):
     password: Annotated[str, Field(min_length=8, max_length=100)]
 
 
-class UserUpdate(BaseEntity):
+class UserUpdateInput(BaseInput):
     """Schema for updating an existing user.
 
     Allows for partial updates of a user's email or password.

@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import pytest
 from tenacity import stop_after_attempt
 
+from museflow.application.inputs.user import UserCreateInput
+from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
@@ -26,8 +28,6 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
-from museflow.domain.schemas.user import UserCreate
-from museflow.domain.schemas.user import UserUpdate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
@@ -50,10 +50,10 @@ from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.utils.wiremock import WireMockContext
+from tests.unit.factories.inputs.user import UserCreateInputFactory
+from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
 from tests.unit.factories.schemas.auth import OAuthProviderUserTokenCreateFactory
-from tests.unit.factories.schemas.user import UserCreateFactory
-from tests.unit.factories.schemas.user import UserUpdateFactory
 
 
 @pytest.fixture(scope="session")
@@ -229,13 +229,13 @@ def track_repository(async_session_db: AsyncSession) -> TrackRepository:
 
 
 @pytest.fixture
-def user_create(request: pytest.FixtureRequest) -> UserCreate:
-    return UserCreateFactory.build(**getattr(request, "param", {}))
+def user_create(request: pytest.FixtureRequest) -> UserCreateInput:
+    return UserCreateInputFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture
-def user_update(request: pytest.FixtureRequest) -> UserUpdate:
-    return UserUpdateFactory.build(**getattr(request, "param", {}))
+def user_update(request: pytest.FixtureRequest) -> UserUpdateInput:
+    return UserUpdateInputFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture
