@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel

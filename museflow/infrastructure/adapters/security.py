@@ -10,9 +10,9 @@ from argon2 import PasswordHasher as Argon2Hasher
 from argon2.exceptions import Argon2Error
 from argon2.exceptions import InvalidHashError
 
-from museflow.domain.ports.security import AccessTokenManagerPort
-from museflow.domain.ports.security import PasswordHasherPort
-from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.security import AccessTokenManagerPort
+from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.infrastructure.config.settings.app import app_settings
 
 

@@ -1,8 +1,8 @@
 from unittest import mock
 
+from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.use_cases.user_authenticate import user_authenticate
 from museflow.domain.entities.user import User
-from museflow.domain.ports.security import PasswordHasherPort
 
 
 class TestUserAuthenticateUseCase:

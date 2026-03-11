@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.ports.repositories.users import UserRepository
 from museflow.domain.entities.user import User
-from museflow.domain.ports.repositories.users import UserRepository
 from museflow.domain.schemas.user import UserCreate
 from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel

@@ -12,9 +12,9 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
+from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.exceptions import SimilarTrackResponseException
-from museflow.domain.ports.advisors.client import AdvisorClientPort
 from museflow.infrastructure.adapters.advisors.lastfm.mappers import to_track_suggested
 from museflow.infrastructure.adapters.advisors.lastfm.schemas import LastFmSimilarTracksResponse
 from museflow.infrastructure.config.settings.lastfm import lastfm_settings

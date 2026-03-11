@@ -4,10 +4,10 @@ from collections.abc import AsyncGenerator
 import pytest
 
 from museflow import __project_name__
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.mappers.auth import auth_token_create_from_token_payload
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter

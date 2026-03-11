@@ -1,12 +1,12 @@
 import asyncio
 from typing import Any
 
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
 from museflow.domain.mappers.auth import auth_token_update_from_token_payload
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError

@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.repositories.users import UserRepository
+from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.use_cases.user_create import user_create
-from museflow.domain.ports.repositories.users import UserRepository
-from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.schemas.user import UserCreate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 

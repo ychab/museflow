@@ -12,11 +12,11 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.ports.repositories.music import ArtistRepository
+from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Track
-from museflow.domain.ports.repositories.music import ArtistRepository
-from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel

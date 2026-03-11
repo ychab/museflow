@@ -3,14 +3,14 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.domain.ports.advisors.client import AdvisorClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.domain.ports.repositories.music import ArtistRepository
-from museflow.domain.ports.repositories.music import TrackRepository
-from museflow.domain.ports.repositories.users import UserRepository
-from museflow.domain.ports.security import PasswordHasherPort
-from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.repositories.music import ArtistRepository
+from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.users import UserRepository
+from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.types import MusicAdvisor
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository

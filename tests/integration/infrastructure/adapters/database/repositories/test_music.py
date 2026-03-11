@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.repositories.music import ArtistRepository
+from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.user import User
-from museflow.domain.ports.repositories.music import ArtistRepository
-from museflow.domain.ports.repositories.music import TrackRepository
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel

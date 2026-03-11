@@ -1,9 +1,9 @@
 from pydantic import HttpUrl
 
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.user import User
-from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.ports.security import StateTokenGeneratorPort
 from museflow.domain.types import MusicProvider
 
 

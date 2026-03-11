@@ -4,6 +4,9 @@ from fastapi import HTTPException
 from fastapi import status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from museflow.application.ports.repositories.users import UserRepository
+from museflow.application.ports.security import AccessTokenManagerPort
+from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.use_cases.user_authenticate import user_authenticate
 from museflow.application.use_cases.user_create import user_create
 from museflow.application.use_cases.user_update import user_update
@@ -13,9 +16,6 @@ from museflow.domain.exceptions import UserEmailAlreadyExistsException
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.ports.repositories.users import UserRepository
-from museflow.domain.ports.security import AccessTokenManagerPort
-from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.schemas.user import UserCreate
 from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager

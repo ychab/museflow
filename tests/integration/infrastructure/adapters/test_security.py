@@ -2,9 +2,9 @@ import uuid
 
 import pytest
 
-from museflow.domain.ports.security import AccessTokenManagerPort
-from museflow.domain.ports.security import PasswordHasherPort
-from museflow.domain.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.security import AccessTokenManagerPort
+from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.security import StateTokenGeneratorPort
 
 
 class TestArgon2PasswordHasher:

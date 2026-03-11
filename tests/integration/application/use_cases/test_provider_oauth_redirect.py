@@ -3,10 +3,10 @@ from pydantic import HttpUrl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.entities.user import User
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.ports.security import StateTokenGeneratorPort
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter

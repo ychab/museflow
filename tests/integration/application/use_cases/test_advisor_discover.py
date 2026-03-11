@@ -2,13 +2,13 @@ from typing import Any
 
 import pytest
 
+from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
 from museflow.application.use_cases.advisor_discover import DiscoveryConfig
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
-from museflow.domain.ports.advisors.client import AdvisorClientPort
-from museflow.domain.ports.providers.library import ProviderLibraryPort
-from museflow.domain.ports.repositories.music import TrackRepository
 
 from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext

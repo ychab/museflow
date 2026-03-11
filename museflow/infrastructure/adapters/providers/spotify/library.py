@@ -7,6 +7,8 @@ from typing import Any
 from pydantic import ValidationError
 
 from museflow import __project_name__
+from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import BaseMediaItem
@@ -14,8 +16,6 @@ from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
-from museflow.domain.ports.providers.library import ProviderLibraryPort
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist

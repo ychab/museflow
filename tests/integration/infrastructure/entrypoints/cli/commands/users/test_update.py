@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
-from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.schemas.user import UserUpdate
 from museflow.infrastructure.adapters.database.models import User as UserModel
 from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic

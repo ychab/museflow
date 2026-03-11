@@ -12,13 +12,13 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.ports.advisors.client import AdvisorClientPort
-from museflow.domain.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.domain.ports.repositories.music import ArtistRepository
-from museflow.domain.ports.repositories.music import TrackRepository
-from museflow.domain.ports.repositories.users import UserRepository
+from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.repositories.music import ArtistRepository
+from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.users import UserRepository
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
 

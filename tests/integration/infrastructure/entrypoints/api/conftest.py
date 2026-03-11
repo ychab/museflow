@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.domain.entities.user import User
-from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher

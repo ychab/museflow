@@ -5,11 +5,11 @@ from fastapi import HTTPException
 
 import pytest
 
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.repositories.users import UserRepository
+from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.user import User
-from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.domain.ports.repositories.users import UserRepository
-from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state

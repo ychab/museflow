@@ -6,10 +6,10 @@ from dataclasses import field
 from dataclasses import replace
 from typing import Any
 
+from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.music import ArtistRepository
+from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.user import User
-from museflow.domain.ports.providers.library import ProviderLibraryPort
-from museflow.domain.ports.repositories.music import ArtistRepository
-from museflow.domain.ports.repositories.music import TrackRepository
 
 logger = logging.getLogger(__name__)
 
