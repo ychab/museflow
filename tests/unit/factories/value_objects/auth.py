@@ -5,7 +5,7 @@ from datetime import timedelta
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
 class OAuthProviderTokenPayloadFactory(ModelFactory[OAuthProviderTokenPayload]):

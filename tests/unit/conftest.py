@@ -19,7 +19,7 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -28,7 +28,7 @@ from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOA
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 from tests.unit.factories.entities.user import UserFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 
 # --- Security Mocks ---
 

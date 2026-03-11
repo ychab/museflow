@@ -27,8 +27,8 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -53,7 +53,7 @@ from tests.integration.utils.wiremock import WireMockContext
 from tests.unit.factories.inputs.auth import OAuthProviderUserTokenCreateInputFactory
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 
 
 @pytest.fixture(scope="session")

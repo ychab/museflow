@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
 class ProviderOAuthClientPort(ABC):

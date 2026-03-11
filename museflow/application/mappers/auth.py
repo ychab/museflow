@@ -1,6 +1,6 @@
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
 def auth_token_create_from_token_payload(

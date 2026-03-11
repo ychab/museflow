@@ -16,7 +16,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.providers.client import ProviderOAuthClientPort
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken

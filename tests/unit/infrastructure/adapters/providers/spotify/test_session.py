@@ -7,12 +7,12 @@ import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
-from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 
 
 class TestSpotifyOAuthSessionClient:

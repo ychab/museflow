@@ -13,7 +13,7 @@ from httpx import codes
 import pytest
 from pytest_httpx import HTTPXMock
 
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 

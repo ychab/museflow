@@ -1,9 +1,9 @@
 from pydantic import AwareDatetime
 
-from museflow.domain.schemas.base import BaseEntity
+from museflow.domain.value_objects.base import BaseValueObject
 
 
-class OAuthProviderTokenPayload(BaseEntity):
+class OAuthProviderTokenPayload(BaseValueObject):
     """Represents the raw, transient OAuth2 token data from an external provider.
 
     This schema is a Value Object used by provider clients to structure authentication

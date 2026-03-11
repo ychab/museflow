@@ -5,8 +5,8 @@ from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken

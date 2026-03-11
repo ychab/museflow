@@ -10,8 +10,8 @@ from museflow.application.ports.repositories.auth import OAuthProviderTokenRepos
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderTokenPayload
 from museflow.domain.types import MusicProvider
+from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
