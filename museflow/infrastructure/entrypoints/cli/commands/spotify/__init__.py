@@ -5,11 +5,20 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from museflow.application.use_cases.advisor_discover import DiscoveryConfig
 from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.domain.exceptions import DiscoveryTrackNoNew
+from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
+from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
+from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import SortOrder
+from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
+from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
 from museflow.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -179,3 +188,89 @@ def sync(
     table.add_row("Tracks updated", str(report.track_updated))
 
     console.print(table)
+
+
+@app.command("discover", help="Discover new tracks for a Spotify's user account.")
+def discover(
+    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    advisor: MusicAdvisor = typer.Option(default=MusicAdvisor.LASTFM, help="The advisor to discover new musics"),
+    seed_top: bool | None = typer.Option(
+        None,
+        "--seed-top/--no-seed-top",
+        help="Whether to use a top seed",
+    ),
+    seed_saved: bool | None = typer.Option(
+        None,
+        "--seed-saved/--no-seed-saved",
+        help="Whether to use a saved seed",
+    ),
+    seed_order_by: TrackOrderBy = typer.Option(
+        TrackOrderBy.RANDOM,
+        "--seed-order-by",
+        help="The column seed track to order on",
+    ),
+    seed_sort_order: SortOrder = typer.Option(
+        SortOrder.ASC,
+        "--seed-sort-order",
+        help="The sort order if the seed tracks",
+    ),
+    seed_limit: int = typer.Option(
+        20,
+        "--seed-limit",
+        help="The limit of seed tracks to collect",
+        min=1,
+        max=50,
+    ),
+    similar_limit: int = typer.Option(
+        5,
+        "--similar-limit",
+        help="The limit of similar tracks to fetch",
+        min=1,
+        max=20,
+    ),
+) -> None:
+    """
+    Discover new tracks for a Spotify's user account.
+    """
+    try:
+        playlist = asyncio.run(
+            discover_logic(
+                email=email,
+                advisor=advisor,
+                config=DiscoveryConfig(
+                    seed_top=seed_top,
+                    seed_saved=seed_saved,
+                    seed_order_by=seed_order_by,
+                    seed_sort_order=seed_sort_order,
+                    seed_limit=seed_limit,
+                    similar_limit=similar_limit,
+                ),
+            ),
+        )
+    except UserNotFound as e:
+        raise typer.BadParameter(f"User not found with email: {email}") from e
+    except ProviderAuthTokenNotFoundError as e:
+        typer.secho(
+            f"Auth token not found with email: {email}. Did you forget to connect?", fg=typer.colors.RED, err=True
+        )
+        raise typer.Exit(code=1) from e
+    except DiscoveryTrackNoSeedFound as e:
+        typer.secho("No seed tracks founded", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except DiscoveryTrackNoSimilarFound as e:
+        typer.secho("No similar tracks founded", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except DiscoveryTrackNoReconciledFound as e:
+        typer.secho("No reconciled tracks founded", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except DiscoveryTrackNoNew as e:
+        typer.secho("No new tracks founded", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except Exception as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+
+    typer.secho(
+        f"\n\nSuggested tracks successfully saved into playlist {playlist.name}! \u2705",
+        fg=typer.colors.GREEN,
+    )

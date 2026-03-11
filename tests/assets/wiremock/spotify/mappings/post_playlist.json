@@ -1,14 +1,7 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/me/playlists",
-    "bodyPatterns": [
-      {
-        "equalToJson": "{\"name\": \"test\"}",
-        "ignoreArrayOrder": true,
-        "ignoreExtraElements": true
-      }
-    ]
+    "urlPath": "/me/playlists"
   },
   "response": {
     "status": 200,

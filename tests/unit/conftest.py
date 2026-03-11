@@ -8,7 +8,9 @@ import pytest
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.ports.advisors.client import AdvisorClientPort
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.ports.providers.library import ProviderLibraryPort
 from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.ports.repositories.music import ArtistRepository
@@ -18,6 +20,7 @@ from museflow.domain.ports.security import AccessTokenManagerPort
 from museflow.domain.ports.security import PasswordHasherPort
 from museflow.domain.ports.security import StateTokenGeneratorPort
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -113,6 +116,16 @@ def mock_provider_client(token_payload: OAuthProviderTokenPayload) -> mock.Async
     )
 
 
+@pytest.fixture
+def mock_provider_library() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=ProviderLibraryPort)
+
+
+@pytest.fixture
+def mock_advisor_client() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=AdvisorClientPort)
+
+
 # --- Adapters ---
 
 
@@ -151,3 +164,12 @@ def spotify_library(
         session_client=spotify_session_client,
         max_concurrency=10,
     )
+
+
+@pytest.fixture
+async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
+    async with LastFmClientAdapter(
+        client_api_key="dummy-api-key",
+        client_secret="dummy-client-secret",
+    ) as client:
+        yield client

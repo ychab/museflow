@@ -104,7 +104,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             params={"time_range": time_range},
             page_size=page_size,
             max_pages=max_pages,
-            prefix_log="[TopArtists]",
+            log_prefix="[TopArtists]",
         )
 
     async def get_top_tracks(
@@ -120,7 +120,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             params={"time_range": time_range},
             page_size=page_size,
             max_pages=max_pages,
-            prefix_log="[TopTracks]",
+            log_prefix="[TopTracks]",
         )
 
     async def get_saved_tracks(self, page_size: int = 50, max_pages: int | None = None) -> list[Track]:
@@ -130,7 +130,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             page_processor=self._extract_saved_tracks,
             page_size=page_size,
             max_pages=max_pages,
-            prefix_log="[SavedTracks]",
+            log_prefix="[SavedTracks]",
         )
 
     async def get_playlist_tracks(self, page_size: int = 50, max_pages: int | None = None) -> list[Track]:
@@ -145,7 +145,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             page_processor=self._extract_playlists,
             page_size=page_size,
             max_pages=max_pages,
-            prefix_log="[Playlists]",
+            log_prefix="[Playlists]",
         )
         logger.info(f"Found {len(playlists)} playlists. Fetching tracks...")
 
@@ -176,6 +176,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         isrc: str | None = None,
         page_size: int = 10,
         max_pages: int | None = None,
+        log_enabled: bool = True,
     ) -> list[Track]:
         query_builder = SpotifySearchTrackQuery(
             track=track,
@@ -192,7 +193,8 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             page_processor=self._extract_search_tracks,
             page_size=page_size,
             max_pages=max_pages,
-            prefix_log=f"[Search track {track}]",
+            log_enabled=log_enabled,
+            log_prefix=f"[Search track {track}]",
             params={
                 "q": query_builder.get_query(),
                 "type": "track",
@@ -249,7 +251,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 },
                 page_size=page_size,
                 max_pages=max_pages,
-                prefix_log=f"[PlaylistTracks({playlist.name})]",
+                log_prefix=f"[PlaylistTracks({playlist.name})]",
             )
         except ProviderPageValidationError as e:
             # Some playlist pages can return invalid data, like missing ID's due to local files.
@@ -271,7 +273,8 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         offset: int = 0,
         page_size: int = 50,
         max_pages: int | None = None,
-        prefix_log: str = "",
+        log_enabled: bool = True,
+        log_prefix: str = "",
         response_key: str | None = None,
     ) -> list[MediaItemType]:
         """
@@ -281,7 +284,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         items: list[MediaItemType] = []
         pages_count = 0
 
-        logger.info(f"{prefix_log} Start fetching endpoint: {endpoint}")
+        if log_enabled:
+            logger.info(f"{log_prefix} Start fetching endpoint: {endpoint}")
+
         while True:
             if max_pages is not None and max_pages <= pages_count:
                 break
@@ -306,14 +311,16 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 exc_msg = "Unsupported local files" if has_local_files else str(e)
 
                 raise ProviderPageValidationError(
-                    msg=f"{prefix_log} - Page validation error on {endpoint} (offset: {offset}): {exc_msg}",
+                    msg=f"{log_prefix} - Page validation error on {endpoint} (offset: {offset}): {exc_msg}",
                     code="unsupported_local_files" if has_local_files else None,
                 ) from e
 
             items += page_processor(page, offset)
             pages_count += 1
 
-            logger.info(f"{prefix_log} ... processed {offset + page_size}/{page.total} ...")
+            if log_enabled:
+                logger.info(f"{log_prefix} ... processed {offset + page_size}/{page.total} ...")
+
             if len(items) >= page.total or len(page.items) < page_size:
                 break
 

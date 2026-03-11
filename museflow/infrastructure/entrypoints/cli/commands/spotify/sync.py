@@ -47,7 +47,7 @@ async def sync_logic(email: EmailStr, config: SyncConfig) -> SyncReport:
             artist_repository=artist_repository,
             track_repository=track_repository,
         )
-        return await use_case.execute(
+        return await use_case.sync_library(
             user=user,
             config=config,
         )

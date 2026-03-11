@@ -102,7 +102,7 @@ class ProviderSyncLibraryUseCase:
         self._artist_repository = artist_repository
         self._track_repository = track_repository
 
-    async def execute(
+    async def sync_library(
         self,
         user: User,
         config: SyncConfig,

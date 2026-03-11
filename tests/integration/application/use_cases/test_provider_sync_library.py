@@ -190,7 +190,7 @@ class TestSpotifySyncMusic:
         use_case: ProviderSyncLibraryUseCase,
     ) -> None:
         pass
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(purge_artist_top=True),
         )
@@ -225,7 +225,7 @@ class TestSpotifySyncMusic:
         expected_other = 1
         total_user = len(tracks_delete) - expected_other
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 purge_track_top=purge_track_top,
@@ -249,7 +249,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_artist_top=True,
@@ -272,7 +272,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(artists_update)
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_artist_top=True,
@@ -297,7 +297,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_top=True,
@@ -324,7 +324,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_top_update)
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_top=True,
@@ -352,7 +352,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = DEFAULT_PAGINATION_TOTAL
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_saved=True,
@@ -379,7 +379,7 @@ class TestSpotifySyncMusic:
         page_size = DEFAULT_PAGINATION_SIZE
         expected_count = len(tracks_saved_update)
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_saved=True,
@@ -410,7 +410,7 @@ class TestSpotifySyncMusic:
 
         expected_count = playlist_total * playlist_tracks_total
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
@@ -437,7 +437,7 @@ class TestSpotifySyncMusic:
         page_size = 1
         expected_count = len(tracks_playlist_update)
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 sync_track_playlist=True,
@@ -471,7 +471,7 @@ class TestSpotifySyncMusic:
         expected_tracks_playlist = 2 * 2
         expect_tracks = expected_tracks_top + expected_tracks_saved + expected_tracks_playlist
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 purge_all=True,
@@ -581,7 +581,7 @@ class TestSpotifySyncMusic:
             expect_tracks_top_updated + expect_tracks_saved_updated + expect_tracks_playlist_updated
         )
 
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(
                 purge_all=False,

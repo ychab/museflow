@@ -88,6 +88,7 @@ class ProviderLibraryPort(ABC):
         isrc: str | None = None,
         page_size: int = 20,
         max_pages: int | None = None,
+        log_enabled: bool = True,
     ) -> list[Track]:
         """Retrieves a list of tracks based on the search criteria.
 
@@ -100,6 +101,7 @@ class ProviderLibraryPort(ABC):
             isrc: An optional ISRC (International Standard Recording Code) to filter by.
             page_size: An optional maximum number of tracks per page.
             max_pages: The maximum number of pages to retrieve.
+            log_enabled: Whether to write logs.
 
         Returns:
             A list of `Track` entities.

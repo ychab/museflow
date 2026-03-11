@@ -2,7 +2,9 @@ from polyfactory import Use
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
 from museflow.domain.entities.music import Artist
+from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
+from museflow.domain.entities.music import TrackSuggested
 
 
 class BaseMusicItemFactory[T: (Artist, Track)](DataclassFactory[T]):
@@ -20,3 +22,11 @@ class ArtistFactory(BaseMusicItemFactory[Artist]):
 
 class TrackFactory(BaseMusicItemFactory[Track]):
     __model__ = Track
+
+
+class TrackSuggestedFactory(DataclassFactory[TrackSuggested]):
+    __model__ = TrackSuggested
+
+
+class PlaylistFactory(DataclassFactory[Playlist]):
+    __model__ = Playlist

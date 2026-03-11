@@ -17,7 +17,7 @@ class TestSpotifySyncLogic:
     """
 
     @pytest.fixture
-    def mock_spotify_sync(self) -> Iterable[mock.Mock]:
+    def mock_use_case(self) -> Iterable[mock.Mock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync.ProviderSyncLibraryUseCase"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
@@ -26,10 +26,9 @@ class TestSpotifySyncLogic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        mock_spotify_sync: mock.Mock,
-        capsys: pytest.CaptureFixture,
+        mock_use_case: mock.Mock,
     ) -> None:
-        mock_spotify_sync.execute.return_value = SyncReport(
+        mock_use_case.sync_library.return_value = SyncReport(
             artist_created=100,
             artist_updated=250,
             track_created=100,

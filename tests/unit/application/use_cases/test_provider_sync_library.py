@@ -109,7 +109,7 @@ class TestSyncMusic:
         auth_token: OAuthProviderUserToken,
         use_case: ProviderSyncLibraryUseCase,
     ) -> None:
-        report = await use_case.execute(
+        report = await use_case.sync_library(
             user=user,
             config=SyncConfig(),
         )
@@ -131,7 +131,7 @@ class TestSyncMusic:
         mock_track_repository.purge.return_value = 0
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     purge_all=purge_all,
@@ -164,7 +164,7 @@ class TestSyncMusic:
         mock_track_repository.purge.side_effect = SQLAlchemyError("Boom")
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     purge_all=purge_all,
@@ -201,7 +201,7 @@ class TestSyncMusic:
         mock_provider_library.get_top_artists.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -236,7 +236,7 @@ class TestSyncMusic:
         mock_artist_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -271,7 +271,7 @@ class TestSyncMusic:
         mock_provider_library.get_top_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -306,7 +306,7 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -341,7 +341,7 @@ class TestSyncMusic:
         mock_provider_library.get_saved_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -376,7 +376,7 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -411,7 +411,7 @@ class TestSyncMusic:
         mock_provider_library.get_playlist_tracks.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,
@@ -446,7 +446,7 @@ class TestSyncMusic:
         mock_track_repository.bulk_upsert.side_effect = exception_raised
 
         with caplog.at_level(logging.ERROR):
-            report = await use_case.execute(
+            report = await use_case.sync_library(
                 user=user,
                 config=SyncConfig(
                     sync_all=sync_all,

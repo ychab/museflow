@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/",
+    "queryParameters": {
+      "method": { "matches": "track.getSimilar" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "tracks_similar.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

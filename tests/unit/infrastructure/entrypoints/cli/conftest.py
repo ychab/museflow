@@ -12,6 +12,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.ports.advisors.client import AdvisorClientPort
 from museflow.domain.ports.providers.client import ProviderOAuthClientPort
 from museflow.domain.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.domain.ports.repositories.auth import OAuthProviderTokenRepository
@@ -101,7 +102,7 @@ def mock_async_context_dependency_factory() -> AsyncDependencyPatcherFactory:
     @contextmanager
     def _patcher(target_path: str, dependency_instance: Any) -> Iterator[mock.Mock]:
         @asynccontextmanager
-        async def _mock_dependency() -> AsyncGenerator[Any]:
+        async def _mock_dependency(*_: Any, **__: Any) -> AsyncGenerator[Any]:
             yield dependency_instance
 
         with mock.patch(target_path, side_effect=_mock_dependency):
@@ -182,6 +183,16 @@ def mock_spotify_client(
 ) -> Iterable[mock.Mock]:
     client = mock.Mock(spec=ProviderOAuthClientPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_spotify_client", client) as mock_client:
+        yield mock_client
+
+
+@pytest.fixture
+def mock_advisor_client(
+    target_path: str,
+    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
+) -> Iterable[mock.Mock]:
+    client = mock.Mock(spec=AdvisorClientPort)
+    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_client", client) as mock_client:
         yield mock_client
 
 
