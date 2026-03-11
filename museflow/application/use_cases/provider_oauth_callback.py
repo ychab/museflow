@@ -1,9 +1,9 @@
+from museflow.application.mappers.auth import auth_token_create_from_token_payload
+from museflow.application.mappers.auth import auth_token_update_from_token_payload
 from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderExchangeCodeError
-from museflow.domain.mappers.auth import auth_token_create_from_token_payload
-from museflow.domain.mappers.auth import auth_token_update_from_token_payload
 from museflow.domain.types import MusicProvider
 
 

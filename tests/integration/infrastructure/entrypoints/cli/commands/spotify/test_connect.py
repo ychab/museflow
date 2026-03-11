@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -29,7 +29,7 @@ class TestSpotifyConnectLogic:
     def simulate_oauth_callback(
         self,
         user: User,
-        auth_token_create: OAuthProviderUserTokenCreate,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
         async_session_db: AsyncSession,
     ) -> Callable[[float], asyncio.Task]:
         """
@@ -70,7 +70,7 @@ class TestSpotifyConnectLogic:
     async def test__nominal(
         self,
         user: User,
-        auth_token_create: OAuthProviderUserTokenCreate,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
         simulate_oauth_callback: Callable[[float], asyncio.Task],
         async_session_db: AsyncSession,
         capsys: pytest.CaptureFixture,

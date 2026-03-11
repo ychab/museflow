@@ -10,12 +10,12 @@ from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
+from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
-from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -93,7 +93,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenCreate,
+        auth_token_data: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
         auth_token_dict: dict[str, Any] = auth_token_data.model_dump()
         auth_token_dict["user_id"] = str(user_id)
@@ -110,7 +110,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenUpdate,
+        auth_token_data: OAuthProviderUserTokenUpdateInput,
     ) -> OAuthProviderUserToken:
         update_data: dict[str, Any] = auth_token_data.model_dump(exclude_none=True)
 

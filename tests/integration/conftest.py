@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import pytest
 from tenacity import stop_after_attempt
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -27,7 +28,6 @@ from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.schemas.auth import OAuthProviderTokenPayload
-from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
@@ -50,10 +50,10 @@ from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.utils.wiremock import WireMockContext
+from tests.unit.factories.inputs.auth import OAuthProviderUserTokenCreateInputFactory
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.schemas.auth import OAuthProviderTokenPayloadFactory
-from tests.unit.factories.schemas.auth import OAuthProviderUserTokenCreateFactory
 
 
 @pytest.fixture(scope="session")
@@ -244,13 +244,13 @@ def token_payload(request: pytest.FixtureRequest) -> OAuthProviderTokenPayload:
 
 
 @pytest.fixture
-def auth_token_create() -> OAuthProviderUserTokenCreate:
-    return OAuthProviderUserTokenCreateFactory.build()
+def auth_token_create() -> OAuthProviderUserTokenCreateInput:
+    return OAuthProviderUserTokenCreateInputFactory.build()
 
 
 @pytest.fixture
-def auth_token_update() -> OAuthProviderUserTokenCreate:
-    return OAuthProviderUserTokenCreateFactory.build()
+def auth_token_update() -> OAuthProviderUserTokenCreateInput:
+    return OAuthProviderUserTokenCreateInputFactory.build()
 
 
 # --- Models DB factories ---

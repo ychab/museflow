@@ -8,14 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
+from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
-from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
@@ -134,7 +134,7 @@ class TestOAuthProviderTokenSQLRepository:
     async def test_create__nominal(
         self,
         user: User,
-        auth_token_create: OAuthProviderUserTokenCreate,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         auth_token_db = await auth_token_repository.create(
@@ -157,7 +157,7 @@ class TestOAuthProviderTokenSQLRepository:
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
-        auth_token_data = OAuthProviderUserTokenUpdate(
+        auth_token_data = OAuthProviderUserTokenUpdateInput(
             token_refresh="dummy-token-state",
             token_expires_at=datetime.now(UTC),
         )
@@ -177,7 +177,7 @@ class TestOAuthProviderTokenSQLRepository:
     async def test_update__all(
         self,
         auth_token: OAuthProviderUserToken,
-        auth_token_update: OAuthProviderUserTokenUpdate,
+        auth_token_update: OAuthProviderUserTokenUpdateInput,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         auth_token_db = await auth_token_repository.update(

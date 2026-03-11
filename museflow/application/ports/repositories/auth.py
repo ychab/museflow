@@ -2,10 +2,10 @@ import uuid
 from abc import ABC
 from abc import abstractmethod
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
+from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.schemas.auth import OAuthProviderUserTokenCreate
-from museflow.domain.schemas.auth import OAuthProviderUserTokenUpdate
 from museflow.domain.types import MusicProvider
 
 
@@ -90,7 +90,7 @@ class OAuthProviderTokenRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenCreate,
+        auth_token_data: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
         """Creates and stores a new auth token for a user and provider.
 
@@ -109,7 +109,7 @@ class OAuthProviderTokenRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenUpdate,
+        auth_token_data: OAuthProviderUserTokenUpdateInput,
     ) -> OAuthProviderUserToken:
         """Updates an existing auth token for a user and provider.
 
