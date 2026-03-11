@@ -29,7 +29,7 @@ def to_domain_token_payload(
         token_type=spotify_token.token_type,
         access_token=spotify_token.access_token,
         refresh_token=refresh_token,
-        expires_at=spotify_token.expires_at,
+        expires_at=spotify_token.expires_at,  # type: ignore[arg-type]
     )
 
 
