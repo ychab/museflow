@@ -3,6 +3,7 @@ from abc import ABC
 from dataclasses import dataclass
 from dataclasses import field
 
+from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.domain.utils.text import generate_fingerprint
 
@@ -49,7 +50,7 @@ class TrackArtist:
 class Album:
     provider_id: str
     name: str
-    album_type: str | None = None
+    album_type: AlbumType | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

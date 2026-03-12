@@ -19,6 +19,7 @@ from museflow.domain.entities.music import Album
 from museflow.domain.entities.music import Artist as ArtistEntity
 from museflow.domain.entities.music import Track as TrackEntity
 from museflow.domain.entities.music import TrackArtist
+from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
@@ -95,6 +96,14 @@ class Track(MusicItemMixin, Base, kw_only=True):
     isrc: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None, index=True)
     fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
 
+    @staticmethod
+    def _to_album_entity(album_dict: AlbumDict) -> Album:
+        return Album(
+            provider_id=album_dict["provider_id"],
+            name=album_dict["name"],
+            album_type=AlbumType(album_dict["album_type"]) if album_dict.get("album_type") else None,
+        )
+
     def to_entity(self) -> TrackEntity:
         return TrackEntity(
             id=self.id,
@@ -108,7 +117,7 @@ class Track(MusicItemMixin, Base, kw_only=True):
             top_position=self.top_position,
             artists=[TrackArtist(provider_id=artist["provider_id"], name=artist["name"]) for artist in self.artists],
             genres=self.genres,
-            album=Album(**self.album) if self.album else None,
+            album=self._to_album_entity(self.album) if self.album else None,
             duration_ms=self.duration_ms,
             isrc=self.isrc,
             fingerprint=self.fingerprint,

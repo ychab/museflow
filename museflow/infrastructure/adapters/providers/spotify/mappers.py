@@ -1,12 +1,15 @@
 import uuid
+from typing import Any
 
 from museflow.domain.entities.music import Album
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
+from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyAlbum
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -54,6 +57,17 @@ def to_domain_artist(
     )
 
 
+def to_domain_album(spotify_album: SpotifyAlbum) -> Album:
+    album_dict: dict[str, Any] = spotify_album.model_dump(by_alias=True)
+
+    try:
+        album_dict["album_type"] = AlbumType(spotify_album.album_type)
+    except ValueError:
+        album_dict["album_type"] = AlbumType.UNKNOWN
+
+    return Album(**album_dict)
+
+
 def to_domain_track(
     spotify_track: SpotifyTrack,
     user_id: uuid.UUID,
@@ -72,7 +86,7 @@ def to_domain_track(
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_track.id,
         artists=[TrackArtist(provider_id=artist.id, name=artist.name) for artist in spotify_track.artists],
-        album=Album(**spotify_track.album.model_dump(by_alias=True)) if spotify_track.album else None,
+        album=to_domain_album(spotify_track.album) if spotify_track.album else None,
         isrc=spotify_track.isrc,
         duration_ms=spotify_track.duration_ms,
     )

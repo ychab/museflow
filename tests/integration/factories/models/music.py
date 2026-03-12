@@ -7,6 +7,7 @@ from sqlalchemy import select
 from polyfactory import Use
 from polyfactory.factories import TypedDictFactory
 
+from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AlbumDict
 from museflow.infrastructure.adapters.database.models import Artist
@@ -56,6 +57,14 @@ class ArtistDictFactory(TypedDictFactory[ArtistDict]):
 
 class AlbumDictFactory(TypedDictFactory[AlbumDict]):
     __model__ = AlbumDict
+
+    album_type = Use(
+        lambda: (
+            TypedDictFactory.__faker__.random_element(AlbumType)
+            if TypedDictFactory.__faker__.boolean(chance_of_getting_true=80)
+            else None
+        )
+    )
 
 
 class TrackModelFactory(BaseMusicItemModelFactory[Track]):
