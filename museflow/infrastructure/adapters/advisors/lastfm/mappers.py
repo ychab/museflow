@@ -8,4 +8,5 @@ def to_track_suggested(track: LastFmTrack) -> TrackSuggested:
         artists=[track.artist.name],
         advisor_id=track.mbid,
         score=track.match,
+        duration_ms=track.duration * 1000 if track.duration else None,
     )

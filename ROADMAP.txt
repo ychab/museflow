@@ -13,26 +13,14 @@ This quick and dirty document just list the roadmap tasks.
 - fix flaky test: tests/integration/infrastructure/entrypoints/api/v1/endpoints/test_spotify.py::TestSpotifyCallback::test__spotify_error
   ==> my guess: polyfactory, for unknown reason yet, don't always generate a state value...?
 
-## direnv
+### LAST.fm
 
-- add support?
+- provide a settings for the base url (in case it change later?)
 
-## DDD
-
-- rename domain/schemas to domain/inputs?
-
-## ports
-
-- remove make_api_call from ports?
 
 ## doc code
 
 - improve the doc code for tests
-
-## Entities/ models Music
-
-- should we add a relationship between the track with the (top) artist?
-- should we have a slug based on the track name + artist name?
 
 ## cli
 
@@ -45,19 +33,13 @@ This quick and dirty document just list the roadmap tasks.
 
 ## advisor
 
-- to prevent duplicate with reconcile, better to use slug maybe? or get ALL reconciled?
-- improve doc
+- to improve reconcile
 - provide a max-retry arg? And so, review the current impl to retry if no result?
-
-- openai?
-- gemini?
 
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => tastedive API
-
-## Playlist (recommendations)
-
-- spotify: create a user playlist
+    => openai
+    => gemini
 
 ## direnv
 
@@ -65,4 +47,4 @@ This quick and dirty document just list the roadmap tasks.
 
 ## Just
 
-Replace Makefile by Just
+Replace Makefile by Just?

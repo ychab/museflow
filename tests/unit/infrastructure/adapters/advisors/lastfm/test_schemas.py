@@ -19,6 +19,7 @@ class TestLastFmSimilarTracksResponse:
                     "match": 1.0,
                     "mbid": "2ced3803-b87a-319f-9926-0388b20608be",
                     "name": "Mi Pueblo",
+                    "duration": 3 * 60,
                 },
             },
         }
@@ -31,6 +32,7 @@ class TestLastFmSimilarTracksResponse:
         assert track.mbid == "2ced3803-b87a-319f-9926-0388b20608be"
         assert track.name == "Mi Pueblo"
         assert track.match == 1.0
+        assert track.duration == 180
 
         assert track.artist.mbid == "5436ce22-af50-4714-addc-afd5d2efc77f"
         assert track.artist.name == "Grupo Niche"

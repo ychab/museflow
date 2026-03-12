@@ -28,6 +28,7 @@ class LastFmTrack(BaseModel):
     mbid: str | None = None
     match: float = Field(..., ge=0.0, le=1.0)
     artist: LastFmArtist
+    duration: int | None = Field(default=None, description="Duration in seconds")
 
 
 class LastFmSimilarTracks(BaseModel):
