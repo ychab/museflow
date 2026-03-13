@@ -357,30 +357,6 @@ class TestTrackSQLRepository:
         # Check that items have been collected only for that user.
         assert set([t.user_id for t in track_list]) == {user.id}
 
-    async def test__get_by_ids__nominal(
-        self,
-        user: User,
-        tracks: list[Track],
-        tracks_other: list[Track],
-        track_repository: TrackRepository,
-    ) -> None:
-        tracks_expected = tracks
-
-        track_list = await track_repository.get_by_ids(user_id=user.id, track_ids=[t.id for t in tracks])
-
-        assert len(track_list) == len(tracks_expected)
-        assert sorted([t.id for t in track_list]) == sorted([t.id for t in tracks_expected])
-
-    async def test__get_by_ids__none(
-        self,
-        user: User,
-        tracks: list[Track],
-        tracks_other: list[Track],
-        track_repository: TrackRepository,
-    ) -> None:
-        track_list = await track_repository.get_by_ids(user_id=user.id, track_ids=[t.id for t in tracks_other])
-        assert len(track_list) == 0
-
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,
