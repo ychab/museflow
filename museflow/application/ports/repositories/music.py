@@ -6,6 +6,7 @@ from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
 
 class ArtistRepository(ABC):
@@ -87,6 +88,27 @@ class TrackRepository(ABC):
 
         Returns:
             A list of `Track` entities.
+        """
+        ...
+
+    @abstractmethod
+    async def get_known_identifiers(
+        self,
+        user_id: uuid.UUID,
+        isrcs: list[str],
+        fingerprints: list[str],
+    ) -> TrackKnowIdentifiers:
+        """
+        Queries the database to find which of the provided ISRCs
+        and Fingerprints are already owned by the user.
+
+        Args:
+            user_id: The ID of the user whose known tracks are to be retrieved.
+            isrcs: A list of ISRC to filter on
+            fingerprints: A list of fingerprints to filter on
+
+        Returns:
+            A value object TrackKnowIdentifiers containing the known ISRC and Fingerprints.
         """
         ...
 

@@ -11,6 +11,7 @@ from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
 from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
 from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import SimilarTrackResponseException
+from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
 from tests.unit.factories.entities.music import PlaylistFactory
 from tests.unit.factories.entities.music import TrackFactory
@@ -62,7 +63,10 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.side_effect = [t for t in reconciled_tracks]
 
         # Given known tracks: 3 tracks are already known, one is new
-        mock_track_repository.get_by_ids.return_value = reconciled_tracks[1:]
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset(t.isrc for t in reconciled_tracks[1:] if t.isrc),
+            fingerprints=frozenset(t.fingerprint for t in reconciled_tracks[1:]),
+        )
 
         expected_playlist = PlaylistFactory.build(tracks=[reconciled_tracks[0]])
         mock_provider_library.create_playlist.return_value = expected_playlist
@@ -74,13 +78,13 @@ class TestAdvisorDiscoverTracksUseCase:
         # Then check similarity
         assert mock_advisor_client.get_similar_tracks.call_count == len(track_seeds)
         for i, track_seed in enumerate(track_seeds):
-            assert f"Track seed: {track_seed.artists[0].name} - {track_seed.name} => 2 suggestions" in caplog.text, i
+            assert f"Track seed: '{track_seed}' => 2 suggestions" in caplog.text, i
 
         # Then check reconciliation
         assert mock_provider_library.search_tracks.call_count == len(reconciled_tracks)
         assert mock_track_reconciler.reconcile.call_count == len(reconciled_tracks)
         for i, track_suggested in enumerate(tracks_suggested):
-            assert f"Track reconciled: {track_suggested.name} - {track_suggested.artists}" in caplog.text, i
+            assert f"Track reconciled: '{track_suggested}'" in caplog.text, i
 
         # Then check known tracks
         assert "New tracks: 1" in caplog.text
@@ -150,7 +154,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoReconciledFound):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
 
-        assert f"Track not reconciled: {track_suggested.name} - {track_suggested.artists}" in caplog.text
+        assert f"Track not reconciled: '{track_suggested}'" in caplog.text
 
     async def test_execute__reconciled__none(
         self,
@@ -173,7 +177,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoReconciledFound):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
 
-        assert f"Track not reconciled: {track_suggested.name} - {track_suggested.artists}" in caplog.text
+        assert f"Track not reconciled: '{track_suggested}'" in caplog.text
 
     async def test_execute__new_tracks__none(
         self,
@@ -183,6 +187,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_advisor_client: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
         mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build()]
@@ -192,10 +197,15 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.return_value = reconciled_track
 
         # All tracks are already known
-        mock_track_repository.get_by_ids.return_value = [reconciled_track]
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset([reconciled_track.isrc] if reconciled_track.isrc else []),
+            fingerprints=frozenset([reconciled_track.fingerprint]),
+        )
 
-        with pytest.raises(DiscoveryTrackNoNew):
+        with caplog.at_level(logging.INFO), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+
+        assert f"Excluded '{reconciled_track}'" in caplog.text
 
     async def test_execute__sorting_with_none_score(
         self,
@@ -224,7 +234,9 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: candidates[0]
 
         # Given new tracks for each reconciled track with a new playlist created
-        mock_track_repository.get_by_ids.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset(), fingerprints=frozenset()
+        )
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When

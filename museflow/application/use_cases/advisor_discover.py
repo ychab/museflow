@@ -111,7 +111,7 @@ class AdvisorDiscoverUseCase:
         logger.info(f"Reconciled tracks: {len(tracks_reconciled)}\n")
 
         # Then filter them to remove known tracks by the user.
-        tracks = await self._exclude_known_tracks(user=user, tracks_reconciled=tracks_reconciled)
+        tracks = await self._deduplicate_tracks(user=user, tracks_reconciled=tracks_reconciled)
         if not tracks:
             raise DiscoveryTrackNoNew()
         logger.info(f"New tracks: {len(tracks)}\n")
@@ -144,18 +144,11 @@ class AdvisorDiscoverUseCase:
             except SimilarTrackResponseException as e:
                 logger.error(
                     f"An error occurred while fetching similar tracks: {e}",
-                    extra={
-                        "tree_seed": {
-                            "artist": track_seed.artists[0].name,
-                            "track": track_seed.name,
-                        },
-                    },
+                    extra={"track": track_seed},
                 )
             else:
                 tracks_suggested.extend(tracks_similar)
-                logger.info(
-                    f"Track seed: {track_seed.artists[0].name} - {track_seed.name} => {len(tracks_similar)} suggestions"
-                )
+                logger.info(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
 
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)
@@ -187,14 +180,14 @@ class AdvisorDiscoverUseCase:
             )
             if best_match:
                 tracks_reconciled.append(best_match)
-                logger.info(f"Track reconciled: {track_suggested.name} - {track_suggested.artists}")
+                logger.info(f"Track reconciled: '{track_suggested}'")
             else:
-                logger.warning(f"Track not reconciled: {track_suggested.name} - {track_suggested.artists}")
+                logger.warning(f"Track not reconciled: '{track_suggested}'")
 
         return tracks_reconciled
 
-    async def _exclude_known_tracks(self, user: User, tracks_reconciled: list[Track]) -> list[Track]:
-        """Excludes tracks that are already in the user's library.
+    async def _deduplicate_tracks(self, user: User, tracks_reconciled: list[Track]) -> list[Track]:
+        """Deduplicate tracks that are already in the user's library.
 
         Args:
             user: The user to check against.
@@ -203,11 +196,20 @@ class AdvisorDiscoverUseCase:
         Returns:
             A list of tracks that are not in the user's library.
         """
-        # @TODO - For now, blindly sticks on ID's only (better to use fingerprint in addition)
-        existing_tracks = await self._track_repository.get_by_ids(
+        tracks_new: list[Track] = []
+
+        known_identifiers = await self._track_repository.get_known_identifiers(
             user_id=user.id,
-            track_ids=[track.id for track in tracks_reconciled],
+            isrcs=[track.isrc for track in tracks_reconciled if track.isrc],
+            fingerprints=[track.fingerprint for track in tracks_reconciled],
         )
 
-        existing_ids = [track.id for track in existing_tracks]
-        return [track for track in tracks_reconciled if track.id not in existing_ids]
+        for track in tracks_reconciled:
+            if known_identifiers.is_known(track):
+                logger.info(f"Excluded '{track}'")
+                continue
+
+            tracks_new.append(track)
+
+        logger.info(f"\nDiscovery:\n- {'\n- '.join([f"'{t}'" for t in tracks_new])}")
+        return tracks_new

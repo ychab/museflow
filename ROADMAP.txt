@@ -8,10 +8,11 @@ This quick and dirty document just list the roadmap tasks.
 
 ## test
 
-- fix flaky test: tests/integration/infrastructure/adapters/providers/spotify/test_library.py::TestSpotifyLibrary::test__get_saved_tracks__nominal - httpx.LocalProtocolError: Illegal header value b'bearer '
+- fix flaky test: FAILED tests/integration/infrastructure/adapters/providers/spotify/test_library.py::TestSpotifyLibrary::test__get_saved_tracks__nominal - httpx.LocalProtocolError: Illegal header value b'bearer '
   ==> probably polyfactory the guilty (don't generate a token?)!
-- fix flaky test: tests/integration/infrastructure/entrypoints/api/v1/endpoints/test_spotify.py::TestSpotifyCallback::test__spotify_error
+- fix flaky test: FAILED tests/integration/infrastructure/entrypoints/api/v1/endpoints/test_spotify.py::TestSpotifyCallback::test__spotify_error
   ==> my guess: polyfactory, for unknown reason yet, don't always generate a state value...?
+ - fix flaky test: FAILED tests/integration/application/use_cases/test_advisor_discover.py::TestAdvisorDiscoverTracksSpotifyLastFMUseCase::test_execute__nominal - httpx.LocalProtocolError: Illegal header value b'bearer '
 
 ### LAST.fm
 
@@ -32,9 +33,6 @@ This quick and dirty document just list the roadmap tasks.
 - spotify: import the extended streaming history?
 
 ## advisor
-
-- to improve reconcile
-- provide a max-retry arg? And so, review the current impl to retry if no result?
 
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => tastedive API

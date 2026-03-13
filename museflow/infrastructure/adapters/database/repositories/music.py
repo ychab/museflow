@@ -19,6 +19,7 @@ from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Track
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.value_objects.music import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import MusicItemMixin
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
@@ -98,6 +99,31 @@ class TrackSQLRepository(TrackRepository):
 
         results = await self.session.execute(stmt)
         return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
+
+    async def get_known_identifiers(
+        self,
+        user_id: uuid.UUID,
+        isrcs: list[str],
+        fingerprints: list[str],
+    ) -> TrackKnowIdentifiers:
+        stmt = select(TrackModel.isrc, TrackModel.fingerprint).where(TrackModel.user_id == user_id)
+
+        conditions = []
+        if isrcs:
+            conditions.append(TrackModel.isrc.in_(isrcs))
+        if fingerprints:
+            conditions.append(TrackModel.fingerprint.in_(fingerprints))
+
+        if conditions:
+            stmt = stmt.where(or_(*conditions))
+
+        result = await self.session.execute(stmt)
+        rows = result.fetchall()
+
+        known_isrcs = frozenset(row.isrc for row in rows if row.isrc)
+        known_fingerprints = frozenset(row.fingerprint for row in rows if row.fingerprint)
+
+        return TrackKnowIdentifiers(isrcs=known_isrcs, fingerprints=known_fingerprints)
 
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         return await bulk_item_upsert(

@@ -63,6 +63,9 @@ class Track(BaseMediaItem):
 
     duration_ms: int
 
+    def __str__(self) -> str:
+        return f"{', '.join([artist.name for artist in self.artists])} - {self.name}".replace("'", "\\'")
+
     def __post_init__(self):
         if not self.fingerprint:
             fingerprint_val = generate_fingerprint(
@@ -79,6 +82,9 @@ class TrackSuggested:
     advisor_id: str | None = None
     score: float | None = None
     duration_ms: int | None = None
+
+    def __str__(self) -> str:
+        return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")
 
 
 @dataclass(frozen=True, kw_only=True)

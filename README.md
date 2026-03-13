@@ -199,6 +199,31 @@ Example: Sync everything for a user
 uv run museflow spotify sync --email user@example.com --sync-all
 ```
 
+**Discover new music:**
+
+Discovers new music for a user based on their listening history and creates a new playlist.
+
+```bash
+uv run museflow spotify discover --email <email> [OPTIONS]
+```
+
+**Discover Options:**
+
+*   `--advisor`: The music advisor to use for getting recommendations (e.g., `spotify`).
+*   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
+*   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
+*   `--seed-order-by`: The field to order the seed tracks by (default: `created_at`).
+*   `--seed-sort-order`: The sort order for the seed tracks (default: `asc`).
+*   `--seed-limit`: The maximum number of seed tracks to use (default: `50`).
+*   `--similar-limit`: The maximum number of similar tracks to fetch for each seed (default: `5`).
+*   `--candidate-limit`: The maximum number of candidate tracks to consider for reconciliation (default: `10`).
+
+Example: Discover new music using top tracks as seeds
+
+```bash
+uv run museflow spotify discover --email user@example.com --advisor lastfm --seed-top --seed-limit 10 --similar-limit 5
+```
+
 ## Development
 
 **Linting and Formatting:**

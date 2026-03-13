@@ -357,6 +357,63 @@ class TestTrackSQLRepository:
         # Check that items have been collected only for that user.
         assert set([t.user_id for t in track_list]) == {user.id}
 
+    async def test__get_known_identifiers__none(self, user: User, track_repository: TrackRepository) -> None:
+        known_identifiers = await track_repository.get_known_identifiers(
+            user_id=user.id,
+            isrcs=[],
+            fingerprints=[],
+        )
+        assert not known_identifiers.isrcs
+        assert not known_identifiers.fingerprints
+
+    async def test__get_known_identifiers__isrc(self, user: User, track_repository: TrackRepository) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, isrc="foo", fingerprint="")
+        await TrackModelFactory.create_async(user_id=user.id, isrc="bar", fingerprint="")
+        await TrackModelFactory.create_async(user_id=user.id, isrc="baz", fingerprint="")
+        # Another user
+        await TrackModelFactory.create_async(isrc="bar", fingerprint="")
+
+        known_identifiers = await track_repository.get_known_identifiers(
+            user_id=user.id,
+            isrcs=["foo", "bar"],
+            fingerprints=["baz"],
+        )
+
+        assert known_identifiers.isrcs == frozenset(["foo", "bar"])
+        assert not known_identifiers.fingerprints
+
+    async def test__get_known_identifiers__fingerprint(self, user: User, track_repository: TrackRepository) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="foo")
+        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="bar")
+        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="baz")
+        # Another user
+        await TrackModelFactory.create_async(isrc=None, fingerprint="bar")
+
+        known_identifiers = await track_repository.get_known_identifiers(
+            user_id=user.id,
+            isrcs=[],
+            fingerprints=["foo", "bar"],
+        )
+
+        assert not known_identifiers.isrcs
+        assert known_identifiers.fingerprints == frozenset(["foo", "bar"])
+
+    async def test__get_known_identifiers__both(self, user: User, track_repository: TrackRepository) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, isrc="foo", fingerprint="foo")
+        await TrackModelFactory.create_async(user_id=user.id, isrc="bar", fingerprint="bar")
+        await TrackModelFactory.create_async(user_id=user.id, isrc="baz", fingerprint="baz")
+        # Another user
+        await TrackModelFactory.create_async(isrc="bar", fingerprint="bar")
+
+        known_identifiers = await track_repository.get_known_identifiers(
+            user_id=user.id,
+            isrcs=["foo", "bar"],
+            fingerprints=["baz"],
+        )
+
+        assert not known_identifiers.isrcs == frozenset(["foo", "bar"])
+        assert known_identifiers.fingerprints == frozenset(["foo", "bar", "baz"])
+
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,
