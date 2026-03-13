@@ -16,6 +16,7 @@ from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
 from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
 from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import SimilarTrackResponseException
+from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 
@@ -43,6 +44,8 @@ class DiscoveryConfig:
 
     similar_limit: int = 5
 
+    candidate_limit: int = 10
+
 
 class AdvisorDiscoverUseCase:
     """Use case for discovering new tracks based on a user's library."""
@@ -52,10 +55,12 @@ class AdvisorDiscoverUseCase:
         track_repository: TrackRepository,
         provider_library: ProviderLibraryPort,
         advisor_client: AdvisorClientPort,
+        track_reconciler: TrackReconciler,
     ) -> None:
         self._track_repository = track_repository
         self._provider_library = provider_library
         self._advisor_client = advisor_client
+        self._track_reconciler = track_reconciler
 
     async def create_suggestions_playlist(self, user: User, config: DiscoveryConfig) -> Playlist:
         """Creates a playlist of suggested tracks for a user.
@@ -75,7 +80,7 @@ class AdvisorDiscoverUseCase:
             DiscoveryTrackNoSeedFound: If no seed tracks are found.
             DiscoveryTrackNoSimilarFound: If no similar tracks are found.
             DiscoveryTrackNoReconciledFound: If no tracks can be reconciled.
-            DiscoveryTrackNoNew: If all reconciled tracks are already known by the user.
+            DiscoveryTrackNoNew: If the user already knows all reconciled tracks.
         """
         # First, gather track seeds.
         track_seeds = await self._track_repository.get_list(
@@ -97,13 +102,16 @@ class AdvisorDiscoverUseCase:
         logger.info(f"Suggested tracks: {len(tracks_suggested)}\n")
 
         # Then reconcile them with the provider.
-        tracks = await self._reconcile_tracks(tracks_suggested=tracks_suggested)
-        if not tracks:
+        tracks_reconciled = await self._reconcile_tracks(
+            tracks_suggested=tracks_suggested,
+            limit=config.candidate_limit,
+        )
+        if not tracks_reconciled:
             raise DiscoveryTrackNoReconciledFound()
-        logger.info(f"Reconciled tracks: {len(tracks)}\n")
+        logger.info(f"Reconciled tracks: {len(tracks_reconciled)}\n")
 
         # Then filter them to remove known tracks by the user.
-        tracks = await self._exclude_known_tracks(user=user, tracks=tracks)
+        tracks = await self._exclude_known_tracks(user=user, tracks_reconciled=tracks_reconciled)
         if not tracks:
             raise DiscoveryTrackNoNew()
         logger.info(f"New tracks: {len(tracks)}\n")
@@ -152,7 +160,7 @@ class AdvisorDiscoverUseCase:
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)
 
-    async def _reconcile_tracks(self, tracks_suggested: list[TrackSuggested]) -> list[Track]:
+    async def _reconcile_tracks(self, tracks_suggested: list[TrackSuggested], limit: int) -> list[Track]:
         """Reconciles suggested tracks with the provider.
 
         This method attempts to find a match for each suggested track in the provider's library.
@@ -163,29 +171,34 @@ class AdvisorDiscoverUseCase:
         Returns:
             A list of reconciled tracks.
         """
-        tracks: list[Track] = []
+        tracks_reconciled: list[Track] = []
 
         for track_suggested in tracks_suggested:
-            tracks_reconciled = await self._provider_library.search_tracks(
+            candidates = await self._provider_library.search_tracks(
                 track=track_suggested.name,
                 artists=track_suggested.artists,
-                page_size=1,
+                page_size=limit,
                 log_enabled=False,
             )
-            if tracks_reconciled:
-                tracks.append(tracks_reconciled[0])  # @TODO For now, blindly pick the first one. Needs a reconciler
+
+            best_match = self._track_reconciler.reconcile(
+                track_suggested=track_suggested,
+                candidates=candidates,
+            )
+            if best_match:
+                tracks_reconciled.append(best_match)
                 logger.info(f"Track reconciled: {track_suggested.name} - {track_suggested.artists}")
             else:
                 logger.warning(f"Track not reconciled: {track_suggested.name} - {track_suggested.artists}")
 
-        return tracks
+        return tracks_reconciled
 
-    async def _exclude_known_tracks(self, user: User, tracks: list[Track]) -> list[Track]:
+    async def _exclude_known_tracks(self, user: User, tracks_reconciled: list[Track]) -> list[Track]:
         """Excludes tracks that are already in the user's library.
 
         Args:
             user: The user to check against.
-            tracks: A list of tracks to filter.
+            tracks_reconciled: A list of reconciled tracks to filter.
 
         Returns:
             A list of tracks that are not in the user's library.
@@ -193,8 +206,8 @@ class AdvisorDiscoverUseCase:
         # @TODO - For now, blindly sticks on ID's only (better to use fingerprint in addition)
         existing_tracks = await self._track_repository.get_by_ids(
             user_id=user.id,
-            track_ids=[track.id for track in tracks],
+            track_ids=[track.id for track in tracks_reconciled],
         )
 
         existing_ids = [track.id for track in existing_tracks]
-        return [track for track in tracks if track.id not in existing_ids]
+        return [track for track in tracks_reconciled if track.id not in existing_ids]

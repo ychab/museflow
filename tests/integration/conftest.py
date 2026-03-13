@@ -27,6 +27,7 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
@@ -349,6 +350,14 @@ async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastF
         base_url=HttpUrl(base_url) if base_url else None,
     ) as client:
         yield client
+
+
+# --- Services ---
+
+
+@pytest.fixture
+def track_reconciler() -> TrackReconciler:
+    return TrackReconciler()
 
 
 # --- Wiremock ---

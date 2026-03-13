@@ -228,6 +228,13 @@ def discover(
         min=1,
         max=20,
     ),
+    candidate_limit: int = typer.Option(
+        10,
+        "--candidate-limit",
+        help="The limit of candidate tracks to search",
+        min=1,
+        max=20,
+    ),
 ) -> None:
     """
     Discover new tracks for a Spotify's user account.
@@ -244,6 +251,7 @@ def discover(
                     seed_sort_order=seed_sort_order,
                     seed_limit=seed_limit,
                     similar_limit=similar_limit,
+                    candidate_limit=candidate_limit,
                 ),
             ),
         )

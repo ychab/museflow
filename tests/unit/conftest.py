@@ -19,6 +19,7 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
@@ -126,6 +127,14 @@ def mock_advisor_client() -> mock.AsyncMock:
     return mock.AsyncMock(spec=AdvisorClientPort)
 
 
+# --- Service Mocks ---
+
+
+@pytest.fixture
+def mock_track_reconciler() -> mock.Mock:
+    return mock.Mock(spec=TrackReconciler)
+
+
 # --- Adapters ---
 
 
@@ -173,3 +182,15 @@ async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
         client_secret="dummy-client-secret",
     ) as client:
         yield client
+
+
+# --- Services ---
+
+
+@pytest.fixture
+def track_reconciler(request: pytest.FixtureRequest) -> TrackReconciler:
+    params = getattr(request, "param", {})
+    match_threshold = params.get("match_threshold", 80.0)
+    score_minimum = params.get("score_minimum", 60.0)
+
+    return TrackReconciler(match_threshold=match_threshold, score_minimum=score_minimum)

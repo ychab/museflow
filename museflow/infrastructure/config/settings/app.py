@@ -35,5 +35,8 @@ class AppSettings(BaseSettings):
 
     SYNC_SEMAPHORE_MAX_CONCURRENCY: int = 20
 
+    RECONCILER_TRACK_MATCH_THRESHOLD: float = 80.0
+    RECONCILER_TRACK_SCORE_MINIMUM: float = 60.0
+
 
 app_settings = AppSettings()

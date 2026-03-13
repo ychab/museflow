@@ -14,6 +14,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
+from museflow.infrastructure.entrypoints.cli.dependencies import get_track_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 
@@ -48,7 +49,9 @@ async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: Discove
             session=session,
             spotify_client=spotify_client,
         )
+
         advisor_client = await stack.enter_async_context(get_advisor_client(advisor))
+        track_reconciler = get_track_reconciler()
 
         user = await user_repository.get_by_email(email)
         if not user:
@@ -64,5 +67,7 @@ async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: Discove
             track_repository=track_repository,
             provider_library=spotify_library,
             advisor_client=advisor_client,
+            track_reconciler=track_reconciler,
         )
+
         return await use_case.create_suggestions_playlist(user=user, config=config)

@@ -46,6 +46,7 @@ class TestSpotifyDiscoverParserCommand:
                 "--seed-sort-order", SortOrder.DESC,
                 "--seed-limit", "20",
                 "--similar-limit", "10",
+                "--candidate-limit", "10",
             ],
         )
         # fmt: on
@@ -156,6 +157,31 @@ class TestSpotifyDiscoverParserCommand:
         result = runner.invoke(
             app,
             ["spotify", "discover", "--email", "test@example.com", "--similar-limit", similar_limit],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert expected_msg in output
+
+    @pytest.mark.parametrize(
+        ("candidate_limit", "expected_msg"),
+        [
+            pytest.param(0, "Invalid value for '--candidate-limit': 0 is not in the range", id="zero"),
+            pytest.param(-15, "Invalid value for '--candidate-limit': -15 is not in the range", id="min_exceed"),
+            pytest.param(25, "Invalid value for '--candidate-limit': 25 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--candidate-limit': 'foo' is not a valid integer", id="string"),
+        ],
+    )
+    def test__candidate_limit__invalid(
+        self,
+        runner: CliRunner,
+        candidate_limit: Any,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["spotify", "discover", "--email", "test@example.com", "--candidate-limit", candidate_limit],
         )
         assert result.exit_code != 0
 

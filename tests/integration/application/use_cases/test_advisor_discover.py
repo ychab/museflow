@@ -9,6 +9,7 @@ from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCa
 from museflow.application.use_cases.advisor_discover import DiscoveryConfig
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
+from museflow.domain.services.reconciler import TrackReconciler
 
 from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
@@ -21,11 +22,13 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         track_repository: TrackRepository,
         spotify_library: ProviderLibraryPort,
         lastfm_client: AdvisorClientPort,
+        track_reconciler: TrackReconciler,
     ) -> AdvisorDiscoverUseCase:
         return AdvisorDiscoverUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
             advisor_client=lastfm_client,
+            track_reconciler=track_reconciler,
         )
 
     @pytest.fixture
@@ -87,7 +90,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         assert len(playlist.tracks) == 1
 
         track = playlist.tracks[0]
-        assert track.provider_id == "30xocklvViCtxktihAEZM8"
+        assert track.provider_id == "1B7EbqtFdlKqLSBXrKKfW8"
         assert track.name == "Mi Pueblo"
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"

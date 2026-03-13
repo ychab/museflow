@@ -11,6 +11,7 @@ from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicAdvisor
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -26,6 +27,8 @@ from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.lastfm import lastfm_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
+# --- Security ---
+
 
 def get_password_hasher() -> PasswordHasherPort:
     return Argon2PasswordHasher()
@@ -33,6 +36,9 @@ def get_password_hasher() -> PasswordHasherPort:
 
 def get_state_token_generator() -> StateTokenGeneratorPort:
     return SystemStateTokenGenerator()
+
+
+# --- Context manager ---
 
 
 @asynccontextmanager
@@ -73,6 +79,9 @@ async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorCli
             raise ValueError(f"Unknown advisor: {advisor}")
 
 
+# --- Session manager ---
+
+
 def get_spotify_library_factory(
     session: AsyncSession,
     spotify_client: SpotifyOAuthClientAdapter,
@@ -81,6 +90,9 @@ def get_spotify_library_factory(
         auth_token_repository=get_auth_token_repository(session),
         client=spotify_client,
     )
+
+
+# --- Repositories ---
 
 
 def get_user_repository(session: AsyncSession) -> UserRepository:
@@ -101,3 +113,10 @@ def get_artist_repository(session: AsyncSession) -> ArtistRepository:
 
 def get_track_repository(session: AsyncSession) -> TrackRepository:
     return TrackSQLRepository(session)
+
+
+# --- Services ---
+
+
+def get_track_reconciler() -> TrackReconciler:
+    return TrackReconciler()
