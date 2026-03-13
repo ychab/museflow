@@ -53,6 +53,9 @@ async def get_spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
+        base_url=spotify_settings.BASE_URL,
+        auth_endpoint=spotify_settings.AUTH_ENDPOINT,
+        token_endpoint=spotify_settings.TOKEN_ENDPOINT,
         timeout=spotify_settings.HTTP_TIMEOUT,
         token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
     ) as client:
@@ -64,6 +67,7 @@ async def get_lastfm_client() -> AsyncGenerator[AdvisorClientPort]:
     async with LastFmClientAdapter(
         client_api_key=lastfm_settings.CLIENT_API_KEY,
         client_secret=lastfm_settings.CLIENT_SECRET,
+        base_url=lastfm_settings.BASE_URL,
         timeout=lastfm_settings.HTTP_TIMEOUT,
     ) as client:
         yield client

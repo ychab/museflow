@@ -7,11 +7,6 @@ This quick and dirty document just list the roadmap tasks.
 - genre: how to populate it? Copied from the artists?
 
 
-### LAST.fm
-
-- provide a settings for the base url (in case it change later?)
-
-
 ## doc code
 
 - improve the doc code for tests

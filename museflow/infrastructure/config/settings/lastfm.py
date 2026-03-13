@@ -1,3 +1,5 @@
+from pydantic import Field
+from pydantic import HttpUrl
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -18,6 +20,8 @@ class LastFMSettings(BaseSettings):
 
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5
+
+    BASE_URL: HttpUrl = Field(default=HttpUrl("http://ws.audioscrobbler.com/2.0/"))
 
 
 lastfm_settings = LastFMSettings()

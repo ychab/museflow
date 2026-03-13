@@ -67,6 +67,9 @@ async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
+        base_url=spotify_settings.BASE_URL,
+        auth_endpoint=spotify_settings.AUTH_ENDPOINT,
+        token_endpoint=spotify_settings.TOKEN_ENDPOINT,
         timeout=spotify_settings.HTTP_TIMEOUT,
         token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
     ) as spotify_client:
