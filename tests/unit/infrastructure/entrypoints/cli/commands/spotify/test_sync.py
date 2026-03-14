@@ -14,7 +14,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
-from museflow.infrastructure.entrypoints.cli.commands.spotify import sync_logic
+from museflow.infrastructure.entrypoints.cli.commands.spotify.sync import sync_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -45,7 +45,7 @@ SYNC_ARGS_COMBINATIONS: Final[list[list[str]]] = [
 class TestSpotifySyncParserCommand:
     @pytest.fixture(autouse=True)
     def mock_sync_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync.sync_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             patched.return_value = SyncReport()
             yield patched
@@ -184,7 +184,7 @@ class TestSpotifySyncParserCommand:
 class TestSpotifySyncCommand:
     @pytest.fixture(autouse=True)
     def mock_sync_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.sync.sync_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 

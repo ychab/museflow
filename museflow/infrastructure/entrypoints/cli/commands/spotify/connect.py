@@ -13,11 +13,43 @@ from museflow.application.ports.repositories.auth import OAuthProviderStateRepos
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+
+
+@app.command("connect", help="Connect a user account to Spotify via OAuth.")
+def connect(
+    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    timeout: float = typer.Option(60.0, help="Seconds to wait for authentication.", min=10),
+    poll_interval: float = typer.Option(2.0, help="Seconds between status checks.", min=0.5),
+) -> None:
+    """
+    Initiates the Spotify OAuth flow for a specific user.
+
+    Important: the app must be run and being able to receive the Spotify's callback
+    define with the setting SPOTIFY_REDIRECT_URI.
+    """
+    try:
+        asyncio.run(connect_logic(email, timeout, poll_interval))
+    except UserNotFound as e:
+        raise typer.BadParameter(f"User not found with email: {email}") from e
+    except TimeoutError as e:
+        typer.secho(
+            f"\n\nUnable to connect after {timeout} seconds. Did you open your browser and accept?",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1) from e
+    except Exception as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+
+    typer.secho("\n\nAuthentication successful! \u2705", fg=typer.colors.GREEN)
 
 
 async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -> None:

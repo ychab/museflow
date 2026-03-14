@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.infrastructure.adapters.database.models import User as UserModel
-from museflow.infrastructure.entrypoints.cli.commands.users import user_create_logic
+from museflow.infrastructure.entrypoints.cli.commands.users.create import user_create_logic
 
 
 class TestUserCreateLogic:

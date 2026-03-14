@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.users import user_update_logic
+from museflow.infrastructure.entrypoints.cli.commands.users.update import user_update_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -17,7 +17,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestUserUpdateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_user_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_update_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.user_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -102,7 +102,7 @@ class TestUserUpdateParserCommand:
 class TestUserUpdateCommand:
     @pytest.fixture(autouse=True)
     def mock_user_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_update_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.user_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 

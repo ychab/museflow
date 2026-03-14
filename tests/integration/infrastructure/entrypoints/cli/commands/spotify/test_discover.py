@@ -7,7 +7,7 @@ from museflow.application.use_cases.advisor_discover import DiscoveryConfig
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicAdvisor
-from museflow.infrastructure.entrypoints.cli.commands.spotify import discover_logic
+from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
 
 from tests.unit.factories.entities.music import PlaylistFactory
 

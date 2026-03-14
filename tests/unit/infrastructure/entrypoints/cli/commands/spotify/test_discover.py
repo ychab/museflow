@@ -17,7 +17,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
-from museflow.infrastructure.entrypoints.cli.commands.spotify import discover_logic
+from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.music import PlaylistFactory
@@ -27,7 +27,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestSpotifyDiscoverParserCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 
@@ -192,7 +192,7 @@ class TestSpotifyDiscoverParserCommand:
 class TestSpotifyDiscoverCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 

@@ -13,7 +13,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestUserCreateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_create_user_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_create_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.user_create_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -92,7 +92,7 @@ class TestUserCreateParserCommand:
 class TestUserCreateCommand:
     @pytest.fixture
     def mock_user_create_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.user_create_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.user_create_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
