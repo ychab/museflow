@@ -2,13 +2,13 @@ import asyncio
 from typing import Any
 
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
 from museflow.domain.types import MusicProvider
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -28,7 +28,7 @@ class SpotifyOAuthSessionClient:
         user: User,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
-        client: SpotifyOAuthClientAdapter,
+        client: ProviderOAuthClientPort,
         token_buffer_seconds: int = spotify_settings.TOKEN_BUFFER_SECONDS,
     ):
         self.user = user

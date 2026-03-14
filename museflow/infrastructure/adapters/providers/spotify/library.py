@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from museflow import __project_name__
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -16,7 +17,6 @@ from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
@@ -46,7 +46,7 @@ class SpotifyLibraryFactory:
     """
 
     auth_token_repository: OAuthProviderTokenRepository
-    client: SpotifyOAuthClientAdapter
+    client: ProviderOAuthClientPort
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
         """Creates a new `SpotifyLibraryAdapter` for a specific user.

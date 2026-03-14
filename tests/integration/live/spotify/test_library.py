@@ -5,6 +5,7 @@ import pytest
 
 from museflow import __project_name__
 from museflow.application.mappers.auth import auth_token_create_from_token_payload
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
@@ -52,7 +53,7 @@ class TestSpotifyLibraryLive:
         return token
 
     @pytest.fixture
-    async def spotify_client_live(self) -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+    async def spotify_client_live(self) -> AsyncGenerator[ProviderOAuthClientPort]:
         async with get_spotify_client() as client:
             yield client
 

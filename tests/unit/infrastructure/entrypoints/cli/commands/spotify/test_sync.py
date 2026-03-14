@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncConfigInput
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -365,7 +365,7 @@ class TestSpotifySyncLogic:
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await sync_logic(email, config=SyncConfig(sync_all=True))
+            await sync_logic(email, config=SyncConfigInput(sync_all=True))
 
     async def test__auth_token__not_found(
         self,
@@ -377,4 +377,4 @@ class TestSpotifySyncLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await sync_logic(user.email, config=SyncConfig(sync_all=True))
+            await sync_logic(user.email, config=SyncConfigInput(sync_all=True))

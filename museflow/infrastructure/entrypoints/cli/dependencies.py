@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
@@ -48,7 +49,7 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 @asynccontextmanager
-async def get_spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
     async with SpotifyOAuthClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
@@ -88,7 +89,7 @@ async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorCli
 
 def get_spotify_library_factory(
     session: AsyncSession,
-    spotify_client: SpotifyOAuthClientAdapter,
+    spotify_client: ProviderOAuthClientPort,
 ) -> SpotifyLibraryFactory:
     return SpotifyLibraryFactory(
         auth_token_repository=get_auth_token_repository(session),

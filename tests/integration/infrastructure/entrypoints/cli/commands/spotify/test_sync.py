@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncConfigInput
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
@@ -35,7 +35,7 @@ class TestSpotifySyncLogic:
             track_updated=250,
         )
 
-        report = await sync_logic(email=user.email, config=SyncConfig(sync_all=True))
+        report = await sync_logic(email=user.email, config=SyncConfigInput(sync_all=True))
 
         assert report.artist_created == 100
         assert report.artist_updated == 250

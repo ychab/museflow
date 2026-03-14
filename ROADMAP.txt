@@ -11,10 +11,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - improve the doc code for tests
 
-## cli
-
-- review how commands/logics are setup
-
 ## Sync
 
 - review it for performance (small chunks to upsert into DB) and atomicity?

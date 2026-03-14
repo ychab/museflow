@@ -8,7 +8,7 @@ import typer
 from rich.table import Table
 
 from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
-from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncConfigInput
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
@@ -104,7 +104,7 @@ def sync(
     """
     start_time = time.perf_counter()
 
-    config = SyncConfig(
+    config = SyncConfigInput(
         purge_all=purge_all,
         purge_artist_top=purge_artist_top,
         purge_track_top=purge_track_top,
@@ -160,7 +160,7 @@ def sync(
     console.print(table)
 
 
-async def sync_logic(email: EmailStr, config: SyncConfig) -> SyncReport:
+async def sync_logic(email: EmailStr, config: SyncConfigInput) -> SyncReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 

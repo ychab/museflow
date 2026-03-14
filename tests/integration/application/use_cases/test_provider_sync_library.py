@@ -11,7 +11,7 @@ import pytest
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
-from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncConfigInput
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
@@ -192,7 +192,7 @@ class TestSpotifySyncMusic:
         pass
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(purge_artist_top=True),
+            config=SyncConfigInput(purge_artist_top=True),
         )
         assert report == SyncReport(purge_artist=len(artists_top_delete))
 
@@ -227,7 +227,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 purge_track_top=purge_track_top,
                 purge_track_saved=purge_track_saved,
                 purge_track_playlist=purge_track_playlist,
@@ -251,7 +251,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_artist_top=True,
                 page_size=page_size,
             ),
@@ -274,7 +274,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_artist_top=True,
                 page_size=page_size,
             ),
@@ -299,7 +299,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_top=True,
                 page_size=page_size,
             ),
@@ -326,7 +326,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_top=True,
                 page_size=page_size,
             ),
@@ -354,7 +354,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_saved=True,
                 page_size=page_size,
             ),
@@ -381,7 +381,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_saved=True,
                 page_size=page_size,
             ),
@@ -412,7 +412,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_playlist=True,
                 page_size=page_size,
             ),
@@ -439,7 +439,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 sync_track_playlist=True,
                 page_size=page_size,
             ),
@@ -473,7 +473,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 purge_all=True,
                 sync_all=True,
                 page_size=DEFAULT_PAGINATION_SIZE,
@@ -583,7 +583,7 @@ class TestSpotifySyncMusic:
 
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(
+            config=SyncConfigInput(
                 purge_all=False,
                 sync_all=True,
                 page_size=page_size,

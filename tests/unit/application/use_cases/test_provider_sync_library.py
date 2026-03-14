@@ -17,7 +17,7 @@ import pytest
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.provider_sync_library import ProviderSyncLibraryUseCase
-from museflow.application.use_cases.provider_sync_library import SyncConfig
+from museflow.application.use_cases.provider_sync_library import SyncConfigInput
 from museflow.application.use_cases.provider_sync_library import SyncReport
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
@@ -27,13 +27,13 @@ from museflow.domain.entities.user import User
 from tests.unit.factories.entities.music import ArtistFactory
 from tests.unit.factories.entities.music import TrackFactory
 
-PURGE_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfig) if f.name.startswith("purge_")]
+PURGE_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfigInput) if f.name.startswith("purge_")]
 PURGE_ARGS_COMBINATIONS: Final[list[tuple[dict[str, bool], bool]]] = [({}, False)] + [
     ({field: True}, True) for field in PURGE_FIELDS
 ]
 
 
-SYNC_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfig) if f.name.startswith("sync_")]
+SYNC_FIELDS: Final[list[str]] = [f.name for f in dataclasses.fields(SyncConfigInput) if f.name.startswith("sync_")]
 SYNC_ARGS_COMBINATIONS: Final[list[tuple[dict[str, bool], bool]]] = [({}, False)] + [
     ({field: True}, True) for field in SYNC_FIELDS
 ]
@@ -63,12 +63,12 @@ def validation_error() -> ValidationError:
 class TestSyncConfig:
     @pytest.mark.parametrize(("attributes", "expected_bool"), PURGE_ARGS_COMBINATIONS)
     def test_has_purge(self, attributes: dict[str, Any], expected_bool: bool) -> None:
-        config = SyncConfig(**attributes)
+        config = SyncConfigInput(**attributes)
         assert config.has_purge() is expected_bool
 
     @pytest.mark.parametrize(("attributes", "expected_bool"), SYNC_ARGS_COMBINATIONS)
     def test_has_sync(self, attributes: dict[str, Any], expected_bool: bool) -> None:
-        config = SyncConfig(**attributes)
+        config = SyncConfigInput(**attributes)
         assert config.has_sync() is expected_bool
 
 
@@ -111,7 +111,7 @@ class TestSyncMusic:
     ) -> None:
         report = await use_case.sync_library(
             user=user,
-            config=SyncConfig(),
+            config=SyncConfigInput(),
         )
         assert report == SyncReport()
 
@@ -133,7 +133,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     purge_all=purge_all,
                     purge_artist_top=purge_artist_top,
                 ),
@@ -166,7 +166,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     purge_all=purge_all,
                     purge_track_top=purge_track_top,
                     purge_track_saved=purge_track_saved,
@@ -203,7 +203,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
                 ),
@@ -238,7 +238,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_artist_top=sync_artist_top,
                 ),
@@ -273,7 +273,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_top=sync_track_top,
                 ),
@@ -308,7 +308,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_top=sync_track_top,
                 ),
@@ -343,7 +343,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
                 ),
@@ -378,7 +378,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_saved=sync_track_saved,
                 ),
@@ -413,7 +413,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,
                 ),
@@ -448,7 +448,7 @@ class TestSyncMusic:
         with caplog.at_level(logging.ERROR):
             report = await use_case.sync_library(
                 user=user,
-                config=SyncConfig(
+                config=SyncConfigInput(
                     sync_all=sync_all,
                     sync_track_playlist=sync_track_playlist,
                 ),

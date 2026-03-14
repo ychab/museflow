@@ -5,8 +5,8 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.application.inputs.discovery import DiscoveryConfig
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryConfig
 from museflow.domain.entities.music import Playlist
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
