@@ -171,4 +171,7 @@ clean: ## Cleanup cache files
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 repomix:
-	uvx repomix --no-security-check --compress
+	npx repomix@latest --no-security-check --compress
+
+repomix-skills:
+	npx repomix@latest --no-security-check --compress --skill-generate --skill-output .claude/skills/codebase

@@ -3,6 +3,18 @@
 This quick and dirty document just list the roadmap tasks.
 
 
+## API
+
+- add support for cors headers
+
+## claude repomix
+
+- generate some skills with repomix?
+
+## cli
+
+- add a way to fetch a list of available genres?
+
 ## doc code
 
 - improve the doc code for tests

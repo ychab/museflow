@@ -16,4 +16,4 @@ junit.xml
 .vscode/
 *.swp
 
-repomix-output.md
+repomix-output.*
