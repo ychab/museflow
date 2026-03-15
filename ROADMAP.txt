@@ -9,7 +9,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## Sync
 
-- review it for performance (small chunks to upsert into DB) and atomicity?
+- review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 - spotify: import the extended streaming history?
 
 ## advisor
