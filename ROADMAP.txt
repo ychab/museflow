@@ -2,10 +2,6 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## track entity
-
-- genre: how to populate it? Copied from the artists?
-
 
 ## doc code
 

@@ -6,6 +6,7 @@ from dataclasses import field
 from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.domain.utils.text import generate_fingerprint
+from museflow.domain.utils.text import unidecode_lower_text
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -27,6 +28,9 @@ class BaseMediaItem(BaseProviderEntity):
     is_saved: bool = False
     is_top: bool = False
     top_position: int | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "genres", [unidecode_lower_text(g) for g in self.genres])
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -67,6 +71,7 @@ class Track(BaseMediaItem):
         return f"{', '.join([artist.name for artist in self.artists])} - {self.name}".replace("'", "\\'")
 
     def __post_init__(self):
+        super().__post_init__()
         if not self.fingerprint:
             fingerprint_val = generate_fingerprint(
                 name=self.name,

@@ -58,7 +58,7 @@ class TestSpotifyLibrary:
         assert top_artist_first.is_saved is False
         assert top_artist_first.is_top is True
         assert top_artist_first.top_position == 1
-        assert top_artist_first.genres == ["rap français"]
+        assert top_artist_first.genres == ["rap francais"]
         assert top_artist_first.provider == MusicProvider.SPOTIFY
         assert top_artist_first.provider_id == "3CnCGFxXbOA8bAK54jR8js"
 

@@ -1,12 +1,22 @@
 import pytest
 
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import unidecode_lower_text
+
+
+class TestUnidecodeLower:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            pytest.param("variété française", "variete francaise", id="unidecode"),
+            pytest.param("PoP", "pop", id="lowercase"),
+        ],
+    )
+    def test__nominal(self, text: str, expected: str) -> None:
+        assert unidecode_lower_text(text) == expected
 
 
 class TestNormalizeText:
-    def test__empty(self) -> None:
-        assert normalize_text("") == ""
-
     @pytest.mark.parametrize(
         ("text", "expected_str"),
         [

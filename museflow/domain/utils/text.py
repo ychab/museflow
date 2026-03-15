@@ -3,20 +3,21 @@ import re
 from unidecode import unidecode
 
 
+def unidecode_lower_text(text: str) -> str:
+    """Remove accents and convert to lowercase"""
+    return unidecode(text).lower()
+
+
 def normalize_text(text: str) -> str:
-    if not text:
-        return ""
+    text = unidecode_lower_text(text)
 
-    # 1. Remove accents and convert to lowercase
-    text = unidecode(text).lower()
-
-    # 2. Remove "feat", "feat.", "ft", "ft.", "remaster", "radio edit" in brackets or parentheses
+    # Remove "feat", "feat.", "ft", "ft.", "remaster", "radio edit" in brackets or parentheses
     text = re.sub(r"[\(\[].*?(feat\.?|ft\.?|remaster|live|edit|version).*?[\)\]]", "", text)
 
-    # 3. Remove trailing suffixes after hyphens
+    # Remove trailing suffixes after hyphens
     text = re.sub(r"\s*-\s*.*?(feat\.?|ft\.?|remaster|live|edit|version|mono|stereo).*", "", text)
 
-    # 4. Remove purely non-alphanumeric noise and extra whitespace
+    # Remove purely non-alphanumeric noise and extra whitespace
     text = re.sub(r"[^\w\s]", "", text)
 
     return " ".join(text.split())
