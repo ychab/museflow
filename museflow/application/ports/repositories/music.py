@@ -114,6 +114,13 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_distinct_genres(self, user_id: uuid.UUID) -> list[str]:
+        """
+        Returns a sorted list of all unique genres found in the user's library
+        (from both tracks and their associated artists).
+        """
+
+    @abstractmethod
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         """Performs a bulk "upsert" (insert or update) of track records.
 

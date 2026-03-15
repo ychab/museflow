@@ -510,6 +510,33 @@ class TestTrackSQLRepository:
         assert not known_identifiers.isrcs == frozenset(["foo", "bar"])
         assert known_identifiers.fingerprints == frozenset(["foo", "bar", "baz"])
 
+    async def test__get_distinct_genres__nominal(self, user: User, track_repository: TrackRepository) -> None:
+        # Track with genres
+        await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "indie"])
+
+        # Artist with genres (one overlapping, one new)
+        artist = await ArtistModelFactory.create_async(user_id=user.id, genres=["rock", "alternative"])
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            artists=[ArtistDict(name="Rock alt", provider_id=artist.provider_id)],
+            genres=[],
+        )
+
+        # Artist with genres (one overlapping, one new)
+        await TrackModelFactory.create_async(genres=["pop"])
+        other_artist = await ArtistModelFactory.create_async(genres=["classic"])
+        await TrackModelFactory.create_async(
+            artists=[ArtistDict(name="Rock alt", provider_id=other_artist.provider_id)],
+            genres=[],
+        )
+
+        genres = await track_repository.get_distinct_genres(user.id)
+        assert sorted(genres) == ["alternative", "indie", "rock"]
+
+    async def test__get_distinct_genres__empty(self, user: User, track_repository: TrackRepository) -> None:
+        genres = await track_repository.get_distinct_genres(user.id)
+        assert genres == []
+
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,

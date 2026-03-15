@@ -147,6 +147,20 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnowIdentifiers(isrcs=known_isrcs, fingerprints=known_fingerprints)
 
+    async def get_distinct_genres(self, user_id: uuid.UUID) -> list[str]:
+        # Subquery to get genres from artists
+        artist_genres = select(func.unnest(ArtistModel.genres).label("genre")).where(ArtistModel.user_id == user_id)
+
+        # Subquery to get genres from tracks
+        track_genres = select(func.unnest(TrackModel.genres).label("genre")).where(TrackModel.user_id == user_id)
+
+        # Combine both and get distinct sorted values
+        combined = artist_genres.union(track_genres).subquery()
+        stmt = select(combined.c.genre).distinct().where(combined.c.genre.isnot(None)).order_by(combined.c.genre)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         return await bulk_item_upsert(
             session=self.session,
