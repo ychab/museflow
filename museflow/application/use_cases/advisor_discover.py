@@ -3,7 +3,7 @@ from datetime import UTC
 from datetime import datetime
 
 from museflow import __project_name__
-from museflow.application.inputs.discovery import DiscoveryConfig
+from museflow.application.inputs.discovery import DiscoveryConfigInput
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
@@ -36,7 +36,7 @@ class AdvisorDiscoverUseCase:
         self._advisor_client = advisor_client
         self._track_reconciler = track_reconciler
 
-    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfig) -> Playlist:
+    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> Playlist:
         """Creates a playlist of suggested tracks for a user.
 
         The process involves gathering seed tracks from the user's library,

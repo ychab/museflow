@@ -5,7 +5,7 @@ from museflow.domain.types import TrackOrderBy
 
 
 @dataclass(frozen=True)
-class DiscoveryConfig:
+class DiscoveryConfigInput:
     """Configuration for the discovery process.
 
     Attributes:

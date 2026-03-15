@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.advisor_discover import DiscoveryConfig
+from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicAdvisor
@@ -36,7 +36,7 @@ class TestSpotifyDiscoverLogic:
         playlist = await discover_logic(
             email=user.email,
             advisor=MusicAdvisor.LASTFM,
-            config=DiscoveryConfig(),
+            config=DiscoveryConfigInput(),
         )
 
         assert playlist == new_playlist

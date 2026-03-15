@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryConfig
+from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
@@ -45,7 +45,7 @@ class TestAdvisorDiscoverTracksUseCase:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Given 2 track seeds
-        config = DiscoveryConfig(seed_limit=2, similar_limit=2)
+        config = DiscoveryConfigInput(seed_limit=2, similar_limit=2)
         track_seeds = TrackFactory.batch(size=2)
         mock_track_repository.get_list.return_value = track_seeds
 
@@ -102,7 +102,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(DiscoveryTrackNoSeedFound):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
     async def test_execute__similar__none(
         self,
@@ -115,7 +115,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_advisor_client.get_similar_tracks.return_value = []
 
         with pytest.raises(DiscoveryTrackNoSimilarFound):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
     async def test_execute__similar__response_exception(
         self,
@@ -129,7 +129,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_advisor_client.get_similar_tracks.side_effect = SimilarTrackResponseException("Boom")
 
         with caplog.at_level(logging.ERROR) and pytest.raises(DiscoveryTrackNoSimilarFound):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
         assert "An error occurred while fetching similar tracks: Boom" in caplog.text
 
@@ -152,7 +152,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.return_value = None
 
         with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoReconciledFound):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
         assert f"Track not reconciled: '{track_suggested}'" in caplog.text
 
@@ -175,7 +175,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.return_value = None
 
         with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoReconciledFound):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
         assert f"Track not reconciled: '{track_suggested}'" in caplog.text
 
@@ -203,7 +203,7 @@ class TestAdvisorDiscoverTracksUseCase:
         )
 
         with caplog.at_level(logging.INFO), pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
         assert f"Excluded '{reconciled_track}'" in caplog.text
 
@@ -240,7 +240,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When
-        await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfig())
+        await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput())
 
         # Then
         args, kwargs = mock_provider_library.create_playlist.call_args

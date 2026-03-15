@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.advisor_discover import DiscoveryConfig
+from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
@@ -326,7 +326,7 @@ class TestSpotifyDiscoverLogic:
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await discover_logic(email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfig())
+            await discover_logic(email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfigInput())
 
     async def test__auth_token__not_found(
         self,
@@ -338,4 +338,4 @@ class TestSpotifyDiscoverLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await discover_logic(user.email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfig())
+            await discover_logic(user.email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfigInput())

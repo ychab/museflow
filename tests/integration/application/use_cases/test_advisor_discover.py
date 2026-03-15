@@ -6,7 +6,7 @@ from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryConfig
+from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
@@ -83,7 +83,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
 
         playlist = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfig(seed_limit=5),
+            config=DiscoveryConfigInput(seed_limit=5),
         )
 
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"

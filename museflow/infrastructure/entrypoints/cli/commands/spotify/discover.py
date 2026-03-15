@@ -5,7 +5,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.inputs.discovery import DiscoveryConfig
+from museflow.application.inputs.discovery import DiscoveryConfigInput
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
 from museflow.domain.entities.music import Playlist
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -84,7 +84,7 @@ def discover(
             discover_logic(
                 email=email,
                 advisor=advisor,
-                config=DiscoveryConfig(
+                config=DiscoveryConfigInput(
                     seed_top=seed_top,
                     seed_saved=seed_saved,
                     seed_order_by=seed_order_by,
@@ -124,7 +124,7 @@ def discover(
     )
 
 
-async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: DiscoveryConfig) -> Playlist:
+async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: DiscoveryConfigInput) -> Playlist:
     """Discovers new music for a user and creates a playlist.
 
     This function orchestrates the discovery process by setting up the necessary
