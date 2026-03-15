@@ -61,6 +61,7 @@ class AdvisorDiscoverUseCase:
             user_id=user.id,
             is_top=config.seed_top,
             is_saved=config.seed_saved,
+            genres=config.seed_genres,
             order_by=config.seed_order_by,
             sort_order=config.seed_sort_order,
             limit=config.seed_limit,

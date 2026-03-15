@@ -44,6 +44,11 @@ def discover(
         "--seed-saved/--no-seed-saved",
         help="Whether to use a saved seed",
     ),
+    seed_genres: list[str] = typer.Option(
+        [],
+        "--seed-genres",
+        help="A list of genres to filter on the seeds",
+    ),
     seed_order_by: TrackOrderBy = typer.Option(
         TrackOrderBy.RANDOM,
         "--seed-order-by",
@@ -87,6 +92,7 @@ def discover(
                 config=DiscoveryConfigInput(
                     seed_top=seed_top,
                     seed_saved=seed_saved,
+                    seed_genres=seed_genres,
                     seed_order_by=seed_order_by,
                     seed_sort_order=seed_sort_order,
                     seed_limit=seed_limit,

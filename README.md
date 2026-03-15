@@ -212,6 +212,7 @@ uv run museflow spotify discover --email <email> [OPTIONS]
 *   `--advisor`: The music advisor to use for getting recommendations (e.g., `spotify`).
 *   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
 *   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
+*   `--seed-genres`: A list of genres to filter on the seeds (e.g. "rock", "jazz").
 *   `--seed-order-by`: The field to order the seed tracks by (default: `created_at`).
 *   `--seed-sort-order`: The sort order for the seed tracks (default: `asc`).
 *   `--seed-limit`: The maximum number of seed tracks to use (default: `50`).
