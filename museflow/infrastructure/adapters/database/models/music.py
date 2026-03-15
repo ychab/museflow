@@ -2,13 +2,13 @@ import uuid
 from typing import NotRequired
 from typing import TypedDict
 
-from sqlalchemy import ARRAY
 from sqlalchemy import Boolean
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import MappedAsDataclass

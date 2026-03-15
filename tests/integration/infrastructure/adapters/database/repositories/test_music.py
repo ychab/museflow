@@ -17,6 +17,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
+from museflow.infrastructure.adapters.database.models import ArtistDict
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.music import ArtistModelFactory
@@ -275,6 +276,101 @@ class TestTrackSQLRepository:
         # Check that we have the expected items.
         assert len(track_list) == len(expected_tracks)
         assert {t.id for t in track_list} == {t.id for t in expected_tracks}
+
+    async def test__get_list__filtering__genres__track(self, user: User, track_repository: TrackRepository) -> None:
+        track_user_db = await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "pop"])
+
+        # Track with the same genre for another user
+        await TrackModelFactory.create_async(genres=["rock"])
+
+        # Track with no matching genres anywhere
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            genres=["classical"],
+        )
+
+        # Test filtering by track genre directly
+        tracks_rock = await track_repository.get_list(user.id, genres=["rock"])
+        assert len(tracks_rock) == 1
+        assert tracks_rock[0].id == track_user_db.id
+
+        # Test multiple genres (OR logic)
+        tracks_both = await track_repository.get_list(user.id, genres=["rock", "pop"])
+        assert len(tracks_both) == 1
+        assert tracks_both[0].id == track_user_db.id
+
+        # Test no match
+        tracks_none = await track_repository.get_list(user.id, genres=["metal"])
+        assert len(tracks_none) == 0
+
+    async def test__get_list__filtering__genres__artists(self, user: User, track_repository: TrackRepository) -> None:
+        # Track with an artist having the genre for the user
+        artist_user_db = await ArtistModelFactory.create_async(
+            user_id=user.id, genres=["rock", "pop"], provider_id="foo"
+        )
+        track_user_db = await TrackModelFactory.create_async(
+            user_id=user.id,
+            artists=[ArtistDict(name="Foo", provider_id=artist_user_db.provider_id)],
+            genres=[],
+        )
+
+        # Track with an artist having the same genre for another user
+        artist_other_db = await ArtistModelFactory.create_async(genres=["rock", "pop"], provider_id="foo")
+        await TrackModelFactory.create_async(
+            artists=[ArtistDict(name="Foo", provider_id=artist_other_db.provider_id)],
+            genres=[],
+        )
+
+        # Track with no matching genres anywhere
+        artist_other_genre = await ArtistModelFactory.create_async(genres=["classic"], provider_id="baz")
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            artists=[ArtistDict(name="Classic", provider_id=artist_other_genre.provider_id)],
+        )
+
+        # Test filtering by artist genre
+        tracks = await track_repository.get_list(user.id, genres=["rock"])
+        assert len(tracks) == 1
+        assert tracks[0].id == track_user_db.id
+
+        # Test multiple genres (OR logic)
+        tracks = await track_repository.get_list(user.id, genres=["rock", "pop"])
+        assert len(tracks) == 1
+        assert tracks[0].id == track_user_db.id
+
+        # Test no match
+        tracks = await track_repository.get_list(user.id, genres=["metal"])
+        assert len(tracks) == 0
+
+    async def test__get_list__filtering__genres__track_and_artists(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        # Track with explicit genre
+        track_genre = await TrackModelFactory.create_async(user_id=user.id, genres=["rock"])
+
+        # Track with an artist having the genre
+        artist_genre = await ArtistModelFactory.create_async(
+            user_id=user.id, genres=["jazz"], provider_id="artist-jazz"
+        )
+        track_artist_genre = await TrackModelFactory.create_async(
+            user_id=user.id,
+            artists=[ArtistDict(name="Jazzman", provider_id=artist_genre.provider_id)],
+            genres=[],
+        )
+
+        # Track for another user to ensure it's not fetched
+        await TrackModelFactory.create_async(genres=["rock"])
+        artist_other = await ArtistModelFactory.create_async(genres=["jazz"], provider_id="artist-jazz-other")
+        await TrackModelFactory.create_async(
+            artists=[ArtistDict(name="Other Jazzman", provider_id=artist_other.provider_id)],
+        )
+
+        # Test filtering by both track and artist genres
+        tracks_both = await track_repository.get_list(user.id, genres=["rock", "jazz"])
+        assert len(tracks_both) == 2
+        assert {t.id for t in tracks_both} == {track_genre.id, track_artist_genre.id}
 
     @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM])
     @pytest.mark.parametrize("sort_order", list(SortOrder))

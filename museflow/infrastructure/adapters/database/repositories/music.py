@@ -69,6 +69,7 @@ class TrackSQLRepository(TrackRepository):
         user_id: uuid.UUID,
         is_top: bool | None = None,
         is_saved: bool | None = None,
+        genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
         sort_order: SortOrder = SortOrder.ASC,
         offset: int | None = None,
@@ -81,6 +82,27 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.is_top == is_top)
         if is_saved is not None:
             stmt = stmt.where(TrackModel.is_saved == is_saved)
+
+        if genres:
+            # Does a Track's artist exist for this user with matching genres?
+            artist_subquery = (
+                select(1)
+                .where(
+                    ArtistModel.user_id == user_id,
+                    ArtistModel.genres.overlap(genres),
+                    TrackModel.artists.contains(
+                        func.jsonb_build_array(func.jsonb_build_object("provider_id", ArtistModel.provider_id))
+                    ),
+                )
+                .correlate(TrackModel)
+            )
+
+            stmt = stmt.where(
+                or_(
+                    TrackModel.genres.overlap(genres),  # Track genres
+                    artist_subquery.exists(),  # Fallback: Artists genres
+                )
+            )
 
         # Ordering
         column = getattr(TrackModel, order_by.value, TrackModel.created_at)

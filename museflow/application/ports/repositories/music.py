@@ -70,6 +70,7 @@ class TrackRepository(ABC):
         user_id: uuid.UUID,
         is_top: bool | None = None,
         is_saved: bool | None = None,
+        genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
         sort_order: SortOrder = SortOrder.ASC,
         offset: int | None = None,
