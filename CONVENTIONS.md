@@ -100,6 +100,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - **Bad**: `logger.error(f"Failed to sync library for user {user.id}")`
   - **Good**: `logger.error("Failed to sync library", extra={"user_id": str(user.id)})`
   - *Why?* Better aggregation in tools like Datadog/Sentry (message template is static).
+  - *Exception*: Use cases logs can be used by Typer commands to display some information to the user. In that case, f-strings are allowed.
 
 ## 5. Documentation & Comments
 

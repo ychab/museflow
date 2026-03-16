@@ -1,4 +1,7 @@
+from typing import Literal
+
 from pydantic import Field
+from pydantic import HttpUrl
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -37,6 +40,27 @@ class AppSettings(BaseSettings):
 
     RECONCILER_TRACK_MATCH_THRESHOLD: float = 80.0
     RECONCILER_TRACK_SCORE_MINIMUM: float = 60.0
+
+    BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)
+    BACKEND_CORS_ALLOW_METHODS: list[str] = Field(default=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
+    BACKEND_CORS_ALLOW_HEADERS: list[str] = Field(
+        default=[
+            "Content-Type",
+            "Set-Cookie",
+            "Access-Control-Allow-Headers",
+            "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+        ]
+    )
+    BACKEND_CORS_ALLOW_CREDENTIALS: bool = True
+    BACKEND_CORS_EXPOSE_HEADERS: list[str] = [
+        "Content-Disposition",
+        "X-Total-Count",
+        "X-Response-Time",
+    ]
+    BACKEND_CORS_MAX_AGE: int = 600
 
 
 app_settings = AppSettings()

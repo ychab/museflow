@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +33,17 @@ app = FastAPI(
     version=__version__,
     lifespan=lifespan,
     debug=app_settings.DEBUG,
+)
+
+# CORS middleware must be added at the top of the list to prevent any side effect.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in app_settings.BACKEND_CORS_ALLOW_ORIGINS],
+    allow_methods=app_settings.BACKEND_CORS_ALLOW_METHODS,
+    allow_headers=app_settings.BACKEND_CORS_ALLOW_HEADERS,
+    allow_credentials=app_settings.BACKEND_CORS_ALLOW_CREDENTIALS,
+    expose_headers=app_settings.BACKEND_CORS_EXPOSE_HEADERS,
+    max_age=app_settings.BACKEND_CORS_MAX_AGE,
 )
 
 api_v1_router = APIRouter()

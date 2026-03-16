@@ -2,22 +2,13 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-
-## API
-
-- add support for cors headers
-
 ## claude repomix
 
-- generate some skills with repomix?
+- generate some skills with repomix and test them?
 
 ## github CI
 
 - include chore deps?
-
-## cli
-
-- add a way to fetch a list of available genres?
 
 ## doc code
 

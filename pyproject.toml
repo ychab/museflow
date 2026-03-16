@@ -15,6 +15,7 @@ authors = [
 
 dependencies = [
     "fastapi[standard]>=0.128.0",
+    "starlette>=0.52.1",
     "pydantic[email]>=2.12.5",
     "pydantic-core>=2.41.5",
     "pydantic-settings>=2.12.0",
@@ -146,6 +147,9 @@ pythonpath = ["."]
 env = [
     # App required settings
     'MUSEFLOW_SECRET_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
+    # App backend cors
+    'MUSEFLOW_BACKEND_CORS_ALLOW_ORIGINS=["*"]',
+    'MUSEFLOW_BACKEND_CORS_ALLOW_CREDENTIALS=False',
     # App settings optional but just in case (fixture override)
     'MUSEFLOW_LOG_LEVEL_API=DEBUG',
     'MUSEFLOW_LOG_LEVEL_CLI=DEBUG',
