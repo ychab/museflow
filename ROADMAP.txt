@@ -2,22 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## claude repomix
-
-- generate some skills with repomix and test them?
-
-## github CI
-
-- include chore deps?
-
-## doc code
-
-- improve the doc code for tests
-
 ## Sync
 
-- review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 - spotify: import the extended streaming history?
+- review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 
 ## advisor
 
@@ -33,3 +21,11 @@ This quick and dirty document just list the roadmap tasks.
 ## Just
 
 Replace Makefile by Just?
+
+## claude repomix
+
+- generate some skills with repomix and test them?
+
+## doc code
+
+- improve the doc code for tests
