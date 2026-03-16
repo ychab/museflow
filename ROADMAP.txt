@@ -11,6 +11,10 @@ This quick and dirty document just list the roadmap tasks.
 
 - generate some skills with repomix?
 
+## github CI
+
+- include chore deps?
+
 ## cli
 
 - add a way to fetch a list of available genres?

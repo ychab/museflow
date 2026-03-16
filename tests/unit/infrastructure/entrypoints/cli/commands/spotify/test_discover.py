@@ -26,7 +26,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestSpotifyDiscoverParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_discover_logic(self) -> Iterable[mock.Mock]:
+    def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
