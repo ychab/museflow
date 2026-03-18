@@ -5,6 +5,7 @@ import pytest
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
+from museflow.domain.types import TrackSource
 
 
 class TestArtist:
@@ -53,6 +54,7 @@ class TestTrack:
             artists=[TrackArtist(name="foo", provider_id="baz")],
             duration_ms=180_000,
             genres=genres,
+            sources=TrackSource.TOP,
         )
         assert track.genres == expected
 
@@ -64,6 +66,7 @@ class TestTrack:
             artists=[TrackArtist(name="Queen", provider_id="baz")],
             duration_ms=354_000,
             genres=["Rock", "Arena Rock"],
+            sources=TrackSource.TOP,
         )
         assert track.genres == ["rock", "arena rock"]
         assert track.fingerprint != ""
@@ -76,6 +79,7 @@ class TestTrack:
             artists=[TrackArtist(name="bar", provider_id=str(uuid.uuid4()))],
             duration_ms=3 * 60,
             fingerprint="baz",
+            sources=TrackSource.TOP,
         )
         assert track.fingerprint == "baz"
 
@@ -86,5 +90,6 @@ class TestTrack:
             provider_id=str(uuid.uuid4()),
             artists=[TrackArtist(name="foo", provider_id=str(uuid.uuid4()))],
             duration_ms=3 * 60,
+            sources=TrackSource.TOP,
         )
         assert track.fingerprint != ""

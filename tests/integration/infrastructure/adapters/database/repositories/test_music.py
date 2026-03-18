@@ -220,16 +220,27 @@ class TestTrackSQLRepository:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=TrackSource.TOP)
-        tracks_saved = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=TrackSource.SAVED)
+        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=int(TrackSource.TOP))
+        tracks_saved = await TrackModelFactory.create_batch_async(
+            size=3,
+            user_id=user.id,
+            sources=int(TrackSource.SAVED),
+        )
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
-            sources=TrackSource.PLAYLIST,
+            sources=int(TrackSource.PLAYLIST),
         )
-        tracks_others = await TrackModelFactory.create_batch_async(size=1)
+        tracks_multi = await TrackModelFactory.create_batch_async(
+            size=1,
+            user_id=user.id,
+            sources=int(TrackSource.TOP | TrackSource.SAVED),
+        )
+        tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
-        return [track_db.to_entity() for track_db in tracks_top + tracks_saved + tracks_playlist + tracks_others]
+        return [
+            track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_multi + tracks_other
+        ]
 
     async def test__get_list__none(self, user: User, track_repository: TrackRepository) -> None:
         track_list = await track_repository.get_list(user.id)
@@ -631,16 +642,21 @@ class TestTrackSQLRepository:
         assert tracks_db.sources == TrackSource.TOP | TrackSource.SAVED
 
     @pytest.mark.parametrize(
-        ("sources", "expected_count"),
+        ("sources", "expected_deleted", "expected_remaining_user"),
         [
-            pytest.param(TrackSource.TOP, 4 + 0 + 0, id="top_only"),
-            pytest.param(TrackSource.SAVED, 0 + 3 + 0, id="saved_only"),
-            pytest.param(TrackSource.PLAYLIST, 0 + 0 + 2, id="playlist_only"),
-            pytest.param(TrackSource.TOP | TrackSource.SAVED, 4 + 3 + 0, id="top_and_saved"),
-            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, 4 + 0 + 2, id="top_and_playlist"),
-            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, 0 + 3 + 2, id="saved_and_playlist"),
-            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST, 4 + 3 + 2, id="all_explicit"),
-            pytest.param(None, 4 + 3 + 2, id="all_implicit"),
+            pytest.param(TrackSource.TOP, 4, 3 + 2 + 1, id="top_only"),
+            pytest.param(TrackSource.SAVED, 3, 4 + 2 + 1, id="saved_only"),
+            pytest.param(TrackSource.PLAYLIST, 2, 4 + 3 + 1, id="playlist_only"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED, 4 + 3 + 1, 2, id="top_and_saved"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, 4 + 2, 3 + 1, id="top_and_playlist"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, 3 + 2, 4 + 1, id="saved_and_playlist"),
+            pytest.param(
+                TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST,
+                4 + 3 + 2 + 1,
+                0,
+                id="all_explicit",
+            ),
+            pytest.param(None, 4 + 3 + 2 + 1, 0, id="all_implicit"),
         ],
     )
     async def test__purge(
@@ -649,23 +665,36 @@ class TestTrackSQLRepository:
         user: User,
         tracks_delete: list[Track],
         sources: TrackSource | None,
-        expected_count: int,
+        expected_deleted: int,
+        expected_remaining_user: int,
         track_repository: TrackRepository,
     ) -> None:
-        expected_other_count = 1
-        expected_total_user_count = len(tracks_delete) - expected_other_count
-
         count = await track_repository.purge(user.id, sources=sources)
-        assert count == expected_count
+        assert count == expected_deleted
 
-        # Check if all artists have been deleted for that user.
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
         results = await async_session_db.execute(stmt)
-        remaining_count = results.scalar()
-        assert remaining_count == expected_total_user_count - expected_count
+        assert results.scalar() == expected_remaining_user
 
-        # Be sure to keep other users items!
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
         results = await async_session_db.execute(stmt)
-        remaining_other_count = results.scalar()
-        assert remaining_other_count == expected_other_count
+        assert results.scalar() == 1
+
+    async def test__purge__clear_bits_only(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        track = await TrackModelFactory.create_async(
+            user_id=user.id,
+            sources=int(TrackSource.TOP | TrackSource.SAVED),
+        )
+        track_id = track.id
+
+        count = await track_repository.purge(user.id, sources=TrackSource.TOP)
+        assert count == 0
+
+        stmt = select(TrackModel).where(TrackModel.id == track_id)
+        track_cleared_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_cleared_db.sources == int(TrackSource.SAVED)

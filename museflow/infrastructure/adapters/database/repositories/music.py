@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -166,13 +167,28 @@ class TrackSQLRepository(TrackRepository):
         )
 
     async def purge(self, user_id: uuid.UUID, sources: TrackSource | None = None) -> int:
-        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+        # Full delete
+        if sources is None:
+            stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+            result = await self.session.execute(stmt)
+            return int(result.rowcount)  # type: ignore
 
-        if sources is not None:
-            stmt = stmt.where(TrackModel.sources.op("&")(int(sources)) != 0)
+        # Otherwise, clear the requested bits from all matching rows first
+        await self.session.execute(
+            update(TrackModel)
+            .where(TrackModel.user_id == user_id)
+            .where(TrackModel.sources.op("&")(int(sources)) != 0)
+            .values(sources=TrackModel.sources.op("&")(~int(sources)))
+        )
 
-        result = await self.session.execute(stmt)
-        return int(result.rowcount)  # type: ignore
+        # Then delete rows that now have no sources left
+        result = await self.session.execute(
+            delete(TrackModel)
+            .where(TrackModel.user_id == user_id)
+            .where(TrackModel.sources == 0)
+            .returning(TrackModel.id)
+        )
+        return len(result.all())
 
 
 async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMediaItem](

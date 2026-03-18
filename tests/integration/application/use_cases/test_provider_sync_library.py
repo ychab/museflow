@@ -157,12 +157,16 @@ class TestSpotifySyncMusic:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=TrackSource.TOP)
-        tracks_saved = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, sources=TrackSource.SAVED)
+        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=int(TrackSource.TOP))
+        tracks_saved = await TrackModelFactory.create_batch_async(
+            size=2,
+            user_id=user.id,
+            sources=int(TrackSource.SAVED),
+        )
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=4,
             user_id=user.id,
-            sources=TrackSource.PLAYLIST,
+            sources=int(TrackSource.PLAYLIST),
         )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 

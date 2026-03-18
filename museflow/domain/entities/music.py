@@ -77,6 +77,7 @@ class Track(BaseMediaItem):
 
     def __post_init__(self):
         super().__post_init__()
+
         if not self.fingerprint:
             fingerprint_val = generate_fingerprint(
                 name=self.name,
