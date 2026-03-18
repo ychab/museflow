@@ -16,6 +16,7 @@ from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.user import User
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import ArtistDict
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
@@ -219,23 +220,12 @@ class TestTrackSQLRepository:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(
-            size=4,
-            user_id=user.id,
-            is_top=True,
-            is_saved=False,
-        )
-        tracks_saved = await TrackModelFactory.create_batch_async(
-            size=3,
-            user_id=user.id,
-            is_top=False,
-            is_saved=True,
-        )
+        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=TrackSource.TOP)
+        tracks_saved = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=TrackSource.SAVED)
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
-            is_top=False,
-            is_saved=False,
+            sources=TrackSource.PLAYLIST,
         )
         tracks_others = await TrackModelFactory.create_batch_async(size=1)
 
@@ -245,33 +235,39 @@ class TestTrackSQLRepository:
         track_list = await track_repository.get_list(user.id)
         assert len(track_list) == 0
 
-    @pytest.mark.parametrize("is_saved", [True, False, None])
-    @pytest.mark.parametrize("is_top", [True, False, None])
+    @pytest.mark.parametrize(
+        "sources",
+        [
+            pytest.param(TrackSource.TOP, id="top_only"),
+            pytest.param(TrackSource.SAVED, id="saved_only"),
+            pytest.param(TrackSource.PLAYLIST, id="playlist_only"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED, id="top_and_saved"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, id="top_and_playlist"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, id="saved_and_playlist"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST, id="all_explicit"),
+            pytest.param(None, id="all_implicit"),
+        ],
+    )
     async def test__get_list__filtering(
         self,
         user: User,
-        is_top: bool | None,
-        is_saved: bool | None,
+        sources: TrackSource | None,
         tracks_other: list[Track],
         track_repository: TrackRepository,
     ) -> None:
-        top_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, is_top=True, is_saved=False)
-        saved_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, is_top=False, is_saved=True)
+        top_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, sources=TrackSource.TOP)
+        saved_tracks = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, sources=TrackSource.SAVED)
         playlist_tracks = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
-            is_top=False,
-            is_saved=False,
+            sources=TrackSource.PLAYLIST,
         )
 
-        expected_tracks = []
-        for t in top_tracks + saved_tracks + playlist_tracks:
-            match_top = (is_top is None) or (t.is_top == is_top)
-            match_saved = (is_saved is None) or (t.is_saved == is_saved)
-            if match_top and match_saved:
-                expected_tracks.append(t)
+        expected_tracks = [
+            t for t in top_tracks + saved_tracks + playlist_tracks if sources is None or (t.sources & sources)
+        ]
 
-        track_list = await track_repository.get_list(user.id, is_top=is_top, is_saved=is_saved)
+        track_list = await track_repository.get_list(user.id, sources=sources)
 
         # Check that we have the expected items.
         assert len(track_list) == len(expected_tracks)
@@ -617,17 +613,34 @@ class TestTrackSQLRepository:
         expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
 
+    async def test__bulk_upsert__sources_are_accumulated(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        async_session_db: AsyncSession,
+    ) -> None:
+        track = TrackFactory.build(user_id=user.id, sources=TrackSource.TOP)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        # The same track, but now coming from saved sync
+        track = dataclasses.replace(track, sources=TrackSource.SAVED)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        tracks_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert tracks_db.sources == TrackSource.TOP | TrackSource.SAVED
+
     @pytest.mark.parametrize(
-        ("is_top", "is_saved", "is_playlist", "expected_count"),
+        ("sources", "expected_count"),
         [
-            pytest.param(False, False, False, 4 + 3 + 2, id="all_implicit"),
-            pytest.param(True, False, False, 4 + 0 + 0, id="top_only"),
-            pytest.param(False, True, False, 0 + 3 + 0, id="saved_only"),
-            pytest.param(False, False, True, 0 + 0 + 2, id="playlist_only"),
-            pytest.param(True, True, False, 4 + 3 + 0, id="top_and_saved"),
-            pytest.param(True, False, True, 4 + 0 + 2, id="top_and_playlist"),
-            pytest.param(False, True, True, 0 + 3 + 2, id="saved_and_playlist"),
-            pytest.param(True, True, True, 4 + 3 + 2, id="all_explicit"),
+            pytest.param(TrackSource.TOP, 4 + 0 + 0, id="top_only"),
+            pytest.param(TrackSource.SAVED, 0 + 3 + 0, id="saved_only"),
+            pytest.param(TrackSource.PLAYLIST, 0 + 0 + 2, id="playlist_only"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED, 4 + 3 + 0, id="top_and_saved"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, 4 + 0 + 2, id="top_and_playlist"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, 0 + 3 + 2, id="saved_and_playlist"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST, 4 + 3 + 2, id="all_explicit"),
+            pytest.param(None, 4 + 3 + 2, id="all_implicit"),
         ],
     )
     async def test__purge(
@@ -635,16 +648,14 @@ class TestTrackSQLRepository:
         async_session_db: AsyncSession,
         user: User,
         tracks_delete: list[Track],
-        is_top: bool,
-        is_saved: bool,
-        is_playlist: bool,
+        sources: TrackSource | None,
         expected_count: int,
         track_repository: TrackRepository,
     ) -> None:
         expected_other_count = 1
         expected_total_user_count = len(tracks_delete) - expected_other_count
 
-        count = await track_repository.purge(user.id, is_top=is_top, is_saved=is_saved, is_playlist=is_playlist)
+        count = await track_repository.purge(user.id, sources=sources)
         assert count == expected_count
 
         # Check if all artists have been deleted for that user.

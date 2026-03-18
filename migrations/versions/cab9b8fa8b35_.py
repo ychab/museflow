@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 07acf9e627f5
+Revision ID: cab9b8fa8b35
 Revises:
-Create Date: 2026-03-15 01:27:20.432248
+Create Date: 2026-03-18 17:09:48.781077
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '07acf9e627f5'
+revision: str = 'cab9b8fa8b35'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -36,8 +36,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('popularity', sa.Integer(), nullable=True),
-    sa.Column('is_saved', sa.Boolean(), nullable=False),
-    sa.Column('is_top', sa.Boolean(), nullable=False),
+    sa.Column('sources', sa.Integer(), nullable=False),
     sa.Column('top_position', sa.Integer(), nullable=True),
     sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
@@ -83,8 +82,7 @@ def upgrade() -> None:
     sa.Column('fingerprint', sa.String(length=512), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('popularity', sa.Integer(), nullable=True),
-    sa.Column('is_saved', sa.Boolean(), nullable=False),
-    sa.Column('is_top', sa.Boolean(), nullable=False),
+    sa.Column('sources', sa.Integer(), nullable=False),
     sa.Column('top_position', sa.Integer(), nullable=True),
     sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),

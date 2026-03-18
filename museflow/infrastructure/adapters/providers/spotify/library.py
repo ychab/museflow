@@ -17,6 +17,8 @@ from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
+from museflow.domain.types import ArtistSource
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
@@ -351,21 +353,25 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
 
     def _extract_top_artists(self, page: SpotifyPage[SpotifyArtist], offset: int) -> list[Artist]:
         return [
-            to_domain_artist(item, user_id=self.user.id, is_top=True, position=offset + i + 1)
+            to_domain_artist(item, user_id=self.user.id, sources=ArtistSource.TOP, top_position=offset + i + 1)
             for i, item in enumerate(page.items)
         ]
 
     def _extract_top_tracks(self, page: SpotifyPage[SpotifyTrack], offset: int) -> list[Track]:
         return [
-            to_domain_track(item, user_id=self.user.id, is_top=True, position=offset + i + 1)
+            to_domain_track(item, user_id=self.user.id, sources=TrackSource.TOP, top_position=offset + i + 1)
             for i, item in enumerate(page.items)
         ]
 
     def _extract_saved_tracks(self, page: SpotifyPage[SpotifySavedTrack], *_: Any) -> list[Track]:
-        return [to_domain_track(item.track, user_id=self.user.id, is_saved=True) for item in page.items]
+        return [to_domain_track(item.track, user_id=self.user.id, sources=TrackSource.SAVED) for item in page.items]
 
     def _extract_playlist_tracks(self, page: SpotifyPage[SpotifyPlaylistTrack], *_: Any) -> list[Track]:
-        return [to_domain_track(item.item, user_id=self.user.id) for item in page.items if item.item]
+        return [
+            to_domain_track(item.item, user_id=self.user.id, sources=TrackSource.PLAYLIST)
+            for item in page.items
+            if item.item
+        ]
 
     def _extract_search_tracks(self, page: SpotifyPage[SpotifyTrack], *_: Any) -> list[Track]:
         return [to_domain_track(item, user_id=self.user.id) for item in page.items if item]

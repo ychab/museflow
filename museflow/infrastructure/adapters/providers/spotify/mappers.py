@@ -7,7 +7,9 @@ from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
 from museflow.domain.types import AlbumType
+from museflow.domain.types import ArtistSource
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyAlbum
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
@@ -39,18 +41,16 @@ def to_domain_token_payload(
 def to_domain_artist(
     spotify_artist: SpotifyArtist,
     user_id: uuid.UUID,
-    is_top: bool = False,
-    is_saved: bool = False,
-    position: int | None = None,
+    sources: ArtistSource = ArtistSource(0),
+    top_position: int | None = None,
 ) -> Artist:
     """Converts a SpotifyArtist schema object to a domain Artist entity."""
     return Artist(
         user_id=user_id,
         name=spotify_artist.name,
         popularity=spotify_artist.popularity,
-        is_saved=is_saved,
-        is_top=is_top,
-        top_position=position,
+        sources=sources,
+        top_position=top_position,
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_artist.id,
         genres=spotify_artist.genres,
@@ -71,18 +71,16 @@ def to_domain_album(spotify_album: SpotifyAlbum) -> Album:
 def to_domain_track(
     spotify_track: SpotifyTrack,
     user_id: uuid.UUID,
-    is_top: bool = False,
-    is_saved: bool = False,
-    position: int | None = None,
+    sources: TrackSource = TrackSource(0),
+    top_position: int | None = None,
 ) -> Track:
     """Converts a SpotifyTrack schema object to a domain Track entity."""
     return Track(
         user_id=user_id,
         name=spotify_track.name,
         popularity=spotify_track.popularity,
-        is_saved=is_saved,
-        is_top=is_top,
-        top_position=position,
+        top_position=top_position,
+        sources=sources,
         provider=MusicProvider.SPOTIFY,
         provider_id=spotify_track.id,
         artists=[TrackArtist(provider_id=artist.id, name=artist.name) for artist in spotify_track.artists],

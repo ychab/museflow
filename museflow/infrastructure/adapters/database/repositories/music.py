@@ -2,8 +2,6 @@ import dataclasses
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement
-from sqlalchemy import and_
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import or_
@@ -19,6 +17,7 @@ from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Track
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import MusicItemMixin
@@ -67,8 +66,7 @@ class TrackSQLRepository(TrackRepository):
     async def get_list(
         self,
         user_id: uuid.UUID,
-        is_top: bool | None = None,
-        is_saved: bool | None = None,
+        sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
         sort_order: SortOrder = SortOrder.ASC,
@@ -78,10 +76,8 @@ class TrackSQLRepository(TrackRepository):
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
         # Filtering
-        if is_top is not None:
-            stmt = stmt.where(TrackModel.is_top == is_top)
-        if is_saved is not None:
-            stmt = stmt.where(TrackModel.is_saved == is_saved)
+        if sources is not None:
+            stmt = stmt.where(TrackModel.sources.op("&")(int(sources)) != 0)
 
         if genres:
             # Does a Track's artist exist for this user with matching genres?
@@ -169,27 +165,12 @@ class TrackSQLRepository(TrackRepository):
             batch_size=batch_size,
         )
 
-    async def purge(
-        self,
-        user_id: uuid.UUID,
-        is_top: bool = False,
-        is_saved: bool = False,
-        is_playlist: bool = False,
-    ) -> int:
-        conditions = [TrackModel.user_id == user_id]
+    async def purge(self, user_id: uuid.UUID, sources: TrackSource | None = None) -> int:
+        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
 
-        or_filters: list[ColumnElement[bool]] = []
-        if is_top:
-            or_filters.append(TrackModel.is_top.is_(True))
-        if is_saved:
-            or_filters.append(TrackModel.is_saved.is_(True))
-        if is_playlist:
-            or_filters.append(and_(TrackModel.is_top.is_(False), TrackModel.is_saved.is_(False)))
+        if sources is not None:
+            stmt = stmt.where(TrackModel.sources.op("&")(int(sources)) != 0)
 
-        if or_filters:
-            conditions.append(or_(*or_filters))
-
-        stmt = delete(TrackModel).where(*conditions)
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
@@ -213,9 +194,16 @@ async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMediaItem]
         items_chunk = items_dicts[offset : offset + batch_size]
 
         stmt = pg_insert(sql_model).values(items_chunk)
+        excluded = stmt.excluded
+
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=index_elements,
-            set_={key: getattr(stmt.excluded, key) for key in items_chunk[0] if key not in index_excluded},
+            set_={
+                # Accumulates sources with bitwise OR, otherwise, override other fields on update.
+                key: (sql_model.sources.bitwise_or(excluded["sources"]) if key == "sources" else excluded[key])
+                for key in items_chunk[0]
+                if key not in index_excluded
+            },
         ).returning(
             sql_model.id,
             text("(xmax = 0) AS was_created"),

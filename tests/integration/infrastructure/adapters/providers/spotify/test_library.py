@@ -55,7 +55,6 @@ class TestSpotifyLibrary:
         assert top_artist_first.user_id == spotify_library.user.id
         assert top_artist_first.name == "Vald"
         assert top_artist_first.popularity == 64
-        assert top_artist_first.is_saved is False
         assert top_artist_first.is_top is True
         assert top_artist_first.top_position == 1
         assert top_artist_first.genres == ["rap francais"]
@@ -67,7 +66,6 @@ class TestSpotifyLibrary:
         assert top_artist_last.user_id == spotify_library.user.id
         assert top_artist_last.name == "Grupo Niche"
         assert top_artist_last.popularity == 69
-        assert top_artist_last.is_saved is False
         assert top_artist_last.is_top is True
         assert top_artist_last.top_position == len(top_artists) == 15
         assert top_artist_last.genres == ["salsa", "merengue"]
@@ -94,6 +92,7 @@ class TestSpotifyLibrary:
         assert top_track_first.popularity == 19
         assert top_track_first.is_saved is False
         assert top_track_first.is_top is True
+        assert top_track_first.is_playlist is False
         assert top_track_first.top_position == 1
         assert len(top_track_first.artists) == 1
         assert top_track_first.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
@@ -108,6 +107,7 @@ class TestSpotifyLibrary:
         assert top_track_last.popularity == 63
         assert top_track_last.is_saved is False
         assert top_track_last.is_top is True
+        assert top_track_last.is_playlist is False
         assert top_track_last.top_position == len(top_tracks) == 15
         assert len(top_track_last.artists) == 2
         assert top_track_last.artists[0].provider_id == "7x5Slu7yTE5icZjNsc3OzW"
@@ -165,6 +165,7 @@ class TestSpotifyLibrary:
         assert track_saved_first.popularity == 56
         assert track_saved_first.is_saved is True
         assert track_saved_first.is_top is False
+        assert track_saved_first.is_playlist is False
         assert track_saved_first.top_position is None
         assert len(track_saved_first.artists) == 1
         assert track_saved_first.artists[0].provider_id == "6dbdXbyAWk2qx8Qttw0knR"
@@ -179,6 +180,7 @@ class TestSpotifyLibrary:
         assert track_saved_last.popularity == 43
         assert track_saved_last.is_saved is True
         assert track_saved_last.is_top is False
+        assert track_saved_last.is_playlist is False
         assert track_saved_last.top_position is None
         assert len(track_saved_last.artists) == 2
         assert track_saved_last.artists[0].provider_id == "0LKAV3zJ8a8AIGnyc5OvfB"
@@ -238,6 +240,7 @@ class TestSpotifyLibrary:
         assert track_first.popularity == 4
         assert track_first.is_saved is False
         assert track_first.is_top is False
+        assert track_first.is_playlist is True
         assert track_first.top_position is None
         assert len(track_first.artists) == 1
         assert track_first.artists[0].provider_id == "6DGyKmbV7zJrnjlNmpA0j9"
@@ -252,6 +255,7 @@ class TestSpotifyLibrary:
         assert track_last.popularity == 49
         assert track_last.is_saved is False
         assert track_last.is_top is False
+        assert track_last.is_playlist is True
         assert track_last.top_position is None
         assert len(track_last.artists) == 1
         assert track_last.artists[0].provider_id == "5gs4Sm2WQUkcGeikMcVHbh"
@@ -364,6 +368,7 @@ class TestSpotifyLibrary:
         assert track_first.popularity == 40
         assert track_first.is_saved is False
         assert track_first.is_top is False
+        assert track_first.is_playlist is False
         assert track_first.top_position is None
         assert len(track_first.artists) == 1
         assert track_first.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
@@ -378,6 +383,7 @@ class TestSpotifyLibrary:
         assert track_last.popularity == 13
         assert track_last.is_saved is False
         assert track_last.is_top is False
+        assert track_last.is_playlist is False
         assert track_last.top_position is None
         assert len(track_last.artists) == 1
         assert track_last.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"

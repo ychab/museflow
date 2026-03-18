@@ -1,4 +1,6 @@
+from enum import IntFlag
 from enum import StrEnum
+from typing import Self
 
 
 class MusicProvider(StrEnum):
@@ -7,6 +9,38 @@ class MusicProvider(StrEnum):
 
 class MusicAdvisor(StrEnum):
     LASTFM = "last.fm"
+
+
+class ArtistSource(IntFlag):
+    """Bitmask: an artist can belong to multiple sources simultaneously."""
+
+    TOP = 1
+
+
+class TrackSource(IntFlag):
+    """Bitmask: a track can belong to multiple sources simultaneously."""
+
+    TOP = 1
+    SAVED = 2
+    PLAYLIST = 4
+
+    @classmethod
+    def from_flags(
+        cls,
+        top: bool | None = None,
+        saved: bool | None = None,
+        playlist: bool | None = None,
+    ) -> Self | None:
+        mask = cls(0)
+
+        if top:
+            mask |= cls.TOP
+        if saved:
+            mask |= cls.SAVED
+        if playlist:
+            mask |= cls.PLAYLIST
+
+        return mask if mask != 0 else None
 
 
 class TrackOrderBy(StrEnum):

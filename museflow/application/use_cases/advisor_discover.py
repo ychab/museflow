@@ -17,6 +17,7 @@ from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
 from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +57,13 @@ class AdvisorDiscoverUseCase:
             DiscoveryTrackNoReconciledFound: If no tracks can be reconciled.
             DiscoveryTrackNoNew: If the user already knows all reconciled tracks.
         """
-        # First, gather track seeds.
+        # First, collect track seeds.
         track_seeds = await self._track_repository.get_list(
             user_id=user.id,
-            is_top=config.seed_top,
-            is_saved=config.seed_saved,
+            sources=TrackSource.from_flags(
+                top=config.seed_top,
+                saved=config.seed_saved,
+            ),
             genres=config.seed_genres,
             order_by=config.seed_order_by,
             sort_order=config.seed_sort_order,

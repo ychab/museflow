@@ -17,6 +17,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -115,8 +116,7 @@ class TestSpotifySyncMusic:
                 track = await TrackModelFactory.create_async(
                     user_id=user.id,
                     provider_id=item["id"],
-                    is_top=True,
-                    is_saved=False,
+                    sources=TrackSource.TOP,
                 )
                 tracks.append(track.to_entity())
 
@@ -132,8 +132,7 @@ class TestSpotifySyncMusic:
                 track = await TrackModelFactory.create_async(
                     user_id=user.id,
                     provider_id=item["track"]["id"],
-                    is_top=False,
-                    is_saved=True,
+                    sources=TrackSource.SAVED,
                 )
                 tracks.append(track.to_entity())
 
@@ -150,8 +149,7 @@ class TestSpotifySyncMusic:
                     track = await TrackModelFactory.create_async(
                         user_id=user.id,
                         provider_id=item["item"]["id"],
-                        is_top=False,
-                        is_saved=False,
+                        sources=TrackSource.PLAYLIST,
                     )
                     tracks.append(track.to_entity())
 
@@ -159,10 +157,12 @@ class TestSpotifySyncMusic:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, is_top=True, is_saved=False)
-        tracks_saved = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, is_top=False, is_saved=True)
+        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=TrackSource.TOP)
+        tracks_saved = await TrackModelFactory.create_batch_async(size=2, user_id=user.id, sources=TrackSource.SAVED)
         tracks_playlist = await TrackModelFactory.create_batch_async(
-            size=4, user_id=user.id, is_top=False, is_saved=False
+            size=4,
+            user_id=user.id,
+            sources=TrackSource.PLAYLIST,
         )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
@@ -311,8 +311,8 @@ class TestSpotifySyncMusic:
         tracks_db = result.scalars().all()
 
         assert len(tracks_db) == expected_count
-        assert all([track.is_top for track in tracks_db])
-        assert not all([track.is_saved for track in tracks_db])
+        assert all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert not all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__tracks_top__sync__update(
         self,
@@ -340,8 +340,8 @@ class TestSpotifySyncMusic:
         assert len(tracks_db) == expected_count == 15
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_top_update])
 
-        assert all([track.is_top for track in tracks_db])
-        assert not all([track.is_saved for track in tracks_db])
+        assert all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert not all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__tracks_saved__sync__create(
         self,
@@ -366,8 +366,8 @@ class TestSpotifySyncMusic:
         tracks_db = result.scalars().all()
 
         assert len(tracks_db) == expected_count
-        assert not all([track.is_top for track in tracks_db])
-        assert all([track.is_saved for track in tracks_db])
+        assert not all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__tracks_saved__sync__update(
         self,
@@ -395,8 +395,8 @@ class TestSpotifySyncMusic:
         assert len(tracks_db) == expected_count == 15
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_saved_update])
 
-        assert not all([track.is_top for track in tracks_db])
-        assert all([track.is_saved for track in tracks_db])
+        assert not all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__tracks_playlist__sync__create(
         self,
@@ -424,8 +424,8 @@ class TestSpotifySyncMusic:
         tracks_db = result.scalars().all()
 
         assert len(tracks_db) == expected_count
-        assert not all([track.is_top for track in tracks_db])
-        assert not all([track.is_saved for track in tracks_db])
+        assert not all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert not all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__tracks_playlist__sync__update(
         self,
@@ -453,8 +453,8 @@ class TestSpotifySyncMusic:
         assert len(tracks_db) == expected_count == 4
         assert sorted([t.id for t in tracks_db]) == sorted([t.id for t in tracks_playlist_update])
 
-        assert not all([track.is_top for track in tracks_db])
-        assert not all([track.is_saved for track in tracks_db])
+        assert not all([track.sources & TrackSource.TOP for track in tracks_db])
+        assert not all([track.sources & TrackSource.SAVED for track in tracks_db])
 
     async def test__all__purge__sync(
         self,
@@ -494,15 +494,15 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt_track)
         assert result.scalar() == expect_tracks
 
-        stmt = stmt_track.where(TrackModel.is_top.is_(True), TrackModel.is_saved.is_(False))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.TOP)) == int(TrackSource.TOP))
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_top
 
-        stmt = stmt_track.where(TrackModel.is_top.is_(False), TrackModel.is_saved.is_(True))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.SAVED)) == int(TrackSource.SAVED))
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_saved
 
-        stmt = stmt_track.where(TrackModel.is_top.is_(False), TrackModel.is_saved.is_(False))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.PLAYLIST)) == int(TrackSource.PLAYLIST))
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_playlist
 

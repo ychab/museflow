@@ -2,7 +2,6 @@ import uuid
 from typing import NotRequired
 from typing import TypedDict
 
-from sqlalchemy import Boolean
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -20,7 +19,9 @@ from museflow.domain.entities.music import Artist as ArtistEntity
 from museflow.domain.entities.music import Track as TrackEntity
 from museflow.domain.entities.music import TrackArtist
 from museflow.domain.types import AlbumType
+from museflow.domain.types import ArtistSource
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
@@ -48,8 +49,7 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     popularity: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
-    is_saved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_top: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sources: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     top_position: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
     genres: Mapped[list[str]] = mapped_column(
@@ -78,8 +78,7 @@ class Artist(MusicItemMixin, Base):
             provider_id=self.provider_id,
             name=self.name,
             popularity=self.popularity,
-            is_saved=self.is_saved,
-            is_top=self.is_top,
+            sources=ArtistSource(self.sources),
             top_position=self.top_position,
             genres=self.genres,
         )
@@ -112,8 +111,7 @@ class Track(MusicItemMixin, Base, kw_only=True):
             provider_id=self.provider_id,
             name=self.name,
             popularity=self.popularity,
-            is_saved=self.is_saved,
-            is_top=self.is_top,
+            sources=TrackSource(self.sources),
             top_position=self.top_position,
             artists=[TrackArtist(provider_id=artist["provider_id"], name=artist["name"]) for artist in self.artists],
             genres=self.genres,

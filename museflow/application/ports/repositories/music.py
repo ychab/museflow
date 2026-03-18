@@ -6,6 +6,7 @@ from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
 
@@ -68,8 +69,7 @@ class TrackRepository(ABC):
     async def get_list(
         self,
         user_id: uuid.UUID,
-        is_top: bool | None = None,
-        is_saved: bool | None = None,
+        sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
         sort_order: SortOrder = SortOrder.ASC,
@@ -80,8 +80,8 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose tracks are to be retrieved.
-            is_top: Whether to include, exclude, or ignore top tracks.
-            is_saved: Whether to include, exclude, or ignore saved tracks.
+            sources: Whether to include, exclude, or ignore tracks base don their bitmask sources.
+            genres: A list of genres to filter on.
             order_by: The column on which to order.
             sort_order: The sort order.
             offset: The number of tracks to skip before starting to collect the result set.
@@ -138,13 +138,7 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def purge(
-        self,
-        user_id: uuid.UUID,
-        is_top: bool = False,
-        is_saved: bool = False,
-        is_playlist: bool = False,
-    ) -> int:
+    async def purge(self, user_id: uuid.UUID, sources: TrackSource | None = None) -> int:
         """Deletes tracks for a user based on specified criteria.
 
         This allows for selective deletion of tracks, for example, only removing
@@ -152,9 +146,7 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose tracks are to be deleted.
-            is_top: If True, delete tracks marked as top tracks.
-            is_saved: If True, delete tracks marked as saved tracks.
-            is_playlist: If True, delete tracks from playlists.
+            sources: Whether to purge tracks based on their bitmask sources.
 
         Returns:
             The number of deleted tracks.

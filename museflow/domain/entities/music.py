@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from museflow.domain.types import AlbumType
+from museflow.domain.types import ArtistSource
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.utils.text import unidecode_lower_text
 
@@ -24,9 +26,6 @@ class BaseProviderEntity(ABC):
 class BaseMediaItem(BaseProviderEntity):
     popularity: int | None = None
     genres: list[str] = field(default_factory=list)
-
-    is_saved: bool = False
-    is_top: bool = False
     top_position: int | None = None
 
     def __post_init__(self) -> None:
@@ -35,7 +34,11 @@ class BaseMediaItem(BaseProviderEntity):
 
 @dataclass(frozen=True, kw_only=True)
 class Artist(BaseMediaItem):
-    pass
+    sources: ArtistSource = ArtistSource(0)
+
+    @property
+    def is_top(self) -> bool:
+        return ArtistSource.TOP in self.sources
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -62,6 +65,8 @@ class Track(BaseMediaItem):
     artists: list[TrackArtist] = field(default_factory=list)
     album: Album | None = None
 
+    sources: TrackSource = TrackSource(0)
+
     isrc: str | None = None
     fingerprint: str = ""
 
@@ -78,6 +83,18 @@ class Track(BaseMediaItem):
                 artist_names=[artist.name for artist in self.artists],
             )
             object.__setattr__(self, "fingerprint", fingerprint_val)
+
+    @property
+    def is_top(self) -> bool:
+        return TrackSource.TOP in self.sources
+
+    @property
+    def is_saved(self) -> bool:
+        return TrackSource.SAVED in self.sources
+
+    @property
+    def is_playlist(self) -> bool:
+        return TrackSource.PLAYLIST in self.sources
 
 
 @dataclass(frozen=True, kw_only=True)
