@@ -157,16 +157,16 @@ class TestSpotifySyncMusic:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=int(TrackSource.TOP))
+        tracks_top = await TrackModelFactory.create_batch_async(size=3, user_id=user.id, sources=TrackSource.TOP)
         tracks_saved = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
-            sources=int(TrackSource.SAVED),
+            sources=TrackSource.SAVED,
         )
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=4,
             user_id=user.id,
-            sources=int(TrackSource.PLAYLIST),
+            sources=TrackSource.PLAYLIST,
         )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
@@ -498,15 +498,15 @@ class TestSpotifySyncMusic:
         result = await async_session_db.execute(stmt_track)
         assert result.scalar() == expect_tracks
 
-        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.TOP)) == int(TrackSource.TOP))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(TrackSource.TOP) == TrackSource.TOP)
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_top
 
-        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.SAVED)) == int(TrackSource.SAVED))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(TrackSource.SAVED) == TrackSource.SAVED)
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_saved
 
-        stmt = stmt_track.where(TrackModel.sources.op("&")(int(TrackSource.PLAYLIST)) == int(TrackSource.PLAYLIST))
+        stmt = stmt_track.where(TrackModel.sources.op("&")(TrackSource.PLAYLIST) == TrackSource.PLAYLIST)
         result = await async_session_db.execute(stmt)
         assert result.scalar() == expected_tracks_playlist
 

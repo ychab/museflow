@@ -71,7 +71,7 @@ def to_domain_album(spotify_album: SpotifyAlbum) -> Album:
 def to_domain_track(
     spotify_track: SpotifyTrack,
     user_id: uuid.UUID,
-    sources: TrackSource = TrackSource(0),
+    sources: TrackSource,
     top_position: int | None = None,
 ) -> Track:
     """Converts a SpotifyTrack schema object to a domain Track entity."""

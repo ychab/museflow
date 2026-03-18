@@ -220,21 +220,21 @@ class TestTrackSQLRepository:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=int(TrackSource.TOP))
+        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=TrackSource.TOP)
         tracks_saved = await TrackModelFactory.create_batch_async(
             size=3,
             user_id=user.id,
-            sources=int(TrackSource.SAVED),
+            sources=TrackSource.SAVED,
         )
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
-            sources=int(TrackSource.PLAYLIST),
+            sources=TrackSource.PLAYLIST,
         )
         tracks_multi = await TrackModelFactory.create_batch_async(
             size=1,
             user_id=user.id,
-            sources=int(TrackSource.TOP | TrackSource.SAVED),
+            sources=TrackSource.TOP | TrackSource.SAVED,
         )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
@@ -688,7 +688,7 @@ class TestTrackSQLRepository:
     ) -> None:
         track = await TrackModelFactory.create_async(
             user_id=user.id,
-            sources=int(TrackSource.TOP | TrackSource.SAVED),
+            sources=TrackSource.TOP | TrackSource.SAVED,
         )
         track_id = track.id
 
@@ -697,4 +697,4 @@ class TestTrackSQLRepository:
 
         stmt = select(TrackModel).where(TrackModel.id == track_id)
         track_cleared_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_cleared_db.sources == int(TrackSource.SAVED)
+        assert track_cleared_db.sources == TrackSource.SAVED
