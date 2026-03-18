@@ -65,7 +65,7 @@ class Track(BaseMediaItem):
     artists: list[TrackArtist] = field(default_factory=list)
     album: Album | None = None
 
-    sources: TrackSource = TrackSource(0)
+    sources: TrackSource
 
     isrc: str | None = None
     fingerprint: str = ""

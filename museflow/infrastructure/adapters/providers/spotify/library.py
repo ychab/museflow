@@ -374,4 +374,4 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         ]
 
     def _extract_search_tracks(self, page: SpotifyPage[SpotifyTrack], *_: Any) -> list[Track]:
-        return [to_domain_track(item, user_id=self.user.id) for item in page.items if item]
+        return [to_domain_track(item, user_id=self.user.id, sources=TrackSource.SEARCH) for item in page.items if item]

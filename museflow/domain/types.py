@@ -23,6 +23,7 @@ class TrackSource(IntFlag):
     TOP = 1
     SAVED = 2
     PLAYLIST = 4
+    SEARCH = 8
 
     @classmethod
     def from_flags(
