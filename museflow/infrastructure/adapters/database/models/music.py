@@ -4,6 +4,7 @@ from typing import TypedDict
 
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
+from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
@@ -64,7 +65,10 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
 
     @declared_attr
     def __table_args__(cls):
-        return (UniqueConstraint("user_id", "provider_id", name=f"uq_{cls.__tablename__}_user_provider_id"),)
+        return (
+            UniqueConstraint("user_id", "provider_id", name=f"uq_{cls.__tablename__}_user_provider_id"),
+            Index(f"ix_{cls.__tablename__}_user_sources", "user_id", "sources"),
+        )
 
 
 class Artist(MusicItemMixin, Base):
@@ -94,6 +98,14 @@ class Track(MusicItemMixin, Base, kw_only=True):
 
     isrc: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None, index=True)
     fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            *super().__table_args__,
+            Index(f"ix_{cls.__tablename__}_user_isrc", "user_id", "isrc"),
+            Index(f"ix_{cls.__tablename__}_user_fingerprint", "user_id", "fingerprint"),
+        )
 
     @staticmethod
     def _to_album_entity(album_dict: AlbumDict) -> Album:

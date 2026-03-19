@@ -7,6 +7,16 @@ This quick and dirty document just list the roadmap tasks.
 - spotify: import the extended streaming history?
 - review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 
+## Database
+
+- Monitor get_list(genres=...) query performance as user count grows.
+  Add GIN index on genres (artist + track) when per-user row counts
+  make the genre subquery scan measurably slow. Use EXPLAIN ANALYZE
+  to confirm before adding — the planner may prefer the B-tree path
+  longer than expected.
+
+  => MusicItemMixin:: Index(f"ix_{cls.__tablename__}_genres", "genres", postgresql_using="gin"),
+
 ## advisor
 
 - found other providers for recommendations (listenbrainz or musicbrainz)?
