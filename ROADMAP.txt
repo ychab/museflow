@@ -2,6 +2,12 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## Streaming history
+
+- use ijson to load objects in stream
+- check what happen if I update a previous track imported from a playlist and then, we upsert it because it come from the history
+  => this apply to any "state" like is_top, is_saved, is_history or is_playlist (all flags are false)
+
 ## Sync
 
 - spotify: import the extended streaming history?

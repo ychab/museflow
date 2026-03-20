@@ -215,7 +215,9 @@ class TestTrackSQLRepository:
     @pytest.fixture
     async def tracks(self, user: User) -> list[Track]:
         tracks_db = await TrackModelFactory.create_batch_async(
-            size=10, user_id=user.id, provider=MusicProvider.SPOTIFY
+            size=10,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
         )
         return [track_db.to_entity() for track_db in tracks_db]
 
@@ -264,6 +266,12 @@ class TestTrackSQLRepository:
             provider=MusicProvider.SPOTIFY,
             sources=TrackSource.PLAYLIST,
         )
+        tracks_history = await TrackModelFactory.create_batch_async(
+            size=1,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
         tracks_multi = await TrackModelFactory.create_batch_async(
             size=1,
             user_id=user.id,
@@ -273,7 +281,8 @@ class TestTrackSQLRepository:
         tracks_other = await TrackModelFactory.create_batch_async(size=1, provider=MusicProvider.SPOTIFY)
 
         return [
-            track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_multi + tracks_other
+            track.to_entity()
+            for track in (tracks_top + tracks_saved + tracks_playlist + tracks_history + tracks_multi + tracks_other)
         ]
 
     async def test__get_list__none(self, user: User, track_repository: TrackRepository) -> None:
@@ -315,14 +324,30 @@ class TestTrackSQLRepository:
     @pytest.mark.parametrize(
         "sources",
         [
+            # None / Default
+            pytest.param(None, id="all_implicit"),
+            # Single Sources
             pytest.param(TrackSource.TOP, id="top_only"),
             pytest.param(TrackSource.SAVED, id="saved_only"),
             pytest.param(TrackSource.PLAYLIST, id="playlist_only"),
-            pytest.param(TrackSource.TOP | TrackSource.SAVED, id="top_and_saved"),
-            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, id="top_and_playlist"),
-            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, id="saved_and_playlist"),
-            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST, id="all_explicit"),
-            pytest.param(None, id="all_implicit"),
+            pytest.param(TrackSource.HISTORY, id="history_only"),
+            # Combinations of 2
+            pytest.param(TrackSource.TOP | TrackSource.SAVED, id="top_saved"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, id="top_playlist"),
+            pytest.param(TrackSource.TOP | TrackSource.HISTORY, id="top_history"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, id="saved_playlist"),
+            pytest.param(TrackSource.SAVED | TrackSource.HISTORY, id="saved_history"),
+            pytest.param(TrackSource.PLAYLIST | TrackSource.HISTORY, id="playlist_history"),
+            # Combinations of 3
+            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST, id="top_saved_playlist"),
+            pytest.param(TrackSource.TOP | TrackSource.SAVED | TrackSource.HISTORY, id="top_saved_history"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST | TrackSource.HISTORY, id="top_playlist_history"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST | TrackSource.HISTORY, id="saved_playlist_history"),
+            # All
+            pytest.param(
+                TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST | TrackSource.HISTORY,
+                id="all_explicit",
+            ),
         ],
     )
     async def test__get_list__filtering__sources(
@@ -339,9 +364,16 @@ class TestTrackSQLRepository:
             user_id=user.id,
             sources=TrackSource.PLAYLIST,
         )
+        history_tracks = await TrackModelFactory.create_batch_async(
+            size=2,
+            user_id=user.id,
+            sources=TrackSource.HISTORY,
+        )
 
         expected_tracks = [
-            t for t in top_tracks + saved_tracks + playlist_tracks if sources is None or (t.sources & sources)
+            t
+            for t in top_tracks + saved_tracks + playlist_tracks + history_tracks
+            if sources is None or (t.sources & sources)
         ]
 
         track_list = await track_repository.get_list(user.id, sources=sources)
@@ -734,19 +766,52 @@ class TestTrackSQLRepository:
     @pytest.mark.parametrize(
         ("sources", "expected_deleted", "expected_remaining_user"),
         [
-            pytest.param(TrackSource.TOP, 4, 3 + 2 + 1, id="top_only"),
-            pytest.param(TrackSource.SAVED, 3, 4 + 2 + 1, id="saved_only"),
-            pytest.param(TrackSource.PLAYLIST, 2, 4 + 3 + 1, id="playlist_only"),
-            pytest.param(TrackSource.TOP | TrackSource.SAVED, 4 + 3 + 1, 2, id="top_and_saved"),
-            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, 4 + 2, 3 + 1, id="top_and_playlist"),
-            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, 3 + 2, 4 + 1, id="saved_and_playlist"),
+            # All implicit
+            pytest.param(None, 11, 0, id="all_implicit"),
+            # Single
+            pytest.param(TrackSource.TOP, 4, 7, id="top_only"),
+            pytest.param(TrackSource.SAVED, 3, 8, id="saved_only"),
+            pytest.param(TrackSource.PLAYLIST, 2, 9, id="playlist_only"),
+            pytest.param(TrackSource.HISTORY, 1, 10, id="history_only"),
+            # Combinations of 2
+            pytest.param(TrackSource.TOP | TrackSource.SAVED, 8, 3, id="top_saved"),
+            pytest.param(TrackSource.TOP | TrackSource.PLAYLIST, 6, 5, id="top_playlist"),
+            pytest.param(TrackSource.TOP | TrackSource.HISTORY, 5, 6, id="top_history"),
+            pytest.param(TrackSource.SAVED | TrackSource.PLAYLIST, 5, 6, id="saved_playlist"),
+            pytest.param(TrackSource.SAVED | TrackSource.HISTORY, 4, 7, id="saved_history"),
+            pytest.param(TrackSource.PLAYLIST | TrackSource.HISTORY, 3, 8, id="playlist_history"),
+            # Combinations of 3
             pytest.param(
                 TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST,
-                4 + 3 + 2 + 1,
+                10,
+                1,
+                id="top_saved_playlist",
+            ),
+            pytest.param(
+                TrackSource.TOP | TrackSource.SAVED | TrackSource.HISTORY,
+                9,
+                2,
+                id="top_saved_history",
+            ),
+            pytest.param(
+                TrackSource.TOP | TrackSource.PLAYLIST | TrackSource.HISTORY,
+                7,
+                4,
+                id="top_playlist_history",
+            ),
+            pytest.param(
+                TrackSource.SAVED | TrackSource.PLAYLIST | TrackSource.HISTORY,
+                6,
+                5,
+                id="saved_playlist_history",
+            ),
+            # All explicit
+            pytest.param(
+                TrackSource.TOP | TrackSource.SAVED | TrackSource.PLAYLIST | TrackSource.HISTORY,
+                11,
                 0,
                 id="all_explicit",
             ),
-            pytest.param(None, 4 + 3 + 2 + 1, 0, id="all_implicit"),
         ],
     )
     async def test__purge(

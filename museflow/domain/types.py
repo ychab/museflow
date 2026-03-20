@@ -23,7 +23,8 @@ class TrackSource(IntFlag):
     TOP = 1
     SAVED = 2
     PLAYLIST = 4
-    SEARCH = 8
+    HISTORY = 8
+    SEARCH = 16
 
     @classmethod
     def from_flags(
@@ -31,6 +32,7 @@ class TrackSource(IntFlag):
         top: bool | None = None,
         saved: bool | None = None,
         playlist: bool | None = None,
+        history: bool | None = None,
     ) -> Self | None:
         mask = cls(0)
 
@@ -40,6 +42,8 @@ class TrackSource(IntFlag):
             mask |= cls.SAVED
         if playlist:
             mask |= cls.PLAYLIST
+        if history:
+            mask |= cls.HISTORY
 
         return mask if mask != 0 else None
 

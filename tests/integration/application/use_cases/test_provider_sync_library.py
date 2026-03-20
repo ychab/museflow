@@ -168,9 +168,16 @@ class TestSpotifySyncMusic:
             user_id=user.id,
             sources=TrackSource.PLAYLIST,
         )
+        tracks_history = await TrackModelFactory.create_batch_async(
+            size=5,
+            user_id=user.id,
+            sources=TrackSource.HISTORY,
+        )
         tracks_other = await TrackModelFactory.create_batch_async(size=1)
 
-        return [track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_other]
+        return [
+            track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_history + tracks_other
+        ]
 
     @pytest.fixture
     def use_case(

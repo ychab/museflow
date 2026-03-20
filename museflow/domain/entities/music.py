@@ -97,6 +97,10 @@ class Track(BaseMediaItem):
     def is_playlist(self) -> bool:
         return TrackSource.PLAYLIST in self.sources
 
+    @property
+    def is_history(self) -> bool:
+        return TrackSource.HISTORY in self.sources
+
 
 @dataclass(frozen=True, kw_only=True)
 class TrackSuggested:
