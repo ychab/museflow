@@ -16,6 +16,7 @@ from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Track
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackSource
@@ -32,16 +33,22 @@ class ArtistSQLRepository(ArtistRepository):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Artist]:
-        stmt = select(ArtistModel).where(ArtistModel.user_id == user_id).order_by("created_at")
+        stmt = select(ArtistModel).where(ArtistModel.user_id == user_id)
+
+        if provider is not None:
+            stmt = stmt.where(ArtistModel.provider == provider)
 
         if offset is not None:
             stmt = stmt.offset(offset)
 
         if limit is not None:
             stmt = stmt.limit(limit)
+
+        stmt = stmt.order_by("created_at")
 
         results = await self.session.execute(stmt)
         return [artist_db.to_entity() for artist_db in results.scalars().all()]
@@ -54,8 +61,8 @@ class ArtistSQLRepository(ArtistRepository):
             batch_size=batch_size,
         )
 
-    async def purge(self, user_id: uuid.UUID) -> int:
-        stmt = delete(ArtistModel).where(ArtistModel.user_id == user_id)
+    async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
+        stmt = delete(ArtistModel).where(ArtistModel.user_id == user_id, ArtistModel.provider == provider)
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
@@ -67,6 +74,7 @@ class TrackSQLRepository(TrackRepository):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
@@ -77,22 +85,25 @@ class TrackSQLRepository(TrackRepository):
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
         # Filtering
+        if provider is not None:
+            stmt = stmt.where(TrackModel.provider == provider)
+
         if sources is not None:
             stmt = stmt.where(TrackModel.sources.op("&")(int(sources)) != 0)
 
         if genres:
             # Does a Track's artist exist for this user with matching genres?
-            artist_subquery = (
-                select(1)
-                .where(
-                    ArtistModel.user_id == user_id,
-                    ArtistModel.genres.overlap(genres),
-                    TrackModel.artists.contains(
-                        func.jsonb_build_array(func.jsonb_build_object("provider_id", ArtistModel.provider_id))
-                    ),
-                )
-                .correlate(TrackModel)
-            )
+            artist_conditions = [
+                ArtistModel.user_id == user_id,
+                ArtistModel.genres.overlap(genres),
+                TrackModel.artists.contains(
+                    func.jsonb_build_array(func.jsonb_build_object("provider_id", ArtistModel.provider_id))
+                ),
+            ]
+            if provider is not None:
+                artist_conditions.append(ArtistModel.provider == provider)
+
+            artist_subquery = select(1).where(*artist_conditions).correlate(TrackModel)
 
             stmt = stmt.where(
                 or_(
@@ -144,15 +155,20 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnowIdentifiers(isrcs=known_isrcs, fingerprints=known_fingerprints)
 
-    async def get_distinct_genres(self, user_id: uuid.UUID) -> list[str]:
+    async def get_distinct_genres(self, user_id: uuid.UUID, provider: MusicProvider | None = None) -> list[str]:
         # Subquery to get genres from artists
-        artist_genres = select(func.unnest(ArtistModel.genres).label("genre")).where(ArtistModel.user_id == user_id)
+        stmt_artist = select(func.unnest(ArtistModel.genres).label("genre")).where(ArtistModel.user_id == user_id)
+        if provider is not None:
+            stmt_artist = stmt_artist.where(ArtistModel.provider == provider)
 
         # Subquery to get genres from tracks
-        track_genres = select(func.unnest(TrackModel.genres).label("genre")).where(TrackModel.user_id == user_id)
+        stmt_track = select(func.unnest(TrackModel.genres).label("genre")).where(TrackModel.user_id == user_id)
+        if provider is not None:
+            stmt_track = stmt_track.where(TrackModel.provider == provider)
 
         # Combine both and get distinct sorted values
-        combined = artist_genres.union(track_genres).subquery()
+        combined = stmt_artist.union(stmt_track).subquery()
+
         stmt = select(combined.c.genre).distinct().where(combined.c.genre.isnot(None)).order_by(combined.c.genre)
 
         result = await self.session.execute(stmt)
@@ -166,17 +182,17 @@ class TrackSQLRepository(TrackRepository):
             batch_size=batch_size,
         )
 
-    async def purge(self, user_id: uuid.UUID, sources: TrackSource | None = None) -> int:
+    async def purge(self, user_id: uuid.UUID, provider: MusicProvider, sources: TrackSource | None = None) -> int:
         # Full delete
         if sources is None:
-            stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+            stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.provider == provider)
             result = await self.session.execute(stmt)
             return int(result.rowcount)  # type: ignore
 
         # Otherwise, clear the requested bits from all matching rows first
         await self.session.execute(
             update(TrackModel)
-            .where(TrackModel.user_id == user_id)
+            .where(TrackModel.user_id == user_id, TrackModel.provider == provider)
             .where(TrackModel.sources.op("&")(int(sources)) != 0)
             .values(sources=TrackModel.sources.op("&")(~int(sources)))
         )
@@ -184,7 +200,7 @@ class TrackSQLRepository(TrackRepository):
         # Then delete rows that now have no sources left
         result = await self.session.execute(
             delete(TrackModel)
-            .where(TrackModel.user_id == user_id)
+            .where(TrackModel.user_id == user_id, TrackModel.provider == provider)
             .where(TrackModel.sources == 0)
             .returning(TrackModel.id)
         )

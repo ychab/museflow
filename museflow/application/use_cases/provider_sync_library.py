@@ -11,6 +11,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.user import User
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,10 @@ class ProviderSyncLibraryUseCase:
                     report_field_purge="purge_artist",
                     user=user,
                     entity_name="artists",
-                    purge_callback=lambda: self._artist_repository.purge(user_id=user.id),
+                    purge_callback=lambda: self._artist_repository.purge(
+                        user_id=user.id,
+                        provider=MusicProvider.SPOTIFY,
+                    ),
                 )
 
             if config.purge_all or config.purge_track_top or config.purge_track_saved or config.purge_track_playlist:
@@ -85,6 +89,7 @@ class ProviderSyncLibraryUseCase:
                     entity_name="tracks",
                     purge_callback=lambda: self._track_repository.purge(
                         user_id=user.id,
+                        provider=MusicProvider.SPOTIFY,
                         sources=TrackSource.from_flags(
                             top=config.purge_track_top,
                             saved=config.purge_track_saved,

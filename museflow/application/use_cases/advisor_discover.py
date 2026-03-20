@@ -17,6 +17,7 @@ from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
 from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,7 @@ class AdvisorDiscoverUseCase:
         # First, collect track seeds.
         track_seeds = await self._track_repository.get_list(
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             sources=TrackSource.from_flags(
                 top=config.seed_top,
                 saved=config.seed_saved,

@@ -4,6 +4,7 @@ from abc import abstractmethod
 
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackSource
@@ -17,6 +18,7 @@ class ArtistRepository(ABC):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Artist]:
@@ -24,6 +26,7 @@ class ArtistRepository(ABC):
 
         Args:
             user_id: The ID of the user whose artists are to be retrieved.
+            provider: A provider to filter on.
             offset: The number of artists to skip before starting to collect the result set.
             limit: The maximum number of artists to return.
 
@@ -50,11 +53,12 @@ class ArtistRepository(ABC):
         ...
 
     @abstractmethod
-    async def purge(self, user_id: uuid.UUID) -> int:
+    async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         """Deletes all artists associated with a specific user.
 
         Args:
             user_id: The ID of the user whose artists are to be deleted.
+            provider: The music provider to filter on.
 
         Returns:
             The number of deleted artists.
@@ -69,6 +73,7 @@ class TrackRepository(ABC):
     async def get_list(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
@@ -80,6 +85,7 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose tracks are to be retrieved.
+            provider: A provider to filter on.
             sources: Whether to include, exclude, or ignore tracks base don their bitmask sources.
             genres: A list of genres to filter on.
             order_by: The column on which to order.
@@ -114,7 +120,7 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_distinct_genres(self, user_id: uuid.UUID) -> list[str]:
+    async def get_distinct_genres(self, user_id: uuid.UUID, provider: MusicProvider | None = None) -> list[str]:
         """
         Returns a sorted list of all unique genres found in the user's library
         (from both tracks and their associated artists).
@@ -138,7 +144,7 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def purge(self, user_id: uuid.UUID, sources: TrackSource | None = None) -> int:
+    async def purge(self, user_id: uuid.UUID, provider: MusicProvider, sources: TrackSource | None = None) -> int:
         """Deletes tracks for a user based on specified criteria.
 
         This allows for selective deletion of tracks, for example, only removing
@@ -146,6 +152,7 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose tracks are to be deleted.
+            provider: A provider to filter on.
             sources: Whether to purge tracks based on their bitmask sources.
 
         Returns:

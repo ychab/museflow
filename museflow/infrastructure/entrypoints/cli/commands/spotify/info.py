@@ -73,7 +73,7 @@ async def info_logic(email: EmailStr, show_genres: bool = True, show_token: bool
 
         if show_genres:
             track_repository = get_track_repository(session)
-            genres = await track_repository.get_distinct_genres(user.id)
+            genres = await track_repository.get_distinct_genres(user.id, provider=MusicProvider.SPOTIFY)
             info_data = replace(info_data, genres=genres)
 
         if show_token:

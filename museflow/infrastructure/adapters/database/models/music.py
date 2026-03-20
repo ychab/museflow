@@ -67,6 +67,7 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
     def __table_args__(cls):
         return (
             UniqueConstraint("user_id", "provider_id", name=f"uq_{cls.__tablename__}_user_provider_id"),
+            Index(f"ix_{cls.__tablename__}_user_provider", "user_id", "provider"),
             Index(f"ix_{cls.__tablename__}_user_sources", "user_id", "sources"),
         )
 

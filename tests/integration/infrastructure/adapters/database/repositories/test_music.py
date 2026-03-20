@@ -14,6 +14,7 @@ from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.user import User
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackSource
@@ -30,17 +31,21 @@ from tests.unit.factories.entities.music import TrackFactory
 class TestArtistSQLRepository:
     @pytest.fixture
     async def artists(self, user: User) -> list[Artist]:
-        artists_db = await ArtistModelFactory.create_batch_async(size=10, user_id=user.id)
+        artists_db = await ArtistModelFactory.create_batch_async(
+            size=10,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+        )
         return [artist_db.to_entity() for artist_db in artists_db]
 
     @pytest.fixture
     async def artists_other(self) -> list[Artist]:
-        artists_db = await ArtistModelFactory.create_batch_async(size=2)
+        artists_db = await ArtistModelFactory.create_batch_async(size=2, provider=MusicProvider.SPOTIFY)
         return [artist_db.to_entity() for artist_db in artists_db]
 
     @pytest.fixture
     def artists_create(self, user: User) -> list[Artist]:
-        return ArtistFactory.batch(size=10, user_id=user.id)
+        return ArtistFactory.batch(size=10, user_id=user.id, provider=MusicProvider.SPOTIFY)
 
     @pytest.fixture
     def artists_update(self, artists: list[Artist]) -> list[Artist]:
@@ -49,13 +54,17 @@ class TestArtistSQLRepository:
     @pytest.fixture
     def artists_mix(self, user: User, artists: list[Artist]) -> list[Artist]:
         return [
-            *ArtistFactory.batch(size=5, user_id=user.id),  # 5 created
+            *ArtistFactory.batch(size=5, user_id=user.id, provider=MusicProvider.SPOTIFY),  # 5 created
             *[dataclasses.replace(artist, genres=["foo"]) for artist in artists[:5]],  # 5 updated
         ]
 
     @pytest.fixture
     async def artists_delete(self, user: User) -> list[Artist]:
-        artists_user = await ArtistModelFactory.create_batch_async(size=3, user_id=user.id)
+        artists_user = await ArtistModelFactory.create_batch_async(
+            size=3,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+        )
         artists_others = await ArtistModelFactory.create_batch_async(size=2)
 
         return [artist_db.to_entity() for artist_db in artists_user + artists_others]
@@ -72,7 +81,12 @@ class TestArtistSQLRepository:
     ) -> None:
         artists_expected = artists[offset : offset + limit] if offset is not None and limit is not None else artists
 
-        artist_list = await artist_repository.get_list(user.id, offset=offset, limit=limit)
+        artist_list = await artist_repository.get_list(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            offset=offset,
+            limit=limit,
+        )
 
         # Check that we have the expected items.
         assert len(artist_list) == len(artists_expected)
@@ -80,6 +94,9 @@ class TestArtistSQLRepository:
 
         # Check that items have been collected only for that user.
         assert set([a.user_id for a in artist_list]) == {user.id}
+
+        # Check that items have been collected only for that provider.
+        assert set([a.provider for a in artist_list]) == {MusicProvider.SPOTIFY}
 
     async def test__get_list__none(self, user: User, artist_repository: ArtistRepository) -> None:
         artist_list = await artist_repository.get_list(user.id)
@@ -173,11 +190,18 @@ class TestArtistSQLRepository:
         artists_delete: list[Artist],
         artist_repository: ArtistRepository,
     ) -> None:
-        count = await artist_repository.purge(user.id)
+        count = await artist_repository.purge(user.id, provider=MusicProvider.SPOTIFY)
         assert count == 3
 
         # Check if all artists have been deleted for that user.
-        stmt = select(func.count()).select_from(ArtistModel).where(ArtistModel.user_id == user.id)
+        stmt = (
+            select(func.count())
+            .select_from(ArtistModel)
+            .where(
+                ArtistModel.user_id == user.id,
+                ArtistModel.provider == MusicProvider.SPOTIFY,
+            )
+        )
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 0
 
@@ -190,17 +214,19 @@ class TestArtistSQLRepository:
 class TestTrackSQLRepository:
     @pytest.fixture
     async def tracks(self, user: User) -> list[Track]:
-        tracks_db = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
+        tracks_db = await TrackModelFactory.create_batch_async(
+            size=10, user_id=user.id, provider=MusicProvider.SPOTIFY
+        )
         return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     async def tracks_other(self) -> list[Track]:
-        tracks_db = await TrackModelFactory.create_batch_async(size=2)
+        tracks_db = await TrackModelFactory.create_batch_async(size=2, provider=MusicProvider.SPOTIFY)
         return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     def tracks_create(self, user: User) -> list[Track]:
-        return TrackFactory.batch(size=10, user_id=user.id)
+        return TrackFactory.batch(size=10, user_id=user.id, provider=MusicProvider.SPOTIFY)
 
     @pytest.fixture
     def tracks_update(self, tracks) -> list[Track]:
@@ -210,7 +236,7 @@ class TestTrackSQLRepository:
     def tracks_mix(self, user: User, tracks) -> list[Track]:
         return [
             # 5 created
-            *TrackFactory.batch(size=5, user_id=user.id),
+            *TrackFactory.batch(size=5, user_id=user.id, provider=MusicProvider.SPOTIFY),
             # 5 updated
             *[
                 dataclasses.replace(track, artists=[TrackArtist(name="SCH", provider_id="foo")])
@@ -220,23 +246,31 @@ class TestTrackSQLRepository:
 
     @pytest.fixture
     async def tracks_delete(self, user: User) -> list[Track]:
-        tracks_top = await TrackModelFactory.create_batch_async(size=4, user_id=user.id, sources=TrackSource.TOP)
+        tracks_top = await TrackModelFactory.create_batch_async(
+            size=4,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.TOP,
+        )
         tracks_saved = await TrackModelFactory.create_batch_async(
             size=3,
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             sources=TrackSource.SAVED,
         )
         tracks_playlist = await TrackModelFactory.create_batch_async(
             size=2,
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             sources=TrackSource.PLAYLIST,
         )
         tracks_multi = await TrackModelFactory.create_batch_async(
             size=1,
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             sources=TrackSource.TOP | TrackSource.SAVED,
         )
-        tracks_other = await TrackModelFactory.create_batch_async(size=1)
+        tracks_other = await TrackModelFactory.create_batch_async(size=1, provider=MusicProvider.SPOTIFY)
 
         return [
             track.to_entity() for track in tracks_top + tracks_saved + tracks_playlist + tracks_multi + tracks_other
@@ -245,6 +279,38 @@ class TestTrackSQLRepository:
     async def test__get_list__none(self, user: User, track_repository: TrackRepository) -> None:
         track_list = await track_repository.get_list(user.id)
         assert len(track_list) == 0
+
+    async def test__get_list__filtering__user(
+        self,
+        user: User,
+        tracks: list[Track],
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        track_list = await track_repository.get_list(user.id)
+
+        # Check that we have the expected items.
+        assert len(track_list) == len(tracks)
+        assert {t.id for t in track_list} == {t.id for t in tracks}
+
+        # Check that items have been collected only for that user.
+        assert set([t.user_id for t in track_list]) == {user.id}
+
+    async def test__get_list__filtering__provider(
+        self,
+        user: User,
+        tracks: list[Track],
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        track_list = await track_repository.get_list(user.id, provider=MusicProvider.SPOTIFY)
+
+        # Check that we have the expected items.
+        assert len(track_list) == len(tracks)
+        assert {t.id for t in track_list} == {t.id for t in tracks}
+
+        # Check that items have been collected only for that provider.
+        assert set([t.provider for t in track_list]) == {MusicProvider.SPOTIFY}
 
     @pytest.mark.parametrize(
         "sources",
@@ -259,7 +325,7 @@ class TestTrackSQLRepository:
             pytest.param(None, id="all_implicit"),
         ],
     )
-    async def test__get_list__filtering(
+    async def test__get_list__filtering__sources(
         self,
         user: User,
         sources: TrackSource | None,
@@ -378,6 +444,21 @@ class TestTrackSQLRepository:
         tracks_both = await track_repository.get_list(user.id, genres=["rock", "jazz"])
         assert len(tracks_both) == 2
         assert {t.id for t in tracks_both} == {track_genre.id, track_artist_genre.id}
+
+    async def test__get_list__filtering__genres__provider(self, user: User, track_repository: TrackRepository) -> None:
+        track_user_db = await TrackModelFactory.create_async(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            genres=["rock", "pop"],
+        )
+
+        # Track with the same genre for another user/provider
+        await TrackModelFactory.create_async(genres=["rock"])
+
+        # Test filtering by track genre directly
+        tracks_rock = await track_repository.get_list(user.id, provider=MusicProvider.SPOTIFY, genres=["rock"])
+        assert len(tracks_rock) == 1
+        assert tracks_rock[0].id == track_user_db.id
 
     @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM])
     @pytest.mark.parametrize("sort_order", list(SortOrder))
@@ -529,7 +610,7 @@ class TestTrackSQLRepository:
             genres=[],
         )
 
-        # Artist with genres (one overlapping, one new)
+        # Artist with genres (one overlapping, one new) for another user.
         await TrackModelFactory.create_async(genres=["pop"])
         other_artist = await ArtistModelFactory.create_async(genres=["classic"])
         await TrackModelFactory.create_async(
@@ -543,6 +624,15 @@ class TestTrackSQLRepository:
     async def test__get_distinct_genres__empty(self, user: User, track_repository: TrackRepository) -> None:
         genres = await track_repository.get_distinct_genres(user.id)
         assert genres == []
+
+    async def test__get_distinct_genres__provider(self, user: User, track_repository: TrackRepository) -> None:
+        # Track with genres for a user and a provider.
+        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, genres=["rock", "indie"])
+        # Another user
+        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY, genres=["pop"])
+
+        genres = await track_repository.get_distinct_genres(user.id, provider=MusicProvider.SPOTIFY)
+        assert sorted(genres) == ["indie", "rock"]
 
     async def test__bulk_upsert__create(
         self,
@@ -669,16 +759,36 @@ class TestTrackSQLRepository:
         expected_remaining_user: int,
         track_repository: TrackRepository,
     ) -> None:
-        count = await track_repository.purge(user.id, sources=sources)
+        count = await track_repository.purge(user.id, provider=MusicProvider.SPOTIFY, sources=sources)
         assert count == expected_deleted
 
-        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
+        stmt = (
+            select(func.count())
+            .select_from(TrackModel)
+            .where(
+                TrackModel.user_id == user.id,
+                TrackModel.provider == MusicProvider.SPOTIFY,
+            )
+        )
         results = await async_session_db.execute(stmt)
         assert results.scalar() == expected_remaining_user
 
+        # Check another user
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 1
+
+        # Check provider
+        stmt = (
+            select(func.count())
+            .select_from(TrackModel)
+            .where(
+                TrackModel.user_id == user.id,
+                TrackModel.provider != MusicProvider.SPOTIFY,
+            )
+        )
+        results = await async_session_db.execute(stmt)
+        assert results.scalar() == 0
 
     async def test__purge__clear_bits_only(
         self,
@@ -692,7 +802,7 @@ class TestTrackSQLRepository:
         )
         track_id = track.id
 
-        count = await track_repository.purge(user.id, sources=TrackSource.TOP)
+        count = await track_repository.purge(user.id, provider=MusicProvider.SPOTIFY, sources=TrackSource.TOP)
         assert count == 0
 
         stmt = select(TrackModel).where(TrackModel.id == track_id)
