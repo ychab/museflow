@@ -33,4 +33,5 @@ uv.lock
 *.log
 .DS_Store
 
+external_data
 tests/assets/

@@ -1,0 +1,26 @@
+# Virtual environments and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Coverage and test outputs
+htmlcov/
+.coverage
+coverage.xml
+junit.xml
+
+# Build and IDE files
+.idea/
+.vscode/
+*.swp
+*.log
+.DS_Store
+
+# Heavy test assets
+tests/assets/wiremock/
+
+# Large generated files
+repomix-output.*
+external_data/

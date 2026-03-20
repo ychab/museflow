@@ -16,4 +16,5 @@ junit.xml
 .vscode/
 *.swp
 
+external_data
 repomix-output.*
