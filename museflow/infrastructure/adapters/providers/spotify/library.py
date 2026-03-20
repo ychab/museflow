@@ -168,6 +168,11 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         # @todo - improve it to don't only rely on spotify ID's
         return list({track.provider_id: track for track in tracks}.values())
 
+    async def get_track_by_id(self, track_id: str) -> Track:
+        data = await self._execute_request(method="GET", endpoint=f"/tracks/{track_id}")
+        spotify_track = SpotifyTrack.model_validate(data)
+        return to_domain_track(spotify_track, user_id=self.user.id, sources=TrackSource.HISTORY)
+
     async def search_tracks(
         self,
         track: str,

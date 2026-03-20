@@ -399,6 +399,22 @@ class TestSpotifyLibrary:
         assert track_last.provider == MusicProvider.SPOTIFY
         assert track_last.provider_id == "0K81HUG9YhPp6khuUEAH9g"
 
+    async def test__get_track_by_id__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
+        track = await spotify_library.get_track_by_id(track_id="7J5pB49l9ycy9ImB6D9hu0")
+
+        assert track.id is not None
+        assert track.user_id == spotify_library.user.id
+        assert track.name == "La Negra No Quiere"
+        assert track.provider_id == "7J5pB49l9ycy9ImB6D9hu0"
+        assert track.is_history is True
+        assert track.is_saved is False
+        assert track.is_top is False
+        assert track.is_playlist is False
+        assert len(track.artists) == 1
+        assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
+        assert track.artists[0].name == "Grupo Niche"
+        assert track.isrc == "COC018416252"
+
     async def test__create_playlist__nominal(
         self,
         playlist_tracks: list[Track],

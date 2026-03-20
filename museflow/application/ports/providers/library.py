@@ -78,6 +78,18 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
+    async def get_track_by_id(self, track_id: str) -> Track:
+        """Fetches full track metadata from the music provider by its provider ID.
+
+        Args:
+            track_id: The provider-specific track identifier.
+
+        Returns:
+            A `Track` entity with source set to HISTORY.
+        """
+        ...
+
+    @abstractmethod
     async def search_tracks(
         self,
         track: str,
