@@ -155,6 +155,21 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnowIdentifiers(isrcs=known_isrcs, fingerprints=known_fingerprints)
 
+    async def get_known_provider_ids(
+        self,
+        user_id: uuid.UUID,
+        provider: MusicProvider,
+        provider_ids: list[str],
+    ) -> frozenset[str]:
+        stmt = select(TrackModel.provider_id).where(
+            TrackModel.user_id == user_id,
+            TrackModel.provider == provider,
+            TrackModel.provider_id.in_(provider_ids),
+        )
+        result = await self.session.execute(stmt)
+
+        return frozenset(row.provider_id for row in result.fetchall())
+
     async def get_distinct_genres(self, user_id: uuid.UUID, provider: MusicProvider | None = None) -> list[str]:
         # Subquery to get genres from artists
         stmt_artist = select(func.unnest(ArtistModel.genres).label("genre")).where(ArtistModel.user_id == user_id)

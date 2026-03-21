@@ -630,6 +630,34 @@ class TestTrackSQLRepository:
         assert not known_identifiers.isrcs == frozenset(["foo", "bar"])
         assert known_identifiers.fingerprints == frozenset(["foo", "bar", "baz"])
 
+    async def test__get_known_provider_ids__nominal(self, user: User, track_repository: TrackRepository) -> None:
+        known_1 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        known_2 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY)
+
+        result = await track_repository.get_known_provider_ids(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            provider_ids=[
+                known_1.provider_id,
+                known_2.provider_id,
+                "unknown_id",
+            ],
+        )
+
+        assert result == frozenset([known_1.provider_id, known_2.provider_id])
+
+    async def test__get_known_provider_ids__empty_list(self, user: User, track_repository: TrackRepository) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+
+        result = await track_repository.get_known_provider_ids(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            provider_ids=[],
+        )
+
+        assert result == frozenset()
+
     async def test__get_distinct_genres__nominal(self, user: User, track_repository: TrackRepository) -> None:
         # Track with genres
         await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "indie"])
