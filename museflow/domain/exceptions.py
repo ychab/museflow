@@ -36,6 +36,9 @@ class ProviderPageValidationError(Exception):
         super().__init__(msg)
 
 
+class ProviderRateLimitExceeded(Exception): ...
+
+
 # --- Similarity track exceptions ---
 
 

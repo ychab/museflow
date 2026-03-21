@@ -16,6 +16,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, SpotifyTokenExpiredError):
+    if isinstance(exception, (SpotifyTokenExpiredError, ProviderRateLimitExceeded)):
         return False  # Let the Session handler deal with this!
 
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
@@ -58,6 +59,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         verify_ssl: bool = True,
         timeout: float = 30.0,
         token_buffer_seconds: int = 300,
+        max_retry_wait: int = 60,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
@@ -68,6 +70,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         self._token_endpoint = token_endpoint or HttpUrl("https://accounts.spotify.com/api/token")
 
         self.token_buffer_seconds = token_buffer_seconds
+        self.max_retry_wait = max_retry_wait
 
         self._client: httpx.AsyncClient = httpx.AsyncClient(
             verify=verify_ssl,
@@ -187,9 +190,16 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
 
             # Special handling for 429 with Retry-After header returned by Spotify
             if e.response.status_code == codes.TOO_MANY_REQUESTS:
-                retry_after = e.response.headers.get("Retry-After")
-                if retry_after:
+                if retry_after := e.response.headers.get("Retry-After"):
                     wait_seconds = int(retry_after) + 1
+                    if wait_seconds > self.max_retry_wait:
+                        logger.warning(
+                            "Spotify rate limit wait exceeds max, aborting",
+                            extra={"retry_after": retry_after, "max_retry_wait": self.max_retry_wait},
+                        )
+                        raise ProviderRateLimitExceeded() from e
+
+                    logger.debug(f"Spotify rate limit exceeded, retrying in {retry_after} seconds")
                     await asyncio.sleep(wait_seconds)
                     # Because we slept as Spotify asked us, we must raise a
                     # TryAgain to prevent Tenacity to sleep again for nothing.

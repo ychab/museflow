@@ -10,9 +10,12 @@ from urllib.parse import urlparse
 import httpx
 from httpx import codes
 
+from pydantic import HttpUrl
+
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
@@ -356,6 +359,36 @@ class TestSpotifyOAuthClientAdapter:
 
         assert response == {"success": True}
         assert len(httpx_mock.get_requests()) == expected_attempt
+
+    async def test__make_user_api_call__retry__rate_limit__with_header__exceeds_max_wait(
+        self,
+        token_payload: OAuthProviderTokenPayload,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        retry_after: int = 100
+        max_retry_wait: int = 10  # retry_after + 1 = 101 > 10
+
+        async with SpotifyOAuthClientAdapter(
+            client_id="dummy-client-id",
+            client_secret="dummy-client-secret",
+            redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+            max_retry_wait=max_retry_wait,
+        ) as client:
+            httpx_mock.add_response(
+                url=f"{client.base_url}/foo/bar",
+                method="GET",
+                status_code=codes.TOO_MANY_REQUESTS,
+                headers={"Retry-After": f"{retry_after}"},
+            )
+
+            with pytest.raises(ProviderRateLimitExceeded):
+                await client.make_user_api_call(
+                    method="GET",
+                    endpoint="/foo/bar",
+                    token_payload=token_payload,
+                )
+
+        assert len(httpx_mock.get_requests()) == 1
 
     async def test__make_user_api_call__retry__rate_limit__without_header(
         self,

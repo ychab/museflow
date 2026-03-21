@@ -144,6 +144,7 @@ async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+        max_retry_wait=5,
     ) as client:
         yield client
 
