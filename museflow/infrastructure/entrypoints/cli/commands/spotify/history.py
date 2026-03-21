@@ -38,16 +38,9 @@ def history(
         90, "--min-duration-played", help="Minimum duration played in seconds to include"
     ),
     batch_size: int = typer.Option(
-        300,
-        "--batch-size",
-        help="The number of items to bulk upsert in DB",
-        min=1,
-        max=500,
-    ),
-    fetch_concurrency: int = typer.Option(
         20,
-        "--fetch-concurrency",
-        help="Max number of concurrent Spotify track fetches",
+        "--batch-size",
+        help="Number of tracks to fetch concurrently and upsert per batch",
         min=1,
         max=50,
     ),
@@ -59,7 +52,6 @@ def history(
         directory=directory,
         min_ms_played=min_duration_played * 1_000,
         batch_size=batch_size,
-        fetch_concurrency=fetch_concurrency,
         purge=purge,
     )
 

@@ -215,7 +215,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         ],
         indirect=True,
     )
-    async def test__fetch_concurrency__chunks_requests(
+    async def test__batch_size__chunks_requests(
         self,
         user: User,
         tmp_path: Path,
@@ -232,15 +232,17 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
         mock_track_repository.get_known_provider_ids.return_value = frozenset()
         mock_provider_library.get_track_by_id.side_effect = tracks
-        mock_track_repository.bulk_upsert.return_value = ([t.id for t in tracks], 3)
+        mock_track_repository.bulk_upsert.side_effect = [([t.id], 1) for t in tracks]
 
         report = await use_case.import_history(
             user=user,
             config=ImportStreamingHistoryConfigInput(
                 directory=tmp_path,
-                fetch_concurrency=1,  # Forces one gather call per track; all tracks still fetched
+                batch_size=1,  # Forces one upsert call per track; all tracks still fetched
             ),
         )
 
         assert report.tracks_fetched == 3
+        assert report.tracks_created == 3
         assert mock_provider_library.get_track_by_id.call_count == 3
+        assert mock_track_repository.bulk_upsert.call_count == 3

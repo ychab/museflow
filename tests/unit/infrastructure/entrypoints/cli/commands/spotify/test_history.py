@@ -35,7 +35,7 @@ class TestSpotifyHistoryParserCommand:
                 "--email", "test@example.com",
                 "--directory", str(tmp_path),
                 "--min-duration-played", "10",
-                "--batch-size", "100",
+                "--batch-size", "50",
                 "--purge",
             ],
         )
@@ -94,37 +94,6 @@ class TestSpotifyHistoryParserCommand:
                 "--email", "test@example.com",
                 "--directory", "/tmp",
                 "--batch-size", batch_size,
-            ],
-        )
-        # fmt: on
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert expected_msg in output
-
-    @pytest.mark.parametrize(
-        ("fetch_concurrency", "expected_msg"),
-        [
-            pytest.param(0, "Invalid value for '--fetch-concurrency': 0 is not in the range", id="zero"),
-            pytest.param(100, "Invalid value for '--fetch-concurrency': 100 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--fetch-concurrency': 'foo' is not a valid integer", id="string"),
-        ],
-    )
-    def test__fetch_concurrency__invalid(
-        self,
-        runner: CliRunner,
-        fetch_concurrency: Any,
-        expected_msg: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        # fmt: off
-        result = runner.invoke(
-            app,
-            [
-                "spotify", "history",
-                "--email", "test@example.com",
-                "--directory", "/tmp",
-                "--fetch-concurrency", fetch_concurrency,
             ],
         )
         # fmt: on

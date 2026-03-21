@@ -9,7 +9,6 @@ import ijson
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import StreamingHistoryInvalidFormat
@@ -103,23 +102,22 @@ class ImportStreamingHistoryUseCase:
         unknown_ids = track_provider_ids - known_ids
         logger.info(f"Collected {len(unknown_ids)} unknown track ID's.")
 
-        # Fetch tracks from the provider in chunks to avoid hammering the API
-        logger.info(f"\nAbout fetching {len(unknown_ids)} track's metadata.")
-        tracks: list[Track] = []
-        for chunk in itertools.batched(unknown_ids, config.fetch_concurrency, strict=False):
-            logger.info(f"... fetching {len(tracks) + len(chunk)} / {len(unknown_ids)}...")
+        # Fetch tracks from the provider in chunks and upsert each chunk immediately.
+        # It releases memory but also allows re-running the command without a purge in case of a rate limit bottleneck.
+        logger.info(f"\nAbout fetching and upserting {len(unknown_ids)} track's metadata.")
+        tracks_fetched = 0
+        tracks_created = 0
+        for chunk in itertools.batched(unknown_ids, config.batch_size, strict=False):
+            logger.info(f"... fetching {tracks_fetched + len(chunk)} / {len(unknown_ids)}...")
 
             chunk_tracks = await asyncio.gather(*[self._provider_library.get_track_by_id(tid) for tid in chunk])
-            tracks.extend(chunk_tracks)
+            tracks_fetched += len(chunk_tracks)
 
-        # Bulk upsert the history tracks.
-        logger.info(f"About upserting in bulk {len(tracks)} tracks.")
-        tracks_created = 0
-        if tracks:
-            _, tracks_created = await self._track_repository.bulk_upsert(
-                tracks=tracks,
+            _, created = await self._track_repository.bulk_upsert(
+                tracks=list(chunk_tracks),
                 batch_size=config.batch_size,
             )
+            tracks_created += created
 
         # Finally, build and return report
         return ImportStreamingHistoryReport(
@@ -128,7 +126,7 @@ class ImportStreamingHistoryUseCase:
             items_skipped_no_uri=items_skipped_no_uri,
             unique_track_ids=len(track_provider_ids),
             tracks_already_known=len(known_ids),
-            tracks_fetched=len(tracks),
+            tracks_fetched=tracks_fetched,
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,
         )
