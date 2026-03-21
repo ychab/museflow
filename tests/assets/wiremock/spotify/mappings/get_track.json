@@ -5,7 +5,8 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "track.json",
+    "transformers": ["response-template"],
+    "bodyFileName": "track_{{request.pathSegments.[1]}}.json",
     "headers": { "Content-Type": "application/json" }
   }
 }

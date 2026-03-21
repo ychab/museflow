@@ -633,7 +633,7 @@ class TestTrackSQLRepository:
     async def test__get_known_provider_ids__nominal(self, user: User, track_repository: TrackRepository) -> None:
         known_1 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
         known_2 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
-        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY)
+        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY)  # Another user
 
         result = await track_repository.get_known_provider_ids(
             user_id=user.id,

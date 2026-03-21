@@ -30,6 +30,7 @@ dependencies = [
     "tenacity>=9.1.4",
     "rapidfuzz>=3.14.3",
     "unidecode>=1.4.0",
+    "ijson>=3.3",
 ]
 
 [project.scripts]
@@ -123,6 +124,10 @@ plugins = "pydantic.mypy"
 
 [[tool.mypy.overrides]]
 module = "wiremock.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ijson.*"
 ignore_missing_imports = true
 
 [tool.deptry.per_rule_ignores]

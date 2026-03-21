@@ -1,0 +1,77 @@
+{
+  "album": {
+    "album_type": "album",
+    "artists": [
+      {
+        "external_urls": {
+          "spotify": "https://open.spotify.com/artist/7iZtZyCzp3LItcw1wtPI3D"
+        },
+        "href": "https://api.spotify.com/v1/artists/7iZtZyCzp3LItcw1wtPI3D",
+        "id": "7iZtZyCzp3LItcw1wtPI3D",
+        "name": "Rae Sremmurd",
+        "type": "artist",
+        "uri": "spotify:artist:7iZtZyCzp3LItcw1wtPI3D"
+      }
+    ],
+    "available_markets": [],
+    "external_urls": {
+      "spotify": "https://open.spotify.com/album/4ZmCBqmAmzZaw6AKnlXqQI"
+    },
+    "href": "https://api.spotify.com/v1/albums/4ZmCBqmAmzZaw6AKnlXqQI",
+    "id": "4ZmCBqmAmzZaw6AKnlXqQI",
+    "images": [
+      {
+        "url": "https://i.scdn.co/image/ab67616d0000b27333aed2eb60354bce0955f18c",
+        "width": 640,
+        "height": 640
+      },
+      {
+        "url": "https://i.scdn.co/image/ab67616d00001e0233aed2eb60354bce0955f18c",
+        "width": 300,
+        "height": 300
+      },
+      {
+        "url": "https://i.scdn.co/image/ab67616d0000485133aed2eb60354bce0955f18c",
+        "width": 64,
+        "height": 64
+      }
+    ],
+    "name": "SremmLife",
+    "release_date": "2015-01-06",
+    "release_date_precision": "day",
+    "total_tracks": 11,
+    "type": "album",
+    "uri": "spotify:album:4ZmCBqmAmzZaw6AKnlXqQI"
+  },
+  "artists": [
+    {
+      "external_urls": {
+        "spotify": "https://open.spotify.com/artist/7iZtZyCzp3LItcw1wtPI3D"
+      },
+      "href": "https://api.spotify.com/v1/artists/7iZtZyCzp3LItcw1wtPI3D",
+      "id": "7iZtZyCzp3LItcw1wtPI3D",
+      "name": "Rae Sremmurd",
+      "type": "artist",
+      "uri": "spotify:artist:7iZtZyCzp3LItcw1wtPI3D"
+    }
+  ],
+  "available_markets": [],
+  "disc_number": 1,
+  "duration_ms": 200080,
+  "explicit": true,
+  "external_ids": {
+    "isrc": "USUM71413477"
+  },
+  "external_urls": {
+    "spotify": "https://open.spotify.com/track/6wb6zxkNTBtcYVkXcvNyJp"
+  },
+  "href": "https://api.spotify.com/v1/tracks/6wb6zxkNTBtcYVkXcvNyJp",
+  "id": "6wb6zxkNTBtcYVkXcvNyJp",
+  "is_local": false,
+  "name": "No Type",
+  "popularity": 0,
+  "preview_url": null,
+  "track_number": 10,
+  "type": "track",
+  "uri": "spotify:track:6wb6zxkNTBtcYVkXcvNyJp"
+}
