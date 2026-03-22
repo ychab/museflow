@@ -2,11 +2,11 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## Streaming history
+## claude
 
-- use ijson to load objects in stream
-- check what happen if I update a previous track imported from a playlist and then, we upsert it because it come from the history
-  => this apply to any "state" like is_top, is_saved, is_history or is_playlist (all flags are false)
+- execute the skills and fix them:
+    -> pending: arch-review
+    -> todo: security-review
 
 ## Sync
 

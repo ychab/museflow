@@ -295,3 +295,28 @@ for i, item in enumerate(items):
 ### Special Markers
 - `@pytest.mark.slow` — skipped by default, run with `--slow`
 - `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify API
+
+## Claude
+
+### Slash Commands (`.claude/commands/`)
+Reusable prompts invoked with `/command-name`:
+
+| Command | Purpose |
+|---|---|
+| `/new-feature` | Scaffold a full feature across all layers |
+| `/new-provider` | Scaffold a new music provider integration |
+| `/new-migration` | Generate and review an Alembic migration |
+| `/add-tests` | Add tests for a source file to 100% branch coverage |
+| `/arch-review` | Review changed files for Clean Architecture violations |
+| `/security-review` | Review changed files for security vulnerabilities |
+
+### Agents (`.claude/agents/`)
+Autonomous subagents invoked with `/agent:name` or auto-routed by Claude:
+
+| Agent | Purpose |
+|---|---|
+| `python` | Fix lint errors autonomously — runs `make lint`, fixes ruff/mypy/deptry issues, iterates until clean |
+| `test` | Fix failing tests and fill coverage gaps — runs `make test`, traces failures, writes missing branches |
+| `arch` | Architecture compliance review — checks all changed files against hexagonal architecture rules |
+| `security` | Security review — checks changed files for vulnerabilities, runs `uv audit` for CVEs |
+| `engineer` | Read-only codebase explorer — explains feature flows, locates code, guides implementation approach |
