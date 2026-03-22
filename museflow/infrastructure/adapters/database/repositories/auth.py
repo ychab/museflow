@@ -64,15 +64,14 @@ class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
         return auth_state_db.to_entity() if auth_state_db else None
 
     async def consume(self, state: str) -> OAuthProviderState | None:
-        stmt_select = select(AuthProviderStateModel).where(AuthProviderStateModel.state == state)
-        result = await self.session.execute(stmt_select)
+        stmt = (
+            delete(AuthProviderStateModel)
+            .where(AuthProviderStateModel.state == state)
+            .returning(AuthProviderStateModel)
+        )
+        result = await self.session.execute(stmt)
         auth_state_db = result.scalar_one_or_none()
-
-        if auth_state_db is not None:
-            stmt_delete = delete(AuthProviderStateModel).where(AuthProviderStateModel.id == auth_state_db.id)
-            await self.session.execute(stmt_delete)
-            await self.session.commit()
-
+        await self.session.commit()
         return auth_state_db.to_entity() if auth_state_db else None
 
 

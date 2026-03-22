@@ -94,7 +94,7 @@ async def create_test_database(anyio_backend: str, test_db_name: str) -> AsyncGe
 
 
 @pytest.fixture(scope="session")
-async def async_engine(create_test_database, test_db_name: str) -> AsyncGenerator[AsyncEngine]:
+async def async_engine(create_test_database: None, test_db_name: str) -> AsyncGenerator[AsyncEngine]:
     url = make_url(str(database_settings.URI)).set(database=test_db_name)
     async_engine = create_async_engine(url=url)
 
