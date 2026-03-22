@@ -172,6 +172,3 @@ clean: ## Cleanup cache files
 
 repomix:
 	npx repomix@latest --no-security-check --compress
-
-repomix-skills:
-	npx repomix@latest --no-security-check --compress --skill-generate --skill-output .claude/skills/codebase

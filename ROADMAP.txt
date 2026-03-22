@@ -8,9 +8,15 @@ This quick and dirty document just list the roadmap tasks.
     -> pending: arch-review
     -> todo: security-review
 
+## Tests
+
+- try to run them in parallel?
+
+
 ## Sync
 
 - spotify: import the extended streaming history?
+    => implements the deprecated /tracks/ids=  to switch between the /track/<id>?
 - review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 
 ## Database
@@ -37,10 +43,6 @@ This quick and dirty document just list the roadmap tasks.
 ## Just
 
 Replace Makefile by Just?
-
-## claude repomix
-
-- generate some skills with repomix and test them?
 
 ## doc code
 

@@ -12,7 +12,7 @@ class TestSpotifyLibraryFactory:
     @pytest.fixture
     def spotify_library_factory(
         self,
-        mock_auth_token_repository: mock.Mock,
+        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_client: mock.AsyncMock,
     ) -> SpotifyLibraryFactory:
         return SpotifyLibraryFactory(

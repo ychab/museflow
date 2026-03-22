@@ -10,4 +10,5 @@ class OAuthProviderUserTokenCreateInputFactory(ModelFactory[OAuthProviderUserTok
 
 class OAuthProviderUserTokenUpdateInputFactory(ModelFactory[OAuthProviderUserTokenUpdateInput]):
     __model__ = OAuthProviderUserTokenUpdateInput
+    # Force all optional fields to have real values so bulk-update tests exercise every field.
     __allow_none_optionals__ = False

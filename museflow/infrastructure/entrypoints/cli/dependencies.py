@@ -25,6 +25,7 @@ from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAu
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.lastfm import lastfm_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -124,4 +125,7 @@ def get_track_repository(session: AsyncSession) -> TrackRepository:
 
 
 def get_track_reconciler() -> TrackReconciler:
-    return TrackReconciler()
+    return TrackReconciler(
+        match_threshold=app_settings.RECONCILER_TRACK_MATCH_THRESHOLD,
+        score_minimum=app_settings.RECONCILER_TRACK_SCORE_MINIMUM,
+    )

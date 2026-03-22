@@ -7,7 +7,6 @@ from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.types import AlbumType
 from museflow.domain.value_objects.music import TrackNormalized
-from museflow.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +14,9 @@ logger = logging.getLogger(__name__)
 class TrackReconciler:
     """Domain service responsible for reconciling tracks using fuzzy text matching and heuristics."""
 
-    def __init__(self, match_threshold: float | None = None, score_minimum: float | None = None) -> None:
-        self.MATCH_THRESHOLD: Final[float] = match_threshold or app_settings.RECONCILER_TRACK_MATCH_THRESHOLD
-        self.SCORE_MINIMUM: Final[float] = score_minimum or app_settings.RECONCILER_TRACK_SCORE_MINIMUM
+    def __init__(self, match_threshold: float = 80.0, score_minimum: float = 60.0) -> None:
+        self.MATCH_THRESHOLD: Final[float] = match_threshold
+        self.SCORE_MINIMUM: Final[float] = score_minimum
 
     def reconcile(self, track_suggested: TrackSuggested, candidates: list[Track]) -> Track | None:
         """Finds the best canonical match for a suggested track in the provider's library."""

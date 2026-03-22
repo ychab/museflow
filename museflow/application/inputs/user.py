@@ -1,4 +1,5 @@
 from typing import Annotated
+from typing import Self
 
 from pydantic import EmailStr
 from pydantic import Field
@@ -29,7 +30,7 @@ class UserUpdateInput(BaseInput):
     password: str | None = Field(default=None, min_length=8, max_length=100)
 
     @model_validator(mode="after")
-    def validate_payload(self):
+    def validate_payload(self) -> Self:
         """Validates that at least one field is provided for update and that
         required fields are not set to None.
         """

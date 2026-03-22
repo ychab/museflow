@@ -82,8 +82,8 @@ class TestSyncMusic:
         return TrackFactory.batch(size=10)
 
     @pytest.fixture
-    def mock_provider_library(self, artists: list[Artist], tracks: list[Track]) -> mock.Mock:
-        return mock.Mock(
+    def mock_provider_library(self, artists: list[Artist], tracks: list[Track]) -> mock.AsyncMock:
+        return mock.AsyncMock(
             spec=ProviderLibraryPort,
             get_top_artists=mock.AsyncMock(return_value=artists),
             get_top_tracks=mock.AsyncMock(return_value=tracks),
@@ -93,7 +93,7 @@ class TestSyncMusic:
     @pytest.fixture
     def use_case(
         self,
-        mock_provider_library: mock.Mock,
+        mock_provider_library: mock.AsyncMock,
         mock_artist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> ProviderSyncLibraryUseCase:

@@ -180,8 +180,8 @@ def mock_track_repository(
 def mock_spotify_client(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.Mock]:
-    client = mock.Mock(spec=ProviderOAuthClientPort)
+) -> Iterable[mock.AsyncMock]:
+    client = mock.AsyncMock(spec=ProviderOAuthClientPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_spotify_client", client) as mock_client:
         yield mock_client
 
@@ -190,8 +190,8 @@ def mock_spotify_client(
 def mock_advisor_client(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.Mock]:
-    client = mock.Mock(spec=AdvisorClientPort)
+) -> Iterable[mock.AsyncMock]:
+    client = mock.AsyncMock(spec=AdvisorClientPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_advisor_client", client) as mock_client:
         yield mock_client
 

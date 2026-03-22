@@ -75,7 +75,7 @@ class Track(BaseMediaItem):
     def __str__(self) -> str:
         return f"{', '.join([artist.name for artist in self.artists])} - {self.name}".replace("'", "\\'")
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
 
         if not self.fingerprint:

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ImportStreamingHistoryConfigInput:
     directory: Path
     min_ms_played: int = 30_000

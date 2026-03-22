@@ -1,3 +1,5 @@
+from typing import Self
+
 from pydantic import AwareDatetime
 from pydantic import Field
 from pydantic import model_validator
@@ -31,7 +33,7 @@ class OAuthProviderUserTokenUpdateInput(BaseInput):
     token_expires_at: AwareDatetime | None = None
 
     @model_validator(mode="after")
-    def validate_one_field_set(self):
+    def validate_one_field_set(self) -> Self:
         if not self.model_fields_set:
             raise ValueError("At least one field must be provided for update")
         return self

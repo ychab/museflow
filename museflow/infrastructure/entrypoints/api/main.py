@@ -59,7 +59,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthCheckRespons
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:
-        logger.exception(f"Health Check Failed: {e}")
+        logger.exception("Health Check Failed")
         return HealthCheckResponse(status="unhealthy", database=f"error: {str(e)}")
     else:
         return HealthCheckResponse(status="healthy", database="connected")

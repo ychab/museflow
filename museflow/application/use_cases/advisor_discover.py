@@ -122,13 +122,11 @@ class AdvisorDiscoverUseCase:
                     limit=limit,
                 )
             except SimilarTrackResponseException as e:
-                logger.error(
-                    f"An error occurred while fetching similar tracks: {e}",
-                    extra={"track": track_seed},
-                )
-            else:
-                tracks_suggested.extend(tracks_similar)
-                logger.info(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
+                logger.exception(f"An error occurred while fetching similar tracks: {e}", extra={"track": track_seed})
+                continue
+
+            tracks_suggested.extend(tracks_similar)
+            logger.info(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
 
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)

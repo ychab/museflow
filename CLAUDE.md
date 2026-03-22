@@ -96,7 +96,7 @@ class ImportStreamingHistoryUseCase:
         ...
 ```
 - Accept ports via parameters (DI). NEVER instantiate repositories inside use cases.
-- Accept Input Schemas (Pydantic), return Domain Entities (dataclasses).
+- Accept Input Schemas, return Domain Entities (dataclasses). Input Schemas can be Pydantic `BaseModel` **or** `@dataclass(frozen=True, kw_only=True)` — both are valid.
 - Use a class only when the use case holds injected dependencies and is called with user-specific args.
 
 ## Infrastructure Layer
@@ -166,11 +166,13 @@ logger.exception("Spotify API Error", extra={"status_code": e.response.status_co
 # Structured context — static message, dynamic in extra:
 logger.error("Failed to sync library", extra={"user_id": str(user.id)})  # GOOD
 logger.error(f"Failed to sync library for user {user.id}")               # BAD
-
-# Exception: Typer CLI display logs may use f-strings (consumed by the user, not operators).
 ```
 - Levels: ERROR (unrecoverable), WARNING (handled unexpected), INFO (milestones, minimal), DEBUG (flow).
 - NEVER log secrets (tokens, passwords). Log IDs only.
+
+**User-facing CLI logs** (displayed directly to the end-user by CLI commands) are exempt from the operator log rules:
+- May use f-strings for readability.
+- May use `logger.error()` inside `except` blocks — `logger.exception()` dumps a traceback which is not useful to the end-user.
 
 ## Error Handling
 - Domain exceptions live in `museflow/domain/exceptions.py` — use these across all layers.
