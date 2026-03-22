@@ -45,8 +45,9 @@ Read each changed file and check for the violations below.
 The logging rules below apply to **operator logs** (going to log aggregators, not directly shown to the CLI user):
 - [ ] `logger.exception()` used inside `except` blocks (not `logger.error()`) — attaches traceback automatically
 - [ ] Static messages with structured context via `extra={}` — never f-strings
+- [ ] `logger.debug()` calls are exempt from the f-string rule — debug logs are for developers and readability matters more than structure at that level. Do NOT flag `logger.debug()` f-strings.
 
-**User-facing CLI logs** (displayed directly to the end-user by sync/discover/history commands) are exempt from both rules above:
+**User-facing CLI logs** (displayed directly to the end-user by CLI commands — including sync, discover, history, and reconciler commands, as well as any domain service called in that chain) are exempt from all rules above:
 - They **may use f-strings** for readability
 - They **may use `logger.error()`** inside `except` blocks (a traceback dump is not useful to the end-user)
 - Do NOT flag these as violations.

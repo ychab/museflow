@@ -5,7 +5,6 @@ This quick and dirty document just list the roadmap tasks.
 ## claude
 
 - execute the skills and fix them:
-    -> pending: arch-review
     -> todo: security-review
 
 ## Tests

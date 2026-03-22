@@ -56,15 +56,15 @@ museflow/
 ### Application layer (`museflow/application/`)
 - [ ] Use cases NEVER instantiate repositories — only accept them as parameters
 - [ ] Use cases depend ONLY on domain (no infrastructure imports)
-- [ ] Use cases accept Input Schemas (Pydantic), return Domain Entities (dataclasses)
-- [ ] Simple use cases: standalone `async def` function
-- [ ] Complex use cases (injected state + user args): class with named method
+- [ ] Use cases accept Input Schemas, return Domain Entities (dataclasses). Input Schemas can be either Pydantic `BaseModel` **or** `@dataclass(frozen=True, kw_only=True)` — both are valid. Flag dataclass inputs only if they are missing `kw_only=True`.
+- [ ] Standalone `async def` for simple use cases; class with named method for complex ones
 
 ### Infrastructure layer (`museflow/infrastructure/`)
 - [ ] SQLAlchemy models use `MappedAsDataclass + Base`, `kw_only=True`
 - [ ] Every SQLAlchemy model implements `to_entity(self) -> Entity`
 - [ ] `JSONB` and `ARRAY` imported from `sqlalchemy.dialects.postgresql` (NOT generic SQLAlchemy)
-- [ ] Auto-fields (`id`, `created_at`, `updated_at`): `init=False` + correct `sort_order` from mixins
+- [ ] Auto-fields (`created_at`, `updated_at`) use `init=False` + `sort_order` from mixins. `DatetimeTrackMixin` is expected on most models but may be omitted when the model already has a domain-specific timestamp that covers the same need (e.g. `token_expires_at` on auth token models).
+- [ ] `UUIDIdMixin.id` intentionally keeps `init=True` (no `init=False`) so that upserts can pass a known UUID to the constructor. Do NOT flag this as a violation.
 - [ ] Repositories inject `AsyncSession` via `__init__`
 - [ ] Repositories use SQLAlchemy 2.0 style (`select/update/delete`) — no legacy `session.query()`
 - [ ] `.returning()` used on mutations (no separate SELECT round-trip)
@@ -73,8 +73,16 @@ museflow/
 
 ### Logging
 - [ ] No secrets logged (tokens, passwords)
-- [ ] Structured context via `extra={}`, not f-strings (exception: CLI user-facing display)
-- [ ] `logger.exception()` inside `except` blocks — not `logger.error(str(e))`
+
+The logging rules below apply to **operator logs** (going to log aggregators, not directly shown to the CLI user):
+- [ ] `logger.exception()` used inside `except` blocks (not `logger.error()`) — attaches traceback automatically
+- [ ] Static messages with structured context via `extra={}` — never f-strings
+- [ ] `logger.debug()` calls are exempt from the f-string rule — debug logs are for developers and readability matters more than structure at that level. Do NOT flag `logger.debug()` f-strings.
+
+**User-facing CLI logs** (displayed directly to the end-user by CLI commands — including sync, discover, history, and reconciler commands, as well as any domain service called in that chain) are exempt from all rules above:
+- They **may use f-strings** for readability
+- They **may use `logger.error()`** inside `except` blocks (a traceback dump is not useful to the end-user)
+- Do NOT flag these as violations.
 
 ### Naming
 - [ ] `entity` = domain entity (frozen dataclass)
@@ -88,7 +96,7 @@ museflow/
 - [ ] `async_session_db` used by default — `async_session_trans` only when commit is tested
 - [ ] No new shared fixtures defined inside test files — they belong in `conftest.py`
 - [ ] `__set_relationships__ = False` on SQLAlchemy factories
-- [ ] `__allow_none_optionals__ = False` on Pydantic input factories
+- [ ] `__allow_none_optionals__ = False` on Pydantic **Update** input factories (forces all optional fields to real values so bulk-update tests exercise every field). **Create** factories typically have no optional fields so this flag is not needed there — do not flag its absence on Create factories.
 
 ## Output format
 

@@ -72,7 +72,7 @@ class MusicItemMixin(UUIDIdMixin, DatetimeTrackMixin, MappedAsDataclass, kw_only
         )
 
 
-class Artist(MusicItemMixin, Base):
+class Artist(MusicItemMixin, Base, kw_only=True):
     __tablename__ = "museflow_artist"
 
     def to_entity(self) -> ArtistEntity:

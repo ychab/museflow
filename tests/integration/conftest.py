@@ -14,6 +14,7 @@ import pytest
 from tenacity import stop_after_attempt
 
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
+from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -52,6 +53,7 @@ from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 from tests.unit.factories.inputs.auth import OAuthProviderUserTokenCreateInputFactory
+from tests.unit.factories.inputs.auth import OAuthProviderUserTokenUpdateInputFactory
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
@@ -250,8 +252,8 @@ def auth_token_create() -> OAuthProviderUserTokenCreateInput:
 
 
 @pytest.fixture
-def auth_token_update() -> OAuthProviderUserTokenCreateInput:
-    return OAuthProviderUserTokenCreateInputFactory.build()
+def auth_token_update() -> OAuthProviderUserTokenUpdateInput:
+    return OAuthProviderUserTokenUpdateInputFactory.build()
 
 
 # --- Models DB factories ---

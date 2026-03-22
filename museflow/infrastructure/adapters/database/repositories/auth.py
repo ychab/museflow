@@ -82,7 +82,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
 
     async def get(self, user_id: uuid.UUID, provider: MusicProvider) -> OAuthProviderUserToken | None:
         stmt = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == str(user_id),
+            AuthProviderTokenModel.user_id == user_id,
             AuthProviderTokenModel.provider == provider,
         )
         result = await self.session.execute(stmt)
@@ -96,7 +96,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         auth_token_data: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
         auth_token_dict: dict[str, Any] = auth_token_data.model_dump()
-        auth_token_dict["user_id"] = str(user_id)
+        auth_token_dict["user_id"] = user_id
         auth_token_dict["provider"] = provider
 
         auth_token_db = AuthProviderTokenModel(**auth_token_dict)

@@ -263,7 +263,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         except ProviderPageValidationError as e:
             # Some playlist pages can return invalid data, like missing ID's due to local files.
             # Anyway, we don't want to break the entire loop of playlists so we catch it here.
-            logger.error(f"Skip playlist {playlist.name.strip()} with error: {e}")
+            logger.exception(f"Skip playlist {playlist.name.strip()} with error: {e}")
 
         return tracks
 
