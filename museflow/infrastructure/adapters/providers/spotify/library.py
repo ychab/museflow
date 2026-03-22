@@ -33,11 +33,9 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTr
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
 from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
-from museflow.infrastructure.config.loggers import get_cli_logger
 from museflow.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
-cli_logger = get_cli_logger(__name__)
 
 
 @dataclass
@@ -151,7 +149,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             max_pages=max_pages,
             log_prefix="[Playlists]",
         )
-        cli_logger.info(f"Found {len(playlists)} playlists. Fetching tracks...")
+        logger.info(f"Found {len(playlists)} playlists. Fetching tracks...")
 
         # Use a Semaphore to limit concurrent playlist fetching to avoid rate limits and overwhelming resources.
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -265,7 +263,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         except ProviderPageValidationError as e:
             # Some playlist pages can return invalid data, like missing ID's due to local files.
             # Anyway, we don't want to break the entire loop of playlists so we catch it here.
-            cli_logger.exception(
+            logger.exception(
                 f"Skip playlist {playlist.name.strip()} with error: {e}",
                 extra={"playlist_name": playlist.name.strip()},
             )
@@ -297,7 +295,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         pages_count = 0
 
         if log_enabled:
-            cli_logger.info(f"{log_prefix} Start fetching endpoint: {endpoint}")
+            logger.info(f"{log_prefix} Start fetching endpoint: {endpoint}")
 
         while True:
             if max_pages is not None and max_pages <= pages_count:
@@ -331,7 +329,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             pages_count += 1
 
             if log_enabled:
-                cli_logger.info(f"{log_prefix} ... processed {offset + page_size}/{page.total} ...")
+                logger.info(f"{log_prefix} ... processed {offset + page_size}/{page.total} ...")
 
             if len(items) >= page.total or len(page.items) < page_size:
                 break

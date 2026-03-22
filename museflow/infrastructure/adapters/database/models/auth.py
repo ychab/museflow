@@ -52,6 +52,9 @@ class AuthProviderToken(NumericIdMixin, Base, kw_only=True):
 
     This model persists the access and refresh tokens for a user, allowing the
     application to make authenticated API calls to the music provider on their behalf.
+
+    Note: DatetimeTrackMixin is intentionally omitted — token rows are identified
+    by their expiry (token_expires_at), not by generic created_at/updated_at timestamps.
     """
 
     __tablename__ = "museflow_auth_token"

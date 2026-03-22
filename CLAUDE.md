@@ -160,24 +160,20 @@ class UserSQLRepository(UserRepository):
 ```python
 logger = logging.getLogger(__name__)
 
-# Inside except blocks — attaches traceback automatically:
-logger.exception("Spotify API Error", extra={"status_code": e.response.status_code})
+# f-strings are always allowed — they produce the human-readable message
+# Add extra={} when the data is useful for an aggregator or dashboard
+logger.info(f"Seed tracks: {len(track_seeds)}", extra={"count": len(track_seeds)})
+logger.warning(f"Track not reconciled: '{track}'", extra={"track": str(track), "user_id": str(user.id)})
 
-# Structured context — static message, dynamic in extra:
-logger.error("Failed to sync library", extra={"user_id": str(user.id)})  # GOOD
-logger.error(f"Failed to sync library for user {user.id}")               # BAD
+# Exception blocks — static message + extra (traceback carries the error detail; no f-string needed)
+logger.exception("Spotify API error", extra={"status_code": e.response.status_code})
 ```
 - Levels: ERROR (unrecoverable), WARNING (handled unexpected), INFO (milestones, minimal), DEBUG (flow).
 - NEVER log secrets (tokens, passwords). Log IDs only.
-
-**Domain layer exception:** domain services cannot import `get_cli_logger` (that would be an infrastructure import). If a domain log is user-facing, use the standard `logger` with an f-string **and** `extra={}` keys — f-strings are acceptable at warning/error level in `museflow/domain/` when `extra={}` is present.
-
-**User-facing CLI logs** (displayed directly to the end-user by CLI commands, in infrastructure and above) are exempt from the operator log rules:
-- Use `cli_logger = get_cli_logger(__name__)` (from `museflow.infrastructure.config.loggers`) — never the standard `logger`.
-- May use f-strings for readability.
-- For **warning/error** level: use `.exception()` inside `except` blocks (traceback attached to the log record for aggregators, hidden from the CLI user by the plain formatter) and include `extra={}` keys for additional context — omit `"error"` since it's redundant with the attached exception.
-
-The standard `logger.*` must always use structured logging with `extra={}` — f-strings are never valid there.
+- f-strings: always OK for the message — **never** for secrets.
+- `extra={}`: add when the data would be useful to query in an aggregator (IDs, counts, entity names). Not required for every f-string — use judgement.
+- Exception blocks: static message + `extra={}`. No f-string needed; the traceback carries the error.
+- `logger.debug()` — f-string only is fine; `extra` optional.
 
 ## Error Handling
 - Domain exceptions live in `museflow/domain/exceptions.py` — use these across all layers.

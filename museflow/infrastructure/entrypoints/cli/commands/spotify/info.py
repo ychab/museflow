@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class SpotifyInfoData:
     genres: list[str] = field(default_factory=list)
     token: OAuthProviderUserToken | None = None

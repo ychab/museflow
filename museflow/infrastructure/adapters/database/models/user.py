@@ -8,7 +8,7 @@ from museflow.infrastructure.adapters.database.models.base import DatetimeTrackM
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 
 
-class User(UUIDIdMixin, DatetimeTrackMixin, Base):
+class User(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_user"
 
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)

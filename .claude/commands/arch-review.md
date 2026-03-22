@@ -42,20 +42,12 @@ Read each changed file and check for the violations below.
 
 ### Logging
 - [ ] No secrets logged (tokens, passwords)
-
-The logging rules below apply to **operator logs** (`logger = logging.getLogger(__name__)`):
+- [ ] All layers use `logger = logging.getLogger(__name__)` — no `cli_logger`, no `get_cli_logger()`
 - [ ] `logger.exception()` used inside `except` blocks (not `logger.error()`) — attaches traceback automatically
-- [ ] Static messages with structured context via `extra={}` — never f-strings
-- [ ] `logger.debug()` is exempt from the f-string rule — do NOT flag it
-
-**Domain layer exception:** domain services (`museflow/domain/`) cannot import `get_cli_logger` (infrastructure import = arch violation). If a domain service log is user-facing (e.g. reconciliation warnings displayed in CLI output), use the standard `logger` with an f-string **and** `extra={}` keys. Do NOT flag f-strings in `museflow/domain/` at warning/error level if `extra={}` is present.
-
-**User-facing CLI logs** (infrastructure and above) must use `cli_logger = get_cli_logger(__name__)` (from `museflow.infrastructure.config.loggers`), never the standard `logger`:
-- [ ] `cli_logger.*` calls **may use f-strings** — do NOT flag them
-- [ ] `cli_logger.exception()` inside `except` blocks — attaches traceback to the log record for aggregators; the plain `%(message)s` formatter hides it from the CLI user. Do NOT flag it.
-- [ ] `cli_logger` at **warning/error level** should include `extra={}` keys (excluding `"error"` — already covered by the attached exception) for observability
-- [ ] If a file has f-string log calls on `logger.*`, that is a violation — flag it
-- [ ] If a file declares `cli_logger`, verify it uses `get_cli_logger(__name__)`, not `logging.getLogger`
+- [ ] Exception blocks use **static messages** + `extra={}` — no f-string needed (traceback carries the error detail)
+- [ ] f-strings are **always allowed** in log messages for readability — do NOT flag them
+- [ ] `extra={}` is added when the data is useful for an aggregator (IDs, counts, entity names). Flag WARNING+ calls that have dynamic data but no `extra={}`
+- [ ] `logger.debug()` — f-string only is fine; `extra` optional. Do NOT flag debug calls.
 
 ### Naming conventions
 - [ ] `*` = domain entity | `*_db` = SQLAlchemy model | `*_in` = Pydantic input | `*_dto` = external DTO
