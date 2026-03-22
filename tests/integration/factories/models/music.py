@@ -29,6 +29,7 @@ class BaseMusicItemModelFactory[T: (Artist | Track)](BaseModelFactory[T]):
     genres = Use(lambda: ["Pop", "Rock", "Rap", "Indie", "Alternative"])
 
     provider = MusicProvider.SPOTIFY
+    provider_id = Use(BaseModelFactory.__faker__.uuid4)
 
     @classmethod
     async def create_async(cls, **kwargs: Any) -> T:

@@ -353,7 +353,7 @@ class TestSpotifyLibrary:
             json_body=wiremock_response,
         )
 
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.ERROR, logger="museflow.cli"):
             await spotify_library.get_playlist_tracks(page_size=page_size)
 
         assert "Skip playlist Salsa with error" in caplog.text

@@ -42,15 +42,20 @@ Read each changed file and check for the violations below.
 
 ### Logging
 - [ ] No secrets logged (tokens, passwords)
-The logging rules below apply to **operator logs** (going to log aggregators, not directly shown to the CLI user):
+
+The logging rules below apply to **operator logs** (`logger = logging.getLogger(__name__)`):
 - [ ] `logger.exception()` used inside `except` blocks (not `logger.error()`) — attaches traceback automatically
 - [ ] Static messages with structured context via `extra={}` — never f-strings
-- [ ] `logger.debug()` calls are exempt from the f-string rule — debug logs are for developers and readability matters more than structure at that level. Do NOT flag `logger.debug()` f-strings.
+- [ ] `logger.debug()` is exempt from the f-string rule — do NOT flag it
 
-**User-facing CLI logs** (displayed directly to the end-user by CLI commands — including sync, discover, history, and reconciler commands, as well as any domain service called in that chain) are exempt from all rules above:
-- They **may use f-strings** for readability
-- They **may use `logger.error()`** inside `except` blocks (a traceback dump is not useful to the end-user)
-- Do NOT flag these as violations.
+**Domain layer exception:** domain services (`museflow/domain/`) cannot import `get_cli_logger` (infrastructure import = arch violation). If a domain service log is user-facing (e.g. reconciliation warnings displayed in CLI output), use the standard `logger` with an f-string **and** `extra={}` keys. Do NOT flag f-strings in `museflow/domain/` at warning/error level if `extra={}` is present.
+
+**User-facing CLI logs** (infrastructure and above) must use `cli_logger = get_cli_logger(__name__)` (from `museflow.infrastructure.config.loggers`), never the standard `logger`:
+- [ ] `cli_logger.*` calls **may use f-strings** — do NOT flag them
+- [ ] `cli_logger.exception()` inside `except` blocks — attaches traceback to the log record for aggregators; the plain `%(message)s` formatter hides it from the CLI user. Do NOT flag it.
+- [ ] `cli_logger` at **warning/error level** should include `extra={}` keys (excluding `"error"` — already covered by the attached exception) for observability
+- [ ] If a file has f-string log calls on `logger.*`, that is a violation — flag it
+- [ ] If a file declares `cli_logger`, verify it uses `get_cli_logger(__name__)`, not `logging.getLogger`
 
 ### Naming conventions
 - [ ] `*` = domain entity | `*_db` = SQLAlchemy model | `*_in` = Pydantic input | `*_dto` = external DTO

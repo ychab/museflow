@@ -7,6 +7,7 @@ from museflow.infrastructure.types import LogHandler
 from museflow.infrastructure.types import LogLevel
 
 LOGGER_MUSEFLOW: Final[str] = "museflow"
+LOGGER_MUSEFLOW_CLI: Final[str] = "museflow.cli"
 
 default_conf: Final[dict[str, Any]] = {
     "version": 1,
@@ -66,6 +67,11 @@ default_conf: Final[dict[str, Any]] = {
             "handlers": ["console"],
             "propagate": False,
         },
+        LOGGER_MUSEFLOW_CLI: {
+            "level": "INFO",
+            "handlers": ["cli"],
+            "propagate": False,
+        },
         "uvicorn": {
             "level": "INFO",
             "handlers": ["console"],
@@ -94,6 +100,16 @@ default_conf: Final[dict[str, Any]] = {
 }
 
 
+def get_cli_logger(name: str) -> logging.Logger:
+    """Return a logger for user-facing CLI progress messages.
+
+    Loggers returned here are scoped under ``museflow.cli.*`` and inherit
+    whichever handler is configured by ``configure_loggers`` (rich in dev,
+    plain message in production).
+    """
+    return logging.getLogger(f"{LOGGER_MUSEFLOW_CLI}.{name}")
+
+
 def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bool = False) -> None:
     """Configures the application's loggers based on the provided level and handlers.
 
@@ -108,9 +124,13 @@ def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bo
     """
     conf = deepcopy(default_conf)
 
-    # Change level and propagate only for our logger for now.
+    # Change level and propagate only for our operator logger.
     conf["loggers"][LOGGER_MUSEFLOW]["level"] = level
     conf["loggers"][LOGGER_MUSEFLOW]["propagate"] = propagate
+
+    # But also for the CLI logger
+    conf["loggers"][LOGGER_MUSEFLOW_CLI]["level"] = level
+    conf["loggers"][LOGGER_MUSEFLOW_CLI]["propagate"] = propagate
 
     # However, change handlers for all loggers defined to use the same.
     for logger in conf["loggers"].keys():
