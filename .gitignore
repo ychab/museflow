@@ -15,6 +15,7 @@ junit.xml
 .idea
 .vscode/
 *.swp
+**/.claude/*.local.json
 
 external_data
 repomix-output.*

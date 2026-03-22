@@ -225,6 +225,42 @@ Example: Discover new music using top tracks as seeds
 uv run museflow spotify discover --email user@example.com --advisor lastfm --seed-top --seed-limit 10 --similar-limit 5
 ```
 
+**Import streaming history:**
+
+Imports a user's extended streaming history from the JSON files exported via Spotify's [privacy data request](https://www.spotify.com/account/privacy/). Parses all JSON files in the given directory, deduplicates track IDs, fetches unknown tracks from Spotify, and upserts them into the database.
+
+**Prerequisite:** Export your data from Spotify (Account → Privacy Settings → Request your data) and unzip the archive. Only the `Streaming_History_Audio_*.json` files are used.
+
+```bash
+uv run museflow spotify history --email <email> --directory <path/to/history/folder> [OPTIONS]
+```
+
+**History Options:**
+
+*   `--directory`: Path to the directory containing the Spotify streaming history JSON files (**required**).
+*   `--min-duration-played`: Minimum playback duration in seconds to count a track as played (default: 90).
+*   `--batch-size`: Number of tracks to fetch from Spotify and upsert per batch, between 1 and 50 (default: 20).
+*   `--purge` / `--no-purge`: Purge all existing history tracks before importing (default: no purge).
+
+Example: Import history, ignoring plays shorter than 30 seconds
+
+```bash
+uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData --min-duration-played 30
+```
+
+On completion, a summary table is printed showing items read, items skipped, unique track IDs found, and tracks created.
+
+**Show account info:**
+
+Displays diagnostic information about a user's Spotify account: available genres (derived from their library) and the current OAuth token.
+
+```bash
+uv run museflow spotify info --email <email> [OPTIONS]
+```
+
+*   `--genres` / `--no-genre`: Display the list of genres available in the user's library (default: on).
+*   `--token` / `--no-token`: Display the current Spotify OAuth token (default: on).
+
 ## Development
 
 **Linting and Formatting:**
@@ -238,3 +274,24 @@ make lint
 ```bash
 make test
 ```
+
+## Claude Code
+
+This project is configured for [Claude Code](https://claude.ai/claude-code), Anthropic's AI coding assistant. The configuration lives in:
+
+- **`CLAUDE.md`** — project conventions and architecture rules loaded into every Claude session
+- **`CONVENTIONS.md`** — detailed architecture reference (the source of truth)
+- **`.claude/commands/`** — custom slash commands (skills) for common development workflows
+
+### Skills
+
+Skills are project-specific slash commands that encode the project's conventions so you don't have to repeat them. Invoke them in a Claude Code session with `/command-name [arguments]`.
+
+| Skill | Invocation | What it does |
+|-------|-----------|--------------|
+| `/new-feature` | `/new-feature <name>` | Scaffolds a full feature across all layers: entity → input schema → port → use case → SQLAlchemy model → repository → API endpoint → CLI command → unit and integration tests |
+| `/new-migration` | `/new-migration <description>` | Guides an Alembic migration: generates the file, reviews nullable defaults and `downgrade()`, verifies it runs cleanly |
+| `/add-tests` | `/add-tests <file_path>` | Analyzes a source file and generates unit + integration tests targeting 100% branch coverage, reusing existing fixtures and factories |
+| `/new-provider` | `/new-provider <name>` | Scaffolds a new music provider integration: client, session, library adapter, DTOs, mappers, schemas, types, exceptions, settings, WireMock stubs, and tests — mirroring the Spotify pattern |
+| `/arch-review` | `/arch-review [files]` | Reviews changed files for Clean Architecture violations: framework imports in domain, repositories instantiated in use cases, wrong `JSONB`/`ARRAY` dialect, missing `to_entity()`, logging secrets, etc. |
+| `/security-review` | `/security-review [files]` | Reviews changed files for security issues: hardcoded secrets, unprotected endpoints, unbounded `Retry-After` sleeps, raw SQL, missing input validation, path traversal, and runs `uv audit` for CVEs |

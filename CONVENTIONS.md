@@ -22,13 +22,13 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - **Computed Fields**: Use `__post_init__` with `object.__setattr__` for permanent computed fields, or `@property` for dynamic ones.
   - **Slugs/UUIDs**: Should be treated as plain strings/UUIDs passed in during construction. Logic for generating them belongs in the Adapter/Mapper, not the Entity itself.
 
-#### B. Input Schemas / Commands (`museflow/domain/schemas/`)
+#### B. Input Schemas / Commands (`museflow/application/inputs/`)
 - **Technology**: `pydantic.BaseModel` (v2).
-- **Purpose**: Define data entering the domain (e.g., `UserCreate`, `UserUpdateInput`, `TrackFilter`).
+- **Purpose**: Define data entering the application (e.g., `UserCreate`, `UserUpdateInput`, `TrackFilter`).
 - **Validation**: Strict validation (Length, Regex, Enums) happens here.
 - **Naming**: `[Entity]Create`, `[Entity]Update`, `[Entity]Filter`.
 
-#### C. Ports (`museflow/domain/ports/`)
+#### C. Ports (`museflow/application/ports/`)
 - **Technology**: Abstract Base Classes (`abc.ABC`).
 - **Signatures**:
   - Accept **Schemas** as input arguments (e.g., `create(data: UserCreate)`).
@@ -37,7 +37,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 ### Application Layer (Use Cases)
 - **Structure**:
   - **Default**: Standalone **async functions** (e.g., `async def user_create(...) -> User`).
-  - **Complex**: Use a **Class** with `__call__` or `execute` method if state/refactoring is needed.
+  - **Complex**: Use a **Class** with a named method if injected state is needed.
 - **Flow**:
   1. Accept **Schemas** (Pydantic) from the API/Controller.
   2. Call Ports (Repositories).
@@ -52,7 +52,6 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - Use `Enum` types directly in columns.
 - **Mapping (DB <-> Domain)**:
   - **To Entity**: Implement `to_entity(self) -> Entity` method on the SQLAlchemy Model.
-  - **To DB**: Use helper `_entity_to_db_dict` in repositories to handle `dataclasses.asdict` + Enum/JSON conversion.
 - **Transactions**:
   - Use `async_session.begin()` or context managers for atomicity.
   - Repositories should accept an `AsyncSession`.
