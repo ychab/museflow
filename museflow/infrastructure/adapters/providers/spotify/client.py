@@ -196,7 +196,9 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                             "Spotify rate limit wait exceeds max, aborting",
                             extra={"retry_after": retry_after, "max_retry_wait": self.max_retry_wait},
                         )
-                        raise ProviderRateLimitExceeded() from e
+                        raise ProviderRateLimitExceeded(
+                            f"Spotify rate limit {retry_after} exceeds max wait {self.max_retry_wait}"
+                        ) from e
 
                     logger.debug(f"Spotify rate limit exceeded, retrying in {retry_after} seconds")
                     await asyncio.sleep(wait_seconds)
