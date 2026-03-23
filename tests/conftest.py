@@ -25,20 +25,28 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow (not executed by default)")
     config.addinivalue_line("markers", "spotify_live: mark test as requiring live Spotify API access")
+    config.addinivalue_line(
+        "markers", "wiremock: test uses a WireMock server — runs serially on a single xdist worker"
+    )
 
 
+@pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     # Create skip markers.
     skip_slow = pytest.mark.skip(reason="need --slow option to run")
     skip_spotify = pytest.mark.skip(reason="need --spotify-refresh-token option to run")
 
     # Automatically skip marked tests if the corresponding parse option is missing.
+    # Group WireMock tests onto a single xdist worker so stub resets don't race.
     for item in items:
         if item.get_closest_marker("slow") and not config.getoption("--slow"):
             item.add_marker(skip_slow)
 
         if item.get_closest_marker("spotify_live") and not config.getoption("--spotify-refresh-token"):
             item.add_marker(skip_spotify)
+
+        if item.get_closest_marker("wiremock"):
+            item.add_marker(pytest.mark.xdist_group("wiremock"))
 
 
 @pytest.fixture(scope="session", autouse=True)

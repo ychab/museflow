@@ -49,6 +49,7 @@ class TestSpotifyConnect:
         assert auth_state is not None
 
 
+@pytest.mark.wiremock
 class TestSpotifyCallback:
     async def test__nominal__create_auth_token(
         self,

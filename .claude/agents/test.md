@@ -69,6 +69,7 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - Use `async_session_db` (auto-rollback) by default in integration tests.
 - Use `async_session_trans` ONLY when the code under test explicitly commits.
 - Add new shared fixtures to `conftest.py` at the appropriate level — never inside a test file.
+- Any integration test class that uses a WireMock instance (directly via `spotify_wiremock`/`lastfm_wiremock`, or indirectly via `spotify_library`, `spotify_client`, `lastfm_client`, etc.) **must** be decorated with `@pytest.mark.wiremock`. Without it the class runs across parallel xdist workers and causes stub-collision flakiness.
 
 ## Factories
 

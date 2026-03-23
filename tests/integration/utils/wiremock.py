@@ -23,8 +23,10 @@ class WireMockContext:
         exc_val: BaseException | None,
         exc_tb: Any | None,
     ) -> None:
-        # Safely reset WireMock to file-based defaults (POST /__admin/mappings/reset)
-        # We use httpx directly because the library's reset() is destructive (DELETE).
+        # Reset all mappings and scenario states to file-based defaults.
+        # Safe because @pytest.mark.wiremock (via --dist=loadgroup) ensures all tests
+        # that share a WireMock server run on the same xdist worker sequentially —
+        # no concurrent worker can have stubs deleted mid-test by this reset.
         httpx.post(f"{self.admin_url}/mappings/reset")
 
     def create_mapping(

@@ -18,6 +18,7 @@ from tests.integration.utils.wiremock import WireMockContext
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
 
+@pytest.mark.wiremock
 class TestSpotifyOAuthSessionClient:
     """
     These integration tests are focus on data persistence and protocol flow (HTTP 401 -> Refresh -> Retry).

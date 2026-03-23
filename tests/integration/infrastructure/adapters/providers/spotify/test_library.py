@@ -14,6 +14,7 @@ from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
 
+@pytest.mark.wiremock
 class TestSpotifyLibrary:
     @pytest.fixture
     def track_locale(self) -> dict[str, Any]:

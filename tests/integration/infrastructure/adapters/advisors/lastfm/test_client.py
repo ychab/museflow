@@ -10,6 +10,7 @@ from tests import ASSETS_DIR
 from tests.integration.utils.wiremock import WireMockContext
 
 
+@pytest.mark.wiremock
 class TestLastFmClientAdapter:
     @pytest.fixture
     def wiremock_response(self, request: pytest.FixtureRequest) -> dict[str, Any]:

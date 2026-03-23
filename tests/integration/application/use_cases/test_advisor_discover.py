@@ -15,6 +15,7 @@ from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
 
+@pytest.mark.wiremock
 class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
     @pytest.fixture
     def use_case(

@@ -129,14 +129,14 @@ db-shell: up-db ## Connect to the database shell
 .PHONY: test test-unit test-integration
 
 test: up-db up-wiremock ## Run all the testsuite
-	uv run pytest ./tests || ($(MAKE) down && exit 1)
+	uv run pytest ./tests -n auto --dist=loadgroup || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
 test-unit: ## Run unit tests
-	uv run pytest ./tests/unit -v
+	uv run pytest ./tests/unit -n auto --dist=loadgroup -v
 
 test-integration: up-test ## Run integration tests
-	uv run pytest ./tests/integration -v || ($(MAKE) down && exit 1)
+	uv run pytest ./tests/integration -n auto --dist=loadgroup -v || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 
 ###################

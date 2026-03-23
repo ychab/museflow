@@ -19,6 +19,7 @@ from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAu
 from tests.integration.utils.wiremock import WireMockContext
 
 
+@pytest.mark.wiremock
 class TestSpotifyOauthCallbackUseCase:
     async def test__token_payload__create(
         self,
