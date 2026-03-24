@@ -42,7 +42,7 @@ async def register(
             password_hasher=password_hasher,
         )
     except UserAlreadyExistsException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
 
     access_token = access_token_manager.create(data={"sub": str(user.id)})
 

@@ -55,7 +55,7 @@ async def spotify_callback(
 ) -> SuccessResponse:
     if error:
         logger.warning("Spotify Callback Error received", extra={"user_id": str(current_user.id), "error": error})
-        raise HTTPException(status_code=400, detail=f"OAuth error: {error}")
+        raise HTTPException(status_code=400, detail="OAuth authorisation failed")
     if not code:
         logger.warning("Spotify Callback received without code", extra={"user_id": str(current_user.id)})
         raise HTTPException(status_code=400, detail="No authorization code received")

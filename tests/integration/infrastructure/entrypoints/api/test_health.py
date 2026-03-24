@@ -28,5 +28,5 @@ class TestHealthCheck:
         response_data = response.json()
         assert response_data == {
             "status": "unhealthy",
-            "database": "error: Boom",
+            "database": "unavailable",
         }

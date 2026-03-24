@@ -1,4 +1,5 @@
 import os
+import re
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
 
@@ -64,7 +65,7 @@ def test_db_name(worker_id: str) -> str:
     if database_settings.URI is None or not database_settings.URI.path:
         pytest.exit("Missing DATABASE_URI env var (or composites)", 1)
 
-    basename = database_settings.URI.path[1:]
+    basename = re.sub(r"[^a-z0-9_]", "_", database_settings.URI.path[1:])
     return f"test_{basename}" if worker_id == "master" else f"test_{basename}_{worker_id}"
 
 

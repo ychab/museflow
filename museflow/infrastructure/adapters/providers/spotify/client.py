@@ -212,7 +212,6 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
                     "status_code": e.response.status_code,
                     "method": method,
                     "endpoint": endpoint,
-                    "response_text": e.response.text,
                 },
             )
             raise e

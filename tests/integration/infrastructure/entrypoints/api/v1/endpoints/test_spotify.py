@@ -185,7 +185,7 @@ class TestSpotifyCallback:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         response_data = response.json()
-        assert response_data["detail"] == "OAuth error: dummy error"
+        assert response_data["detail"] == "OAuth authorisation failed"
 
     async def test__no_code(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
         url = app.url_path_for("spotify_callback")

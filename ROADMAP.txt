@@ -6,15 +6,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - update README.md with claude agents, etc.
 
-## claude
-
-- execute the skills and fix them:
-    -> todo: security-review
-
-## Tests
-
-- try to run them in parallel?
-
 
 ## Sync
 

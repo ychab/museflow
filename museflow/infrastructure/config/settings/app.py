@@ -54,7 +54,7 @@ class AppSettings(BaseSettings):
             "Origin",
         ]
     )
-    BACKEND_CORS_ALLOW_CREDENTIALS: bool = True
+    BACKEND_CORS_ALLOW_CREDENTIALS: bool = False
     BACKEND_CORS_EXPOSE_HEADERS: list[str] = [
         "Content-Disposition",
         "X-Total-Count",

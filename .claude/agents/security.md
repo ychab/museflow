@@ -54,11 +54,13 @@ You are a security engineer specializing in Python web applications and the Muse
 - [ ] SSL verification is NOT disabled (`verify=False` is forbidden)
 - [ ] `Retry-After` values checked against `max_retry_wait` before sleeping — no unbounded sleep
 - [ ] `ProviderRateLimitExceeded` raised (not swallowed) when `Retry-After` exceeds max
+- **Known exception:** Last.fm API (`ws.audioscrobbler.com`) uses HTTP only — their API does not support HTTPS. This is an architectural limitation of the provider, not a code defect. Do not flag Last.fm HTTP as a vulnerability.
 
 ### Error handling & information leakage
 - [ ] Generic `except` in CLI commands: use `str(e)` for user-facing messages only — full traceback goes to logger
 - [ ] HTTP error responses never include internal stack traces or raw exception messages
 - [ ] `logger.exception()` (with traceback) in `except` blocks for ERROR-level — never `logger.error(str(e))`
+- **Known exception:** `logger.exception(f"...{e}", ...)` is allowed when the exception detail is intentional user-facing diagnostic output (e.g., skipped-item warnings in long-running CLI operations such as playlist import). The `{e}` surfaces the reason directly to the operator.
 
 ### Dependency audit
 - Run `uv audit` and report any CVEs found.
