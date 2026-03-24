@@ -295,6 +295,48 @@ for i, item in enumerate(items):
 - Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/lastfm/`.
 - Use the `spotify_wiremock` fixture to configure stubs per-test.
 
+### Dead End Protocol
+
+When fixing a failing test or external-tool issue, Claude applies a **3-attempt cap**. If the problem is not resolved after 3 attempts, Claude **stops** iterating and outputs a structured summary instead.
+
+**What counts as one attempt:**
+- Run the test(s), observe the failure.
+- Form a hypothesis, apply a targeted fix (edit a file, update a stub, change a fixture).
+- Re-run to verify.
+
+**When the cap is reached, output:**
+
+```
+## Dead End — <test or file name>
+
+### Attempts (3/3)
+1. **Attempt 1:** <what was changed> → <error / result>
+2. **Attempt 2:** <what was changed> → <error / result>
+3. **Attempt 3:** <what was changed> → <error / result>
+
+### Root Cause
+<Clear, honest assessment of what the problem appears to be and why it is hard to fix automatically.>
+
+### Options
+**A — <most likely fix>**
+<Concrete steps. Who needs to do what.>
+
+**B — <alternative approach>**
+<Concrete steps.>
+
+**C — Skip temporarily**
+Mark with `@pytest.mark.skip(reason="<issue>: <short description>")` until the root cause is resolved.
+```
+
+**Failure-mode option menus (use as starting point):**
+
+| Failure mode | Typical options |
+|---|---|
+| Test assertion keeps failing | A) Fix source bug · B) Update test expectation · C) Skip |
+| WireMock stub mismatch | A) Update stub JSON · B) Add `@pytest.mark.wiremock` · C) Regenerate stub from real API (`--spotify-live`) |
+| DB / fixture error | A) Run `make db-upgrade` · B) Fix conftest fixture chain · C) Restart Docker (`make down && make up`) |
+| External library break | A) Pin previous version in `pyproject.toml` · B) Adapt code to new API · C) Skip + open issue |
+
 ### Special Markers
 - `@pytest.mark.slow` — skipped by default, run with `--slow`
 - `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify API

@@ -41,6 +41,40 @@ You are a testing expert specializing in the MuseFlow codebase. Your job is to a
 4. Check existing fixtures and factories before creating new ones — reuse whenever possible.
 5. Write tests, run coverage, repeat until 100%.
 
+## Dead End Protocol
+
+After **3 failed fix attempts** on the same problem, **stop iterating** and output a structured summary.
+
+**One attempt =** run tests → form hypothesis → apply fix → re-run.
+
+**Output format when cap is reached:**
+
+```
+## Dead End — <test or file name>
+
+### Attempts (3/3)
+1. **Attempt 1:** <what was changed> → <error>
+2. **Attempt 2:** <what was changed> → <error>
+3. **Attempt 3:** <what was changed> → <error>
+
+### Root Cause
+<Honest assessment of what is blocking and why automated fixing is insufficient.>
+
+### Options
+**A — <most likely fix>**  <steps>
+**B — <alternative>**  <steps>
+**C — Skip temporarily**  `@pytest.mark.skip(reason="<short description>")`
+```
+
+Common option menus by failure mode:
+
+| Failure mode | Typical options |
+|---|---|
+| Assertion keeps failing | A) Fix source bug · B) Update expectation · C) Skip |
+| WireMock stub mismatch | A) Update stub JSON · B) Add `@pytest.mark.wiremock` · C) Regenerate from live API |
+| DB / fixture error | A) `make db-upgrade` · B) Fix conftest chain · C) `make down && make up` |
+| External library break | A) Pin old version · B) Adapt to new API · C) Skip + open issue |
+
 ## Test file mirror convention
 
 ```
