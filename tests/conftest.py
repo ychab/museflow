@@ -26,7 +26,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow (not executed by default)")
     config.addinivalue_line("markers", "spotify_live: mark test as requiring live Spotify API access")
     config.addinivalue_line(
-        "markers", "wiremock: test uses a WireMock server — runs serially on a single xdist worker"
+        "markers",
+        "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'lastfm') — "
+        "groups tests by server set so each group runs serially on a single xdist worker",
     )
 
 
@@ -45,8 +47,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         if item.get_closest_marker("spotify_live") and not config.getoption("--spotify-refresh-token"):
             item.add_marker(skip_spotify)
 
-        if item.get_closest_marker("wiremock"):
-            item.add_marker(pytest.mark.xdist_group("wiremock"))
+        if marker := item.get_closest_marker("wiremock"):
+            servers = sorted(set(marker.args))
+            item.add_marker(pytest.mark.xdist_group("wiremock-" + "-".join(servers)))
 
 
 @pytest.fixture(scope="session", autouse=True)

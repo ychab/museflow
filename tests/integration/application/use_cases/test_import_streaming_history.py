@@ -24,7 +24,7 @@ from tests.integration.utils.wiremock import WireMockContext
 HISTORY_DIR: Final[Path] = ASSETS_DIR / "history"
 
 
-@pytest.mark.wiremock
+@pytest.mark.wiremock("spotify")
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def use_case(

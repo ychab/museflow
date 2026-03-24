@@ -38,7 +38,7 @@ def wiremock_response(filename: str) -> dict[str, Any]:
     return json.loads(filepath.read_text())
 
 
-@pytest.mark.wiremock
+@pytest.mark.wiremock("spotify")
 class TestSpotifySyncMusic:
     @pytest.fixture
     def patch_playlist_tracks_response(self, spotify_wiremock: WireMockContext) -> None:

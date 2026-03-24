@@ -15,7 +15,7 @@ from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
 
-@pytest.mark.wiremock
+@pytest.mark.wiremock("lastfm")
 class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
     @pytest.fixture
     def use_case(
@@ -71,7 +71,6 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         track_seed: Track,
         wiremock_lastfm_response: dict[str, Any],
         track_repository: TrackRepository,
-        spotify_wiremock: WireMockContext,
         lastfm_wiremock: WireMockContext,
     ) -> None:
         lastfm_wiremock.create_mapping(
