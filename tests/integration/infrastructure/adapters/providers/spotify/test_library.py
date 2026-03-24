@@ -416,6 +416,71 @@ class TestSpotifyLibrary:
         assert track.artists[0].name == "Grupo Niche"
         assert track.isrc == "COC018416252"
 
+    async def test__get_tracks_by_ids__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
+        tracks = await spotify_library.get_tracks_by_ids(
+            track_ids=[
+                "7J5pB49l9ycy9ImB6D9hu0",
+                "4BqYFb5LHhRmmTDsPyUmQg",
+            ]
+        )
+
+        assert len(tracks) == 2
+        assert tracks[0].provider_id == "7J5pB49l9ycy9ImB6D9hu0"
+        assert tracks[1].provider_id == "4BqYFb5LHhRmmTDsPyUmQg"
+
+    @pytest.mark.parametrize("wiremock_response", ["track_4BqYFb5LHhRmmTDsPyUmQg"], indirect=["wiremock_response"])
+    async def test__get_tracks_by_ids__skips__none(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+        wiremock_response: dict[str, Any],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/tracks",
+            status=200,
+            json_body={"tracks": [None, wiremock_response]},
+        )
+
+        with caplog.at_level(logging.DEBUG):
+            tracks = await spotify_library.get_tracks_by_ids(
+                track_ids=[
+                    "id_not_exists",
+                    "4BqYFb5LHhRmmTDsPyUmQg",
+                ]
+            )
+
+        assert len(tracks) == 1
+        assert tracks[0].provider_id == "4BqYFb5LHhRmmTDsPyUmQg"
+
+        assert "Skipping null track entry in response" in caplog.text
+
+    @pytest.mark.parametrize("wiremock_response", ["track_4BqYFb5LHhRmmTDsPyUmQg"], indirect=["wiremock_response"])
+    async def test__get_tracks_by_ids__skips__local_file(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        track_locale: dict[str, Any],
+        wiremock_response: dict[str, Any],
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/tracks",
+            status=200,
+            json_body={"tracks": [track_locale, wiremock_response]},
+        )
+
+        tracks = await spotify_library.get_tracks_by_ids(
+            track_ids=[
+                "local_id",
+                "4BqYFb5LHhRmmTDsPyUmQg",
+            ]
+        )
+
+        assert len(tracks) == 1
+        assert tracks[0].provider_id == "4BqYFb5LHhRmmTDsPyUmQg"
+
     async def test__create_playlist__nominal(
         self,
         playlist_tracks: list[Track],

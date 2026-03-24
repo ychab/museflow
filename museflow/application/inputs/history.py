@@ -7,4 +7,5 @@ class ImportStreamingHistoryConfigInput:
     directory: Path
     min_ms_played: int = 30_000
     batch_size: int = 20
+    fetch_bulk: bool = False
     purge: bool = False

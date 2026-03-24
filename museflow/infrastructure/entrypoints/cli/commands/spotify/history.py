@@ -44,6 +44,11 @@ def history(
         min=1,
         max=50,
     ),
+    fetch_bulk: bool = typer.Option(
+        False,
+        "--fetch-bulk/--no-fetch-bulk",
+        help="Use Spotify bulk endpoint (deprecated) instead of per-track requests",
+    ),
     purge: bool = typer.Option(False, "--purge/--no-purge", help="Purge existing HISTORY tracks before import"),
 ) -> None:
     start_time = time.perf_counter()
@@ -52,6 +57,7 @@ def history(
         directory=directory,
         min_ms_played=min_duration_played * 1_000,
         batch_size=batch_size,
+        fetch_bulk=fetch_bulk,
         purge=purge,
     )
 

@@ -110,7 +110,12 @@ class ImportStreamingHistoryUseCase:
         for chunk in itertools.batched(unknown_ids, config.batch_size, strict=False):
             logger.info(f"... fetching {tracks_fetched + len(chunk)} / {len(unknown_ids)}...")
 
-            chunk_tracks = await asyncio.gather(*[self._provider_library.get_track_by_id(tid) for tid in chunk])
+            if config.fetch_bulk:
+                chunk_tracks = await self._provider_library.get_tracks_by_ids(list(chunk))
+            else:
+                chunk_tracks = list(
+                    await asyncio.gather(*[self._provider_library.get_track_by_id(tid) for tid in chunk])
+                )
             tracks_fetched += len(chunk_tracks)
 
             _, created = await self._track_repository.bulk_upsert(

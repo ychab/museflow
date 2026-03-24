@@ -90,6 +90,20 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
+    async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
+        """Fetches metadata for multiple tracks in a single bulk request.
+
+        Not all providers may support this method, or could be deprecated.
+
+        Args:
+            track_ids: Provider-specific track identifiers (adapter enforces provider limits).
+
+        Returns:
+            A list of `Track` entities for all successfully resolved IDs, source=HISTORY.
+        """
+        ...
+
+    @abstractmethod
     async def search_tracks(
         self,
         track: str,

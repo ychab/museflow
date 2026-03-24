@@ -173,6 +173,38 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         spotify_track = SpotifyTrack.model_validate(data)
         return to_domain_track(spotify_track, user_id=self.user.id, sources=TrackSource.HISTORY)
 
+    async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
+        tracks: list[Track] = []
+
+        data = await self._execute_request(
+            method="GET",
+            endpoint="/tracks",
+            params={"ids": ",".join(track_ids)},
+        )
+
+        for item in data.get("tracks", []):
+            if item is None:
+                # Seems weird but indeed, Spotify could return a None entry (instead of returning nothing)
+                # in case the ID's is invalid or doesn't exist anymore.
+                logger.debug("Skipping null track entry in response")
+                continue
+
+            try:
+                spotify_track = SpotifyTrack.model_validate(item)
+            except ValidationError as e:
+                logger.debug(f"Skipping invalid track {item.get('id')} with error: {e}")
+                continue
+
+            tracks.append(
+                to_domain_track(
+                    spotify_track=spotify_track,
+                    user_id=self.user.id,
+                    sources=TrackSource.HISTORY,
+                )
+            )
+
+        return tracks
+
     async def search_tracks(
         self,
         track: str,

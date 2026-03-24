@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/tracks",
+    "queryParameters": {
+      "ids": { "matches": ".+" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "tracks.json",
+    "headers": { "Content-Type": "application/json" }
+  }
+}

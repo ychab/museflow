@@ -215,6 +215,89 @@ class TestImportStreamingHistorySpotifyUseCase:
         ],
         indirect=True,
     )
+    async def test__fetch_bulk__nominal(
+        self,
+        user: User,
+        tmp_path: Path,
+        json_file: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        tracks = TrackFactory.batch(
+            size=3,
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+
+        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_provider_library.get_tracks_by_ids.side_effect = [[tracks[0]], [tracks[1]], [tracks[2]]]
+        mock_track_repository.bulk_upsert.side_effect = [([t.id], 1) for t in tracks]
+
+        report = await use_case.import_history(
+            user=user,
+            config=ImportStreamingHistoryConfigInput(
+                directory=tmp_path,
+                batch_size=1,
+                fetch_bulk=True,
+            ),
+        )
+
+        assert report.tracks_fetched == 3
+        assert report.tracks_created == 3
+        mock_provider_library.get_track_by_id.assert_not_called()
+        assert mock_provider_library.get_tracks_by_ids.call_count == 3
+
+    @pytest.mark.parametrize(
+        "json_file",
+        [
+            {
+                "entries": [
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track1"},
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track2"},
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track3"},
+                ],
+            },
+        ],
+        indirect=True,
+    )
+    async def test__fetch_bulk__partial_results(
+        self,
+        user: User,
+        tmp_path: Path,
+        json_file: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        track_1 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY, sources=TrackSource.HISTORY)
+
+        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_provider_library.get_tracks_by_ids.return_value = [track_1]
+        mock_track_repository.bulk_upsert.return_value = ([track_1.id], 1)
+
+        report = await use_case.import_history(
+            user=user,
+            config=ImportStreamingHistoryConfigInput(directory=tmp_path, fetch_bulk=True),
+        )
+
+        assert report.tracks_fetched == 1
+        assert report.tracks_created == 1
+
+    @pytest.mark.parametrize(
+        "json_file",
+        [
+            {
+                "entries": [
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track1"},
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track2"},
+                    {"ms_played": 60000, "spotify_track_uri": "spotify:track:track3"},
+                ],
+            },
+        ],
+        indirect=True,
+    )
     async def test__batch_size__chunks_requests(
         self,
         user: User,

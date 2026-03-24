@@ -36,6 +36,7 @@ class TestSpotifyHistoryParserCommand:
                 "--directory", str(tmp_path),
                 "--min-duration-played", "10",
                 "--batch-size", "50",
+                "--fetch-bulk",
                 "--purge",
             ],
         )

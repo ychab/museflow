@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+from typing import Any
 from typing import Final
 
 from sqlalchemy import func
@@ -27,6 +29,21 @@ HISTORY_DIR: Final[Path] = ASSETS_DIR / "history"
 @pytest.mark.wiremock("spotify")
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
+    def tracks_json_response(self) -> dict[str, Any]:
+        return {
+            "tracks": [
+                json.loads((ASSETS_DIR / "wiremock" / "spotify" / "__files" / f"track_{track_id}.json").read_text())
+                for track_id in [
+                    # Same ID's as the history JSON files.
+                    "6wb6zxkNTBtcYVkXcvNyJp",
+                    "76v0OHTbZGeOZYmaLtEDhQ",
+                    "5BuWeANxxuVOZdTCgnaOnp",
+                    "4BqYFb5LHhRmmTDsPyUmQg",
+                ]
+            ],
+        }
+
+    @pytest.fixture
     def use_case(
         self,
         spotify_library: SpotifyLibraryAdapter,
@@ -37,7 +54,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             track_repository=track_repository,
         )
 
-    async def test__nominal(
+    async def test__nominal__fetch_single(
         self,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
@@ -53,6 +70,41 @@ class TestImportStreamingHistorySpotifyUseCase:
             config=ImportStreamingHistoryConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
+            ),
+        )
+
+        assert report == ImportStreamingHistoryReport(
+            items_read=6,
+            items_skipped_duration=2,
+            items_skipped_no_uri=0,
+            unique_track_ids=4,
+            tracks_already_known=0,
+            tracks_fetched=4,
+            tracks_created=4,
+            tracks_purged=0,
+        )
+
+    async def test__nominal__fetch_bulk(
+        self,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+        tracks_json_response: dict[str, Any],
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/tracks",
+            status=200,
+            json_body=tracks_json_response,
+        )
+
+        report = await use_case.import_history(
+            user=user,
+            config=ImportStreamingHistoryConfigInput(
+                directory=HISTORY_DIR,
+                min_ms_played=30_000,
+                batch_size=50,
+                fetch_bulk=True,
             ),
         )
 
