@@ -4,8 +4,7 @@
 This project follows **Clean Architecture (Hexagonal)** principles.
 - **Domain (`museflow/domain`)**:
   - **Entities**: Pure Python Dataclasses (`frozen=True`). Represent the "Truth" of the system.
-  - **Schemas**: Pydantic Models. Represent "Input/Output" contracts (DTOs, Commands).
-  - **Ports**: Interfaces (`abc.ABC`).
+  - **Ports**: Interfaces (`abc.ABC`). Accept Input Schemas, return Domain Entities.
 - **Application (`museflow/application`)**: Orchestrates business logic. Depends ONLY on Domain.
 - **Infrastructure (`museflow/infrastructure`)**: Implements details (SQLAlchemy, FastAPI, Typer CLI commands, Spotify Client, etc).
 
@@ -23,7 +22,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - **Slugs/UUIDs**: Should be treated as plain strings/UUIDs passed in during construction. Logic for generating them belongs in the Adapter/Mapper, not the Entity itself.
 
 #### B. Input Schemas / Commands (`museflow/application/inputs/`)
-- **Technology**: `pydantic.BaseModel` (v2).
+- **Technology**: `pydantic.BaseModel` (v2) **or** `@dataclass(frozen=True, kw_only=True)` — both are valid.
 - **Purpose**: Define data entering the application (e.g., `UserCreate`, `UserUpdateInput`, `TrackFilter`).
 - **Validation**: Strict validation (Length, Regex, Enums) happens here.
 - **Naming**: `[Entity]Create`, `[Entity]Update`, `[Entity]Filter`.
@@ -95,11 +94,13 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 ### Best Practices & Implementation
 - **Logger**: Use `logger = logging.getLogger(__name__)`.
 - **Exceptions**: Use `logger.exception("Message")` inside `except` blocks to auto-attach tracebacks.
-- **Structured Context**: Avoid f-strings for IDs. Pass context via `extra` dict (or rely on `structlog` if available later).
-  - **Bad**: `logger.error(f"Failed to sync library for user {user.id}")`
-  - **Good**: `logger.error("Failed to sync library", extra={"user_id": str(user.id)})`
-  - *Why?* Better aggregation in tools like Datadog/Sentry (message template is static).
-  - *Exception*: Use cases logs can be used by Typer commands to display some information to the user. In that case, f-strings are allowed.
+- **f-strings in messages**: Always allowed — they produce the human-readable message.
+- **Structured Context**: Add `extra={}` when the data would be useful to query in an aggregator (IDs, counts, entity names). Not required for every log line — use judgement.
+  - **Example**: `logger.info(f"Synced {count} tracks", extra={"count": count, "user_id": str(user.id)})`
+- **Exception blocks**: Use a static message — the traceback already carries the error detail. Move variable data to `extra={}`.
+  - **Bad**: `logger.exception(f"Spotify error: {e}")`
+  - **Good**: `logger.exception("Spotify error", extra={"status_code": e.response.status_code})`
+  - *Exception*: `{e}` in the message is allowed when the detail is intentional user-facing diagnostic output (e.g., skipped-item warnings in long-running CLI operations).
 
 ## 5. Documentation & Comments
 

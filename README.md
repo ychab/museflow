@@ -209,7 +209,7 @@ uv run museflow spotify discover --email <email> [OPTIONS]
 
 **Discover Options:**
 
-*   `--advisor`: The music advisor to use for getting recommendations (e.g., `spotify`).
+*   `--advisor`: The music advisor to use for getting recommendations (e.g., `lastfm`).
 *   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
 *   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
 *   `--seed-genres`: A list of genres to filter on the seeds (e.g. "rock", "jazz").
@@ -282,6 +282,7 @@ This project is configured for [Claude Code](https://claude.ai/claude-code), Ant
 - **`CLAUDE.md`** — project conventions and architecture rules loaded into every Claude session
 - **`CONVENTIONS.md`** — detailed architecture reference (the source of truth)
 - **`.claude/commands/`** — custom slash commands (skills) for common development workflows
+- **`.claude/agents/`** — autonomous subagents for specialized tasks
 
 ### Skills
 
@@ -295,3 +296,15 @@ Skills are project-specific slash commands that encode the project's conventions
 | `/new-provider` | `/new-provider <name>` | Scaffolds a new music provider integration: client, session, library adapter, DTOs, mappers, schemas, types, exceptions, settings, WireMock stubs, and tests — mirroring the Spotify pattern |
 | `/arch-review` | `/arch-review [files]` | Reviews changed files for Clean Architecture violations: framework imports in domain, repositories instantiated in use cases, wrong `JSONB`/`ARRAY` dialect, missing `to_entity()`, logging secrets, etc. |
 | `/security-review` | `/security-review [files]` | Reviews changed files for security issues: hardcoded secrets, unprotected endpoints, unbounded `Retry-After` sleeps, raw SQL, missing input validation, path traversal, and runs `uv audit` for CVEs |
+
+### Agents
+
+Agents are autonomous subagents that Claude routes to automatically or that you can trigger explicitly. They run as subprocesses with their own tools and specialized instructions.
+
+| Agent | What it does |
+|-------|--------------|
+| `python` | Fixes lint errors autonomously — runs `make lint`, fixes ruff/mypy/deptry issues, iterates until clean |
+| `test` | Fixes failing tests and fills coverage gaps — runs `make test`, traces failures, writes missing branches |
+| `arch` | Architecture compliance review — checks changed files against hexagonal architecture rules |
+| `security` | Security review — checks changed files for vulnerabilities, runs `uv audit` for CVEs |
+| `engineer` | Read-only codebase explorer — explains feature flows, locates code, guides implementation approach |

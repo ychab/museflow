@@ -2,14 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## docs
-
-- update README.md with claude agents, etc.
-
 
 ## Sync
 
-- spotify: import the extended streaming history?
+- spotify: import the extended streaming history:
     => implements the deprecated /tracks/ids=  to switch between the /track/<id>?
 - review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
 
@@ -37,7 +33,3 @@ This quick and dirty document just list the roadmap tasks.
 ## Just
 
 Replace Makefile by Just?
-
-## doc code
-
-- improve the doc code for tests
