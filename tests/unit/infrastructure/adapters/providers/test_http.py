@@ -11,10 +11,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 from tenacity import stop_after_attempt
 
-from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.http import HttpProviderMixin
-
-from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 
 
 class DummyProviderAdapter(HttpProviderMixin): ...
@@ -23,14 +20,7 @@ class DummyProviderAdapter(HttpProviderMixin): ...
 class TestHttpProviderMixin:
     @pytest.fixture
     async def adapter(self) -> DummyProviderAdapter:
-        return DummyProviderAdapter(
-            base_url=HttpUrl("https://api.example.com/v1"),
-            token_endpoint=HttpUrl("https://api.example.com/token"),
-        )
-
-    @pytest.fixture
-    def token_payload(self) -> OAuthProviderTokenPayload:
-        return OAuthProviderTokenPayloadFactory.build()
+        return DummyProviderAdapter(base_url=HttpUrl("https://api.example.com/v1"))
 
     @pytest.fixture
     def mock_tenacity(self) -> Iterable[None]:
@@ -47,7 +37,6 @@ class TestHttpProviderMixin:
     async def test__nominal(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
     ) -> None:
         response_json: dict[str, Any] = {"ok": True}
@@ -57,18 +46,13 @@ class TestHttpProviderMixin:
             json=response_json,
         )
 
-        result = await adapter.make_api_call(
-            method="GET",
-            endpoint="/tracks",
-            token_payload=token_payload,
-        )
+        result = await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert result == response_json
 
     async def test__no_content(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -77,18 +61,41 @@ class TestHttpProviderMixin:
             status_code=codes.NO_CONTENT,
         )
 
-        result = await adapter.make_api_call(
-            method="GET",
-            endpoint="/tracks",
-            token_payload=token_payload,
-        )
+        result = await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert result == {}
+
+    async def test__default_content_type_header(
+        self,
+        adapter: DummyProviderAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url="https://api.example.com/v1/tracks", method="GET", json={})
+
+        await adapter.make_api_call(method="GET", endpoint="/tracks")
+
+        assert httpx_mock.get_requests()[0].headers["Content-Type"] == "application/json"
+
+    async def test__custom_headers_merged(
+        self,
+        adapter: DummyProviderAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url="https://api.example.com/v1/tracks", method="GET", json={})
+
+        await adapter.make_api_call(
+            method="GET",
+            endpoint="/tracks",
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        request = httpx_mock.get_requests()[0]
+        assert request.headers["Content-Type"] == "application/json"
+        assert request.headers["Authorization"] == "Bearer test-token"
 
     async def test__retry__on_server_error(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         mock_tenacity: None,
     ) -> None:
@@ -103,11 +110,7 @@ class TestHttpProviderMixin:
             json={"ok": True},
         )
 
-        result = await adapter.make_api_call(
-            method="GET",
-            endpoint="/tracks",
-            token_payload=token_payload,
-        )
+        result = await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert result == {"ok": True}
         assert len(httpx_mock.get_requests()) == 2
@@ -115,7 +118,6 @@ class TestHttpProviderMixin:
     async def test__retry__on_network_error(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         mock_tenacity: None,
     ) -> None:
@@ -126,11 +128,7 @@ class TestHttpProviderMixin:
             json={"ok": True},
         )
 
-        result = await adapter.make_api_call(
-            method="GET",
-            endpoint="/tracks",
-            token_payload=token_payload,
-        )
+        result = await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert result == {"ok": True}
         assert len(httpx_mock.get_requests()) == 2
@@ -138,7 +136,6 @@ class TestHttpProviderMixin:
     async def test__retry__max_attempts_exceeded(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         mock_tenacity: None,
     ) -> None:
@@ -150,11 +147,7 @@ class TestHttpProviderMixin:
             )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await adapter.make_api_call(
-                method="GET",
-                endpoint="/tracks",
-                token_payload=token_payload,
-            )
+            await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert exc_info.value.response.status_code == codes.INTERNAL_SERVER_ERROR
         assert len(httpx_mock.get_requests()) == 5
@@ -163,7 +156,6 @@ class TestHttpProviderMixin:
     async def test__retry__not_on_4xx(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         status_code: int,
     ) -> None:
@@ -174,7 +166,7 @@ class TestHttpProviderMixin:
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await adapter.make_api_call(method="GET", endpoint="/tracks", token_payload=token_payload)
+            await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert exc_info.value.response.status_code == status_code
         assert len(httpx_mock.get_requests()) == 1
@@ -182,20 +174,18 @@ class TestHttpProviderMixin:
     async def test__retry__not_on_generic_error(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_exception(RuntimeError("Unexpected crash"))
 
         with pytest.raises(RuntimeError, match="Unexpected crash"):
-            await adapter.make_api_call(method="GET", endpoint="/tracks", token_payload=token_payload)
+            await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert len(httpx_mock.get_requests()) == 1
 
     async def test__retry__rate_limit(
         self,
         adapter: DummyProviderAdapter,
-        token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         mock_tenacity: None,
     ) -> None:
@@ -210,7 +200,7 @@ class TestHttpProviderMixin:
             json={"ok": True},
         )
 
-        result = await adapter.make_api_call(method="GET", endpoint="/tracks", token_payload=token_payload)
+        result = await adapter.make_api_call(method="GET", endpoint="/tracks")
 
         assert result == {"ok": True}
         assert len(httpx_mock.get_requests()) == 2

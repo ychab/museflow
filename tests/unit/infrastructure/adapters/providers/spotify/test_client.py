@@ -188,6 +188,46 @@ class TestSpotifyClientAdapter:
         )
         assert response_data == {}
 
+    async def test__make_api_call__no_token_payload(
+        self,
+        spotify_client: SpotifyClientAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url=f"{spotify_client.base_url}/foo/bar",
+            method="GET",
+            json={"ok": True},
+        )
+
+        result = await spotify_client.make_api_call(method="GET", endpoint="/foo/bar")
+
+        request = httpx_mock.get_requests()[0]
+        assert "Authorization" not in request.headers
+        assert result == {"ok": True}
+
+    async def test__make_api_call__custom_headers(
+        self,
+        spotify_client: SpotifyClientAdapter,
+        token_payload: OAuthProviderTokenPayload,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url=f"{spotify_client.base_url}/foo/bar",
+            method="GET",
+            json={"ok": True},
+        )
+
+        await spotify_client.make_api_call(
+            method="GET",
+            endpoint="/foo/bar",
+            headers={"X-Custom": "value"},
+            token_payload=token_payload,
+        )
+
+        request = httpx_mock.get_requests()[0]
+        assert request.headers["X-Custom"] == "value"
+        assert request.headers["Authorization"] == f"{token_payload.token_type} {token_payload.access_token}"
+
     async def test__make_api_call__retry__not_on_401(
         self,
         spotify_client: SpotifyClientAdapter,

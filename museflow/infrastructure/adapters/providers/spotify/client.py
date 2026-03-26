@@ -64,7 +64,6 @@ class SpotifyClientAdapter(HttpProviderMixin, ProviderClientPort):
     ) -> None:
         super().__init__(
             base_url=base_url or HttpUrl("https://api.spotify.com/v1"),
-            token_endpoint=token_endpoint or HttpUrl("https://accounts.spotify.com/api/token"),
             verify_ssl=verify_ssl,
             timeout=timeout,
         )
@@ -72,9 +71,15 @@ class SpotifyClientAdapter(HttpProviderMixin, ProviderClientPort):
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-        self._auth_endpoint = auth_endpoint or HttpUrl("https://accounts.spotify.com/authorize")
         self.token_buffer_seconds = token_buffer_seconds
         self.max_retry_wait = max_retry_wait
+
+        self._auth_endpoint = auth_endpoint or HttpUrl("https://accounts.spotify.com/authorize")
+        self._token_endpoint = token_endpoint or HttpUrl("https://accounts.spotify.com/api/token")
+
+    @property
+    def token_endpoint(self) -> HttpUrl:
+        return self._token_endpoint
 
     def _get_basic_auth_header(self) -> str:
         credentials = f"{self.client_id}:{self.client_secret}"
@@ -150,23 +155,26 @@ class SpotifyClientAdapter(HttpProviderMixin, ProviderClientPort):
         self,
         method: str,
         endpoint: str,
-        token_payload: OAuthProviderTokenPayload,
+        *,
+        headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
+        token_payload: OAuthProviderTokenPayload | None = None,
     ) -> dict[str, Any]:
         """Makes an authenticated API call to the Spotify API.
 
         This method includes retry logic for transient errors and rate limiting.
         It specifically handles the `Retry-After` header from Spotify for 429 responses.
         """
+        headers = {"Content-Type": "application/json"} | (headers or {})
+        if token_payload:
+            headers["Authorization"] = f"{token_payload.token_type} {token_payload.access_token}"
+
         try:
             response = await self._client.request(
                 method=method.upper(),
                 url=f"{str(self.base_url).rstrip('/')}{endpoint}",
-                headers={
-                    "Authorization": f"{token_payload.token_type} {token_payload.access_token}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 params=params,
                 json=json_data,
             )
