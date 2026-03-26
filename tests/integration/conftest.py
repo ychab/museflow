@@ -32,6 +32,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.advisors.http import HttpAdvisorMixin
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -40,7 +41,7 @@ from museflow.infrastructure.adapters.database.repositories.music import ArtistS
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
@@ -291,13 +292,13 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
 
 @pytest.fixture
-async def spotify_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[SpotifyOAuthClientAdapter]:
+async def spotify_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[SpotifyClientAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_SPOTIFY_BASE_URL")
 
-    retry_method = SpotifyOAuthClientAdapter.make_user_api_call
+    retry_method = SpotifyClientAdapter.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
-    async with SpotifyOAuthClientAdapter(
+    async with SpotifyClientAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
@@ -316,7 +317,7 @@ def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
     auth_token_repository: OAuthProviderTokenRepository,
-    spotify_client: SpotifyOAuthClientAdapter,
+    spotify_client: SpotifyClientAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
@@ -346,7 +347,7 @@ def spotify_library(
 async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmClientAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_LASTFM_BASE_URL")
 
-    retry_method = LastFmClientAdapter.make_api_call
+    retry_method = HttpAdvisorMixin.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
     async with LastFmClientAdapter(

@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import jwt
 
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -23,7 +22,7 @@ from museflow.infrastructure.adapters.database.repositories.auth import OAuthPro
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -62,8 +61,8 @@ def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserReposito
     return UserSQLRepository(session)
 
 
-async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
-    async with SpotifyOAuthClientAdapter(
+async def get_spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
+    async with SpotifyClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,

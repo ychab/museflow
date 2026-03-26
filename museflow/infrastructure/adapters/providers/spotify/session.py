@@ -2,13 +2,13 @@ import asyncio
 from typing import Any
 
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -28,7 +28,7 @@ class SpotifyOAuthSessionClient:
         user: User,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
-        client: ProviderOAuthClientPort,
+        client: SpotifyClientAdapter,
         token_buffer_seconds: int = spotify_settings.TOKEN_BUFFER_SECONDS,
     ):
         self.user = user
@@ -71,7 +71,7 @@ class SpotifyOAuthSessionClient:
         current_access_token = self.auth_token.token_access
 
         try:
-            response = await self.client.make_user_api_call(
+            response = await self.client.make_api_call(
                 method=method,
                 endpoint=endpoint,
                 token_payload=auth_token_to_token_payload(self.auth_token),
@@ -84,7 +84,7 @@ class SpotifyOAuthSessionClient:
             await self._refresh_token_safely(stale_access_token=current_access_token)
 
             # Retry only ONCE with new token and if it fails again with 401, bubble up the error (session invalid)
-            return await self.client.make_user_api_call(
+            return await self.client.make_api_call(
                 method=method,
                 endpoint=endpoint,
                 token_payload=auth_token_to_token_payload(self.auth_token),

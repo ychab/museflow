@@ -6,7 +6,6 @@ from pydantic import HttpUrl
 import pytest
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
@@ -22,7 +21,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
@@ -112,7 +111,7 @@ def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserT
 @pytest.fixture
 def mock_provider_client(token_payload: OAuthProviderTokenPayload) -> mock.AsyncMock:
     return mock.AsyncMock(
-        spec=ProviderOAuthClientPort,
+        spec=SpotifyClientAdapter,
         refresh_access_token=mock.AsyncMock(return_value=token_payload),
     )
 
@@ -139,8 +138,8 @@ def mock_track_reconciler() -> mock.Mock:
 
 
 @pytest.fixture
-async def spotify_client() -> AsyncGenerator[SpotifyOAuthClientAdapter]:
-    async with SpotifyOAuthClientAdapter(
+async def spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
+    async with SpotifyClientAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
@@ -154,7 +153,7 @@ def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
     mock_auth_token_repository: mock.AsyncMock,
-    spotify_client: SpotifyOAuthClientAdapter,
+    spotify_client: SpotifyClientAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,

@@ -14,7 +14,7 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 
 from tests.integration.utils.wiremock import WireMockContext
 
@@ -28,7 +28,7 @@ class TestSpotifyOauthCallbackUseCase:
         user: User,
         token_payload: OAuthProviderTokenPayload,
         auth_token_repository: OAuthProviderTokenRepository,
-        spotify_client: SpotifyOAuthClientAdapter,
+        spotify_client: SpotifyClientAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
@@ -81,7 +81,7 @@ class TestSpotifyOauthCallbackUseCase:
         token_payload: OAuthProviderTokenPayload,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
-        spotify_client: SpotifyOAuthClientAdapter,
+        spotify_client: SpotifyClientAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(

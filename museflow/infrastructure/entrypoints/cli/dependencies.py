@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
@@ -21,7 +20,7 @@ from museflow.infrastructure.adapters.database.repositories.music import ArtistS
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -50,8 +49,8 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 @asynccontextmanager
-async def get_spotify_client() -> AsyncGenerator[ProviderOAuthClientPort]:
-    async with SpotifyOAuthClientAdapter(
+async def get_spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
+    async with SpotifyClientAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
@@ -90,7 +89,7 @@ async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorCli
 
 def get_spotify_library_factory(
     session: AsyncSession,
-    spotify_client: ProviderOAuthClientPort,
+    spotify_client: SpotifyClientAdapter,
 ) -> SpotifyLibraryFactory:
     return SpotifyLibraryFactory(
         auth_token_repository=get_auth_token_repository(session),

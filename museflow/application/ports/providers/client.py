@@ -1,32 +1,19 @@
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
 
 from pydantic import HttpUrl
 
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
-class ProviderOAuthClientPort(ABC):
+class ProviderClientPort(ABC):
     """A port defining the contract for a stateless OAuth client for a music provider.
 
     This interface abstracts the details of interacting with a provider's OAuth2
     endpoints, ensuring that the application's domain logic remains decoupled from
     specific provider implementations. It handles URL generation, token exchange,
-    and authenticated API calls.
+    and token refresh.
     """
-
-    @property
-    @abstractmethod
-    def base_url(self) -> HttpUrl:
-        """The base URL for the provider's API."""
-        ...
-
-    @property
-    @abstractmethod
-    def token_endpoint(self) -> HttpUrl:
-        """The URL for token-related operations (exchange, refresh)."""
-        ...
 
     @abstractmethod
     def get_authorization_url(self, state: str) -> HttpUrl:
@@ -61,29 +48,6 @@ class ProviderOAuthClientPort(ABC):
 
         Returns:
             A payload containing the new access token and its expiry information.
-        """
-        ...
-
-    @abstractmethod
-    async def make_user_api_call(
-        self,
-        method: str,
-        endpoint: str,
-        token_payload: OAuthProviderTokenPayload,
-        params: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Makes an authenticated API call to the provider on behalf of the user.
-
-        Args:
-            method: The HTTP method (e.g., "GET", "POST").
-            endpoint: The API endpoint to call (relative to the base URL).
-            token_payload: The user's token information for authentication.
-            params: Optional URL query parameters.
-            json_data: Optional JSON body for the request.
-
-        Returns:
-            The JSON response from the API as a dictionary.
         """
         ...
 

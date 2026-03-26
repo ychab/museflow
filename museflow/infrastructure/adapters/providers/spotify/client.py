@@ -15,9 +15,10 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.application.ports.providers.client import ProviderClientPort
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.providers.http import HttpProviderMixin
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -41,7 +42,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
+class SpotifyClientAdapter(HttpProviderMixin, ProviderClientPort):
     """An asynchronous Spotify API client with OAuth and automatic token refresh.
 
     This adapter includes robust retry logic for handling transient network errors and
@@ -61,35 +62,24 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         token_buffer_seconds: int = 300,
         max_retry_wait: int = 60,
     ) -> None:
+        super().__init__(
+            base_url=base_url or HttpUrl("https://api.spotify.com/v1"),
+            token_endpoint=token_endpoint or HttpUrl("https://accounts.spotify.com/api/token"),
+            verify_ssl=verify_ssl,
+            timeout=timeout,
+        )
+
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-
-        self._base_url = base_url or HttpUrl("https://api.spotify.com/v1")
         self._auth_endpoint = auth_endpoint or HttpUrl("https://accounts.spotify.com/authorize")
-        self._token_endpoint = token_endpoint or HttpUrl("https://accounts.spotify.com/api/token")
-
         self.token_buffer_seconds = token_buffer_seconds
         self.max_retry_wait = max_retry_wait
-
-        self._client: httpx.AsyncClient = httpx.AsyncClient(
-            verify=verify_ssl,
-            timeout=timeout,
-            follow_redirects=True,
-        )
 
     def _get_basic_auth_header(self) -> str:
         credentials = f"{self.client_id}:{self.client_secret}"
         encoded = base64.b64encode(credentials.encode()).decode()
         return f"Basic {encoded}"
-
-    @property
-    def base_url(self) -> HttpUrl:
-        return self._base_url
-
-    @property
-    def token_endpoint(self) -> HttpUrl:
-        return self._token_endpoint
 
     def get_authorization_url(self, state: str) -> HttpUrl:
         params = {
@@ -156,7 +146,7 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
         stop=stop_after_attempt(spotify_settings.HTTP_MAX_RETRIES),
         reraise=True,
     )
-    async def make_user_api_call(
+    async def make_api_call(
         self,
         method: str,
         endpoint: str,
@@ -220,12 +210,3 @@ class SpotifyOAuthClientAdapter(ProviderOAuthClientPort):
             return {}
 
         return response.json()
-
-    async def close(self) -> None:
-        await self._client.aclose()
-
-    async def __aenter__(self) -> "SpotifyOAuthClientAdapter":
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.close()

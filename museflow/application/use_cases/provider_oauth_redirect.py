@@ -1,6 +1,6 @@
 from pydantic import HttpUrl
 
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.application.ports.providers.client import ProviderClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.user import User
@@ -11,7 +11,7 @@ async def oauth_redirect(
     user: User,
     auth_state_repository: OAuthProviderStateRepository,
     provider: MusicProvider,
-    provider_client: ProviderOAuthClientPort,
+    provider_client: ProviderClientPort,
     state_token_generator: StateTokenGeneratorPort,
 ) -> HttpUrl:
     """Generates a URL to redirect the user for OAuth provider authentication.

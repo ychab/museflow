@@ -52,13 +52,13 @@ class TestSpotifyOAuthSessionClient:
         mock_provider_client: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
     ) -> None:
-        mock_provider_client.make_user_api_call.side_effect = SpotifyTokenExpiredError()
+        mock_provider_client.make_api_call.side_effect = SpotifyTokenExpiredError()
         mock_provider_client.refresh_access_token.return_value = token_payload
 
         with pytest.raises(SpotifyTokenExpiredError):
             await session_client.execute("GET", "/test")
 
-        assert mock_provider_client.make_user_api_call.call_count == 2
+        assert mock_provider_client.make_api_call.call_count == 2
 
     async def test__refresh_token_safely__reactive_skip(
         self,
@@ -90,7 +90,7 @@ class TestSpotifyOAuthSessionClient:
             return token_payload
 
         mock_provider_client.refresh_access_token.side_effect = slow_refresh
-        mock_provider_client.make_user_api_call.return_value = {}
+        mock_provider_client.make_api_call.return_value = {}
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(10):
@@ -99,8 +99,8 @@ class TestSpotifyOAuthSessionClient:
         mock_provider_client.refresh_access_token.assert_called_once()
         mock_auth_token_repository.update.assert_called_once()
 
-        assert mock_provider_client.make_user_api_call.call_count == 10
-        for i, call in enumerate(mock_provider_client.make_user_api_call.call_args_list):
+        assert mock_provider_client.make_api_call.call_count == 10
+        for i, call in enumerate(mock_provider_client.make_api_call.call_args_list):
             assert call.kwargs["token_payload"].access_token == token_payload.access_token, i
 
     async def test__concurrency__reactive_refresh_locking(
@@ -133,11 +133,11 @@ class TestSpotifyOAuthSessionClient:
             # If using the OLD token (auth_token) -> 401
             raise SpotifyTokenExpiredError()
 
-        mock_provider_client.make_user_api_call.side_effect = mock_api_call
+        mock_provider_client.make_api_call.side_effect = mock_api_call
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(10):
                 tg.create_task(session_client.execute("GET", "/test"))
 
         mock_provider_client.refresh_access_token.assert_called_once()
-        assert mock_provider_client.make_user_api_call.call_count == 20  # 10 (initial failures) + 10 (retries)
+        assert mock_provider_client.make_api_call.call_count == 20  # 10 (initial failures) + 10 (retries)

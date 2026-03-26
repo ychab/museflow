@@ -1,6 +1,6 @@
 from museflow.application.mappers.auth import auth_token_create_from_token_payload
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
-from museflow.application.ports.providers.client import ProviderOAuthClientPort
+from museflow.application.ports.providers.client import ProviderClientPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderExchangeCodeError
@@ -12,7 +12,7 @@ async def oauth_callback(
     user: User,
     provider: MusicProvider,
     auth_token_repository: OAuthProviderTokenRepository,
-    provider_client: ProviderOAuthClientPort,
+    provider_client: ProviderClientPort,
 ) -> None:
     """Handles the OAuth callback from a music provider.
 

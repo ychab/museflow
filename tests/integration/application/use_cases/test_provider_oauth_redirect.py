@@ -9,7 +9,7 @@ from museflow.application.use_cases.provider_oauth_redirect import oauth_redirec
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyOAuthClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 
 
 class TestSpotifyOAuthRedirectUseCase:
@@ -18,7 +18,7 @@ class TestSpotifyOAuthRedirectUseCase:
         async_session_db: AsyncSession,
         user: User,
         auth_state_repository: OAuthProviderStateRepository,
-        spotify_client: SpotifyOAuthClientAdapter,
+        spotify_client: SpotifyClientAdapter,
         state_token_generator: StateTokenGeneratorPort,
     ) -> None:
         authorization_url = await oauth_redirect(
