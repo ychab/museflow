@@ -309,6 +309,7 @@ async def spotify_oauth(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Spoti
         token_endpoint=HttpUrl(f"{base_url}/api/token") if base_url else None,
         # Don't verify the self-signed cert of WireMock
         verify_ssl=False,
+        max_retry_wait=5,
     ) as client:
         yield client
 
@@ -374,6 +375,7 @@ async def gemini_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gemin
         model=GeminiModel.FLASH_2_5,
         base_url=HttpUrl(base_url) if base_url else None,
         verify_ssl=False,
+        max_retry_wait=5,
     ) as client:
         yield client
 

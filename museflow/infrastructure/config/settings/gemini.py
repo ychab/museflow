@@ -22,6 +22,8 @@ class GeminiSettings(BaseSettings):
     MODEL: GeminiModel = GeminiModel.FLASH_2_5
 
     HTTP_TIMEOUT: float = 30.0
+    HTTP_MAX_RETRIES: int = 5
+    HTTP_MAX_RETRY_WAIT: int = 60
 
 
 gemini_settings = GeminiSettings()

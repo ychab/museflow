@@ -39,6 +39,9 @@ class ProviderPageValidationError(Exception):
 class ProviderRateLimitExceeded(Exception): ...
 
 
+class AdvisorRateLimitExceeded(Exception): ...
+
+
 # --- Similarity track exceptions ---
 
 

@@ -61,6 +61,7 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
         token_endpoint=spotify_settings.TOKEN_ENDPOINT,
         timeout=spotify_settings.HTTP_TIMEOUT,
         token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
+        max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
 
@@ -83,6 +84,7 @@ async def get_gemini_client() -> AsyncGenerator[AdvisorClientPort]:
         model=gemini_settings.MODEL,
         base_url=gemini_settings.BASE_URL,
         timeout=gemini_settings.HTTP_TIMEOUT,
+        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
 

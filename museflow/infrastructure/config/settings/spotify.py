@@ -26,6 +26,7 @@ class SpotifySettings(BaseSettings):
 
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5
+    HTTP_MAX_RETRY_WAIT: int = 60
 
     TOKEN_BUFFER_SECONDS: int = 60 * 5
 

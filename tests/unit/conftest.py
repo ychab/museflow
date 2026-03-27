@@ -191,6 +191,7 @@ async def gemini_client() -> AsyncGenerator[GeminiClientAdapter]:
     async with GeminiClientAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,
+        max_retry_wait=5,
     ) as client:
         yield client
 
