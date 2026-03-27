@@ -26,10 +26,12 @@ class LastFmClientAdapter(HttpAdvisorMixin, AdvisorClientPort):
         client_api_key: str,
         client_secret: str,
         base_url: HttpUrl | None = None,
+        verify_ssl: bool = True,
         timeout: float = 30.0,
     ) -> None:
         super().__init__(
             base_url=base_url or HttpUrl("http://ws.audioscrobbler.com/2.0/"),
+            verify_ssl=verify_ssl,
             timeout=timeout,
         )
 
@@ -45,6 +47,7 @@ class LastFmClientAdapter(HttpAdvisorMixin, AdvisorClientPort):
 
         response_data = await self.make_api_call(
             method="GET",
+            endpoint="",
             params={
                 "method": "track.getSimilar",
                 "api_key": self.client_api_key,

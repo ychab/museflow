@@ -10,7 +10,7 @@ from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClient
 class TestLastFmClientAdapter:
     async def test__get_similar_tracks__none(self, lastfm_client: LastFmClientAdapter, httpx_mock: HTTPXMock) -> None:
         httpx_mock.add_response(
-            url=re.compile(f"^{re.escape(str(lastfm_client.base_url))}.*"),
+            url=re.compile(f"^{re.escape(str(lastfm_client.base_url).rstrip('/'))}.*"),
             method="GET",
             json={"similartracks": {"track": []}},
         )
@@ -29,7 +29,7 @@ class TestLastFmClientAdapter:
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
-            url=re.compile(f"^{re.escape(str(lastfm_client.base_url))}.*"),
+            url=re.compile(f"^{re.escape(str(lastfm_client.base_url).rstrip('/'))}.*"),
             method="GET",
             json={
                 "similartracks": {

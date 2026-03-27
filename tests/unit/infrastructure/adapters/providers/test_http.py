@@ -65,17 +65,6 @@ class TestHttpProviderMixin:
 
         assert result == {}
 
-    async def test__default_content_type_header(
-        self,
-        adapter: DummyProviderAdapter,
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(url="https://api.example.com/v1/tracks", method="GET", json={})
-
-        await adapter.make_api_call(method="GET", endpoint="/tracks")
-
-        assert httpx_mock.get_requests()[0].headers["Content-Type"] == "application/json"
-
     async def test__custom_headers_merged(
         self,
         adapter: DummyProviderAdapter,
@@ -90,7 +79,6 @@ class TestHttpProviderMixin:
         )
 
         request = httpx_mock.get_requests()[0]
-        assert request.headers["Content-Type"] == "application/json"
         assert request.headers["Authorization"] == "Bearer test-token"
 
     async def test__retry__on_server_error(

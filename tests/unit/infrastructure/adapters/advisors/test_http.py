@@ -50,7 +50,7 @@ class TestHttpAdvisorMixin:
     async def test__no_content(self, adapter: DummyAdvisorAdapter, httpx_mock: HTTPXMock) -> None:
         httpx_mock.add_response(status_code=codes.NO_CONTENT)
 
-        result = await adapter.make_api_call(method="GET")
+        result = await adapter.make_api_call(method="GET", endpoint="/test")
 
         assert result == {}
 

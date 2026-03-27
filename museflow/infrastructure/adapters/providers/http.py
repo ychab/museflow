@@ -26,19 +26,19 @@ def _is_retryable_error(exception: BaseException) -> bool:
 
 
 class HttpProviderMixin:
-    """HTTP mixin for provider adapters.
+    """HTTP mixin for music provider adapters.
 
     Provides shared httpx client setup, a generic retried make_api_call with
-    default Content-Type header merging, and lifecycle management. Concrete
-    adapters combine this mixin with ProviderClientPort via multiple inheritance.
+    header merging, and lifecycle management. Concrete adapters combine this
+    mixin with ProviderClientPort via multiple inheritance.
+
+    Kept separate from HttpAdvisorMixin intentionally: advisor and provider are
+    distinct ports in the hexagonal architecture. As new providers (e.g. Apple
+    Music, Deezer) are added, their auth schemes, error handling, and domain
+    concerns will diverge further. Separate mixins keep that boundary explicit.
     """
 
-    def __init__(
-        self,
-        base_url: HttpUrl,
-        verify_ssl: bool = True,
-        timeout: float = 30.0,
-    ) -> None:
+    def __init__(self, base_url: HttpUrl, verify_ssl: bool = True, timeout: float = 30.0) -> None:
         self._base_url = base_url
         self._client: httpx.AsyncClient = httpx.AsyncClient(
             verify=verify_ssl,
@@ -61,14 +61,14 @@ class HttpProviderMixin:
         method: str,
         endpoint: str,
         *,
-        headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         response = await self._client.request(
             method=method.upper(),
             url=f"{str(self._base_url).rstrip('/')}{endpoint}",
-            headers={"Content-Type": "application/json"} | (headers or {}),
+            headers=headers,
             params=params,
             json=json_data,
         )

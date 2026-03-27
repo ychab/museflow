@@ -31,11 +31,18 @@ class HttpAdvisorMixin:
     Provides shared httpx client setup, a generic retried make_api_call, and
     lifecycle management (close / async context manager). Concrete adapters
     combine this mixin with AdvisorClientPort via multiple inheritance.
+
+    Kept separate from HttpProviderMixin intentionally: advisor and provider are
+    distinct ports in the hexagonal architecture. As new advisors (e.g. Gemini)
+    and providers (e.g. Apple Music) are added, their auth schemes, error
+    handling, and domain concerns will diverge further. Separate mixins keep
+    that boundary explicit.
     """
 
-    def __init__(self, base_url: HttpUrl, timeout: float = 30.0) -> None:
+    def __init__(self, base_url: HttpUrl, verify_ssl: bool = True, timeout: float = 30.0) -> None:
         self._base_url = base_url
         self._client: httpx.AsyncClient = httpx.AsyncClient(
+            verify=verify_ssl,
             timeout=timeout,
             follow_redirects=True,
         )
@@ -53,12 +60,19 @@ class HttpAdvisorMixin:
     async def make_api_call(
         self,
         method: str,
-        endpoint: str | None = None,
+        endpoint: str,
+        *,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        url = str(self._base_url) if endpoint is None else f"{str(self._base_url).rstrip('/')}{endpoint}"
-        response = await self._client.request(method=method.upper(), url=url, params=params, json=json_data)
+        response = await self._client.request(
+            method=method.upper(),
+            url=f"{str(self._base_url).rstrip('/')}{endpoint}",
+            headers=headers,
+            params=params,
+            json=json_data,
+        )
         response.raise_for_status()
 
         if response.status_code == codes.NO_CONTENT:
