@@ -1,6 +1,6 @@
 from museflow.application.mappers.auth import auth_token_create_from_token_payload
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
-from museflow.application.ports.providers.client import ProviderClientPort
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderExchangeCodeError
@@ -12,7 +12,7 @@ async def oauth_callback(
     user: User,
     provider: MusicProvider,
     auth_token_repository: OAuthProviderTokenRepository,
-    provider_client: ProviderClientPort,
+    provider_oauth: ProviderOAuthPort,
 ) -> None:
     """Handles the OAuth callback from a music provider.
 
@@ -24,13 +24,13 @@ async def oauth_callback(
         user: The user entity for whom the callback is being processed.
         provider: The music provider (e.g., Spotify).
         auth_token_repository: The repository for OAuth provider tokens.
-        provider_client: The client for interacting with the OAuth provider.
+        provider_oauth: The OAuth adapter for the provider.
 
     Raises:
         ProviderExchangeCodeError: If there's an error during the code exchange.
     """
     try:
-        token_payload = await provider_client.exchange_code_for_token(code)
+        token_payload = await provider_oauth.exchange_code_for_token(code)
     except Exception as e:
         raise ProviderExchangeCodeError() from e
 

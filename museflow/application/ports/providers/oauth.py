@@ -6,7 +6,7 @@ from pydantic import HttpUrl
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
-class ProviderClientPort(ABC):
+class ProviderOAuthPort(ABC):
     """A port defining the contract for a stateless OAuth client for a music provider.
 
     This interface abstracts the details of interacting with a provider's OAuth2

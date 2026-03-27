@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from fastapi import status
 from fastapi.responses import RedirectResponse
 
-from museflow.application.ports.providers.client import ProviderClientPort
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.security import StateTokenGeneratorPort
@@ -18,7 +18,7 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
-from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_client
+from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 from museflow.infrastructure.entrypoints.api.schemas import SuccessResponse
@@ -32,14 +32,14 @@ router = APIRouter()
 async def connect(
     current_user: User = Depends(get_current_user),
     auth_state_repository: OAuthProviderStateRepository = Depends(get_auth_state_repository),
-    provider_client: ProviderClientPort = Depends(get_spotify_client),
+    provider_oauth: ProviderOAuthPort = Depends(get_spotify_oauth),
     state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
 ) -> RedirectResponse:
     authorization_url = await oauth_redirect(
         user=current_user,
         auth_state_repository=auth_state_repository,
         provider=MusicProvider.SPOTIFY,
-        provider_client=provider_client,
+        provider_oauth=provider_oauth,
         state_token_generator=state_token_generator,
     )
     return RedirectResponse(str(authorization_url))
@@ -51,7 +51,7 @@ async def spotify_callback(
     error: str | None = None,
     current_user: User = Depends(get_user_from_state),
     auth_token_repository: OAuthProviderTokenRepository = Depends(get_auth_token_repository),
-    spotify_client: ProviderClientPort = Depends(get_spotify_client),
+    provider_oauth: ProviderOAuthPort = Depends(get_spotify_oauth),
 ) -> SuccessResponse:
     if error:
         logger.warning("Spotify Callback Error received", extra={"user_id": str(current_user.id), "error": error})
@@ -66,7 +66,7 @@ async def spotify_callback(
             user=current_user,
             provider=MusicProvider.SPOTIFY,
             auth_token_repository=auth_token_repository,
-            provider_client=spotify_client,
+            provider_oauth=provider_oauth,
         )
     except ProviderExchangeCodeError as e:
         logger.exception("Failed to exchange Spotify code", extra={"user_id": str(current_user.id)})

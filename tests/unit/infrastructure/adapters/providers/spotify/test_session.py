@@ -27,13 +27,13 @@ class TestSpotifyOAuthSessionClient:
         user: User,
         auth_token: OAuthProviderUserToken,
         mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
     ) -> SpotifyOAuthSessionClient:
         return SpotifyOAuthSessionClient(
             user=user,
             auth_token=auth_token,
             auth_token_repository=mock_auth_token_repository,
-            client=mock_provider_client,
+            oauth_client=mock_provider_oauth,
         )
 
     @pytest.fixture
@@ -49,21 +49,21 @@ class TestSpotifyOAuthSessionClient:
     async def test__execute__retry_fails_again(
         self,
         session_client: SpotifyOAuthSessionClient,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
     ) -> None:
-        mock_provider_client.make_api_call.side_effect = SpotifyTokenExpiredError()
-        mock_provider_client.refresh_access_token.return_value = token_payload
+        mock_provider_oauth.make_api_call.side_effect = SpotifyTokenExpiredError()
+        mock_provider_oauth.refresh_access_token.return_value = token_payload
 
         with pytest.raises(SpotifyTokenExpiredError):
             await session_client.execute("GET", "/test")
 
-        assert mock_provider_client.make_api_call.call_count == 2
+        assert mock_provider_oauth.make_api_call.call_count == 2
 
     async def test__refresh_token_safely__reactive_skip(
         self,
         session_client: SpotifyOAuthSessionClient,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         auth_token: OAuthProviderUserToken,
     ) -> None:
@@ -72,13 +72,13 @@ class TestSpotifyOAuthSessionClient:
 
         await session_client._refresh_token_safely(stale_access_token=stale_token)
 
-        mock_provider_client.refresh_access_token.assert_not_called()
+        mock_provider_oauth.refresh_access_token.assert_not_called()
         mock_auth_token_repository.update.assert_not_called()
 
     async def test__concurrency__proactive_double_check_locking(
         self,
         session_client: SpotifyOAuthSessionClient,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         auth_token_expired: OAuthProviderUserToken,
         token_payload: OAuthProviderTokenPayload,
@@ -89,25 +89,25 @@ class TestSpotifyOAuthSessionClient:
             await asyncio.sleep(0.05)
             return token_payload
 
-        mock_provider_client.refresh_access_token.side_effect = slow_refresh
-        mock_provider_client.make_api_call.return_value = {}
+        mock_provider_oauth.refresh_access_token.side_effect = slow_refresh
+        mock_provider_oauth.make_api_call.return_value = {}
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(10):
                 tg.create_task(session_client.execute("GET", "/test"))
 
-        mock_provider_client.refresh_access_token.assert_called_once()
+        mock_provider_oauth.refresh_access_token.assert_called_once()
         mock_auth_token_repository.update.assert_called_once()
 
-        assert mock_provider_client.make_api_call.call_count == 10
-        for i, call in enumerate(mock_provider_client.make_api_call.call_args_list):
+        assert mock_provider_oauth.make_api_call.call_count == 10
+        for i, call in enumerate(mock_provider_oauth.make_api_call.call_args_list):
             assert call.kwargs["token_payload"].access_token == token_payload.access_token, i
 
     async def test__concurrency__reactive_refresh_locking(
         self,
         frozen_time: datetime,
         session_client: SpotifyOAuthSessionClient,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         auth_token: OAuthProviderUserToken,
     ) -> None:
@@ -123,7 +123,7 @@ class TestSpotifyOAuthSessionClient:
             await asyncio.sleep(0.05)
             return new_token_payload
 
-        mock_provider_client.refresh_access_token.side_effect = slow_refresh
+        mock_provider_oauth.refresh_access_token.side_effect = slow_refresh
 
         async def mock_api_call(token_payload, **kwargs):
             # If using the NEW token -> Success
@@ -133,11 +133,11 @@ class TestSpotifyOAuthSessionClient:
             # If using the OLD token (auth_token) -> 401
             raise SpotifyTokenExpiredError()
 
-        mock_provider_client.make_api_call.side_effect = mock_api_call
+        mock_provider_oauth.make_api_call.side_effect = mock_api_call
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(10):
                 tg.create_task(session_client.execute("GET", "/test"))
 
-        mock_provider_client.refresh_access_token.assert_called_once()
-        assert mock_provider_client.make_api_call.call_count == 20  # 10 (initial failures) + 10 (retries)
+        mock_provider_oauth.refresh_access_token.assert_called_once()
+        assert mock_provider_oauth.make_api_call.call_count == 20  # 10 (initial failures) + 10 (retries)

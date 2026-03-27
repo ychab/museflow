@@ -19,8 +19,8 @@ from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.commands.spotify import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
+from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -100,7 +100,7 @@ def history(
 async def history_logic(email: EmailStr, config: ImportStreamingHistoryConfigInput) -> ImportStreamingHistoryReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
-        spotify_client = await stack.enter_async_context(get_spotify_client())
+        spotify_client = await stack.enter_async_context(get_spotify_oauth())
         spotify_library_factory = get_spotify_library_factory(
             session=session,
             spotify_client=spotify_client,

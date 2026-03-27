@@ -13,11 +13,11 @@ class TestSpotifyLibraryFactory:
     def spotify_library_factory(
         self,
         mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_client: mock.AsyncMock,
+        mock_provider_oauth: mock.AsyncMock,
     ) -> SpotifyLibraryFactory:
         return SpotifyLibraryFactory(
             auth_token_repository=mock_auth_token_repository,
-            client=mock_provider_client,
+            oauth_client=mock_provider_oauth,
         )
 
     def test_create__nominal(

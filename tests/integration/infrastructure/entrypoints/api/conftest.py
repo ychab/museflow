@@ -15,7 +15,7 @@ from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
-from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_client
+from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.api.main import app
 
 
@@ -79,9 +79,9 @@ async def async_client(
         app.dependency_overrides[get_db] = override_get_db
 
     # Override Spotify client if fixture is used
-    if "spotify_client" in request.fixturenames:
-        spotify_client_fixture = request.getfixturevalue("spotify_client")
-        app.dependency_overrides[get_spotify_client] = lambda: spotify_client_fixture
+    if "spotify_oauth" in request.fixturenames:
+        spotify_client_fixture = request.getfixturevalue("spotify_oauth")
+        app.dependency_overrides[get_spotify_oauth] = lambda: spotify_client_fixture
 
     # Override security password hasher ports
     if "password_hasher" in request.fixturenames:

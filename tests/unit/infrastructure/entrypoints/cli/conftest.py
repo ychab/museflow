@@ -13,7 +13,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
-from museflow.application.ports.providers.client import ProviderClientPort
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
@@ -181,8 +181,8 @@ def mock_spotify_client(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    client = mock.AsyncMock(spec=ProviderClientPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_spotify_client", client) as mock_client:
+    client = mock.AsyncMock(spec=ProviderOAuthPort)
+    with mock_async_context_dependency_factory(f"{target_path}.get_spotify_oauth", client) as mock_client:
         yield mock_client
 
 

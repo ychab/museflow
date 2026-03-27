@@ -20,8 +20,8 @@ from museflow.infrastructure.adapters.database.repositories.music import ArtistS
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
@@ -49,8 +49,8 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 
 
 @asynccontextmanager
-async def get_spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
-    async with SpotifyClientAdapter(
+async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
+    async with SpotifyOAuthAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
@@ -89,11 +89,11 @@ async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorCli
 
 def get_spotify_library_factory(
     session: AsyncSession,
-    spotify_client: SpotifyClientAdapter,
+    spotify_client: SpotifyOAuthAdapter,
 ) -> SpotifyLibraryFactory:
     return SpotifyLibraryFactory(
         auth_token_repository=get_auth_token_repository(session),
-        client=spotify_client,
+        oauth_client=spotify_client,
     )
 
 

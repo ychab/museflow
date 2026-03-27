@@ -11,7 +11,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.integration.utils.wiremock import WireMockContext
@@ -38,7 +38,7 @@ class TestSpotifyOAuthSessionClient:
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
-        spotify_client: SpotifyClientAdapter,
+        spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
@@ -47,7 +47,7 @@ class TestSpotifyOAuthSessionClient:
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": token_payload.token_type,
@@ -90,7 +90,7 @@ class TestSpotifyOAuthSessionClient:
         self,
         async_session_db: AsyncSession,
         frozen_time: datetime,
-        spotify_client: SpotifyClientAdapter,
+        spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
         auth_token_repository: mock.AsyncMock,
         token_payload: OAuthProviderTokenPayload,
@@ -108,7 +108,7 @@ class TestSpotifyOAuthSessionClient:
         )
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": token_payload.token_type,

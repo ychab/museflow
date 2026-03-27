@@ -18,10 +18,10 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.types import ArtistSource
 from museflow.domain.types import TrackSource
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchTrackQuery
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyItem
@@ -48,7 +48,7 @@ class SpotifyLibraryFactory:
     """
 
     auth_token_repository: OAuthProviderTokenRepository
-    client: SpotifyClientAdapter
+    oauth_client: SpotifyOAuthAdapter
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
         """Creates a new `SpotifyLibraryAdapter` for a specific user.
@@ -66,7 +66,7 @@ class SpotifyLibraryFactory:
                 user=user,
                 auth_token=auth_token,
                 auth_token_repository=self.auth_token_repository,
-                client=self.client,
+                oauth_client=self.oauth_client,
             ),
         )
 

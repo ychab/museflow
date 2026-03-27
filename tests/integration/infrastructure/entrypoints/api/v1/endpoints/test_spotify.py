@@ -57,13 +57,13 @@ class TestSpotifyCallback:
         frozen_time: datetime,
         user: User,
         auth_state: OAuthProviderState,
-        spotify_client: mock.AsyncMock,
+        spotify_oauth: mock.AsyncMock,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": "Bearer",
@@ -114,13 +114,13 @@ class TestSpotifyCallback:
         user: User,
         auth_state: OAuthProviderState,
         auth_token: OAuthProviderUserToken,
-        spotify_client: mock.AsyncMock,
+        spotify_oauth: mock.AsyncMock,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": "Bearer",
@@ -199,13 +199,13 @@ class TestSpotifyCallback:
         self,
         user: User,
         auth_state: OAuthProviderState,
-        spotify_client: mock.AsyncMock,
+        spotify_oauth: mock.AsyncMock,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=500,
         )
 

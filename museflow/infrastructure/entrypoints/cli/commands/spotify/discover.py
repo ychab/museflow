@@ -22,8 +22,8 @@ from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
+from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
@@ -155,7 +155,7 @@ async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: Discove
         auth_token_repository = get_auth_token_repository(session)
         track_repository = get_track_repository(session)
 
-        spotify_client = await stack.enter_async_context(get_spotify_client())
+        spotify_client = await stack.enter_async_context(get_spotify_oauth())
         spotify_library_factory = get_spotify_library_factory(
             session=session,
             spotify_client=spotify_client,

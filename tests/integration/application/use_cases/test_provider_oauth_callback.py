@@ -14,7 +14,7 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 
 from tests.integration.utils.wiremock import WireMockContext
 
@@ -28,12 +28,12 @@ class TestSpotifyOauthCallbackUseCase:
         user: User,
         token_payload: OAuthProviderTokenPayload,
         auth_token_repository: OAuthProviderTokenRepository,
-        spotify_client: SpotifyClientAdapter,
+        spotify_oauth: SpotifyOAuthAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": token_payload.token_type,
@@ -48,7 +48,7 @@ class TestSpotifyOauthCallbackUseCase:
             user=user,
             provider=MusicProvider.SPOTIFY,
             auth_token_repository=auth_token_repository,
-            provider_client=spotify_client,
+            provider_oauth=spotify_oauth,
         )
 
         stmt_state = select(AuthProviderStateModel).where(
@@ -81,12 +81,12 @@ class TestSpotifyOauthCallbackUseCase:
         token_payload: OAuthProviderTokenPayload,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
-        spotify_client: SpotifyClientAdapter,
+        spotify_oauth: SpotifyOAuthAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
         spotify_wiremock.create_mapping(
             method="POST",
-            url_path=spotify_client.token_endpoint.path or "",
+            url_path=spotify_oauth.token_endpoint.path or "",
             status=200,
             json_body={
                 "token_type": token_payload.token_type,
@@ -101,7 +101,7 @@ class TestSpotifyOauthCallbackUseCase:
             user=user,
             provider=MusicProvider.SPOTIFY,
             auth_token_repository=auth_token_repository,
-            provider_client=spotify_client,
+            provider_oauth=spotify_oauth,
         )
 
         stmt_state = select(AuthProviderStateModel).where(

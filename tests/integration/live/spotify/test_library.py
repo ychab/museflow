@@ -5,19 +5,19 @@ import pytest
 
 from museflow import __project_name__
 from museflow.application.mappers.auth import auth_token_create_from_token_payload
-from museflow.application.ports.providers.client import ProviderClientPort
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
+from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
 
 from tests import ASSETS_DIR
 
@@ -54,8 +54,8 @@ class TestSpotifyLibraryLive:
         return token
 
     @pytest.fixture
-    async def spotify_client_live(self) -> AsyncGenerator[ProviderClientPort]:
-        async with get_spotify_client() as client:
+    async def spotify_oauth_live(self) -> AsyncGenerator[ProviderOAuthPort]:
+        async with get_spotify_oauth() as client:
             yield client
 
     @pytest.fixture
@@ -64,9 +64,9 @@ class TestSpotifyLibraryLive:
         user: User,
         auth_token_repository: OAuthProviderTokenRepository,
         spotify_refresh_token: str,
-        spotify_client_live: SpotifyClientAdapter,
+        spotify_oauth_live: SpotifyOAuthAdapter,
     ) -> SpotifyOAuthSessionClient:
-        token_payload = await spotify_client_live.refresh_access_token(spotify_refresh_token)
+        token_payload = await spotify_oauth_live.refresh_access_token(spotify_refresh_token)
 
         auth_token = await auth_token_repository.create(
             user_id=user.id,
@@ -78,7 +78,7 @@ class TestSpotifyLibraryLive:
             user=user,
             auth_token=auth_token,
             auth_token_repository=auth_token_repository,
-            client=spotify_client_live,
+            oauth_client=spotify_oauth_live,
         )
 
     @pytest.fixture

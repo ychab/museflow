@@ -22,7 +22,7 @@ from museflow.infrastructure.adapters.database.repositories.auth import OAuthPro
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -61,8 +61,8 @@ def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserReposito
     return UserSQLRepository(session)
 
 
-async def get_spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
-    async with SpotifyClientAdapter(
+async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
+    async with SpotifyOAuthAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET,
         redirect_uri=spotify_settings.REDIRECT_URI,
@@ -71,8 +71,8 @@ async def get_spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
         token_endpoint=spotify_settings.TOKEN_ENDPOINT,
         timeout=spotify_settings.HTTP_TIMEOUT,
         token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
-    ) as spotify_client:
-        yield spotify_client
+    ) as spotify_oauth:
+        yield spotify_oauth
 
 
 async def get_current_user(

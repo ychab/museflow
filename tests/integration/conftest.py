@@ -41,8 +41,8 @@ from museflow.infrastructure.adapters.database.repositories.music import TrackSQ
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.http import HttpClientMixin
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
@@ -292,13 +292,13 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
 
 @pytest.fixture
-async def spotify_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[SpotifyClientAdapter]:
+async def spotify_oauth(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[SpotifyOAuthAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_SPOTIFY_BASE_URL")
 
-    retry_method = SpotifyClientAdapter.make_api_call
+    retry_method = SpotifyOAuthAdapter.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
-    async with SpotifyClientAdapter(
+    async with SpotifyOAuthAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
@@ -317,13 +317,13 @@ def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
     auth_token_repository: OAuthProviderTokenRepository,
-    spotify_client: SpotifyClientAdapter,
+    spotify_oauth: SpotifyOAuthAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
         auth_token=auth_token,
         auth_token_repository=auth_token_repository,
-        client=spotify_client,
+        oauth_client=spotify_oauth,
     )
 
 

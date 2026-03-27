@@ -30,7 +30,7 @@ class HttpClientMixin:
 
     Provides shared httpx client setup, retry logic (5xx + 429 + network errors),
     and lifecycle management (close / async context manager). Concrete adapters
-    combine this mixin with the relevant port (ProviderClientPort, AdvisorClientPort)
+    combine this mixin with the relevant port (ProviderOAuthPort, AdvisorClientPort)
     via multiple inheritance.
 
     Split into separate mixins only if provider and advisor retry/transport concerns

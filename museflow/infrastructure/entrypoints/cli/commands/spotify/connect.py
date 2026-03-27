@@ -16,7 +16,7 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_client
+from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -55,7 +55,7 @@ def connect(
 async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -> None:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
-        provider_client = await stack.enter_async_context(get_spotify_client())
+        provider_oauth = await stack.enter_async_context(get_spotify_oauth())
         user_repository = get_user_repository(session)
         auth_state_repository = get_auth_state_repository(session)
         state_token_generator = get_state_token_generator()
@@ -68,7 +68,7 @@ async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -
             user=user,
             auth_state_repository=auth_state_repository,
             provider=MusicProvider.SPOTIFY,
-            provider_client=provider_client,
+            provider_oauth=provider_oauth,
             state_token_generator=state_token_generator,
         )
 

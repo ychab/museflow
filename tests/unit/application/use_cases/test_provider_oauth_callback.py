@@ -13,9 +13,9 @@ class TestOauthCallbackUseCase:
         self,
         user: User,
         mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_client: mock.Mock,
+        mock_provider_oauth: mock.Mock,
     ) -> None:
-        mock_provider_client.exchange_code_for_token.side_effect = Exception("Boom")
+        mock_provider_oauth.exchange_code_for_token.side_effect = Exception("Boom")
 
         with pytest.raises(ProviderExchangeCodeError):
             await oauth_callback(
@@ -23,5 +23,5 @@ class TestOauthCallbackUseCase:
                 user=user,
                 provider=MusicProvider.SPOTIFY,
                 auth_token_repository=mock_auth_token_repository,
-                provider_client=mock_provider_client,
+                provider_oauth=mock_provider_oauth,
             )

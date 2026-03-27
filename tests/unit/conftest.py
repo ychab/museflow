@@ -21,8 +21,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
-from museflow.infrastructure.adapters.providers.spotify.client import SpotifyClientAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
@@ -109,9 +109,9 @@ def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserT
 
 
 @pytest.fixture
-def mock_provider_client(token_payload: OAuthProviderTokenPayload) -> mock.AsyncMock:
+def mock_provider_oauth(token_payload: OAuthProviderTokenPayload) -> mock.AsyncMock:
     return mock.AsyncMock(
-        spec=SpotifyClientAdapter,
+        spec=SpotifyOAuthAdapter,
         refresh_access_token=mock.AsyncMock(return_value=token_payload),
     )
 
@@ -138,8 +138,8 @@ def mock_track_reconciler() -> mock.Mock:
 
 
 @pytest.fixture
-async def spotify_client() -> AsyncGenerator[SpotifyClientAdapter]:
-    async with SpotifyClientAdapter(
+async def spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
+    async with SpotifyOAuthAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
         redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
@@ -153,13 +153,13 @@ def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
     mock_auth_token_repository: mock.AsyncMock,
-    spotify_client: SpotifyClientAdapter,
+    spotify_oauth: SpotifyOAuthAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
         auth_token=auth_token,
         auth_token_repository=mock_auth_token_repository,
-        client=spotify_client,
+        oauth_client=spotify_oauth,
     )
 
 
