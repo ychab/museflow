@@ -95,3 +95,52 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
+
+
+@pytest.mark.wiremock("gemini")
+class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
+    @pytest.fixture
+    def use_case(
+        self,
+        track_repository: TrackRepository,
+        spotify_library: ProviderLibraryPort,
+        gemini_client: AdvisorClientPort,
+        track_reconciler: TrackReconciler,
+    ) -> AdvisorDiscoverUseCase:
+        return AdvisorDiscoverUseCase(
+            track_repository=track_repository,
+            provider_library=spotify_library,
+            advisor_client=gemini_client,
+            track_reconciler=track_reconciler,
+        )
+
+    @pytest.fixture
+    async def track_seed(self, user: User) -> Track:
+        track_seed_db = await TrackModelFactory.create_async(
+            name="La Negra No Quiere",
+            artists=[{"name": "Grupo Niche", "provider_id": "1zng9JZpblpk48IPceRWs8"}],
+            user_id=user.id,
+        )
+        return track_seed_db.to_entity()
+
+    async def test_execute__nominal(
+        self,
+        use_case: AdvisorDiscoverUseCase,
+        user: User,
+        track_seed: Track,
+        track_repository: TrackRepository,
+    ) -> None:
+        playlist = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoveryConfigInput(seed_limit=5),
+        )
+
+        assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert len(playlist.tracks) == 1
+
+        track = playlist.tracks[0]
+        assert track.provider_id == "1B7EbqtFdlKqLSBXrKKfW8"
+        assert track.name == "Mi Pueblo"
+        assert len(track.artists) == 1
+        assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
+        assert track.artists[0].name == "Grupo Niche"

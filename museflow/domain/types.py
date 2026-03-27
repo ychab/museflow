@@ -9,6 +9,7 @@ class MusicProvider(StrEnum):
 
 class MusicAdvisor(StrEnum):
     LASTFM = "last.fm"
+    GEMINI = "gemini"
 
 
 class ArtistSource(IntFlag):

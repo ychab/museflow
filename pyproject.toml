@@ -181,6 +181,11 @@ env = [
     # Wiremock lastfm settings
     'WIREMOCK_LASTFM_ADMIN_URL=http://localhost:8082',
     'WIREMOCK_LASTFM_BASE_URL=http://localhost:8082',
+    # Gemini client required settings (could be overriden for live tests)
+    'D:GEMINI_API_KEY=dummy-api-key',
+    # Wiremock gemini settings
+    'WIREMOCK_GEMINI_ADMIN_URL=http://localhost:8083',
+    'WIREMOCK_GEMINI_BASE_URL=https://localhost:8445',
 ]
 filterwarnings = [
     "always",  # Equivalent to -W always

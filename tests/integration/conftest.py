@@ -32,6 +32,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
+from museflow.infrastructure.adapters.advisors.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -40,7 +42,6 @@ from museflow.infrastructure.adapters.database.repositories.music import ArtistS
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
-from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -288,7 +289,7 @@ async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProvide
     return auth_token_db.to_entity()
 
 
-# --- Clients impl ---
+# --- Providers impl ---
 
 
 @pytest.fixture
@@ -343,17 +344,36 @@ def spotify_library(
     )
 
 
+# --- Advisor impls ---
+
+
 @pytest.fixture
 async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmClientAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_LASTFM_BASE_URL")
 
-    retry_method = HttpClientMixin.make_api_call
+    retry_method = LastFmClientAdapter.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
     async with LastFmClientAdapter(
         client_api_key="dummy-api-key",
         client_secret="dummy-client-secret",
         base_url=HttpUrl(base_url) if base_url else None,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+async def gemini_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiClientAdapter]:
+    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
+
+    retry_method = GeminiClientAdapter.make_api_call
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+
+    async with GeminiClientAdapter(
+        api_key="dummy-api-key",
+        model=GeminiModel.FLASH_2_5,
+        base_url=HttpUrl(base_url) if base_url else None,
+        verify_ssl=False,
     ) as client:
         yield client
 
@@ -378,6 +398,12 @@ def spotify_wiremock() -> Iterable[WireMockContext]:
 @pytest.fixture
 def lastfm_wiremock() -> Iterable[WireMockContext]:
     with WireMockContext(base_url=os.getenv("WIREMOCK_LASTFM_ADMIN_URL", "")) as wiremock_context:
+        yield wiremock_context
+
+
+@pytest.fixture
+def gemini_wiremock() -> Iterable[WireMockContext]:
+    with WireMockContext(base_url=os.getenv("WIREMOCK_GEMINI_ADMIN_URL", "")) as wiremock_context:
         yield wiremock_context
 
 

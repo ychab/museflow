@@ -89,7 +89,7 @@ class TestSpotifyDiscoverParserCommand:
 
         output = clean_typer_text(result.output)
         choices = ", ".join([f"'{advisor}'" for advisor in MusicAdvisor])
-        assert f"Invalid value for '--advisor': 'foo' is not {choices}" in output
+        assert f"Invalid value for '--advisor': 'foo' is not one of {choices}" in output
 
     def test__seed_order_by__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(

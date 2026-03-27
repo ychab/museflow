@@ -4,23 +4,24 @@ from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from museflow import BASE_DIR
+from museflow.infrastructure.adapters.advisors.gemini.types import GeminiModel
 
 
-class LastFMSettings(BaseSettings):
+class GeminiSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="LASTFM_",
+        env_prefix="GEMINI_",
         env_file=[BASE_DIR / ".env"],
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
     )
 
-    CLIENT_API_KEY: str
-    CLIENT_SECRET: str
+    API_KEY: str
 
-    BASE_URL: HttpUrl = Field(default=HttpUrl("http://ws.audioscrobbler.com/2.0/"))
+    BASE_URL: HttpUrl = Field(default=HttpUrl("https://generativelanguage.googleapis.com/v1beta/"))
+    MODEL: GeminiModel = GeminiModel.FLASH_2_5
 
     HTTP_TIMEOUT: float = 30.0
 
 
-lastfm_settings = LastFMSettings()
+gemini_settings = GeminiSettings()

@@ -13,6 +13,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicAdvisor
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
@@ -25,6 +26,7 @@ from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAut
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.config.settings.gemini import gemini_settings
 from museflow.infrastructure.config.settings.lastfm import lastfm_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -75,10 +77,24 @@ async def get_lastfm_client() -> AsyncGenerator[AdvisorClientPort]:
 
 
 @asynccontextmanager
+async def get_gemini_client() -> AsyncGenerator[AdvisorClientPort]:
+    async with GeminiClientAdapter(
+        api_key=gemini_settings.API_KEY,
+        model=gemini_settings.MODEL,
+        base_url=gemini_settings.BASE_URL,
+        timeout=gemini_settings.HTTP_TIMEOUT,
+    ) as client:
+        yield client
+
+
+@asynccontextmanager
 async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorClientPort]:
     match advisor:
         case MusicAdvisor.LASTFM:
             async with get_lastfm_client() as client:
+                yield client
+        case MusicAdvisor.GEMINI:
+            async with get_gemini_client() as client:
                 yield client
         case _:
             raise ValueError(f"Unknown advisor: {advisor}")

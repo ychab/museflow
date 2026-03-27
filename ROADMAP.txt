@@ -5,7 +5,13 @@ This quick and dirty document just list the roadmap tasks.
 
 ## Discovery
 
-- contine until X suggestions are reconciled and unknown?
+- contine until X suggestions are reconciled and unknown (min_playlist_size=?)
+
+## live tests
+
+- update the spotify if missing method?
+- add live test for lastfm?
+- add live test for gemini?
 
 ## Sync
 
@@ -26,7 +32,6 @@ This quick and dirty document just list the roadmap tasks.
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => tastedive API
     => openai
-    => gemini
 
 ## direnv
 

@@ -24,10 +24,12 @@ class TestSpotifyDiscoverLogic:
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 
+    @pytest.mark.parametrize("advisor", list(MusicAdvisor))
     async def test__discover__nominal(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
+        advisor: MusicAdvisor,
         mock_use_case: mock.Mock,
     ) -> None:
         new_playlist = PlaylistFactory.build(user_id=user.id)
@@ -35,7 +37,7 @@ class TestSpotifyDiscoverLogic:
 
         playlist = await discover_logic(
             email=user.email,
-            advisor=MusicAdvisor.LASTFM,
+            advisor=advisor,
             config=DiscoveryConfigInput(),
         )
 

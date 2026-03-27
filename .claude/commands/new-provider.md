@@ -17,7 +17,6 @@ class <Name>Settings(BaseSettings):
     BASE_URL: HttpUrl = Field(default=HttpUrl("https://api.<name>.com/..."))
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5
-    HTTP_MAX_RETRY_WAIT: int = 60
 ```
 
 ### Provider package — `museflow/infrastructure/adapters/providers/<name>/`

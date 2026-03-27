@@ -83,6 +83,16 @@ services:
       - ./tests/assets/wiremock/lastfm:/home/wiremock
     command: ["--verbose", "--global-response-templating"]
 
+  wiremock-gemini:
+    image: wiremock/wiremock:3.12.0
+    container_name: museflow-wiremock-gemini
+    ports:
+      - "8083:8080"
+      - "8445:8443"
+    volumes:
+      - ./tests/assets/wiremock/gemini:/home/wiremock
+    command: ["--verbose", "--https-port", "8443", "--global-response-templating"]
+
 volumes:
   db_data:
 

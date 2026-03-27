@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/models/gemini-2.5-flash:generateContent"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "generate_content-gemini-2.5-flash.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

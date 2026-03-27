@@ -1,0 +1,14 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"tracks\": [{\"name\": \"Mi Pueblo\", \"artists\": [\"Grupo Niche\"], \"score\": 1.0}]}"
+          }
+        ],
+        "role": "model"
+      }
+    }
+  ]
+}
