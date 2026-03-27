@@ -107,7 +107,7 @@ app-shell: up ## Connect to the application shell
 # Database
 ##########
 
-.PHONY: db-upgrade db-downgrade db-revision db-shell
+.PHONY: db-upgrade db-downgrade db-revision db-shell db-dump db-restore
 
 db-upgrade: up-db  ## Upgrade database
 	uv run alembic upgrade head
@@ -120,6 +120,18 @@ db-revision: up-db ## Create a new migration
 
 db-shell: up-db ## Connect to the database shell
 	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+
+db-dump: up-db  ## Dump database to external_data/backups/TIMESTAMP.sql
+	@mkdir -p external_data/backups
+	@FILE="external_data/backups/$$(date +%Y%m%d-%H%M%S).sql" && \
+	docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$$FILE"
+
+db-restore: up-db  ## Restore latest backup (or FILE=path)
+	@FILE=$${FILE:-$$(ls -t external_data/backups/*.sql 2>/dev/null | head -1)} && \
+	test -n "$$FILE" || (echo "No backup found in external_data/backups/" && exit 1) && \
+	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB" > /dev/null' && \
+	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null' && \
+	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" > /dev/null' < "$$FILE"
 
 
 ################
