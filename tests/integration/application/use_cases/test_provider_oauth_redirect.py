@@ -1,5 +1,3 @@
-from pydantic import HttpUrl
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +26,7 @@ class TestSpotifyOAuthRedirectUseCase:
             provider_oauth=spotify_oauth,
             state_token_generator=state_token_generator,
         )
-        assert isinstance(authorization_url, HttpUrl)
+        assert authorization_url.startswith("https://")
 
         stmt = select(AuthProviderStateModel).where(
             AuthProviderStateModel.user_id == user.id,

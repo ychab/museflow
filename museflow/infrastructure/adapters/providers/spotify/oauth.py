@@ -86,7 +86,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         encoded = base64.b64encode(credentials.encode()).decode()
         return f"Basic {encoded}"
 
-    def get_authorization_url(self, state: str) -> HttpUrl:
+    def get_authorization_url(self, state: str) -> str:
         params = {
             "client_id": self.client_id,
             "response_type": "code",
@@ -95,7 +95,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
             "state": state,
         }
 
-        return HttpUrl(f"{self._auth_endpoint}?{urlencode(params)}")
+        return f"{self._auth_endpoint}?{urlencode(params)}"
 
     async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenPayload:
         response = await self._client.post(

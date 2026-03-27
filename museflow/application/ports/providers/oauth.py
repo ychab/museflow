@@ -1,8 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
 
-from pydantic import HttpUrl
-
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
@@ -16,7 +14,7 @@ class ProviderOAuthPort(ABC):
     """
 
     @abstractmethod
-    def get_authorization_url(self, state: str) -> HttpUrl:
+    def get_authorization_url(self, state: str) -> str:
         """Generates the provider's OAuth authorization URL.
 
         Args:
