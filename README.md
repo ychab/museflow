@@ -209,7 +209,7 @@ uv run museflow spotify discover --email <email> [OPTIONS]
 
 **Discover Options:**
 
-*   `--advisor`: The music advisor to use for getting recommendations (e.g., `lastfm`).
+*   `--advisor`: The music advisor to use for getting recommendations (e.g., `last.fm`).
 *   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
 *   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
 *   `--seed-genres`: A list of genres to filter on the seeds (e.g. "rock", "jazz").
@@ -222,7 +222,7 @@ uv run museflow spotify discover --email <email> [OPTIONS]
 Example: Discover new music using top tracks as seeds
 
 ```bash
-uv run museflow spotify discover --email user@example.com --advisor lastfm --seed-top --seed-limit 10 --similar-limit 5
+uv run museflow spotify discover --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
 ```
 
 **Import streaming history:**
