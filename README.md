@@ -240,6 +240,7 @@ uv run museflow spotify history --email <email> --directory <path/to/history/fol
 *   `--directory`: Path to the directory containing the Spotify streaming history JSON files (**required**).
 *   `--min-duration-played`: Minimum playback duration in seconds to count a track as played (default: 90).
 *   `--batch-size`: Number of tracks to fetch from Spotify and upsert per batch, between 1 and 50 (default: 20).
+*   `--fetch-bulk` / `--no-fetch-bulk`: Use the Spotify bulk tracks endpoint instead of per-track requests. The bulk endpoint is deprecated by Spotify and may be removed in the future (default: no fetch-bulk).
 *   `--purge` / `--no-purge`: Purge all existing history tracks before importing (default: no purge).
 
 Example: Import history, ignoring plays shorter than 30 seconds
