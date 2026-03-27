@@ -6,14 +6,14 @@ from pydantic import ValidationError
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.exceptions import SimilarTrackResponseException
-from museflow.infrastructure.adapters.advisors.http import HttpAdvisorMixin
 from museflow.infrastructure.adapters.advisors.lastfm.mappers import to_track_suggested
 from museflow.infrastructure.adapters.advisors.lastfm.schemas import LastFmSimilarTracksResponse
+from museflow.infrastructure.adapters.http import HttpClientMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LastFmClientAdapter(HttpAdvisorMixin, AdvisorClientPort):
+class LastFmClientAdapter(HttpClientMixin, AdvisorClientPort):
     """Adapter for the Last.fm API.
 
     This class implements the `AdvisorClientPort` and provides methods to interact

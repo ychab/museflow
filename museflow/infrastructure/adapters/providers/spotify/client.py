@@ -18,7 +18,7 @@ from tenacity import wait_exponential
 from museflow.application.ports.providers.client import ProviderClientPort
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
-from museflow.infrastructure.adapters.providers.http import HttpProviderMixin
+from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -42,7 +42,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class SpotifyClientAdapter(HttpProviderMixin, ProviderClientPort):
+class SpotifyClientAdapter(HttpClientMixin, ProviderClientPort):
     """An asynchronous Spotify API client with OAuth and automatic token refresh.
 
     This adapter includes robust retry logic for handling transient network errors and

@@ -25,17 +25,16 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class HttpProviderMixin:
-    """HTTP mixin for music provider adapters.
+class HttpClientMixin:
+    """Generic HTTP mixin for infrastructure adapters.
 
-    Provides shared httpx client setup, a generic retried make_api_call with
-    header merging, and lifecycle management. Concrete adapters combine this
-    mixin with ProviderClientPort via multiple inheritance.
+    Provides shared httpx client setup, retry logic (5xx + 429 + network errors),
+    and lifecycle management (close / async context manager). Concrete adapters
+    combine this mixin with the relevant port (ProviderClientPort, AdvisorClientPort)
+    via multiple inheritance.
 
-    Kept separate from HttpAdvisorMixin intentionally: advisor and provider are
-    distinct ports in the hexagonal architecture. As new providers (e.g. Apple
-    Music, Deezer) are added, their auth schemes, error handling, and domain
-    concerns will diverge further. Separate mixins keep that boundary explicit.
+    Split into separate mixins only if provider and advisor retry/transport concerns
+    genuinely diverge.
     """
 
     def __init__(self, base_url: HttpUrl, verify_ssl: bool = True, timeout: float = 30.0) -> None:
