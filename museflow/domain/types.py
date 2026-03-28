@@ -2,6 +2,8 @@ from enum import IntFlag
 from enum import StrEnum
 from typing import Self
 
+type Score = float
+
 
 class MusicProvider(StrEnum):
     SPOTIFY = "spotify"

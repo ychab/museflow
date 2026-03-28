@@ -83,7 +83,11 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
 
         playlist = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(seed_limit=5),
+            config=DiscoveryConfigInput(
+                seed_limit=5,
+                playlist_size=1,
+                max_attempts=1,
+            ),
         )
 
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
@@ -132,7 +136,11 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
     ) -> None:
         playlist = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(seed_limit=5),
+            config=DiscoveryConfigInput(
+                seed_limit=5,
+                playlist_size=1,
+                max_attempts=1,
+            ),
         )
 
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"

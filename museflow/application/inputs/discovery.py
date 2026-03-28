@@ -15,8 +15,11 @@ class DiscoveryConfigInput:
         seed_genres: A list of genres to filter on the seeds.
         seed_order_by: The field to order the seed tracks by.
         seed_sort_order: The sort order for the seed tracks.
-        seed_limit: The maximum number of seed tracks to use.
+        seed_limit: The batch size of seed tracks per attempt.
         similar_limit: The maximum number of similar tracks to fetch for each seed.
+        candidate_limit: The maximum number of search candidates per suggestion.
+        playlist_size: The target exact number of tracks in the generated playlist.
+        max_attempts: The maximum number of seed batches to process before stopping.
     """
 
     seed_top: bool | None = None
@@ -29,3 +32,6 @@ class DiscoveryConfigInput:
     similar_limit: int = 5
 
     candidate_limit: int = 10
+
+    playlist_size: int = 10
+    max_attempts: int = 5

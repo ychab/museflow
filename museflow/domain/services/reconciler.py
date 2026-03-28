@@ -43,7 +43,7 @@ class TrackReconciler:
             )
             return best_match
 
-        logger.warning(
+        logger.debug(
             f"Reconciliation failed for '{track_suggested.artists[0]} - {track_suggested.name}'. "
             f"Best score: {best_score:.1f}",
             extra={"artists": track_suggested.artists, "track": track_suggested.name, "best_score": best_score},

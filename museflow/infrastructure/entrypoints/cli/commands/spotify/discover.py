@@ -9,9 +9,6 @@ from museflow.application.inputs.discovery import DiscoveryConfigInput
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
 from museflow.domain.entities.music import Playlist
 from museflow.domain.exceptions import DiscoveryTrackNoNew
-from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
-from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
-from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicAdvisor
@@ -62,7 +59,7 @@ def discover(
     seed_limit: int = typer.Option(
         20,
         "--seed-limit",
-        help="The limit of seed tracks to collect",
+        help="The batch size of seed tracks per attempt",
         min=1,
         max=50,
     ),
@@ -79,6 +76,20 @@ def discover(
         help="The limit of candidate tracks to search",
         min=1,
         max=20,
+    ),
+    playlist_size: int = typer.Option(
+        10,
+        "--playlist-size",
+        help="Target number of tracks in the generated playlist",
+        min=1,
+        max=30,
+    ),
+    max_attempts: int = typer.Option(
+        5,
+        "--max-attempts",
+        help="Maximum number of seed batches to process before stopping",
+        min=1,
+        max=10,
     ),
 ) -> None:
     """
@@ -98,6 +109,8 @@ def discover(
                     seed_limit=seed_limit,
                     similar_limit=similar_limit,
                     candidate_limit=candidate_limit,
+                    playlist_size=playlist_size,
+                    max_attempts=max_attempts,
                 ),
             ),
         )
@@ -108,17 +121,8 @@ def discover(
             f"Auth token not found with email: {email}. Did you forget to connect?", fg=typer.colors.RED, err=True
         )
         raise typer.Exit(code=1) from e
-    except DiscoveryTrackNoSeedFound as e:
-        typer.secho("No seed tracks founded", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from e
-    except DiscoveryTrackNoSimilarFound as e:
-        typer.secho("No similar tracks founded", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from e
-    except DiscoveryTrackNoReconciledFound as e:
-        typer.secho("No reconciled tracks founded", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from e
     except DiscoveryTrackNoNew as e:
-        typer.secho("No new tracks founded", fg=typer.colors.RED, err=True)
+        typer.secho("No new tracks found after all attempts", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)

@@ -9,9 +9,6 @@ from typer.testing import CliRunner
 from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
-from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
-from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
-from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicAdvisor
@@ -47,6 +44,8 @@ class TestSpotifyDiscoverParserCommand:
                 "--seed-limit", "20",
                 "--similar-limit", "10",
                 "--candidate-limit", "10",
+                "--playlist-size", "15",
+                "--max-attempts", "3",
             ],
         )
         # fmt: on
@@ -188,6 +187,56 @@ class TestSpotifyDiscoverParserCommand:
         output = clean_typer_text(result.output)
         assert expected_msg in output
 
+    @pytest.mark.parametrize(
+        ("playlist_size", "expected_msg"),
+        [
+            pytest.param(0, "Invalid value for '--playlist-size': 0 is not in the range", id="zero"),
+            pytest.param(-5, "Invalid value for '--playlist-size': -5 is not in the range", id="min_exceed"),
+            pytest.param(31, "Invalid value for '--playlist-size': 31 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--playlist-size': 'foo' is not a valid integer", id="string"),
+        ],
+    )
+    def test__playlist_size__invalid(
+        self,
+        runner: CliRunner,
+        playlist_size: Any,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["spotify", "discover", "--email", "test@example.com", "--playlist-size", playlist_size],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert expected_msg in output
+
+    @pytest.mark.parametrize(
+        ("max_attempts", "expected_msg"),
+        [
+            pytest.param(0, "Invalid value for '--max-attempts': 0 is not in the range", id="zero"),
+            pytest.param(-1, "Invalid value for '--max-attempts': -1 is not in the range", id="min_exceed"),
+            pytest.param(11, "Invalid value for '--max-attempts': 11 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--max-attempts': 'foo' is not a valid integer", id="string"),
+        ],
+    )
+    def test__max_attempts__invalid(
+        self,
+        runner: CliRunner,
+        max_attempts: Any,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["spotify", "discover", "--email", "test@example.com", "--max-attempts", max_attempts],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert expected_msg in output
+
 
 class TestSpotifyDiscoverCommand:
     @pytest.fixture(autouse=True)
@@ -224,48 +273,6 @@ class TestSpotifyDiscoverCommand:
         output = clean_typer_text(result.stderr)
         assert "Auth token not found with email: test@example.com. Did you forget to connect?" in output
 
-    def test__no_track_seed_found(
-        self,
-        mock_discover_logic: mock.AsyncMock,
-        runner: CliRunner,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        mock_discover_logic.side_effect = DiscoveryTrackNoSeedFound()
-
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.stderr)
-        assert "No seed tracks founded" in output
-
-    def test__no_track_similar_found(
-        self,
-        mock_discover_logic: mock.AsyncMock,
-        runner: CliRunner,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        mock_discover_logic.side_effect = DiscoveryTrackNoSimilarFound()
-
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.stderr)
-        assert "No similar tracks founded" in output
-
-    def test__no_track_reconciled_found(
-        self,
-        mock_discover_logic: mock.AsyncMock,
-        runner: CliRunner,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        mock_discover_logic.side_effect = DiscoveryTrackNoReconciledFound()
-
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.stderr)
-        assert "No reconciled tracks founded" in output
-
     def test__no_track_new_found(
         self,
         mock_discover_logic: mock.AsyncMock,
@@ -278,7 +285,7 @@ class TestSpotifyDiscoverCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "No new tracks founded" in output
+        assert "No new tracks found after all attempts" in output
 
     def test__output__exceptions(
         self,

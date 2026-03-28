@@ -12,12 +12,10 @@ from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
-from museflow.domain.exceptions import DiscoveryTrackNoReconciledFound
-from museflow.domain.exceptions import DiscoveryTrackNoSeedFound
-from museflow.domain.exceptions import DiscoveryTrackNoSimilarFound
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import Score
 from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
@@ -41,9 +39,10 @@ class AdvisorDiscoverUseCase:
     async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> Playlist:
         """Creates a playlist of suggested tracks for a user.
 
-        The process involves gathering seed tracks from the user's library,
-        finding similar tracks using an advisor, reconciling them with a provider,
-        excluding tracks the user already knows, and finally creating a playlist.
+        Iterates over seed batches from the user's library until `playlist_size` tracks are
+        accumulated or `max_attempts` batches have been processed. The final playlist is trimmed
+        to exactly `playlist_size` tracks by the highest advisor score, or shorter if fewer tracks
+        were found.
 
         Args:
             user: The user for whom to create the playlist.
@@ -53,50 +52,85 @@ class AdvisorDiscoverUseCase:
             The newly created playlist.
 
         Raises:
-            DiscoveryTrackNoSeedFound: If no seed tracks are found.
-            DiscoveryTrackNoSimilarFound: If no similar tracks are found.
-            DiscoveryTrackNoReconciledFound: If no tracks can be reconciled.
-            DiscoveryTrackNoNew: If the user already knows all reconciled tracks.
+            DiscoveryTrackNoNew: If no new tracks are found after all attempts.
         """
-        # First, collect track seeds.
-        track_seeds = await self._track_repository.get_list(
-            user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.from_flags(
-                top=config.seed_top,
-                saved=config.seed_saved,
-            ),
-            genres=config.seed_genres,
-            order_by=config.seed_order_by,
-            sort_order=config.seed_sort_order,
-            limit=config.seed_limit,
-        )
-        if not track_seeds:
-            raise DiscoveryTrackNoSeedFound()
-        logger.info(f"Seed tracks: {len(track_seeds)}\n")
+        tracks_scores: list[tuple[Track, Score]] = []
+        offset = 0
 
-        # Then get seed's similarities by the advisor.
-        tracks_suggested = await self._get_similar_tracks(track_seeds=track_seeds, limit=config.similar_limit)
-        if not tracks_suggested:
-            raise DiscoveryTrackNoSimilarFound()
-        logger.info(f"Suggested tracks: {len(tracks_suggested)}\n")
+        for attempt in range(1, config.max_attempts + 1):
+            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###\n")
 
-        # Then reconcile them with the provider.
-        tracks_reconciled = await self._reconcile_tracks(
-            tracks_suggested=tracks_suggested,
-            limit=config.candidate_limit,
-        )
-        if not tracks_reconciled:
-            raise DiscoveryTrackNoReconciledFound()
-        logger.info(f"Reconciled tracks: {len(tracks_reconciled)}\n")
+            logger.info("--- Seed tracks ---")
+            track_seeds = await self._track_repository.get_list(
+                user_id=user.id,
+                provider=MusicProvider.SPOTIFY,
+                sources=TrackSource.from_flags(
+                    top=config.seed_top,
+                    saved=config.seed_saved,
+                ),
+                genres=config.seed_genres,
+                order_by=config.seed_order_by,
+                sort_order=config.seed_sort_order,
+                limit=config.seed_limit,
+                offset=offset,
+            )
+            if not track_seeds:
+                logger.info("Seeds exhausted, stopping.")
+                break
 
-        # Then filter them to remove known tracks by the user.
-        tracks = await self._deduplicate_tracks(user=user, tracks_reconciled=tracks_reconciled)
-        if not tracks:
+            offset += config.seed_limit
+            logger.info(f"Seed tracks found: {len(track_seeds)}")
+
+            logger.info("--- Suggested tracks ---")
+            tracks_suggested = await self._get_similar_tracks(track_seeds=track_seeds, limit=config.similar_limit)
+            if not tracks_suggested:
+                logger.warning(f"Attempt {attempt}: no similar tracks found, continuing...")
+                continue
+
+            logger.info("--- Reconcile suggested tracks ---")
+            tracks_reconciled = await self._reconcile_tracks(
+                tracks_suggested=tracks_suggested,
+                limit=config.candidate_limit,
+            )
+            if not tracks_reconciled:
+                logger.warning(f"Attempt {attempt}: no reconciled tracks found, continuing...")
+                continue
+
+            logger.info("--- Deduplicate reconciled tracks ---")
+            tracks_new = await self._deduplicate_tracks(user=user, tracks_reconciled=tracks_reconciled)
+
+            # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
+            existing_fps = {t.fingerprint for t, _ in tracks_scores}
+            existing_isrcs = {t.isrc for t, _ in tracks_scores if t.isrc}
+            tracks_new = [
+                (t, s)
+                for t, s in tracks_new
+                if t.fingerprint not in existing_fps and (not t.isrc or t.isrc not in existing_isrcs)
+            ]
+
+            tracks_scores.extend(tracks_new)
+            logger.info(
+                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_new)} tracks (total: {len(tracks_scores)})\n",
+                extra={"attempt": attempt, "total": len(tracks_scores)},
+            )
+
+            if len(tracks_scores) >= config.playlist_size:
+                break
+
+        if not tracks_scores:
             raise DiscoveryTrackNoNew()
-        logger.info(f"New tracks: {len(tracks)}\n")
 
-        # Finally, save them into a dedicated playlist.
+        # Sort by advisor score DESC, trim to exact playlist_size
+        tracks_scores.sort(key=lambda x: x[1], reverse=True)
+        tracks = [t for t, _ in tracks_scores[: config.playlist_size]]
+
+        if len(tracks) < config.playlist_size:
+            logger.warning(
+                f"playlist_size not reached ({len(tracks)}/{config.playlist_size}) "
+                f"after {config.max_attempts} attempt(s)",
+                extra={"found": len(tracks), "target": config.playlist_size},
+            )
+
         return await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {self._advisor_client.display_name} - {datetime.now(UTC).isoformat()}",
             tracks=tracks,
@@ -131,18 +165,21 @@ class AdvisorDiscoverUseCase:
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)
 
-    async def _reconcile_tracks(self, tracks_suggested: list[TrackSuggested], limit: int) -> list[Track]:
+    async def _reconcile_tracks(
+        self,
+        tracks_suggested: list[TrackSuggested],
+        limit: int,
+    ) -> list[tuple[Track, Score]]:
         """Reconciles suggested tracks with the provider.
-
-        This method attempts to find a match for each suggested track in the provider's library.
 
         Args:
             tracks_suggested: A list of tracks suggested by the advisor.
+            limit: The maximum number of search candidates per suggestion.
 
         Returns:
-            A list of reconciled tracks.
+            A list of (reconciled track, advisor score) pairs.
         """
-        tracks_reconciled: list[Track] = []
+        tracks_reconciled: list[tuple[Track, Score]] = []
 
         for track_suggested in tracks_suggested:
             candidates = await self._provider_library.search_tracks(
@@ -157,37 +194,43 @@ class AdvisorDiscoverUseCase:
                 candidates=candidates,
             )
             if best_match:
-                tracks_reconciled.append(best_match)
+                tracks_reconciled.append((best_match, track_suggested.score or 0.0))
                 logger.info(f"Track reconciled: '{track_suggested}'")
             else:
                 logger.warning(f"Track not reconciled: '{track_suggested}'")
 
         return tracks_reconciled
 
-    async def _deduplicate_tracks(self, user: User, tracks_reconciled: list[Track]) -> list[Track]:
+    async def _deduplicate_tracks(
+        self,
+        user: User,
+        tracks_reconciled: list[tuple[Track, Score]],
+    ) -> list[tuple[Track, Score]]:
         """Deduplicate tracks that are already in the user's library.
 
         Args:
             user: The user to check against.
-            tracks_reconciled: A list of reconciled tracks to filter.
+            tracks_reconciled: A list of (track, score) pairs to filter.
 
         Returns:
-            A list of tracks that are not in the user's library.
+            A list of (track, score) pairs not in the user's library.
         """
-        tracks_new: list[Track] = []
+        tracks_new: list[tuple[Track, Score]] = []
 
         known_identifiers = await self._track_repository.get_known_identifiers(
             user_id=user.id,
-            isrcs=[track.isrc for track in tracks_reconciled if track.isrc],
-            fingerprints=[track.fingerprint for track in tracks_reconciled],
+            isrcs=[track.isrc for track, _ in tracks_reconciled if track.isrc],
+            fingerprints=[track.fingerprint for track, _ in tracks_reconciled],
         )
 
-        for track in tracks_reconciled:
+        for track, score in tracks_reconciled:
             if known_identifiers.is_known(track):
                 logger.info(f"Excluded '{track}'")
                 continue
 
-            tracks_new.append(track)
+            tracks_new.append((track, score))
 
-        logger.info(f"\nDiscovery:\n- {'\n- '.join([f"'{t}'" for t in tracks_new])}")
+        logger.info(
+            f"Discovery:\n- {'\n- '.join([f"'{t}'" for t, _ in tracks_new])}" if tracks_new else "Discovery: None"
+        )
         return tracks_new

@@ -21,6 +21,12 @@ class UserInactive(Exception): ...
 class UserInvalidCredentials(Exception): ...
 
 
+# --- Rate limit exceptions ---
+
+
+class HttpRateLimitExceeded(Exception): ...
+
+
 # --- Provider exceptions ---
 
 
@@ -36,10 +42,13 @@ class ProviderPageValidationError(Exception):
         super().__init__(msg)
 
 
-class ProviderRateLimitExceeded(Exception): ...
+class ProviderRateLimitExceeded(HttpRateLimitExceeded): ...
 
 
-class AdvisorRateLimitExceeded(Exception): ...
+# --- Advisor exceptions ---
+
+
+class AdvisorRateLimitExceeded(HttpRateLimitExceeded): ...
 
 
 # --- Similarity track exceptions ---
@@ -52,15 +61,6 @@ class SimilarTrackResponseException(Exception): ...
 
 
 class DiscoveryTrackException(Exception): ...
-
-
-class DiscoveryTrackNoSeedFound(DiscoveryTrackException): ...
-
-
-class DiscoveryTrackNoSimilarFound(DiscoveryTrackException): ...
-
-
-class DiscoveryTrackNoReconciledFound(DiscoveryTrackException): ...
 
 
 class DiscoveryTrackNoNew(DiscoveryTrackException): ...
