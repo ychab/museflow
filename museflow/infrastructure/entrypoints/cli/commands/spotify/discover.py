@@ -91,6 +91,7 @@ def discover(
         min=1,
         max=10,
     ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Discover tracks without creating a playlist"),
 ) -> None:
     """
     Discover new tracks for a Spotify's user account.
@@ -111,6 +112,7 @@ def discover(
                     candidate_limit=candidate_limit,
                     playlist_size=playlist_size,
                     max_attempts=max_attempts,
+                    dry_run=dry_run,
                 ),
             ),
         )
@@ -128,13 +130,19 @@ def discover(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(
-        f"\n\nSuggested tracks successfully saved into playlist {playlist.name}! \u2705",
-        fg=typer.colors.GREEN,
-    )
+    if playlist is None:
+        typer.secho(
+            "\n\nTracks discovered but playlist not created (dry-run mode) \u26a0\ufe0f",
+            fg=typer.colors.YELLOW,
+        )
+    else:
+        typer.secho(
+            f"\n\nSuggested tracks successfully saved into playlist {playlist.name}! \u2705",
+            fg=typer.colors.GREEN,
+        )
 
 
-async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: DiscoveryConfigInput) -> Playlist:
+async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: DiscoveryConfigInput) -> Playlist | None:
     """Discovers new music for a user and creates a playlist.
 
     This function orchestrates the discovery process by setting up the necessary
@@ -146,7 +154,7 @@ async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: Discove
         config: The configuration for the discovery process.
 
     Returns:
-        The newly created playlist.
+        The newly created playlist, or ``None`` if dry-run mode is enabled.
 
     Raises:
         UserNotFound: If the user with the given email is not found.

@@ -36,7 +36,7 @@ class AdvisorDiscoverUseCase:
         self._advisor_client = advisor_client
         self._track_reconciler = track_reconciler
 
-    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> Playlist:
+    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> Playlist | None:
         """Creates a playlist of suggested tracks for a user.
 
         Iterates over seed batches from the user's library until `playlist_size` tracks are
@@ -49,7 +49,7 @@ class AdvisorDiscoverUseCase:
             config: The configuration for the discovery process.
 
         Returns:
-            The newly created playlist.
+            The newly created playlist, or ``None`` if ``config.dry_run`` is True.
 
         Raises:
             DiscoveryTrackNoNew: If no new tracks are found after all attempts.
@@ -130,6 +130,10 @@ class AdvisorDiscoverUseCase:
                 f"after {config.max_attempts} attempt(s)",
                 extra={"found": len(tracks), "target": config.playlist_size},
             )
+
+        if config.dry_run:
+            logger.info("Dry-run mode: skipping playlist creation.")
+            return None
 
         return await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {self._advisor_client.display_name} - {datetime.now(UTC).isoformat()}",

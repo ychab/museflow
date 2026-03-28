@@ -90,6 +90,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
             ),
         )
 
+        assert playlist is not None
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert len(playlist.tracks) == 1
 
@@ -143,6 +144,7 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
             ),
         )
 
+        assert playlist is not None
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert len(playlist.tracks) == 1
 

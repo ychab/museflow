@@ -2,14 +2,12 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## Design
 
-## Flaky tests again
-
-FAILED tests/integration/application/use_cases/test_advisor_discover.py::TestAdvisorDiscoverTracksSpotifyGeminiUseCase::test_execute__nominal@wiremock-gemini - httpx.HTTPStatusError: Client error '404 Not Found' for url 'https://localhost:8444/search?offset=0&limit=10&q=track%3A%22Mi+Pueblo%22+artist%3A%22Grupo+Niche%22&type=track'
+- use case: replace method name by __call__?
 
 ## Discovery
 
-- contine until X suggestions are reconciled and unknown (min_playlist_size=?)
 - add dry-run mode (don't create the remote playlist)?
 - add use case report and then, list in cli typer command in a table all new tracks added instead with stats for reports?
 

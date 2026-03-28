@@ -35,3 +35,5 @@ class DiscoveryConfigInput:
 
     playlist_size: int = 10
     max_attempts: int = 5
+
+    dry_run: bool = False

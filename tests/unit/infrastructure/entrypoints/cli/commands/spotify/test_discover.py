@@ -316,6 +316,20 @@ class TestSpotifyDiscoverCommand:
         output = clean_typer_text(result.stdout)
         assert f"Suggested tracks successfully saved into playlist {playlist.name}!" in output
 
+    def test__output__dry_run(
+        self,
+        mock_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        mock_discover_logic.return_value = None
+
+        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com", "--dry-run"])
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert "Tracks discovered but playlist not created (dry-run mode)" in output
+
 
 @pytest.mark.usefixtures(
     "mock_get_db",

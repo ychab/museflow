@@ -396,6 +396,38 @@ class TestAdvisorDiscoverTracksUseCase:
         assert playlist_tracks[0].name == "High"
         assert playlist_tracks[1].name == "Mid"
 
+    async def test__dry_run(
+        self,
+        user: User,
+        use_case: AdvisorDiscoverUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor_client: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
+        mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
+
+        reconciled_track = TrackFactory.build()
+        mock_provider_library.search_tracks.return_value = [reconciled_track]
+        mock_track_reconciler.reconcile.return_value = reconciled_track
+
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset(),
+            fingerprints=frozenset(),
+        )
+
+        with caplog.at_level(logging.INFO):
+            result = await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoveryConfigInput(seed_limit=1, max_attempts=1, dry_run=True),
+            )
+
+        assert result is None
+        mock_provider_library.create_playlist.assert_not_called()
+        assert "Dry-run mode: skipping playlist creation." in caplog.text
+
     async def test__sorting_with_none_score(
         self,
         user: User,
