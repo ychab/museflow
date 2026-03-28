@@ -15,6 +15,10 @@ class WireMockContext:
         self.admin_url = f"{base_url.rstrip('/')}/__admin"
 
     def __enter__(self) -> Self:
+        # Reset to file-based stubs before the test starts. This guards against a previous
+        # test's __exit__ reset failing silently and leaving dynamic mappings behind, which
+        # would bleed into this test and cause it to receive unexpected responses.
+        httpx.post(f"{self.admin_url}/mappings/reset")
         return self
 
     def __exit__(

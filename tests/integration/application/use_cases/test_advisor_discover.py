@@ -101,7 +101,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         assert track.artists[0].name == "Grupo Niche"
 
 
-@pytest.mark.wiremock("gemini")
+@pytest.mark.wiremock("spotify")
 class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
     @pytest.fixture
     def use_case(
