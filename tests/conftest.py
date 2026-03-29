@@ -20,11 +20,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=None,
         help="A valid Spotify Refresh Token to run live API tests.",
     )
+    parser.addoption(
+        "--lastfm-live",
+        action="store_true",
+        default=False,
+        help="Run live Last.fm API tests (requires LASTFM_CLIENT_API_KEY and LASTFM_CLIENT_SECRET).",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow (not executed by default)")
     config.addinivalue_line("markers", "spotify_live: mark test as requiring live Spotify API access")
+    config.addinivalue_line("markers", "lastfm_live: mark test as requiring live Last.fm API access")
     config.addinivalue_line(
         "markers",
         "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'lastfm') — "
@@ -46,6 +53,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
         if item.get_closest_marker("spotify_live") and not config.getoption("--spotify-refresh-token"):
             item.add_marker(skip_spotify)
+
+        if item.get_closest_marker("lastfm_live") and not config.getoption("--lastfm-live"):
+            item.add_marker(pytest.mark.skip(reason="need --lastfm-live option to run"))
 
         if marker := item.get_closest_marker("wiremock"):
             servers = sorted(set(marker.args))

@@ -2,11 +2,20 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## todo.txt
+
+- fix missing
+
 ## live tests
 
 - update the spotify if missing method?
 - add live test for lastfm?
 - add live test for gemini?
+
+## gemini
+
+- improve the prompt?
+- override the default prompt?
 
 ## Sync
 
@@ -27,6 +36,7 @@ This quick and dirty document just list the roadmap tasks.
 - found other providers for recommendations (listenbrainz or musicbrainz)?
     => tastedive API
     => openai
+    => spotify search with hipster / new tags, etc?
 
 ## direnv
 
