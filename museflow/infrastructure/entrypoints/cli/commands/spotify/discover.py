@@ -4,9 +4,11 @@ from contextlib import AsyncExitStack
 from pydantic import EmailStr
 
 import typer
+from rich.table import Table
 
 from museflow.application.inputs.discovery import DiscoveryConfigInput
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
+from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
 from museflow.domain.entities.music import Playlist
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -16,6 +18,7 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
+from museflow.infrastructure.entrypoints.cli.commands.spotify import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_client
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -97,7 +100,7 @@ def discover(
     Discover new tracks for a Spotify's user account.
     """
     try:
-        playlist = asyncio.run(
+        playlist, reports = asyncio.run(
             discover_logic(
                 email=email,
                 advisor=advisor,
@@ -130,6 +133,24 @@ def discover(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    table = Table(title="Discovery Report")
+    table.add_column("Attempt", justify="right")
+    table.add_column("Seeds", justify="right")
+    table.add_column("Suggested", justify="right")
+    table.add_column("Reconciled", justify="right")
+    table.add_column("Survived", justify="right")
+    table.add_column("New", justify="right")
+    for r in reports:
+        table.add_row(
+            str(r.attempt),
+            str(r.tracks_seeds),
+            str(r.tracks_suggested),
+            str(r.tracks_reconciled),
+            str(r.tracks_survived),
+            str(r.tracks_new),
+        )
+    console.print(table)
+
     if playlist is None:
         typer.secho(
             "\n\nTracks discovered but playlist not created (dry-run mode) \u26a0\ufe0f",
@@ -142,7 +163,11 @@ def discover(
         )
 
 
-async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: DiscoveryConfigInput) -> Playlist | None:
+async def discover_logic(
+    email: EmailStr,
+    advisor: MusicAdvisor,
+    config: DiscoveryConfigInput,
+) -> tuple[Playlist | None, list[DiscoveryAttemptReport]]:
     """Discovers new music for a user and creates a playlist.
 
     This function orchestrates the discovery process by setting up the necessary
@@ -154,7 +179,7 @@ async def discover_logic(email: EmailStr, advisor: MusicAdvisor, config: Discove
         config: The configuration for the discovery process.
 
     Returns:
-        The newly created playlist, or ``None`` if dry-run mode is enabled.
+        A tuple of (playlist or ``None`` if dry-run, list of per-attempt reports).
 
     Raises:
         UserNotFound: If the user with the given email is not found.

@@ -81,7 +81,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
             json_body=wiremock_lastfm_response,
         )
 
-        playlist = await use_case.create_suggestions_playlist(
+        playlist, reports = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=5,
@@ -100,6 +100,9 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
+
+        assert len(reports) == 1
+        assert reports[0].tracks_new >= 1
 
 
 @pytest.mark.wiremock("spotify")
@@ -135,7 +138,7 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
         track_seed: Track,
         track_repository: TrackRepository,
     ) -> None:
-        playlist = await use_case.create_suggestions_playlist(
+        playlist, reports = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=5,
@@ -154,3 +157,6 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
+
+        assert len(reports) == 1
+        assert reports[0].tracks_new >= 1

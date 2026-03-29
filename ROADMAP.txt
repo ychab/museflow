@@ -2,15 +2,6 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## Design
-
-- use case: replace method name by __call__?
-
-## Discovery
-
-- add dry-run mode (don't create the remote playlist)?
-- add use case report and then, list in cli typer command in a table all new tracks added instead with stats for reports?
-
 ## live tests
 
 - update the spotify if missing method?

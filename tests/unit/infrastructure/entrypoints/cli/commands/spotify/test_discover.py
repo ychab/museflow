@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
 from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -26,7 +27,8 @@ class TestSpotifyDiscoverParserCommand:
     def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            yield patched.return_value
+            patched.return_value = (None, [])
+            yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
         # fmt: off
@@ -307,8 +309,16 @@ class TestSpotifyDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
+        report = DiscoveryAttemptReport(
+            attempt=1,
+            tracks_seeds=5,
+            tracks_suggested=10,
+            tracks_reconciled=8,
+            tracks_survived=2,
+            tracks_new=6,
+        )
         playlist = PlaylistFactory.build()
-        mock_discover_logic.return_value = playlist
+        mock_discover_logic.return_value = (playlist, [report])
 
         result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -322,7 +332,7 @@ class TestSpotifyDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.return_value = None
+        mock_discover_logic.return_value = (None, [])
 
         result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
