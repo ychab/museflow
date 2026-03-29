@@ -164,9 +164,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
 
         # Gather all tracks first.
         tracks = [track for task in tasks for track in task.result()]
-        # Then remove duplicates due to multiple playlists with the same tracks.
-        # @todo - improve it to don't only rely on spotify ID's
-        return list({track.provider_id: track for track in tracks}.values())
+
+        # Deduplicate by fingerprint to exclude remasters/live/edits versions (first-wins, order preserved).
+        return list({track.fingerprint: track for track in reversed(tracks)}.values())
 
     async def get_track_by_id(self, track_id: str) -> Track:
         data = await self._execute_request(method="GET", endpoint=f"/tracks/{track_id}")

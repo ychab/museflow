@@ -328,6 +328,68 @@ class TestSpotifyLibrary:
     @pytest.mark.parametrize(
         "wiremock_response", ["playlist_items_1xnKqEZDpMWvrts4M9I9GC_page_1"], indirect=["wiremock_response"]
     )
+    async def test__get_playlist_tracks__duplicates_by_fingerprint(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        wiremock_response: dict[str, Any],
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        page_size = 1
+        original_track = wiremock_response["items"][0]["item"]
+
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/playlists/0wKgiV47itigJyxBgFxAu1/items",
+            status=200,
+            query_params={
+                "offset": 0,
+                "limit": page_size,
+                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                "additional_types": "track",
+            },
+            json_body={
+                **wiremock_response,
+                "total": 1,
+                "items": [
+                    {
+                        "item": original_track,
+                    }
+                ],
+            },
+        )
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/playlists/1xnKqEZDpMWvrts4M9I9GC/items",
+            status=200,
+            query_params={
+                "offset": 0,
+                "limit": page_size,
+                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                "additional_types": "track",
+            },
+            json_body={
+                **wiremock_response,
+                "total": 1,
+                "items": [
+                    {
+                        "item": {
+                            **original_track,
+                            "id": "REMASTERED_ID",
+                            "name": f"{original_track['name']} (Remastered)",
+                        },
+                    },
+                ],
+            },
+        )
+
+        tracks = await spotify_library.get_playlist_tracks(page_size=page_size)
+
+        assert len(tracks) == 1
+        assert tracks[0].provider_id == original_track["id"]
+
+    @pytest.mark.parametrize(
+        "wiremock_response", ["playlist_items_1xnKqEZDpMWvrts4M9I9GC_page_1"], indirect=["wiremock_response"]
+    )
     async def test__get_playlist_tracks__local_files(
         self,
         spotify_library: SpotifyLibraryAdapter,
