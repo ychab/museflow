@@ -6,12 +6,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - fix missing
 
-## live tests
-
-- update the spotify if missing method?
-- add live test for lastfm?
-- add live test for gemini?
-
 ## gemini
 
 - improve the prompt?

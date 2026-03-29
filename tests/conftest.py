@@ -26,12 +26,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Run live Last.fm API tests (requires LASTFM_CLIENT_API_KEY and LASTFM_CLIENT_SECRET).",
     )
+    parser.addoption(
+        "--gemini-live",
+        action="store_true",
+        default=False,
+        help="Run live Gemini API tests (requires GEMINI_API_KEY).",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow (not executed by default)")
     config.addinivalue_line("markers", "spotify_live: mark test as requiring live Spotify API access")
     config.addinivalue_line("markers", "lastfm_live: mark test as requiring live Last.fm API access")
+    config.addinivalue_line("markers", "gemini_live: mark test as requiring live Gemini API access")
     config.addinivalue_line(
         "markers",
         "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'lastfm') — "
@@ -56,6 +63,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
         if item.get_closest_marker("lastfm_live") and not config.getoption("--lastfm-live"):
             item.add_marker(pytest.mark.skip(reason="need --lastfm-live option to run"))
+
+        if item.get_closest_marker("gemini_live") and not config.getoption("--gemini-live"):
+            item.add_marker(pytest.mark.skip(reason="need --gemini-live option to run"))
 
         if marker := item.get_closest_marker("wiremock"):
             servers = sorted(set(marker.args))
