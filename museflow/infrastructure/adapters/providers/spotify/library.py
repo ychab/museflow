@@ -16,6 +16,7 @@ from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
+from museflow.domain.types import AlbumType
 from museflow.domain.types import ArtistSource
 from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
@@ -165,8 +166,20 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         # Gather all tracks first.
         tracks = [track for task in tasks for track in task.result()]
 
-        # Deduplicate by fingerprint to exclude remasters/live/edits versions (first-wins, order preserved).
-        return list({track.fingerprint: track for track in reversed(tracks)}.values())
+        # Deduplicate by fingerprint, preferring album version over single/EP/compilation.
+        # Sort worst→best so last-wins dict comprehension retains the highest-priority version.
+        return list(
+            {
+                t.fingerprint: t
+                for t in sorted(
+                    tracks,
+                    key=lambda t: (
+                        t.album.album_type.priority if t.album and t.album.album_type else AlbumType.UNKNOWN.priority
+                    ),
+                    reverse=True,
+                )
+            }.values()
+        )
 
     async def get_track_by_id(self, track_id: str) -> Track:
         data = await self._execute_request(method="GET", endpoint=f"/tracks/{track_id}")

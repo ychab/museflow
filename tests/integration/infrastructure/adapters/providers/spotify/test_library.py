@@ -335,7 +335,8 @@ class TestSpotifyLibrary:
         spotify_wiremock: WireMockContext,
     ) -> None:
         page_size = 1
-        original_track = wiremock_response["items"][0]["item"]
+
+        original_track = wiremock_response["items"][0]["item"]  # album_type: "album"
 
         spotify_wiremock.create_mapping(
             method="GET",
@@ -347,15 +348,7 @@ class TestSpotifyLibrary:
                 "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                 "additional_types": "track",
             },
-            json_body={
-                **wiremock_response,
-                "total": 1,
-                "items": [
-                    {
-                        "item": original_track,
-                    }
-                ],
-            },
+            json_body={**wiremock_response, "total": 1, "items": [{"item": original_track}]},
         )
         spotify_wiremock.create_mapping(
             method="GET",
@@ -376,6 +369,7 @@ class TestSpotifyLibrary:
                             **original_track,
                             "id": "REMASTERED_ID",
                             "name": f"{original_track['name']} (Remastered)",
+                            "album": {**original_track["album"], "album_type": "single"},  # downgraded version
                         },
                     },
                 ],
@@ -385,7 +379,7 @@ class TestSpotifyLibrary:
         tracks = await spotify_library.get_playlist_tracks(page_size=page_size)
 
         assert len(tracks) == 1
-        assert tracks[0].provider_id == original_track["id"]
+        assert tracks[0].provider_id == original_track["id"]  # album version preferred over single
 
     @pytest.mark.parametrize(
         "wiremock_response", ["playlist_items_1xnKqEZDpMWvrts4M9I9GC_page_1"], indirect=["wiremock_response"]

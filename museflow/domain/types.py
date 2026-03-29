@@ -70,3 +70,13 @@ class AlbumType(StrEnum):
     COMPILATION = "compilation"
     EP = "ep"
     UNKNOWN = "unknown"
+
+    @property
+    def priority(self) -> int:
+        return {
+            AlbumType.ALBUM: 0,
+            AlbumType.EP: 1,
+            AlbumType.SINGLE: 2,
+            AlbumType.COMPILATION: 3,
+            AlbumType.UNKNOWN: 4,
+        }[self]
