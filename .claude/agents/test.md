@@ -38,6 +38,7 @@ You are a testing expert specializing in the MuseFlow codebase. Your job is to a
 3. Determine whether to add a unit test or an integration test:
    - **Integration first** (real DB, real implementations).
    - **Unit** for branches hard to reach via integration (specific error conditions, internal helpers).
+   - **Do NOT** add a unit test for a happy path already covered by an integration test — that is duplication, not coverage.
 4. Check existing fixtures and factories before creating new ones — reuse whenever possible.
 5. Write tests, run coverage, repeat until 100%.
 
@@ -122,6 +123,7 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - `mock.AsyncMock` for async ports/repositories.
 - `mock.Mock` for sync ports.
 - Never mock the database in integration tests — use the real `async_session_db` fixture.
+- Never use fake (in-memory) repository implementations. Use `AsyncMock` for all repository fixtures in unit tests.
 
 ## Coverage rules
 

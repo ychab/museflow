@@ -192,6 +192,8 @@ Tests are the **contract with our users**. They must be clean, clear, and easy t
 - **100% branch coverage** is mandatory (`pytest-cov --cov-branch --cov-fail-under=100`).
 - **Integration tests** are the primary focus — test full flows with a real DB and WireMock for external APIs.
 - **Unit tests** fill gaps — complex domain logic and edge cases hard to reach via integration.
+- **Do not mirror happy paths**: if a happy path is already covered by an integration test, do not add a unit test for the same flow — it creates maintenance duplication with no extra confidence.
+- **Use `AsyncMock` for repositories**: do not implement fake (in-memory) repositories. `AsyncMock` is appropriate here: complex repository methods (filtering, bulk upsert) are hard to fake correctly, and integration tests already validate the port contract.
 - **All test code is typed** — fixtures, test functions, factories, helpers all have strict type annotations.
 
 ### Test File Mirror

@@ -14,6 +14,8 @@ File to test: **$ARGUMENTS**
 ### 2. Determine test type(s) needed
 - **Integration test** (primary): Use the real DB + real implementations. Write these first.
 - **Unit test** (gap-filling): Use mocks. Write these for branches hard to reach via integration (e.g., specific error handling, internal helper functions, edge cases).
+- **Do NOT** write a unit test for a happy path already covered by an integration test — this is duplication, not coverage. If the integration test covers the nominal flow, unit tests only need to cover unreachable-via-integration branches.
+- **Do NOT** create fake (in-memory) repository implementations. Use `AsyncMock` for repository mocks in unit tests.
 
 ### 3. Check for existing fixtures and factories
 Before creating new fixtures or factories, check:
