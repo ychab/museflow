@@ -169,12 +169,17 @@ class GeminiClientAdapter(HttpClientMixin, AdvisorClientPort):
             generationConfig=GEMINI_TRACK_SUGGESTIONS_CONFIG,
         )
 
-        response_data = await self.make_api_call(
-            method="POST",
-            endpoint=f"/models/{self._model}:generateContent",
-            headers={"x-goog-api-key": self._api_key},
-            json_data=request.model_dump(exclude_none=True),
-        )
+        try:
+            response_data = await self.make_api_call(
+                method="POST",
+                endpoint=f"/models/{self._model}:generateContent",
+                headers={"x-goog-api-key": self._api_key},
+                json_data=request.model_dump(exclude_none=True),
+            )
+        except TryAgain as e:
+            raise AdvisorRateLimitExceeded(
+                f"Gemini rate limit exceeded after max retries for '{track_name}' by '{artist_name}'"
+            ) from e
 
         envelope = GeminiResponse.model_validate(response_data)
 

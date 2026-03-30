@@ -93,6 +93,36 @@ class TestGeminiClientAdapter:
         with pytest.raises(SimilarTrackResponseException):
             await gemini_client.get_similar_tracks(artist_name="Artist", track_name="Track")
 
+    async def test__get_similar_tracks__rate_limit_exhausted(
+        self,
+        gemini_client: GeminiClientAdapter,
+        httpx_mock: HTTPXMock,
+        mock_tenacity_sleep: None,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            status_code=codes.TOO_MANY_REQUESTS,
+            json={
+                "error": {
+                    "code": 429,
+                    "status": "RESOURCE_EXHAUSTED",
+                    "details": [
+                        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "3s"},
+                    ],
+                }
+            },
+            is_reusable=True,
+        )
+
+        with (
+            pytest.raises(AdvisorRateLimitExceeded) as exc_info,
+            mock.patch("asyncio.sleep", new_callable=mock.AsyncMock),
+        ):
+            await gemini_client.get_similar_tracks(artist_name="Radiohead", track_name="Creep")
+
+        assert "Gemini rate limit exceeded after max retries for 'Creep' by 'Radiohead'" in str(exc_info.value)
+
     async def test__get_similar_tracks__invalid_schema_raises(
         self,
         gemini_client: GeminiClientAdapter,
