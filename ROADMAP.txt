@@ -2,18 +2,34 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## claude
+## discovery improvements
 
-- review settings to add more generic permissions
+- Dry-run track preview: currently --dry-run only shows metrics (counts per attempt).
+  Print the actual track list (name + artist) that would be added so the user can
+  evaluate quality before committing to a playlist creation.
 
-## gemini
+- Per-artist diversity cap: add a max_tracks_per_artist config (default 2).
+  The final playlist sort-by-score step doesn't prevent 4 songs from the same artist
+  landing in a 10-track playlist. Simple constraint, big perceived quality improvement.
 
-- improve the prompt?
-- override the default prompt?
+- Combined score (advisor × reconciliation confidence): advisor score and reconciler
+  final score are currently independent. Weighting them together (e.g. advisor_score ×
+  normalized_reconciler_score) would improve final ranking quality — a weakly reconciled
+  track should rank below a confidently matched one even if the advisor score is higher.
 
-## Sync
+- Gemini context enrichment: the advisor port only receives artist_name + track_name.
+  Gemini is a generative model — pass it richer context: user's top genres, a mood/energy
+  hint, and what to avoid (e.g. compilations, already-owned tracks). Would meaningfully
+  differentiate Gemini from Last.fm. Requires extending the port interface or adding an
+  optional context argument.
 
-- review it for atomicity between purge and resync? What about the test wrapped into a transaction then? Switch to async_session_trans?
+- Cross-advisor confidence signal: run both Last.fm and Gemini in parallel per seed,
+  union the results, and boost the score of tracks that appear in both. Agreement between
+  two independent advisors is a strong quality signal. Keep single-advisor as default.
+
+- Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next
+  run. Add a discovery_skip table (user_id + fingerprint) checked during deduplication.
+  CLI would need a way to mark tracks as skipped (e.g. after dry-run preview).
 
 ## Database
 
