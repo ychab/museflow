@@ -160,7 +160,12 @@ class GeminiClientAdapter(HttpClientMixin, AdvisorClientPort):
                         GeminiRequestPart(
                             text=(
                                 f"You are a music recommendation engine. "
-                                f'Suggest {limit} tracks similar to "{track_name}" by "{artist_name}".'
+                                f'Suggest {limit} tracks similar to "{track_name}" by "{artist_name}" '
+                                f"based on genre, mood, and musical style. "
+                                f"Return diverse suggestions from different artists. "
+                                f"Do not include the seed track itself. "
+                                f"For each track, assign a similarity score between 0.0 and 1.0 "
+                                f"where 1.0 means nearly identical style."
                             )
                         )
                     ]
