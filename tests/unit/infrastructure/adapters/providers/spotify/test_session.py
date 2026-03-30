@@ -4,9 +4,11 @@ from datetime import timedelta
 from unittest import mock
 
 import pytest
+from tenacity import TryAgain
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -141,3 +143,29 @@ class TestSpotifyOAuthSessionClient:
 
         mock_provider_oauth.refresh_access_token.assert_called_once()
         assert mock_provider_oauth.make_api_call.call_count == 20  # 10 (initial failures) + 10 (retries)
+
+    async def test__execute__rate_limit_on_first_call(
+        self,
+        session_client: SpotifyOAuthSessionClient,
+        mock_provider_oauth: mock.AsyncMock,
+    ) -> None:
+        mock_provider_oauth.make_api_call.side_effect = TryAgain()
+
+        with pytest.raises(ProviderRateLimitExceeded):
+            await session_client.execute("GET", "/test")
+
+        assert mock_provider_oauth.make_api_call.call_count == 1
+
+    async def test__execute__rate_limit_after_token_refresh(
+        self,
+        session_client: SpotifyOAuthSessionClient,
+        mock_provider_oauth: mock.AsyncMock,
+        token_payload: OAuthProviderTokenPayload,
+    ) -> None:
+        mock_provider_oauth.make_api_call.side_effect = [SpotifyTokenExpiredError(), TryAgain()]
+        mock_provider_oauth.refresh_access_token.return_value = token_payload
+
+        with pytest.raises(ProviderRateLimitExceeded):
+            await session_client.execute("GET", "/test")
+
+        assert mock_provider_oauth.make_api_call.call_count == 2
