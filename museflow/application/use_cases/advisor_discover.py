@@ -79,9 +79,9 @@ class AdvisorDiscoverUseCase:
         offset = 0
 
         for attempt in range(1, config.max_attempts + 1):
-            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###\n")
+            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
 
-            logger.info("--- Seed tracks ---")
+            logger.debug("--- Seed tracks ---")
             track_seeds = await self._track_repository.get_list(
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
@@ -101,22 +101,23 @@ class AdvisorDiscoverUseCase:
                 break
 
             offset += config.seed_limit
-            logger.info(f"Seed tracks found: {len(track_seeds)}")
+            logger.info(f"Seed tracks: {len(track_seeds)}")
 
-            logger.info("--- Suggested tracks ---")
+            logger.debug("--- Suggested tracks ---")
             tracks_suggested = await self._get_similar_tracks(track_seeds=track_seeds, limit=config.similar_limit)
             if not tracks_suggested:
-                logger.warning(f"Attempt {attempt}: no similar tracks found, continuing...")
+                logger.debug(f"Attempt {attempt}: no similar tracks found, continuing...")
                 reports.append(DiscoveryAttemptReport(attempt=attempt, tracks_seeds=len(track_seeds)))
                 continue
+            logger.info(f"Suggested tracks: {len(tracks_suggested)}")
 
-            logger.info("--- Reconcile suggested tracks ---")
+            logger.debug("--- Reconcile suggested tracks ---")
             tracks_reconciled = await self._reconcile_tracks(
                 tracks_suggested=tracks_suggested,
                 limit=config.candidate_limit,
             )
             if not tracks_reconciled:
-                logger.warning(f"Attempt {attempt}: no reconciled tracks found, continuing...")
+                logger.debug(f"Attempt {attempt}: no reconciled tracks found, continuing...")
                 reports.append(
                     DiscoveryAttemptReport(
                         attempt=attempt,
@@ -125,9 +126,11 @@ class AdvisorDiscoverUseCase:
                     )
                 )
                 continue
+            logger.info(f"Reconciled tracks: {len(tracks_reconciled)}")
 
-            logger.info("--- Deduplicate reconciled tracks ---")
+            logger.debug("--- Deduplicate reconciled tracks ---")
             tracks_survived = await self._deduplicate_tracks(user=user, tracks_reconciled=tracks_reconciled)
+            logger.info(f"Survived tracks: {len(tracks_survived)}")
 
             # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
             existing_fps = {t.fingerprint for t, _ in tracks_scores}
@@ -206,7 +209,7 @@ class AdvisorDiscoverUseCase:
                 continue
 
             tracks_suggested.extend(tracks_similar)
-            logger.info(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
+            logger.debug(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
 
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)
@@ -241,9 +244,9 @@ class AdvisorDiscoverUseCase:
             )
             if best_match:
                 tracks_reconciled.append((best_match, track_suggested.score or 0.0))
-                logger.info(f"Track reconciled: '{track_suggested}'")
+                logger.debug(f"Track reconciled: '{track_suggested}'")
             else:
-                logger.warning(f"Track not reconciled: '{track_suggested}'")
+                logger.debug(f"Track not reconciled: '{track_suggested}'")
 
         return tracks_reconciled
 
@@ -271,12 +274,12 @@ class AdvisorDiscoverUseCase:
 
         for track, score in tracks_reconciled:
             if known_identifiers.is_known(track):
-                logger.info(f"Excluded '{track}'")
+                logger.debug(f"Excluded '{track}'")
                 continue
 
             tracks_new.append((track, score))
 
-        logger.info(
+        logger.debug(
             f"Discovery:\n- {'\n- '.join([f"'{t}'" for t, _ in tracks_new])}" if tracks_new else "Discovery: None"
         )
         return tracks_new

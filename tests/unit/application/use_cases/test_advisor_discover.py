@@ -71,7 +71,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = expected_playlist
 
         # When
-        with caplog.at_level(logging.INFO):
+        with caplog.at_level(logging.DEBUG):
             result = await use_case.create_suggestions_playlist(user=user, config=config)
 
         assert isinstance(result, DiscoveryResult)
@@ -128,7 +128,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
         mock_advisor_client.get_similar_tracks.return_value = []
 
-        with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoNew):
+        with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
 
         assert "Attempt 1: no similar tracks found, continuing..." in caplog.text
@@ -165,7 +165,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.search_tracks.return_value = [TrackFactory.build()]
         mock_track_reconciler.reconcile.return_value = None
 
-        with caplog.at_level(logging.WARNING), pytest.raises(DiscoveryTrackNoNew):
+        with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
 
         assert f"Track not reconciled: '{track_suggested}'" in caplog.text
@@ -194,7 +194,7 @@ class TestAdvisorDiscoverTracksUseCase:
             fingerprints=frozenset([reconciled_track.fingerprint]),
         )
 
-        with caplog.at_level(logging.INFO), pytest.raises(DiscoveryTrackNoNew):
+        with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
 
         assert f"Excluded '{reconciled_track}'" in caplog.text
