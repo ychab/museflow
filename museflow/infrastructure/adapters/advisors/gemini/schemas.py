@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
+from pydantic import Field
 
 # --- Request models ---
 
@@ -77,8 +78,8 @@ class GeminiGenerateContentRequest(BaseModel):
 
 
 class GeminiSuggestedTrack(BaseModel):
-    name: str
-    artists: list[str]
+    name: str = Field(..., min_length=1)
+    artists: list[str] = Field(..., min_length=1)
     score: float
 
 

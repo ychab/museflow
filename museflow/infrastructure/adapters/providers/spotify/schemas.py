@@ -31,8 +31,8 @@ class SpotifyToken(BaseModel):
 
 
 class SpotifyTrackArtist(BaseModel):
-    id: str
-    name: str
+    id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
 
 
 class SpotifyAlbum(BaseModel):
@@ -42,8 +42,8 @@ class SpotifyAlbum(BaseModel):
 
 
 class SpotifyItem(BaseModel):
-    id: str = Field(..., max_length=512)
-    name: str = Field(..., max_length=255)
+    id: str = Field(..., min_length=1, max_length=512)
+    name: str = Field(..., min_length=1, max_length=255)
     href: HttpUrl
 
 

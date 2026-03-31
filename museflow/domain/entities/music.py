@@ -52,6 +52,12 @@ class TrackArtist:
     provider_id: str
     name: str
 
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("TrackArtist.name must not be empty")
+        if not self.provider_id:
+            raise ValueError("TrackArtist.provider_id must not be empty")
+
     def __str__(self) -> str:
         return self.name.replace("'", "\\'")
 
@@ -80,6 +86,13 @@ class Track(BaseMediaItem):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+
+        if not self.name:
+            raise ValueError("Track.name must not be empty")
+        if not self.provider_id:
+            raise ValueError("Track.provider_id must not be empty")
+        if not self.artists:
+            raise ValueError("Track must have at least one artist")
 
         if not self.fingerprint:
             fingerprint_val = generate_fingerprint(
@@ -112,6 +125,12 @@ class TrackSuggested:
     advisor_id: str | None = None
     score: float | None = None
     duration_ms: int | None = None
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("TrackSuggested.name must not be empty")
+        if not self.artists:
+            raise ValueError("TrackSuggested must have at least one artist")
 
     def __str__(self) -> str:
         return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")

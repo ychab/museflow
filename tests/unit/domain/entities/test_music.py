@@ -5,6 +5,7 @@ import pytest
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackArtist
+from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.types import TrackSource
 
 
@@ -28,6 +29,16 @@ class TestArtist:
             genres=genres,
         )
         assert artist.genres == expected
+
+
+class TestTrackArtist:
+    def test__name__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackArtist.name must not be empty"):
+            TrackArtist(name="", provider_id="some-id")
+
+    def test__provider_id__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackArtist.provider_id must not be empty"):
+            TrackArtist(name="Queen", provider_id="")
 
 
 class TestTrack:
@@ -93,3 +104,68 @@ class TestTrack:
             sources=TrackSource.TOP,
         )
         assert track.fingerprint != ""
+
+    def test__name__none(self) -> None:
+        with pytest.raises(ValueError, match="Track.name must not be empty"):
+            Track(
+                user_id=uuid.uuid4(),
+                name="",
+                provider_id="spotify:track:123",
+                artists=[TrackArtist(name="Queen", provider_id="spotify:artist:456")],
+                duration_ms=180_000,
+                sources=TrackSource.TOP,
+            )
+
+    def test__provider_id__none(self) -> None:
+        with pytest.raises(ValueError, match="Track.provider_id must not be empty"):
+            Track(
+                user_id=uuid.uuid4(),
+                name="Bohemian Rhapsody",
+                provider_id="",
+                artists=[TrackArtist(name="Queen", provider_id="spotify:artist:456")],
+                duration_ms=180_000,
+                sources=TrackSource.TOP,
+            )
+
+    def test__artists__none(self) -> None:
+        with pytest.raises(ValueError, match="Track must have at least one artist"):
+            Track(
+                user_id=uuid.uuid4(),
+                name="Bohemian Rhapsody",
+                provider_id="spotify:track:123",
+                artists=[],
+                duration_ms=180_000,
+                sources=TrackSource.TOP,
+            )
+
+    def test__artist__name__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackArtist.name must not be empty"):
+            Track(
+                user_id=uuid.uuid4(),
+                name="Bohemian Rhapsody",
+                provider_id="spotify:track:123",
+                artists=[TrackArtist(name="", provider_id="spotify:artist:456")],
+                duration_ms=180_000,
+                sources=TrackSource.TOP,
+            )
+
+    def test__artist__provider_id__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackArtist.provider_id must not be empty"):
+            Track(
+                user_id=uuid.uuid4(),
+                name="Bohemian Rhapsody",
+                provider_id="spotify:track:123",
+                artists=[TrackArtist(name="Queen", provider_id="")],
+                duration_ms=180_000,
+                sources=TrackSource.TOP,
+            )
+
+
+class TestTrackSuggested:
+    def test__name__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackSuggested.name must not be empty"):
+            TrackSuggested(name="", artists=["Queen"])
+
+    def test__artists__none(self) -> None:
+        with pytest.raises(ValueError, match="TrackSuggested must have at least one artist"):
+            TrackSuggested(name="Bohemian Rhapsody", artists=[])

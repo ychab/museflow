@@ -30,7 +30,6 @@ class DiscoveryConfigInput:
     seed_limit: int = 50
 
     similar_limit: int = 5
-
     candidate_limit: int = 10
 
     playlist_size: int = 10

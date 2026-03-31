@@ -19,12 +19,12 @@ def _ensure_list(v: Any) -> list[Any]:
 
 
 class LastFmArtist(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     mbid: str | None = None
 
 
 class LastFmTrack(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     mbid: str | None = None
     match: float = Field(..., ge=0.0, le=1.0)
     artist: LastFmArtist

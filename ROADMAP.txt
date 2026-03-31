@@ -7,6 +7,8 @@ This quick and dirty document just list the roadmap tasks.
 - Per-artist diversity cap: add a max_tracks_per_artist config (default 2).
   The final playlist sort-by-score step doesn't prevent 4 songs from the same artist
   landing in a 10-track playlist. Simple constraint, big perceived quality improvement.
+  Depends on the Track entity invariants plan above (guarantees artists[0] is always set).
+  Plan: plans/calm-swinging-kernighan.md
 
 - Combined score (advisor × reconciliation confidence): advisor score and reconciler
   final score are currently independent. Weighting them together (e.g. advisor_score ×
