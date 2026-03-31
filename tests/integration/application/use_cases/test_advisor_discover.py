@@ -81,7 +81,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
             json_body=wiremock_lastfm_response,
         )
 
-        playlist, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=5,
@@ -90,19 +90,19 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
             ),
         )
 
-        assert playlist is not None
-        assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
-        assert len(playlist.tracks) == 1
+        assert result.playlist is not None
+        assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert len(result.playlist.tracks) == 1
 
-        track = playlist.tracks[0]
+        track = result.playlist.tracks[0]
         assert track.provider_id == "1B7EbqtFdlKqLSBXrKKfW8"
         assert track.name == "Mi Pueblo"
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
 
-        assert len(reports) == 1
-        assert reports[0].tracks_new >= 1
+        assert len(result.reports) == 1
+        assert result.reports[0].tracks_new >= 1
 
 
 @pytest.mark.wiremock("spotify")
@@ -138,7 +138,7 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
         track_seed: Track,
         track_repository: TrackRepository,
     ) -> None:
-        playlist, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=5,
@@ -147,16 +147,16 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
             ),
         )
 
-        assert playlist is not None
-        assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
-        assert len(playlist.tracks) == 1
+        assert result.playlist is not None
+        assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert len(result.playlist.tracks) == 1
 
-        track = playlist.tracks[0]
+        track = result.playlist.tracks[0]
         assert track.provider_id == "1B7EbqtFdlKqLSBXrKKfW8"
         assert track.name == "Mi Pueblo"
         assert len(track.artists) == 1
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
 
-        assert len(reports) == 1
-        assert reports[0].tracks_new >= 1
+        assert len(result.reports) == 1
+        assert result.reports[0].tracks_new >= 1

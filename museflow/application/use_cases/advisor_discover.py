@@ -33,6 +33,13 @@ class DiscoveryAttemptReport:
     tracks_new: int = 0
 
 
+@dataclass(frozen=True, kw_only=True)
+class DiscoveryResult:
+    playlist: Playlist | None
+    reports: list[DiscoveryAttemptReport]
+    tracks: list[Track]
+
+
 class AdvisorDiscoverUseCase:
     """Use case for discovering new tracks based on a user's library."""
 
@@ -48,11 +55,7 @@ class AdvisorDiscoverUseCase:
         self._advisor_client = advisor_client
         self._track_reconciler = track_reconciler
 
-    async def create_suggestions_playlist(
-        self,
-        user: User,
-        config: DiscoveryConfigInput,
-    ) -> tuple[Playlist | None, list[DiscoveryAttemptReport]]:
+    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> DiscoveryResult:
         """Creates a playlist of suggested tracks for a user.
 
         Iterates over seed batches from the user's library until `playlist_size` tracks are
@@ -65,7 +68,8 @@ class AdvisorDiscoverUseCase:
             config: The configuration for the discovery process.
 
         Returns:
-            A tuple of (playlist or ``None`` if dry-run, list of per-attempt reports).
+            A DiscoveryResult with the playlist (or ``None`` if dry-run), per-attempt reports,
+            and the final list of tracks.
 
         Raises:
             DiscoveryTrackNoNew: If no new tracks are found after all attempts.
@@ -170,13 +174,13 @@ class AdvisorDiscoverUseCase:
 
         if config.dry_run:
             logger.info("Dry-run mode: skipping playlist creation.")
-            return None, reports
+            return DiscoveryResult(playlist=None, reports=reports, tracks=tracks)
 
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {self._advisor_client.display_name} - {datetime.now(UTC).isoformat()}",
             tracks=tracks,
         )
-        return playlist, reports
+        return DiscoveryResult(playlist=playlist, reports=reports, tracks=tracks)
 
     async def _get_similar_tracks(self, track_seeds: list[Track], limit: int) -> list[TrackSuggested]:
         """Gets similar tracks from the advisor for a list of seed tracks.

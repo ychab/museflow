@@ -4,9 +4,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## discovery improvements
 
-- Dry-run track preview: currently --dry-run only shows metrics (counts per attempt).
-  Print the actual track list (name + artist) that would be added so the user can
-  evaluate quality before committing to a playlist creation.
+- review the log levels to switch most of them to debug?
 
 - Per-artist diversity cap: add a max_tracks_per_artist config (default 2).
   The final playlist sort-by-score step doesn't prevent 4 songs from the same artist

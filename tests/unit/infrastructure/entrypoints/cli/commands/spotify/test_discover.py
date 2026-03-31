@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
 from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
+from museflow.application.use_cases.advisor_discover import DiscoveryResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -19,6 +20,7 @@ from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import di
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.music import PlaylistFactory
+from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
@@ -27,7 +29,7 @@ class TestSpotifyDiscoverParserCommand:
     def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = (None, [])
+            patched.return_value = DiscoveryResult(playlist=None, reports=[], tracks=[])
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -318,7 +320,15 @@ class TestSpotifyDiscoverCommand:
             tracks_new=6,
         )
         playlist = PlaylistFactory.build()
-        mock_discover_logic.return_value = (playlist, [report])
+
+        # One track with an album, one without — covers both branches of `track.album.name if track.album else ""`
+        track_with_album = TrackFactory.build()
+        track_without_album = TrackFactory.build(album=None)
+        mock_discover_logic.return_value = DiscoveryResult(
+            playlist=playlist,
+            reports=[report],
+            tracks=[track_with_album, track_without_album],
+        )
 
         result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -332,7 +342,7 @@ class TestSpotifyDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.return_value = (None, [])
+        mock_discover_logic.return_value = DiscoveryResult(playlist=None, reports=[], tracks=[])
 
         result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0

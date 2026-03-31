@@ -52,6 +52,9 @@ class TrackArtist:
     provider_id: str
     name: str
 
+    def __str__(self) -> str:
+        return self.name.replace("'", "\\'")
+
 
 @dataclass(frozen=True, kw_only=True)
 class Album:
@@ -73,7 +76,7 @@ class Track(BaseMediaItem):
     duration_ms: int
 
     def __str__(self) -> str:
-        return f"{', '.join([artist.name for artist in self.artists])} - {self.name}".replace("'", "\\'")
+        return f"{', '.join([str(artist) for artist in self.artists])} - {self.name}".replace("'", "\\'")
 
     def __post_init__(self) -> None:
         super().__post_init__()

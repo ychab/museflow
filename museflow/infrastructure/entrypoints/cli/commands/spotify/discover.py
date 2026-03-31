@@ -8,8 +8,7 @@ from rich.table import Table
 
 from museflow.application.inputs.discovery import DiscoveryConfigInput
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
-from museflow.domain.entities.music import Playlist
+from museflow.application.use_cases.advisor_discover import DiscoveryResult
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
@@ -100,7 +99,7 @@ def discover(
     Discover new tracks for a Spotify's user account.
     """
     try:
-        playlist, reports = asyncio.run(
+        result = asyncio.run(
             discover_logic(
                 email=email,
                 advisor=advisor,
@@ -133,6 +132,7 @@ def discover(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    # First print the report
     table = Table(title="Discovery Report")
     table.add_column("Attempt", justify="right")
     table.add_column("Seeds", justify="right")
@@ -140,25 +140,38 @@ def discover(
     table.add_column("Reconciled", justify="right")
     table.add_column("Survived", justify="right")
     table.add_column("New", justify="right")
-    for r in reports:
+    for report in result.reports:
         table.add_row(
-            str(r.attempt),
-            str(r.tracks_seeds),
-            str(r.tracks_suggested),
-            str(r.tracks_reconciled),
-            str(r.tracks_survived),
-            str(r.tracks_new),
+            str(report.attempt),
+            str(report.tracks_seeds),
+            str(report.tracks_suggested),
+            str(report.tracks_reconciled),
+            str(report.tracks_survived),
+            str(report.tracks_new),
         )
     console.print(table)
 
-    if playlist is None:
+    # Then print the tracks discovered
+    track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
+    track_table.add_column("#", justify="right", style="dim")
+    track_table.add_column("Artist(s)")
+    track_table.add_column("Track")
+    track_table.add_column("Album", style="dim")
+    for i, track in enumerate(result.tracks, start=1):
+        artists = ", ".join(str(artist) for artist in track.artists)
+        album_name = track.album.name if track.album else ""
+        track_table.add_row(str(i), artists, track.name, album_name)
+    console.print(track_table)
+
+    # Finally, print a final message.
+    if result.playlist is None:
         typer.secho(
             "\n\nTracks discovered but playlist not created (dry-run mode) \u26a0\ufe0f",
             fg=typer.colors.YELLOW,
         )
     else:
         typer.secho(
-            f"\n\nSuggested tracks successfully saved into playlist {playlist.name}! \u2705",
+            f"\n\nSuggested tracks successfully saved into playlist {result.playlist.name}! \u2705",
             fg=typer.colors.GREEN,
         )
 
@@ -167,7 +180,7 @@ async def discover_logic(
     email: EmailStr,
     advisor: MusicAdvisor,
     config: DiscoveryConfigInput,
-) -> tuple[Playlist | None, list[DiscoveryAttemptReport]]:
+) -> DiscoveryResult:
     """Discovers new music for a user and creates a playlist.
 
     This function orchestrates the discovery process by setting up the necessary
@@ -179,7 +192,7 @@ async def discover_logic(
         config: The configuration for the discovery process.
 
     Returns:
-        A tuple of (playlist or ``None`` if dry-run, list of per-attempt reports).
+        A DiscoveryResult with the playlist, per-attempt reports, and final tracks.
 
     Raises:
         UserNotFound: If the user with the given email is not found.

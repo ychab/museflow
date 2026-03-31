@@ -6,6 +6,7 @@ import pytest
 from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
 from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
 from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
+from museflow.application.use_cases.advisor_discover import DiscoveryResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import SimilarTrackResponseException
@@ -71,7 +72,9 @@ class TestAdvisorDiscoverTracksUseCase:
 
         # When
         with caplog.at_level(logging.INFO):
-            playlist, reports = await use_case.create_suggestions_playlist(user=user, config=config)
+            result = await use_case.create_suggestions_playlist(user=user, config=config)
+
+        assert isinstance(result, DiscoveryResult)
 
         # Then check similarity
         assert mock_advisor_client.get_similar_tracks.call_count == len(track_seeds)
@@ -89,11 +92,12 @@ class TestAdvisorDiscoverTracksUseCase:
 
         # Then the created playlist
         mock_provider_library.create_playlist.assert_called_once()
-        assert playlist == expected_playlist
+        assert result.playlist == expected_playlist
+        assert result.tracks == [reconciled_tracks[0]]
 
         # Then check the report
-        assert len(reports) == 1
-        assert reports[0] == DiscoveryAttemptReport(
+        assert len(result.reports) == 1
+        assert result.reports[0] == DiscoveryAttemptReport(
             attempt=1,
             tracks_seeds=2,
             tracks_suggested=4,
@@ -223,7 +227,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When
-        _, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=1,
@@ -236,7 +240,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # Then: loop ran exactly 2 attempts (not 3)
         assert mock_track_repository.get_list.call_count == 2
         assert len(mock_provider_library.create_playlist.call_args.kwargs["tracks"]) == 2
-        assert len(reports) == 2
+        assert len(result.reports) == 2
 
     async def test__partial_after_max_attempts(
         self,
@@ -268,7 +272,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         # When
         with caplog.at_level(logging.WARNING):
-            _, reports = await use_case.create_suggestions_playlist(
+            result = await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoveryConfigInput(
                     seed_limit=1,
@@ -282,7 +286,7 @@ class TestAdvisorDiscoverTracksUseCase:
         assert "playlist_size not reached (2/5) after 2 attempt(s)" in caplog.text
         mock_provider_library.create_playlist.assert_called_once()
         assert len(mock_provider_library.create_playlist.call_args.kwargs["tracks"]) == 2
-        assert len(reports) == 2
+        assert len(result.reports) == 2
 
     async def test__seeds_exhausted_mid_loop(
         self,
@@ -310,7 +314,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         # When
         with caplog.at_level(logging.INFO):
-            _, reports = await use_case.create_suggestions_playlist(
+            result = await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoveryConfigInput(
                     seed_limit=1,
@@ -324,8 +328,8 @@ class TestAdvisorDiscoverTracksUseCase:
         assert mock_track_repository.get_list.call_count == 2
         assert "Seeds exhausted, stopping." in caplog.text
         assert "playlist_size not reached (1/5) after 5 attempt(s)" in caplog.text
-        assert len(reports) == 2
-        assert reports[1] == DiscoveryAttemptReport(attempt=2)
+        assert len(result.reports) == 2
+        assert result.reports[1] == DiscoveryAttemptReport(attempt=2)
 
     async def test__inter_iteration_dedup(
         self,
@@ -351,7 +355,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When
-        _, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=1,
@@ -364,7 +368,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # Then: track_a appears only once in the playlist despite being in both attempts
         assert len(mock_provider_library.create_playlist.call_args.kwargs["tracks"]) == 1
         assert mock_provider_library.create_playlist.call_args.kwargs["tracks"][0] == track_1
-        assert len(reports) == 2
+        assert len(result.reports) == 2
 
     async def test__trim_by_score(
         self,
@@ -396,7 +400,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When
-        _, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 seed_limit=1,
@@ -412,7 +416,7 @@ class TestAdvisorDiscoverTracksUseCase:
         assert len(playlist_tracks) == 2
         assert playlist_tracks[0].name == "High"
         assert playlist_tracks[1].name == "Mid"
-        assert len(reports) == 1
+        assert len(result.reports) == 1
 
     async def test__dry_run(
         self,
@@ -437,13 +441,13 @@ class TestAdvisorDiscoverTracksUseCase:
         )
 
         with caplog.at_level(logging.INFO):
-            result, reports = await use_case.create_suggestions_playlist(
+            result = await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoveryConfigInput(seed_limit=1, max_attempts=1, dry_run=True),
             )
 
-        assert result is None
-        assert len(reports) == 1
+        assert result.playlist is None
+        assert len(result.reports) == 1
         mock_provider_library.create_playlist.assert_not_called()
         assert "Dry-run mode: skipping playlist creation." in caplog.text
 
@@ -480,7 +484,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
 
         # When
-        _, reports = await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoveryConfigInput(
                 playlist_size=3,
@@ -493,4 +497,4 @@ class TestAdvisorDiscoverTracksUseCase:
         assert playlist_tracks[0].name == "High"
         assert playlist_tracks[1].name == "Low"
         assert playlist_tracks[2].name == "None"
-        assert len(reports) == 1
+        assert len(result.reports) == 1
