@@ -298,7 +298,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 page_model=SpotifyPage[SpotifyPlaylistTrack],
                 page_processor=self._extract_playlist_tracks,
                 params={
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                    "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 page_size=page_size,
@@ -417,11 +417,14 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         ]
 
     def _extract_saved_tracks(self, page: SpotifyPage[SpotifySavedTrack], *_: Any) -> list[Track]:
-        return [to_domain_track(item.track, user_id=self.user.id, sources=TrackSource.SAVED) for item in page.items]
+        return [
+            to_domain_track(item.track, user_id=self.user.id, sources=TrackSource.SAVED, added_at=item.added_at)
+            for item in page.items
+        ]
 
     def _extract_playlist_tracks(self, page: SpotifyPage[SpotifyPlaylistTrack], *_: Any) -> list[Track]:
         return [
-            to_domain_track(item.item, user_id=self.user.id, sources=TrackSource.PLAYLIST)
+            to_domain_track(item.item, user_id=self.user.id, sources=TrackSource.PLAYLIST, added_at=item.added_at)
             for item in page.items
             if item.item
         ]

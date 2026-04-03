@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from museflow.domain.entities.music import Album
@@ -73,6 +74,7 @@ def to_domain_track(
     user_id: uuid.UUID,
     sources: TrackSource,
     top_position: int | None = None,
+    added_at: datetime | None = None,
 ) -> Track:
     """Converts a SpotifyTrack schema object to a domain Track entity."""
     return Track(
@@ -87,6 +89,7 @@ def to_domain_track(
         album=to_domain_album(spotify_track.album) if spotify_track.album else None,
         isrc=spotify_track.isrc,
         duration_ms=spotify_track.duration_ms,
+        added_at=added_at,
     )
 
 

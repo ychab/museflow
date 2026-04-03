@@ -818,6 +818,31 @@ class TestTrackSQLRepository:
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.played_at == newer
 
+    async def test__bulk_upsert__added_at_keeps_latest(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        async_session_db: AsyncSession,
+    ) -> None:
+        older = datetime(2023, 1, 1, tzinfo=UTC)
+        newer = datetime(2023, 6, 1, tzinfo=UTC)
+
+        track = TrackFactory.build(user_id=user.id, sources=TrackSource.SAVED, added_at=older)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        # Re-upsert the same track with a newer added_at — should win
+        await track_repository.bulk_upsert([dataclasses.replace(track, added_at=newer)], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.added_at == newer
+
+        # Re-upsert again with an older added_at — should NOT overwrite
+        await track_repository.bulk_upsert([dataclasses.replace(track, added_at=older)], batch_size=1)
+
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.added_at == newer
+
     @pytest.mark.parametrize(
         ("sources", "expected_deleted", "expected_remaining_user"),
         [

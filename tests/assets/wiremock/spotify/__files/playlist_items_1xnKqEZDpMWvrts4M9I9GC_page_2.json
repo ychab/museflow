@@ -2,6 +2,7 @@
   "limit": 1,
   "items": [
     {
+      "added_at": "2026-01-28T09:15:00Z",
       "item": {
         "name": "Late Nights",
         "href": "https://api.spotify.com/v1/tracks/01S5aiC3Q5bt84EiGaCVwP",

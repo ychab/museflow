@@ -85,7 +85,7 @@ class TestSpotifySyncMusic:
                 query_params={
                     "offset": 0,
                     "limit": DEFAULT_PAGINATION_SIZE,
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                    "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 json_body=wiremock_playlist_track_response,

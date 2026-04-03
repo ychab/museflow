@@ -2,6 +2,7 @@
   "limit": 1,
   "items": [
     {
+      "added_at": "2026-01-10T08:00:00Z",
       "item": {
         "name": "Yo Te Canto",
         "href": "https://api.spotify.com/v1/tracks/7CmDeBNvuklb5WvErkDkTj",

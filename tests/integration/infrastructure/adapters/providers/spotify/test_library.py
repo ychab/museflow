@@ -1,5 +1,7 @@
 import json
 import logging
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -101,6 +103,8 @@ class TestSpotifyLibrary:
         assert top_track_first.artists[0].name == "Grupo Niche"
         assert top_track_first.provider == MusicProvider.SPOTIFY
         assert top_track_first.provider_id == "7J5pB49l9ycy9ImB6D9hu0"
+        assert top_track_first.added_at is None
+        assert top_track_first.played_at is None
 
         top_track_last = top_tracks[-1]
         assert top_track_last.id is not None
@@ -119,6 +123,8 @@ class TestSpotifyLibrary:
         assert top_track_last.artists[1].name == "Héctor Lavoe"
         assert top_track_last.provider == MusicProvider.SPOTIFY
         assert top_track_last.provider_id == "4rPtnAmfvHkVSCO2KKkiC1"
+        assert top_track_last.added_at is None
+        assert top_track_last.played_at is None
 
     async def test__get_top_tracks__max_pages(self, spotify_library: SpotifyLibraryAdapter) -> None:
         page_size = 5
@@ -176,6 +182,8 @@ class TestSpotifyLibrary:
         assert track_saved_first.artists[0].name == "Josman"
         assert track_saved_first.provider == MusicProvider.SPOTIFY
         assert track_saved_first.provider_id == "3GsmreScQWMqOyuyW1Dac2"
+        assert track_saved_first.added_at == datetime(2026, 2, 27, 12, 16, 52, tzinfo=UTC)
+        assert track_saved_first.played_at is None
 
         track_saved_last = tracks_saved[-1]
         assert track_saved_last.id is not None
@@ -194,6 +202,8 @@ class TestSpotifyLibrary:
         assert track_saved_last.artists[1].name == "Booba"
         assert track_saved_last.provider == MusicProvider.SPOTIFY
         assert track_saved_last.provider_id == "6Y8i5zcz6wTi11HN88iNLW"
+        assert track_saved_last.added_at == datetime(2026, 2, 11, 15, 47, 8, tzinfo=UTC)
+        assert track_saved_last.played_at is None
 
     async def test__get_saved_tracks__max_pages(self, spotify_library: SpotifyLibraryAdapter) -> None:
         page_size = 5
@@ -253,6 +263,8 @@ class TestSpotifyLibrary:
         assert track_first.artists[0].name == "Piper Pimienta"
         assert track_first.provider == MusicProvider.SPOTIFY
         assert track_first.provider_id == "3L1kaOVoLhNphFfByd5b5m"
+        assert track_first.added_at == datetime(2026, 1, 15, 10, 30, 0, tzinfo=UTC)
+        assert track_first.played_at is None
 
         track_last = tracks[-1]
         assert track_last.id is not None
@@ -269,6 +281,8 @@ class TestSpotifyLibrary:
         assert track_last.artists[0].name == "Hamza"
         assert track_last.provider == MusicProvider.SPOTIFY
         assert track_last.provider_id == "01S5aiC3Q5bt84EiGaCVwP"
+        assert track_last.added_at == datetime(2026, 1, 28, 9, 15, 0, tzinfo=UTC)
+        assert track_last.played_at is None
 
     async def test__get_playlist_tracks__max_pages(self, spotify_library: SpotifyLibraryAdapter) -> None:
         page_size = 1
@@ -304,7 +318,7 @@ class TestSpotifyLibrary:
                 query_params={
                     "offset": offset,
                     "limit": page_size,
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                    "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 json_body=wiremock_response,
@@ -316,7 +330,7 @@ class TestSpotifyLibrary:
                 query_params={
                     "offset": offset,
                     "limit": page_size,
-                    "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                    "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                     "additional_types": "track",
                 },
                 json_body=wiremock_response,
@@ -345,7 +359,7 @@ class TestSpotifyLibrary:
             query_params={
                 "offset": 0,
                 "limit": page_size,
-                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                 "additional_types": "track",
             },
             json_body={**wiremock_response, "total": 1, "items": [{"item": original_track}]},
@@ -357,7 +371,7 @@ class TestSpotifyLibrary:
             query_params={
                 "offset": 0,
                 "limit": page_size,
-                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                 "additional_types": "track",
             },
             json_body={
@@ -404,7 +418,7 @@ class TestSpotifyLibrary:
             query_params={
                 "offset": 0,
                 "limit": page_size,
-                "fields": "total,limit,offset,items(item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
+                "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
                 "additional_types": "track",
             },
             json_body=wiremock_response,
@@ -439,6 +453,8 @@ class TestSpotifyLibrary:
         assert track_first.artists[0].name == "Grupo Niche"
         assert track_first.provider == MusicProvider.SPOTIFY
         assert track_first.provider_id == "30xocklvViCtxktihAEZM8"
+        assert track_first.added_at is None
+        assert track_first.played_at is None
 
         track_last = tracks[-1]
         assert track_last.id is not None
@@ -455,6 +471,8 @@ class TestSpotifyLibrary:
         assert track_last.artists[0].name == "Grupo Niche"
         assert track_last.provider == MusicProvider.SPOTIFY
         assert track_last.provider_id == "0K81HUG9YhPp6khuUEAH9g"
+        assert track_last.added_at is None
+        assert track_last.played_at is None
 
     async def test__get_track_by_id__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
         track = await spotify_library.get_track_by_id(track_id="7J5pB49l9ycy9ImB6D9hu0")
@@ -471,6 +489,8 @@ class TestSpotifyLibrary:
         assert track.artists[0].provider_id == "1zng9JZpblpk48IPceRWs8"
         assert track.artists[0].name == "Grupo Niche"
         assert track.isrc == "COC018416252"
+        assert track.added_at is None
+        assert track.played_at is None
 
     async def test__get_tracks_by_ids__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
         tracks = await spotify_library.get_tracks_by_ids(

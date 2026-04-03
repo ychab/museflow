@@ -246,12 +246,12 @@ async def bulk_item_upsert[ItemModel: MusicItemMixin, ItemEntity: BaseMediaItem]
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=index_elements,
             set_={
-                # Accumulates sources with bitwise OR; keeps latest played_at; overrides everything else.
+                # Accumulates sources with bitwise OR; keeps latest played_at and added_at; overrides everything else.
                 key: (
                     sql_model.sources.bitwise_or(excluded["sources"])
                     if key == "sources"
                     else func.greatest(getattr(sql_model, key), excluded[key])
-                    if key == "played_at"
+                    if key in ("played_at", "added_at")
                     else excluded[key]
                 )
                 for key in items_chunk[0]

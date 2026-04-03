@@ -2,6 +2,7 @@
   "limit": 1,
   "items": [
     {
+      "added_at": "2026-01-15T10:30:00Z",
       "item": {
         "name": "A Buenaventura",
         "href": "https://api.spotify.com/v1/tracks/3L1kaOVoLhNphFfByd5b5m",

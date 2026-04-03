@@ -85,6 +85,7 @@ class SpotifySavedTrack(BaseModel):
 
 
 class SpotifyPlaylistTrack(BaseModel):
+    added_at: AwareDatetime | None = None
     item: SpotifyTrack
 
 
