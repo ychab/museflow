@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
@@ -164,9 +165,17 @@ class AdvisorDiscoverUseCase:
         if not tracks_scores:
             raise DiscoveryTrackNoNew()
 
-        # Sort by advisor score DESC, trim to exact playlist_size
+        # Sort by advisor score DESC
         tracks_scores.sort(key=lambda x: x[1], reverse=True)
-        tracks = [t for t, _ in tracks_scores[: config.playlist_size]]
+
+        # Apply per-artist cap
+        tracks = self._apply_artist_cap(
+            tracks=[t for t, _ in tracks_scores],
+            max_tracks_per_artist=config.max_tracks_per_artist,
+        )
+
+        # Trim to final playlist size
+        tracks = tracks[: config.playlist_size]
 
         if len(tracks) < config.playlist_size:
             logger.warning(
@@ -283,3 +292,20 @@ class AdvisorDiscoverUseCase:
             f"Discovery:\n- {'\n- '.join([f"'{t}'" for t, _ in tracks_new])}" if tracks_new else "Discovery: None"
         )
         return tracks_new
+
+    @staticmethod
+    def _apply_artist_cap(
+        tracks: list[Track],
+        max_tracks_per_artist: int,
+    ) -> list[Track]:
+        tracks_filtered: list[Track] = []
+
+        artist_counts: Counter[str] = Counter()
+        for track in tracks:
+            artist_provider_id = track.artists[0].provider_id  # Pick only the primary artist.
+
+            if artist_counts[artist_provider_id] < max_tracks_per_artist:
+                tracks_filtered.append(track)
+                artist_counts[artist_provider_id] += 1
+
+        return tracks_filtered

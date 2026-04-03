@@ -13,6 +13,7 @@ from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
 from tests.unit.factories.entities.music import PlaylistFactory
+from tests.unit.factories.entities.music import TrackArtistFactory
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.music import TrackSuggestedFactory
 
@@ -199,7 +200,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         assert f"Excluded '{reconciled_track}'" in caplog.text
 
-    async def test__reached_on_second_attempt(
+    async def test__second_attempt(
         self,
         user: User,
         use_case: AdvisorDiscoverUseCase,
@@ -417,6 +418,63 @@ class TestAdvisorDiscoverTracksUseCase:
         assert playlist_tracks[0].name == "High"
         assert playlist_tracks[1].name == "Mid"
         assert len(result.reports) == 1
+
+    async def test__artist_cap__exceed(
+        self,
+        user: User,
+        use_case: AdvisorDiscoverUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor_client: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+    ) -> None:
+        # Given: 3 tracks from artist A (scores 0.9, 0.8, 0.7) + 1 from artist B (score 0.6)
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
+
+        artist_a = TrackArtistFactory.build(provider_id="artist-a")
+        artist_b = TrackArtistFactory.build(provider_id="artist-b")
+
+        suggestions = [
+            TrackSuggestedFactory.build(name="A1", score=0.9),
+            TrackSuggestedFactory.build(name="A2", score=0.8),
+            TrackSuggestedFactory.build(name="A3", score=0.7),
+            TrackSuggestedFactory.build(name="B1", score=0.6),
+        ]
+        mock_advisor_client.get_similar_tracks.return_value = suggestions
+
+        reconciled = {
+            "A1": TrackFactory.build(name="A1", artists=[artist_a]),
+            "A2": TrackFactory.build(name="A2", artists=[artist_a]),
+            "A3": TrackFactory.build(name="A3", artists=[artist_a]),
+            "B1": TrackFactory.build(name="B1", artists=[artist_b]),
+        }
+        mock_provider_library.search_tracks.side_effect = lambda track, **kwargs: [reconciled[track]]
+        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: candidates[0]
+
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset(),
+            fingerprints=frozenset(),
+        )
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        # When: cap=2, size=4 → A1, A2 (capped), B1 — A3 excluded
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoveryConfigInput(
+                seed_limit=1,
+                similar_limit=4,
+                playlist_size=4,
+                max_attempts=1,
+                max_tracks_per_artist=2,
+            ),
+        )
+
+        playlist_tracks = mock_provider_library.create_playlist.call_args.kwargs["tracks"]
+        assert len(playlist_tracks) == 3
+        assert playlist_tracks[0].name == "A1"
+        assert playlist_tracks[1].name == "A2"
+        assert playlist_tracks[2].name == "B1"
+        assert result.tracks == playlist_tracks
 
     async def test__dry_run(
         self,

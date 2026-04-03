@@ -34,5 +34,6 @@ class DiscoveryConfigInput:
 
     playlist_size: int = 10
     max_attempts: int = 5
+    max_tracks_per_artist: int = 2
 
     dry_run: bool = False

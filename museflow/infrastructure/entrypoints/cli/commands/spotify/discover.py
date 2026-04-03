@@ -93,6 +93,13 @@ def discover(
         min=1,
         max=10,
     ),
+    max_tracks_per_artist: int = typer.Option(
+        2,
+        "--max-tracks-per-artist",
+        help="Maximum tracks per artist in the final playlist",
+        min=1,
+        max=10,
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover tracks without creating a playlist"),
 ) -> None:
     """
@@ -114,6 +121,7 @@ def discover(
                     candidate_limit=candidate_limit,
                     playlist_size=playlist_size,
                     max_attempts=max_attempts,
+                    max_tracks_per_artist=max_tracks_per_artist,
                     dry_run=dry_run,
                 ),
             ),
