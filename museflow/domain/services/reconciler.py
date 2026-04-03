@@ -6,6 +6,7 @@ from rapidfuzz import fuzz
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.types import AlbumType
+from museflow.domain.types import ScoreReconciler
 from museflow.domain.value_objects.music import TrackNormalized
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,11 @@ class TrackReconciler:
         self.MATCH_THRESHOLD: Final[float] = match_threshold
         self.SCORE_MINIMUM: Final[float] = score_minimum
 
-    def reconcile(self, track_suggested: TrackSuggested, candidates: list[Track]) -> Track | None:
+    def reconcile(
+        self,
+        track_suggested: TrackSuggested,
+        candidates: list[Track],
+    ) -> tuple[Track, ScoreReconciler] | None:
         """Finds the best canonical match for a suggested track in the provider's library."""
 
         track_target = TrackNormalized.create(
@@ -41,7 +46,7 @@ class TrackReconciler:
                 f"Matched '{track_suggested.artists[0]} - {track_suggested.name}' "
                 f"-> '{best_match.name}' (Score: {best_score:.1f})"
             )
-            return best_match
+            return best_match, min(best_score / 100.0, 1.0)
 
         logger.debug(
             f"Reconciliation failed for '{track_suggested.artists[0]} - {track_suggested.name}'. "

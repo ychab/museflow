@@ -41,5 +41,4 @@ class TestGeminiClientLive:
         for track in results:
             assert track.name
             assert len(track.artists) > 0
-            assert track.score is not None
             assert 0.0 <= track.score <= 1.0

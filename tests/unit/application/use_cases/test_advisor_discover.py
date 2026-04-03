@@ -60,7 +60,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # Given reconciled with one reconciled track for EACH suggestion
         reconciled_tracks = TrackFactory.batch(size=len(track_seeds) * len(tracks_suggested))
         mock_provider_library.search_tracks.side_effect = [[t] for t in reconciled_tracks]
-        mock_track_reconciler.reconcile.side_effect = [t for t in reconciled_tracks]
+        mock_track_reconciler.reconcile.side_effect = [(t, 0.95) for t in reconciled_tracks]
 
         # Given known tracks: 3 tracks are already known, one is new
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
@@ -187,7 +187,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
-        mock_track_reconciler.reconcile.return_value = reconciled_track
+        mock_track_reconciler.reconcile.return_value = (reconciled_track, 0.95)
 
         # All tracks are already known
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
@@ -219,7 +219,7 @@ class TestAdvisorDiscoverTracksUseCase:
         track_1 = TrackFactory.build()
         track_2 = TrackFactory.build()
         mock_provider_library.search_tracks.side_effect = [[track_1], [track_2]]
-        mock_track_reconciler.reconcile.side_effect = [track_1, track_2]
+        mock_track_reconciler.reconcile.side_effect = [(track_1, 0.95), (track_2, 0.95)]
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -263,7 +263,7 @@ class TestAdvisorDiscoverTracksUseCase:
         track_1 = TrackFactory.build()
         track_2 = TrackFactory.build()
         mock_provider_library.search_tracks.side_effect = [[track_1], [track_2]]
-        mock_track_reconciler.reconcile.side_effect = [track_1, track_2]
+        mock_track_reconciler.reconcile.side_effect = [(track_1, 0.95), (track_2, 0.95)]
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -305,7 +305,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [track]
-        mock_track_reconciler.reconcile.return_value = track
+        mock_track_reconciler.reconcile.return_value = (track, 0.95)
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -347,7 +347,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         track_1 = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [track_1]
-        mock_track_reconciler.reconcile.return_value = track_1
+        mock_track_reconciler.reconcile.return_value = (track_1, 0.95)
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -392,7 +392,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         reconciled = {s.name: TrackFactory.build(name=s.name) for s in suggestions}
         mock_provider_library.search_tracks.side_effect = lambda track, **kwargs: [reconciled[track]]
-        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: candidates[0]
+        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: (candidates[0], 0.95)
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -449,7 +449,7 @@ class TestAdvisorDiscoverTracksUseCase:
             "B1": TrackFactory.build(name="B1", artists=[artist_b]),
         }
         mock_provider_library.search_tracks.side_effect = lambda track, **kwargs: [reconciled[track]]
-        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: candidates[0]
+        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: (candidates[0], 0.95)
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -491,7 +491,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
-        mock_track_reconciler.reconcile.return_value = reconciled_track
+        mock_track_reconciler.reconcile.return_value = (reconciled_track, 0.95)
 
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
             isrcs=frozenset(),
@@ -509,7 +509,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library.create_playlist.assert_not_called()
         assert "Dry-run mode: skipping playlist creation." in caplog.text
 
-    async def test__sorting_with_none_score(
+    async def test__sorting_with_zero_score(
         self,
         user: User,
         use_case: AdvisorDiscoverUseCase,
@@ -521,10 +521,10 @@ class TestAdvisorDiscoverTracksUseCase:
         # Given one seed
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
 
-        # Given 3 suggested tracks with one NULL score
+        # Given 3 suggested tracks, one with score=0.0
         suggestions = [
             TrackSuggestedFactory.build(name="Low", score=0.1),
-            TrackSuggestedFactory.build(name="None", score=None),
+            TrackSuggestedFactory.build(name="Zero", score=0.0),
             TrackSuggestedFactory.build(name="High", score=0.9),
         ]
         mock_advisor_client.get_similar_tracks.return_value = suggestions
@@ -533,7 +533,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # Given a reconciled track for each track suggested
         reconciled_tracks = {t.name: TrackFactory.build(name=t.name) for t in suggestions}
         mock_provider_library.search_tracks.side_effect = lambda track, **kwargs: [reconciled_tracks.get(track)]
-        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: candidates[0]
+        mock_track_reconciler.reconcile.side_effect = lambda track_suggested, candidates: (candidates[0], 0.95)
 
         # Given new tracks for each reconciled track with a new playlist created
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
@@ -550,9 +550,58 @@ class TestAdvisorDiscoverTracksUseCase:
             ),
         )
 
-        # Then: tracks sorted by score DESC (None treated as 0)
+        # Then: tracks sorted by score DESC
         playlist_tracks = mock_provider_library.create_playlist.call_args.kwargs["tracks"]
         assert playlist_tracks[0].name == "High"
         assert playlist_tracks[1].name == "Low"
-        assert playlist_tracks[2].name == "None"
+        assert playlist_tracks[2].name == "Zero"
         assert len(result.reports) == 1
+
+    async def test__sort__reconciler_breaks_tie_within_band(
+        self,
+        user: User,
+        use_case: AdvisorDiscoverUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor_client: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+    ) -> None:
+        """Within the same advisor score band, the higher reconciler score wins."""
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
+
+        # 0.89 and 0.87 are both in the [0.85, 0.90) band with score_band_width=0.05
+        weak_reconciler_track = TrackFactory.build(name="WeakReconciler")
+        strong_reconciler_track = TrackFactory.build(name="StrongReconciler")
+
+        mock_advisor_client.get_similar_tracks.return_value = [
+            TrackSuggestedFactory.build(score=0.89),  # higher advisor, weak reconciler
+            TrackSuggestedFactory.build(score=0.87),  # lower advisor, strong reconciler
+        ]
+        mock_provider_library.search_tracks.side_effect = [
+            [weak_reconciler_track],
+            [strong_reconciler_track],
+        ]
+        mock_track_reconciler.reconcile.side_effect = [
+            (weak_reconciler_track, 0.62),  # barely passed reconciliation
+            (strong_reconciler_track, 0.98),  # very confident reconciliation
+        ]
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            isrcs=frozenset(),
+            fingerprints=frozenset(),
+        )
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoveryConfigInput(
+                seed_limit=1,
+                similar_limit=2,
+                playlist_size=2,
+                max_attempts=1,
+                score_band_width=0.05,
+                dry_run=True,
+            ),
+        )
+
+        # strong_reconciler_track wins within the same band despite lower advisor score
+        assert result.tracks[0] is strong_reconciler_track
+        assert result.tracks[1] is weak_reconciler_track

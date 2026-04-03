@@ -4,16 +4,9 @@ This quick and dirty document just list the roadmap tasks.
 
 ## discovery improvements
 
-- Per-artist diversity cap: add a max_tracks_per_artist config (default 2).
-  The final playlist sort-by-score step doesn't prevent 4 songs from the same artist
-  landing in a 10-track playlist. Simple constraint, big perceived quality improvement.
-  Depends on the Track entity invariants plan above (guarantees artists[0] is always set).
-  Plan: plans/calm-swinging-kernighan.md
-
-- Combined score (advisor × reconciliation confidence): advisor score and reconciler
-  final score are currently independent. Weighting them together (e.g. advisor_score ×
-  normalized_reconciler_score) would improve final ranking quality — a weakly reconciled
-  track should rank below a confidently matched one even if the advisor score is higher.
+- Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next
+  run. Add a discovery_skip table (user_id + fingerprint) checked during deduplication.
+  CLI would need a way to mark tracks as skipped (e.g. after dry-run preview).
 
 - Gemini context enrichment: the advisor port only receives artist_name + track_name.
   Gemini is a generative model — pass it richer context: user's top genres, a mood/energy
@@ -24,10 +17,6 @@ This quick and dirty document just list the roadmap tasks.
 - Cross-advisor confidence signal: run both Last.fm and Gemini in parallel per seed,
   union the results, and boost the score of tracks that appear in both. Agreement between
   two independent advisors is a strong quality signal. Keep single-advisor as default.
-
-- Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next
-  run. Add a discovery_skip table (user_id + fingerprint) checked during deduplication.
-  CLI would need a way to mark tracks as skipped (e.g. after dry-run preview).
 
 ## Tests
 

@@ -123,7 +123,7 @@ class TrackSuggested:
     name: str
     artists: list[str] = field(default_factory=list)
     advisor_id: str | None = None
-    score: float | None = None
+    score: float
     duration_ms: int | None = None
 
     def __post_init__(self) -> None:

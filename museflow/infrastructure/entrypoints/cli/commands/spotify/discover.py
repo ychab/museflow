@@ -100,6 +100,13 @@ def discover(
         min=1,
         max=10,
     ),
+    score_band_width: float = typer.Option(
+        0.05,
+        "--score-band-width",
+        help="Width of advisor score bands for tiebreaking by reconciler confidence (0–1)",
+        min=0.01,
+        max=0.5,
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover tracks without creating a playlist"),
 ) -> None:
     """
@@ -119,6 +126,7 @@ def discover(
                     seed_limit=seed_limit,
                     similar_limit=similar_limit,
                     candidate_limit=candidate_limit,
+                    score_band_width=score_band_width,
                     playlist_size=playlist_size,
                     max_attempts=max_attempts,
                     max_tracks_per_artist=max_tracks_per_artist,

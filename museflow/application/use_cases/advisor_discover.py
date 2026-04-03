@@ -1,4 +1,5 @@
 import logging
+import math
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC
@@ -17,7 +18,8 @@ from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import Score
+from museflow.domain.types import ScoreAdvisor
+from museflow.domain.types import ScoreReconciler
 from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,13 @@ class DiscoveryResult:
     playlist: Playlist | None
     reports: list[DiscoveryAttemptReport]
     tracks: list[Track]
+
+
+@dataclass(frozen=True, kw_only=True)
+class TrackScored:
+    track: Track
+    advisor_score: ScoreAdvisor
+    reconciler_score: ScoreReconciler
 
 
 class AdvisorDiscoverUseCase:
@@ -75,7 +84,7 @@ class AdvisorDiscoverUseCase:
         Raises:
             DiscoveryTrackNoNew: If no new tracks are found after all attempts.
         """
-        tracks_scores: list[tuple[Track, Score]] = []
+        tracks_scores: list[TrackScored] = []
         reports: list[DiscoveryAttemptReport] = []
         offset = 0
 
@@ -134,12 +143,13 @@ class AdvisorDiscoverUseCase:
             logger.info(f"Survived tracks: {len(tracks_survived)}")
 
             # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
-            existing_fps = {t.fingerprint for t, _ in tracks_scores}
-            existing_isrcs = {t.isrc for t, _ in tracks_scores if t.isrc}
+            existing_fps = {ts.track.fingerprint for ts in tracks_scores}
+            existing_isrcs = {ts.track.isrc for ts in tracks_scores if ts.track.isrc}
             tracks_added = [
-                (t, s)
-                for t, s in tracks_survived
-                if t.fingerprint not in existing_fps and (not t.isrc or t.isrc not in existing_isrcs)
+                ts
+                for ts in tracks_survived
+                if ts.track.fingerprint not in existing_fps
+                and (not ts.track.isrc or ts.track.isrc not in existing_isrcs)
             ]
 
             reports.append(
@@ -165,12 +175,18 @@ class AdvisorDiscoverUseCase:
         if not tracks_scores:
             raise DiscoveryTrackNoNew()
 
-        # Sort by advisor score DESC
-        tracks_scores.sort(key=lambda x: x[1], reverse=True)
+        # Sort: band by advisor score DESC, then by reconciler confidence DESC within band
+        tracks_scores.sort(
+            key=lambda ts: (
+                math.floor(ts.advisor_score / config.score_band_width) * config.score_band_width,
+                ts.reconciler_score,
+            ),
+            reverse=True,
+        )
 
         # Apply per-artist cap
         tracks = self._apply_artist_cap(
-            tracks=[t for t, _ in tracks_scores],
+            tracks=[ts.track for ts in tracks_scores],
             max_tracks_per_artist=config.max_tracks_per_artist,
         )
 
@@ -221,13 +237,9 @@ class AdvisorDiscoverUseCase:
             logger.debug(f"Track seed: '{track_seed}' => {len(tracks_similar)} suggestions")
 
         # Re-order them by score DESC.
-        return sorted(tracks_suggested, key=lambda t: t.score or 0, reverse=True)
+        return sorted(tracks_suggested, key=lambda t: t.score, reverse=True)
 
-    async def _reconcile_tracks(
-        self,
-        tracks_suggested: list[TrackSuggested],
-        limit: int,
-    ) -> list[tuple[Track, Score]]:
+    async def _reconcile_tracks(self, tracks_suggested: list[TrackSuggested], limit: int) -> list[TrackScored]:
         """Reconciles suggested tracks with the provider.
 
         Args:
@@ -235,9 +247,9 @@ class AdvisorDiscoverUseCase:
             limit: The maximum number of search candidates per suggestion.
 
         Returns:
-            A list of (reconciled track, advisor score) pairs.
+            A list of reconciled tracks with their advisor and reconciler scores.
         """
-        tracks_reconciled: list[tuple[Track, Score]] = []
+        tracks_reconciled: list[TrackScored] = []
 
         for track_suggested in tracks_suggested:
             candidates = await self._provider_library.search_tracks(
@@ -247,49 +259,52 @@ class AdvisorDiscoverUseCase:
                 log_enabled=False,
             )
 
-            best_match = self._track_reconciler.reconcile(
+            result = self._track_reconciler.reconcile(
                 track_suggested=track_suggested,
                 candidates=candidates,
             )
-            if best_match:
-                tracks_reconciled.append((best_match, track_suggested.score or 0.0))
+            if result:
+                best_match, reconciler_score = result
+                tracks_reconciled.append(
+                    TrackScored(
+                        track=best_match,
+                        advisor_score=track_suggested.score,
+                        reconciler_score=reconciler_score,
+                    )
+                )
                 logger.debug(f"Track reconciled: '{track_suggested}'")
             else:
                 logger.debug(f"Track not reconciled: '{track_suggested}'")
 
         return tracks_reconciled
 
-    async def _deduplicate_tracks(
-        self,
-        user: User,
-        tracks_reconciled: list[tuple[Track, Score]],
-    ) -> list[tuple[Track, Score]]:
+    async def _deduplicate_tracks(self, user: User, tracks_reconciled: list[TrackScored]) -> list[TrackScored]:
         """Deduplicate tracks that are already in the user's library.
 
         Args:
             user: The user to check against.
-            tracks_reconciled: A list of (track, score) pairs to filter.
+            tracks_reconciled: A list of scored tracks to filter.
 
         Returns:
-            A list of (track, score) pairs not in the user's library.
+            A list of scored tracks not in the user's library.
         """
-        tracks_new: list[tuple[Track, Score]] = []
+        tracks_new: list[TrackScored] = []
 
         known_identifiers = await self._track_repository.get_known_identifiers(
             user_id=user.id,
-            isrcs=[track.isrc for track, _ in tracks_reconciled if track.isrc],
-            fingerprints=[track.fingerprint for track, _ in tracks_reconciled],
+            isrcs=[ts.track.isrc for ts in tracks_reconciled if ts.track.isrc],
+            fingerprints=[ts.track.fingerprint for ts in tracks_reconciled],
         )
 
-        for track, score in tracks_reconciled:
-            if known_identifiers.is_known(track):
-                logger.debug(f"Excluded '{track}'")
+        for ts in tracks_reconciled:
+            if known_identifiers.is_known(ts.track):
+                logger.debug(f"Excluded '{ts.track}'")
                 continue
 
-            tracks_new.append((track, score))
+            tracks_new.append(ts)
 
         logger.debug(
-            f"Discovery:\n- {'\n- '.join([f"'{t}'" for t, _ in tracks_new])}" if tracks_new else "Discovery: None"
+            f"Discovery:\n- {'\n- '.join([f"'{ts.track}'" for ts in tracks_new])}" if tracks_new else "Discovery: None"
         )
         return tracks_new
 

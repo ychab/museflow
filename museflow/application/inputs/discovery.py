@@ -18,6 +18,7 @@ class DiscoveryConfigInput:
         seed_limit: The batch size of seed tracks per attempt.
         similar_limit: The maximum number of similar tracks to fetch for each seed.
         candidate_limit: The maximum number of search candidates per suggestion.
+        score_band_width: Width of advisor score bands for tiebreaking by reconciler confidence.
         playlist_size: The target exact number of tracks in the generated playlist.
         max_attempts: The maximum number of seed batches to process before stopping.
     """
@@ -31,6 +32,8 @@ class DiscoveryConfigInput:
 
     similar_limit: int = 5
     candidate_limit: int = 10
+
+    score_band_width: float = 0.05
 
     playlist_size: int = 10
     max_attempts: int = 5

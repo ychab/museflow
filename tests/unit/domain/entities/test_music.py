@@ -164,8 +164,8 @@ class TestTrack:
 class TestTrackSuggested:
     def test__name__none(self) -> None:
         with pytest.raises(ValueError, match="TrackSuggested.name must not be empty"):
-            TrackSuggested(name="", artists=["Queen"])
+            TrackSuggested(name="", artists=["Queen"], score=0.5)
 
     def test__artists__none(self) -> None:
         with pytest.raises(ValueError, match="TrackSuggested must have at least one artist"):
-            TrackSuggested(name="Bohemian Rhapsody", artists=[])
+            TrackSuggested(name="Bohemian Rhapsody", artists=[], score=0.5)
