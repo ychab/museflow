@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 872c6c7e6317
+Revision ID: 9b74ed7a43c8
 Revises:
-Create Date: 2026-03-20 12:51:22.540003
+Create Date: 2026-04-03 15:36:02.849428
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '872c6c7e6317'
+revision: str = '9b74ed7a43c8'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -82,6 +82,8 @@ def upgrade() -> None:
     sa.Column('duration_ms', sa.Integer(), nullable=False),
     sa.Column('isrc', sa.String(length=512), nullable=True),
     sa.Column('fingerprint', sa.String(length=512), nullable=False),
+    sa.Column('played_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('added_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('popularity', sa.Integer(), nullable=True),
     sa.Column('sources', sa.Integer(), nullable=False),

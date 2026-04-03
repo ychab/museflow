@@ -2,6 +2,7 @@ import uuid
 from abc import ABC
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import datetime
 
 from museflow.domain.types import AlbumType
 from museflow.domain.types import ArtistSource
@@ -80,6 +81,9 @@ class Track(BaseMediaItem):
     fingerprint: str = ""
 
     duration_ms: int
+
+    played_at: datetime | None = None
+    added_at: datetime | None = None
 
     def __str__(self) -> str:
         return f"{', '.join([str(artist) for artist in self.artists])} - {self.name}".replace("'", "\\'")

@@ -87,6 +87,7 @@ def history(
     table.add_column("Value", justify="right", style="magenta")
 
     table.add_row("Items read", str(report.items_read))
+    table.add_row("Items skipped (no timestamp)", str(report.items_skipped_no_ts))
     table.add_row("Items skipped (duration)", str(report.items_skipped_duration))
     table.add_row("Items skipped (no URI)", str(report.items_skipped_no_uri))
     table.add_row("Unique track IDs", str(report.unique_track_ids))

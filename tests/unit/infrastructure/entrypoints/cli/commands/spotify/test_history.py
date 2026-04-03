@@ -192,6 +192,7 @@ class TestSpotifyHistoryCommand:
     ) -> None:
         mock_history_logic.return_value = ImportStreamingHistoryReport(
             items_read=1000,
+            items_skipped_no_ts=5,
             items_skipped_duration=200,
             items_skipped_no_uri=50,
             unique_track_ids=750,
@@ -209,6 +210,7 @@ class TestSpotifyHistoryCommand:
         output = clean_typer_text(result.stdout)
         assert "Import successful in" in output
         assert "Items read 1000" in output
+        assert "Items skipped (no timestamp) 5" in output
         assert "Items skipped (duration) 200" in output
         assert "Items skipped (no URI) 50" in output
         assert "Unique track IDs 750" in output

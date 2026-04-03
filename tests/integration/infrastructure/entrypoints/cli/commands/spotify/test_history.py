@@ -33,6 +33,7 @@ class TestSpotifyHistoryLogic:
     ) -> None:
         mock_use_case.import_history.return_value = ImportStreamingHistoryReport(
             items_read=1000,
+            items_skipped_no_ts=5,
             items_skipped_duration=200,
             items_skipped_no_uri=50,
             unique_track_ids=750,
@@ -47,6 +48,7 @@ class TestSpotifyHistoryLogic:
         )
 
         assert report.items_read == 1000
+        assert report.items_skipped_no_ts == 5
         assert report.items_skipped_duration == 200
         assert report.items_skipped_no_uri == 50
         assert report.unique_track_ids == 750

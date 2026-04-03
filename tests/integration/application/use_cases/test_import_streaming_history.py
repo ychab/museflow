@@ -75,6 +75,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         assert report == ImportStreamingHistoryReport(
             items_read=6,
+            items_skipped_no_ts=0,
             items_skipped_duration=2,
             items_skipped_no_uri=0,
             unique_track_ids=4,
@@ -110,6 +111,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         assert report == ImportStreamingHistoryReport(
             items_read=6,
+            items_skipped_no_ts=0,
             items_skipped_duration=2,
             items_skipped_no_uri=0,
             unique_track_ids=4,
@@ -145,6 +147,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         assert report == ImportStreamingHistoryReport(
             items_read=6,
+            items_skipped_no_ts=0,
             items_skipped_duration=2,
             items_skipped_no_uri=0,
             unique_track_ids=4,

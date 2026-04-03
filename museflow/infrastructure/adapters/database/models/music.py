@@ -1,7 +1,9 @@
 import uuid
+from datetime import datetime
 from typing import NotRequired
 from typing import TypedDict
 
+from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Index
@@ -100,6 +102,9 @@ class Track(MusicItemMixin, Base, kw_only=True):
     isrc: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None, index=True)
     fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
 
+    played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    added_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -132,4 +137,6 @@ class Track(MusicItemMixin, Base, kw_only=True):
             duration_ms=self.duration_ms,
             isrc=self.isrc,
             fingerprint=self.fingerprint,
+            played_at=self.played_at,
+            added_at=self.added_at,
         )

@@ -1,7 +1,9 @@
 import asyncio
+import dataclasses
 import itertools
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import ijson
@@ -17,14 +19,11 @@ from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
 
-type _CounterRead = int
-type _CounterSkippedDuration = int
-type _CounterSkippedUri = int
-
 
 @dataclass(frozen=True, kw_only=True)
 class ImportStreamingHistoryReport:
     items_read: int = 0
+    items_skipped_no_ts: int = 0
     items_skipped_duration: int = 0
     items_skipped_no_uri: int = 0
 
@@ -36,16 +35,27 @@ class ImportStreamingHistoryReport:
     tracks_purged: int = 0
 
 
+@dataclass(frozen=True, kw_only=True)
+class _FileParseEntry:
+    provider_id: str
+    played_at: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
+class _FileParseStats:
+    items_read: int = 0
+    items_skipped_no_ts: int = 0
+    items_skipped_duration: int = 0
+    items_skipped_no_uri: int = 0
+
+
 class ImportStreamingHistoryUseCase:
-    """Import a user's Spotify streaming history from exported JSON files.
+    """
+    Import a user's Spotify streaming history from exported JSON files.
 
     Parses all JSON files in the given directory, filters entries by minimum
     playback duration, deduplicates track IDs, fetches unknown tracks from the
     provider, and bulk-upserts them into the repository.
-
-    Attributes:
-        _provider_library: Port to fetch track metadata from the music provider.
-        _track_repository: Repository for persisting and querying tracks.
     """
 
     def __init__(self, provider_library: ProviderLibraryPort, track_repository: TrackRepository) -> None:
@@ -61,6 +71,7 @@ class ImportStreamingHistoryUseCase:
         if not config.directory.exists() or not config.directory.is_dir():
             raise StreamingHistoryDirectoryNotFound(f"Directory not found: {config.directory}")
 
+        # Validate files
         json_files = sorted(config.directory.glob("*.json"))
         if not json_files:
             raise StreamingHistoryDirectoryNotFound(f"No JSON files found in: {config.directory}")
@@ -75,22 +86,27 @@ class ImportStreamingHistoryUseCase:
             )
             logger.info("History tracks purged.\n")
 
-        # Heavily collect unique track IDs from all files AT ONCE
-        track_provider_ids: set[str] = set()
-        items_read = 0
-        items_skipped_duration = 0
-        items_skipped_no_uri = 0
+        # Collect unique track IDs with their latest played_at across all files
+        tracks_ts: dict[str, datetime] = {}  # provider_id → most recent played_at
+        items_read = items_skipped_no_ts = items_skipped_duration = items_skipped_no_uri = 0
 
         for path in json_files:
-            ids, read, skipped_dur, skipped_uri = await asyncio.to_thread(
+            entries, stats = await asyncio.to_thread(
                 self._parse_history_file,
                 path=path,
                 min_ms_played=config.min_ms_played,
             )
-            track_provider_ids.update(ids)
-            items_read += read
-            items_skipped_duration += skipped_dur
-            items_skipped_no_uri += skipped_uri
+
+            for entry in entries:
+                if entry.provider_id not in tracks_ts or entry.played_at > tracks_ts[entry.provider_id]:
+                    tracks_ts[entry.provider_id] = entry.played_at
+
+            items_read += stats.items_read
+            items_skipped_no_ts += stats.items_skipped_no_ts
+            items_skipped_duration += stats.items_skipped_duration
+            items_skipped_no_uri += stats.items_skipped_no_uri
+
+        track_provider_ids = set(tracks_ts.keys())
         logger.info(f"Collected {len(track_provider_ids)} unique track ID's.")
 
         # Filter already-known IDs
@@ -119,7 +135,9 @@ class ImportStreamingHistoryUseCase:
             tracks_fetched += len(chunk_tracks)
 
             _, created = await self._track_repository.bulk_upsert(
-                tracks=list(chunk_tracks),
+                tracks=[
+                    dataclasses.replace(track, played_at=tracks_ts.get(track.provider_id)) for track in chunk_tracks
+                ],
                 batch_size=config.batch_size,
             )
             tracks_created += created
@@ -127,6 +145,7 @@ class ImportStreamingHistoryUseCase:
         # Finally, build and return report
         return ImportStreamingHistoryReport(
             items_read=items_read,
+            items_skipped_no_ts=items_skipped_no_ts,
             items_skipped_duration=items_skipped_duration,
             items_skipped_no_uri=items_skipped_no_uri,
             unique_track_ids=len(track_provider_ids),
@@ -137,13 +156,12 @@ class ImportStreamingHistoryUseCase:
         )
 
     @staticmethod
-    def _parse_history_file(
-        path: Path, min_ms_played: int
-    ) -> tuple[set[str], _CounterRead, _CounterSkippedDuration, _CounterSkippedUri]:
-        """Parse a single streaming history JSON file and extract track IDs with counters.
+    def _parse_history_file(path: Path, min_ms_played: int) -> tuple[list[_FileParseEntry], _FileParseStats]:
+        """Parse a single streaming history JSON file and extract track entries with counters.
 
         Runs synchronously and is intended to be offloaded via ``asyncio.to_thread``.
         Streams the file using ijson to avoid loading the entire JSON into memory.
+        Deduplicates entries within the file, keeping the latest ``played_at`` per track.
 
         Args:
             path: Path to the JSON history file to parse.
@@ -151,18 +169,17 @@ class ImportStreamingHistoryUseCase:
                 this threshold are skipped and counted as skipped-duration.
 
         Returns:
-            A 4-tuple of:
-            - set of Spotify track IDs extracted from valid entries,
-            - number of entries read,
-            - number of entries skipped due to insufficient playback duration,
-            - number of entries skipped due to a missing or invalid track URI.
+            A tuple of:
+            - list of deduplicated track entries (one per unique provider ID, latest played_at),
+            - parse statistics (items read and skipped counts).
 
         Raises:
             StreamingHistoryInvalidFormat: If the file cannot be parsed as valid JSON.
         """
-        track_ids: set[str] = set()
+        track_ts: dict[str, datetime] = {}
 
         items_read = 0
+        items_skipped_no_ts = 0
         items_skipped_duration = 0
         items_skipped_no_uri = 0
 
@@ -170,6 +187,12 @@ class ImportStreamingHistoryUseCase:
             with open(path, "rb") as f:
                 for item in ijson.items(f, "item"):
                     items_read += 1
+
+                    ts_raw = item.get("ts")
+                    if not ts_raw:
+                        items_skipped_no_ts += 1
+                        continue
+                    ts = datetime.fromisoformat(ts_raw)
 
                     if item.get("ms_played", 0) < min_ms_played:
                         items_skipped_duration += 1
@@ -185,8 +208,17 @@ class ImportStreamingHistoryUseCase:
                         items_skipped_no_uri += 1
                         continue
 
-                    track_ids.add(parts[2])
+                    track_id = parts[2]
+                    if track_id not in track_ts or ts > track_ts[track_id]:
+                        track_ts[track_id] = ts
         except Exception as exc:
             raise StreamingHistoryInvalidFormat(f"Failed to parse {path}: {exc}") from exc
 
-        return track_ids, items_read, items_skipped_duration, items_skipped_no_uri
+        entries = [_FileParseEntry(provider_id=tid, played_at=ts) for tid, ts in track_ts.items()]
+        stats = _FileParseStats(
+            items_read=items_read,
+            items_skipped_no_ts=items_skipped_no_ts,
+            items_skipped_duration=items_skipped_duration,
+            items_skipped_no_uri=items_skipped_no_uri,
+        )
+        return entries, stats
