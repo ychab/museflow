@@ -1,130 +1,128 @@
-# Step 5: CLI + Dependencies + Exports
+# Step 5: Use Case + Tests
 
 **Part of:** [Master Plan](taste_profile_master_plan.md)
-**Dependencies:** Steps 1–4 all complete (entity, use case, repo, adapter all exist)
+**Dependencies:** Steps 1–4 complete (entity, ports, DB model + repo, Gemini adapter all exist)
 
 ## Files to touch
 
 | Action | File |
 |---|---|
-| Create | `museflow/infrastructure/entrypoints/cli/commands/profile.py` |
-| Modify | `museflow/infrastructure/entrypoints/cli/dependencies.py` |
-| Modify | `museflow/infrastructure/entrypoints/cli/main.py` (or wherever the Typer app is assembled) |
+| Create | `museflow/application/use_cases/build_taste_profile.py` |
+| Create | `tests/unit/application/use_cases/test_build_taste_profile.py` |
+| Create | `tests/integration/application/use_cases/test_build_taste_profile.py` |
+| Create | `tests/assets/wiremock/gemini/taste_profile_segment.json` |
+| Create | `tests/assets/wiremock/gemini/taste_profile_merge.json` |
+| Create | `tests/assets/wiremock/gemini/taste_profile_reflection.json` |
 
-## Before starting — read these files
+## 1. Use case
 
-- `museflow/infrastructure/entrypoints/cli/dependencies.py` — how existing context managers are structured (`get_gemini_client`, `get_track_repository`, etc.)
-- `museflow/infrastructure/entrypoints/cli/commands/discover.py` (or similar) — how a command calls `anyio.run(...)` and uses the dependency helpers
-
-## 1. `museflow/infrastructure/entrypoints/cli/dependencies.py` — add two helpers
-
-```python
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
-from museflow.infrastructure.adapters.advisors.gemini.taste_profile_client import GeminiTasteProfileAdapter
-from museflow.infrastructure.adapters.database.repositories.taste_profile import UserTasteProfileSQLRepository
-from museflow.infrastructure.config.settings.gemini import gemini_settings
-
-
-@asynccontextmanager
-async def get_gemini_taste_profile_client() -> AsyncGenerator[GeminiTasteProfileAdapter, None]:
-    client = GeminiTasteProfileAdapter(
-        api_key=gemini_settings.api_key.get_secret_value(),
-        model=gemini_settings.model,
-        base_url=str(gemini_settings.base_url),
-        timeout=gemini_settings.http_timeout,
-        verify_ssl=gemini_settings.http_verify_ssl,
-        max_retry_wait=gemini_settings.http_max_retry_wait,
-    )
-    try:
-        yield client
-    finally:
-        await client.close()
-
-
-def get_taste_profile_repository(session: AsyncSession) -> UserTasteProfileSQLRepository:
-    return UserTasteProfileSQLRepository(session)
-```
-
-## 2. `museflow/infrastructure/entrypoints/cli/commands/profile.py` — new command file
+`museflow/application/use_cases/build_taste_profile.py`
 
 ```python
 from __future__ import annotations
 
-from typing import Annotated
+import itertools
+import logging
+import uuid
+from datetime import UTC, datetime
 
-import anyio
-import typer
+from museflow.application.inputs.taste_profile import BuildTasteProfileConfigInput
+from museflow.application.ports.advisors.taste_profile import TasteProfileAdvisorPort
+from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.taste_profile import UserTasteProfileRepository
+from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile
+from museflow.domain.entities.user import User
+from museflow.domain.exceptions import EmptyLibraryException  # or nearest equivalent
 
-app = typer.Typer()
-
-
-@app.command("build")
-def profile_build(
-    email: Annotated[str, typer.Option(help="User email address")],
-    track_limit: Annotated[int, typer.Option(help="Max tracks to process")] = 3000,
-    batch_size: Annotated[int, typer.Option(help="Tracks per Gemini batch")] = 400,
-) -> None:
-    """Build a Gemini master taste profile from your library."""
-    anyio.run(_profile_build_logic, email, track_limit, batch_size)
+logger = logging.getLogger(__name__)
 
 
-async def _profile_build_logic(email: str, track_limit: int, batch_size: int) -> None:
-    from museflow.application.inputs.taste_profile import BuildTasteProfileConfigInput
-    from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
-    from museflow.infrastructure.entrypoints.cli.dependencies import (
-        get_async_session,
-        get_gemini_taste_profile_client,
-        get_taste_profile_repository,
-        get_track_repository,
-        get_user_by_email,
-    )
+class BuildTasteProfileUseCase:
+    def __init__(
+        self,
+        track_repository: TrackRepository,
+        profile_repository: UserTasteProfileRepository,
+        advisor: TasteProfileAdvisorPort,
+    ) -> None:
+        self._track_repository = track_repository
+        self._profile_repository = profile_repository
+        self._advisor = advisor
 
-    async with get_async_session() as session:
-        user = await get_user_by_email(session, email)
-        track_repo = get_track_repository(session)
-        profile_repo = get_taste_profile_repository(session)
+    async def build_profile(
+        self, user: User, config: BuildTasteProfileConfigInput
+    ) -> UserTasteProfile:
+        tracks = await self._track_repository.get_for_profile(user, limit=config.track_limit)
+        if not tracks:
+            raise EmptyLibraryException(f"No tracks found for user {user.id}")
 
-        async with get_gemini_taste_profile_client() as advisor:
-            use_case = BuildTasteProfileUseCase(
-                track_repository=track_repo,
-                profile_repository=profile_repo,
-                advisor=advisor,
+        current_profile: TasteProfileData | None = None
+
+        for i, batch in enumerate(itertools.batched(tracks, config.batch_size)):
+            segment = await self._advisor.build_profile_segment(list(batch))
+            if current_profile is None:
+                current_profile = segment
+            else:
+                current_profile = await self._advisor.merge_profiles(current_profile, segment)
+            logger.info(
+                f"Taste profile batch {i + 1} processed "
+                f"({min((i + 1) * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
             )
-            config = BuildTasteProfileConfigInput(track_limit=track_limit, batch_size=batch_size)
-            profile = await use_case.build_profile(user, config)
 
-    # Output summary
-    typer.echo(f"Profile built: {profile.tracks_count} tracks processed")
-    typer.echo(f"Advisor: {profile.advisor} ({profile.logic_version})")
-    typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
-    if profile.profile["personality_archetype"]:
-        typer.echo(f"Archetype: {profile.profile['personality_archetype']}")
-    for insight in profile.profile["life_phase_insights"]:
-        typer.echo(f"  - {insight}")
+        assert current_profile is not None  # unreachable: tracks non-empty guarantees ≥1 iteration
+
+        current_profile = await self._advisor.reflect_on_profile(current_profile)
+        logger.info("Psychographic reflection complete")
+
+        profile = UserTasteProfile(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            advisor=self._advisor.display_name,
+            profile=current_profile,
+            tracks_count=len(tracks),
+            logic_version=self._advisor.logic_version,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        return await self._profile_repository.upsert(profile)
 ```
 
-## 3. Register `profile` subgroup in main CLI app
+> `itertools.batched` requires Python 3.12+ (available on our 3.13 stack).
+>
+> `advisor=self._advisor.display_name` — the concrete `GeminiTasteProfileAdapter` must return `MusicAdvisor.GEMINI` here (a valid StrEnum value).
 
-Read the main Typer app file (likely `museflow/infrastructure/entrypoints/cli/main.py` or similar) and add:
+## 2. Unit tests
 
-```python
-from museflow.infrastructure.entrypoints.cli.commands.profile import app as profile_app
+`tests/unit/application/use_cases/test_build_taste_profile.py`
 
-app.add_typer(profile_app, name="profile")
-```
+- **nominal — multiple batches**: 3 batches → `build_profile_segment` called 3×, `merge_profiles` called 2×, `reflect_on_profile` called 1×, `upsert` called 1×
+- **single batch**: `build_profile_segment` called 1×, `merge_profiles` never called, `reflect_on_profile` called 1×
+- **empty tracks**: `get_for_profile` returns `[]` → raises `EmptyLibraryException`
+
+Use `AsyncMock` for all ports.
+
+## 3. Integration tests
+
+`tests/integration/application/use_cases/test_build_taste_profile.py`
+
+- **nominal**: real DB + WireMock Gemini stubs → profile row created in `museflow_user_taste_profile`
+- **upsert**: run twice → still 1 row, `updated_at` changes, `tracks_count` updated
+- **empty library**: no tracks in DB for user → raises `EmptyLibraryException`
+
+Use `async_session_trans` (explicit commit path via `upsert`).
+
+## 4. WireMock stubs
+
+Three stub files under `tests/assets/wiremock/gemini/`:
+
+- `taste_profile_segment.json` — stub for `build_profile_segment` prompt → returns a `TasteProfileData` JSON
+- `taste_profile_merge.json` — stub for `merge_profiles` prompt → returns merged `TasteProfileData` JSON
+- `taste_profile_reflection.json` — stub for `reflect_on_profile` prompt → returns profile with `personality_archetype` + `life_phase_insights` filled
+
+Pattern follows existing Spotify/Last.fm stubs in `tests/assets/wiremock/`.
 
 ## Verification
 
 ```bash
 make lint
-muse profile --help           # should show "build" command
-muse profile build --help     # should show all options
+make test
 ```
-
-Integration test (after WireMock stubs are in place):
-- `tests/integration/application/use_cases/test_build_taste_profile.py`
-  - `test__build_profile__nominal` — full flow with mocked Gemini via WireMock
-  - Verify DB row exists after run
-  - Verify upsert on second run (updated_at changes, row count stays 1)

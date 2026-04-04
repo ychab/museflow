@@ -18,6 +18,16 @@ This quick and dirty document just list the roadmap tasks.
   union the results, and boost the score of tracks that appear in both. Agreement between
   two independent advisors is a strong quality signal. Keep single-advisor as default.
 
+
+## claude
+
+- to build a big features, better to split it into mutliple plans, written on disk (not in memory). Why not a dir /plans in the root project?
+- then to split plans, it almost always the same pattern:
+-> 1. domain (entities, value objects, etc)
+-> 2. infra port adapters
+-> 3. use cases + inputs
+-> 4. infra entrypoints: cli / api
+
 ## Tests
 
 - check if we don't have redondant tests

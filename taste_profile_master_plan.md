@@ -54,11 +54,12 @@ class TasteProfileData(TypedDict):
 
 | Step | File | Status |
 |---|---|---|
-| [Step 1](taste_profile_step_1_plan.md) | Domain layer (types + entity) | TODO |
-| [Step 2](taste_profile_step_2_plan.md) | Application layer (ports + input + use case) | TODO |
+| [Step 1](taste_profile_step_1_plan.md) | Domain layer (types + entity) | ✅ Done |
+| [Step 2](taste_profile_step_2_plan.md) | Application layer (ports + input schema) | TODO |
 | [Step 3](taste_profile_step_3_plan.md) | Infrastructure DB (model + repositories + migration) | TODO |
 | [Step 4](taste_profile_step_4_plan.md) | Gemini adapter (schemas + 3-prompt client) | TODO |
-| [Step 5](taste_profile_step_5_plan.md) | CLI + dependencies + exports | TODO |
+| [Step 5](taste_profile_step_5_plan.md) | Use case + unit tests + integration tests (WireMock) | TODO |
+| [Step 6](taste_profile_step_6_plan.md) | CLI + dependencies + exports | TODO |
 
 ## Verification (end-to-end)
 
