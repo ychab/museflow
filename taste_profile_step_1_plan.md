@@ -8,7 +8,7 @@
 | Action | File |
 |---|---|
 | Modify | `museflow/domain/types.py` |
-| Create | `museflow/domain/entities/taste_profile.py` |
+| Create | `museflow/domain/entities/taste.py` |
 | Modify | `museflow/domain/entities/__init__.py` |
 
 ## 1. `museflow/domain/types.py` — add TypedDicts
@@ -30,7 +30,7 @@ class TasteProfileData(TypedDict):
     life_phase_insights: list[str]           # e.g. ["Shift to ambient during 2024"] — set by final pass
 ```
 
-## 2. `museflow/domain/entities/taste_profile.py` — new entity
+## 2. `museflow/domain/entities/taste.py` — new entity
 
 Pattern: frozen dataclass, kw_only, no framework imports. Declare all fields explicitly (no base class for `id`/`created_at`/`updated_at`).
 

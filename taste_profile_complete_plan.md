@@ -36,7 +36,7 @@ Plan: Gemini Master Taste Profile
      personality_archetype: str | None    # e.g. "The Architect of Sound" — set by final pass
      life_phase_insights: list[str]       # e.g. ["Shift to ambient during 2024"] — set by final pass
 
- New: museflow/domain/entities/taste_profile.py:
+ New: museflow/domain/entities/taste.py:
  @dataclass(frozen=True, kw_only=True)
  class UserTasteProfile:
      id: uuid.UUID
