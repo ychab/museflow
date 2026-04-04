@@ -22,6 +22,7 @@ from museflow.application.ports.repositories.auth import OAuthProviderStateRepos
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -40,6 +41,7 @@ from museflow.infrastructure.adapters.database.repositories.auth import OAuthPro
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import ArtistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -231,6 +233,11 @@ def artist_repository(async_session_db: AsyncSession) -> ArtistRepository:
 @pytest.fixture
 def track_repository(async_session_db: AsyncSession) -> TrackRepository:
     return TrackSQLRepository(async_session_db)
+
+
+@pytest.fixture
+def taste_profile_repository(async_session_db: AsyncSession) -> TasteProfileRepository:
+    return TasteProfileSQLRepository(async_session_db)
 
 
 # --- Entity factories ---

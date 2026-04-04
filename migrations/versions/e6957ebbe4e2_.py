@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9b74ed7a43c8
+Revision ID: e6957ebbe4e2
 Revises:
-Create Date: 2026-04-03 15:36:02.849428
+Create Date: 2026-04-05 00:37:37.050311
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '9b74ed7a43c8'
+revision: str = 'e6957ebbe4e2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -74,6 +74,20 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_token')
     )
+    op.create_table('museflow_taste_profile',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('advisor', sa.Enum('LASTFM', 'GEMINI', name='musicadvisor'), nullable=False),
+    sa.Column('profile', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('tracks_count', sa.Integer(), nullable=False),
+    sa.Column('logic_version', sa.String(length=32), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'advisor', name='uq_museflow_taste_profile_user_advisor')
+    )
+    op.create_index(op.f('ix_museflow_taste_profile_user_id'), 'museflow_taste_profile', ['user_id'], unique=False)
     op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -118,6 +132,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_museflow_track_isrc'), table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_fingerprint'), table_name='museflow_track')
     op.drop_table('museflow_track')
+    op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')
+    op.drop_table('museflow_taste_profile')
     op.drop_table('museflow_auth_token')
     op.drop_index(op.f('ix_museflow_auth_state_state'), table_name='museflow_auth_state')
     op.drop_table('museflow_auth_state')
