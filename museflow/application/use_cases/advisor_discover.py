@@ -100,8 +100,7 @@ class AdvisorDiscoverUseCase:
                     saved=config.seed_saved,
                 ),
                 genres=config.seed_genres,
-                order_by=config.seed_order_by,
-                sort_order=config.seed_sort_order,
+                order=[(config.seed_order_by, config.seed_sort_order)],
                 limit=config.seed_limit,
                 offset=offset,
             )

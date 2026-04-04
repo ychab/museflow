@@ -26,32 +26,37 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from museflow.application.inputs.taste_profile import BuildTasteProfileConfigInput
-from museflow.application.ports.advisors.taste_profile import TasteProfileAdvisorPort
+from museflow.application.inputs.taste import BuildTasteProfileConfigInput
+from museflow.application.ports.advisors.taste import TasteProfileAdvisorPort
 from museflow.application.ports.repositories.music import TrackRepository
-from museflow.application.ports.repositories.taste_profile import UserTasteProfileRepository
+from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import EmptyLibraryException  # or nearest equivalent
+from museflow.domain.types import SortOrder, TrackOrderBy, TrackOrdering
 
 logger = logging.getLogger(__name__)
 
 
 class BuildTasteProfileUseCase:
     def __init__(
-        self,
-        track_repository: TrackRepository,
-        profile_repository: UserTasteProfileRepository,
-        advisor: TasteProfileAdvisorPort,
+            self,
+            track_repository: TrackRepository,
+            profile_repository: TasteProfileRepository,
+            advisor: TasteProfileAdvisorPort,
     ) -> None:
         self._track_repository = track_repository
         self._profile_repository = profile_repository
         self._advisor = advisor
 
     async def build_profile(
-        self, user: User, config: BuildTasteProfileConfigInput
+            self, user: User, config: BuildTasteProfileConfigInput
     ) -> UserTasteProfile:
-        tracks = await self._track_repository.get_for_profile(user, limit=config.track_limit)
+        tracks = await self._track_repository.get_list(
+            user_id=user.id,
+            order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC), (TrackOrderBy.ADDED_AT, SortOrder.ASC)],
+            limit=config.track_limit,
+        )
         if not tracks:
             raise EmptyLibraryException(f"No tracks found for user {user.id}")
 
@@ -96,7 +101,7 @@ class BuildTasteProfileUseCase:
 
 - **nominal — multiple batches**: 3 batches → `build_profile_segment` called 3×, `merge_profiles` called 2×, `reflect_on_profile` called 1×, `upsert` called 1×
 - **single batch**: `build_profile_segment` called 1×, `merge_profiles` never called, `reflect_on_profile` called 1×
-- **empty tracks**: `get_for_profile` returns `[]` → raises `EmptyLibraryException`
+- **empty tracks**: `get_list` returns `[]` → raises `EmptyLibraryException`
 
 Use `AsyncMock` for all ports.
 

@@ -5,8 +5,7 @@ from abc import abstractmethod
 from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Track
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
@@ -76,8 +75,7 @@ class TrackRepository(ABC):
         provider: MusicProvider | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
-        order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
-        sort_order: SortOrder = SortOrder.ASC,
+        order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
@@ -88,8 +86,9 @@ class TrackRepository(ABC):
             provider: A provider to filter on.
             sources: Whether to include, exclude, or ignore tracks base don their bitmask sources.
             genres: A list of genres to filter on.
-            order_by: The column on which to order.
-            sort_order: The sort order.
+            order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
+                   Use RANDOM as the sole entry for random ordering. Nullable columns (PLAYED_AT,
+                   ADDED_AT) always sort NULLs last regardless of direction.
             offset: The number of tracks to skip before starting to collect the result set.
             limit: The maximum number of tracks to return.
 

@@ -9,22 +9,20 @@
 
 | Action | File |
 |---|---|
-| Create | `museflow/application/ports/advisors/taste_profile.py` |
-| Modify | `museflow/application/ports/advisors/__init__.py` |
-| Create | `museflow/application/ports/repositories/taste_profile.py` |
-| Modify | `museflow/application/ports/repositories/__init__.py` |
-| Modify | `museflow/application/ports/repositories/music.py` |
-| Create | `museflow/application/inputs/taste_profile.py` |
+| Create | `museflow/application/ports/advisors/taste.py` |
+| Create | `museflow/application/ports/repositories/taste.py` |
+| Create | `museflow/application/inputs/taste.py` |
+
 ## 1. Advisor port
 
 ```python
-# museflow/application/ports/advisors/taste_profile.py
+# museflow/application/ports/advisors/taste.py
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
 from museflow.domain.entities.music import Track
-from museflow.domain.types import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileData
 
 
 class TasteProfileAdvisorPort(ABC):
@@ -57,39 +55,28 @@ class TasteProfileAdvisorPort(ABC):
 ## 2. Repository port
 
 ```python
-# museflow/application/ports/repositories/taste_profile.py
+# museflow/application/ports/repositories/taste.py
 from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
 
-from museflow.domain.entities.taste_profile import UserTasteProfile
+from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.types import MusicAdvisor
 
 
-class UserTasteProfileRepository(ABC):
+class TasteProfileRepository(ABC):
     @abstractmethod
     async def upsert(self, profile: UserTasteProfile) -> UserTasteProfile: ...
 
     @abstractmethod
-    async def get_by_user_and_advisor(
-        self, user_id: uuid.UUID, advisor: str
-    ) -> UserTasteProfile | None: ...
+    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> UserTasteProfile | None: ...
 ```
 
-## 3. Extend `TrackRepository` in `music.py`
-
-Add the abstract method to the existing `TrackRepository` ABC:
+## 3. Input schema
 
 ```python
-@abstractmethod
-async def get_for_profile(self, user: User, limit: int, offset: int = 0) -> list[Track]:
-    """Return tracks ordered by COALESCE(played_at, added_at) ASC NULLS LAST."""
-```
-
-## 4. Input schema
-
-```python
-# museflow/application/inputs/taste_profile.py
+# museflow/application/inputs/taste.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -101,10 +88,9 @@ class BuildTasteProfileConfigInput:
     batch_size: int = 400
 ```
 
-## 5. `__init__.py` exports
+## 4. `__init__.py` exports
 
-- `museflow/application/ports/advisors/__init__.py` — add `TasteProfileAdvisorPort`
-- `museflow/application/ports/repositories/__init__.py` — add `UserTasteProfileRepository`
+Both `museflow/application/ports/advisors/__init__.py` and `museflow/application/ports/repositories/__init__.py` are intentionally left empty.
 
 ## Verification
 

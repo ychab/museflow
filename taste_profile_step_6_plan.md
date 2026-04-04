@@ -22,8 +22,8 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from museflow.infrastructure.adapters.advisors.gemini.taste_profile_client import GeminiTasteProfileAdapter
-from museflow.infrastructure.adapters.database.repositories.taste_profile import UserTasteProfileSQLRepository
+from museflow.infrastructure.adapters.advisors.gemini.taste import GeminiTasteProfileAdapter  # confirm name in Step 4
+from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 
 
@@ -43,8 +43,8 @@ async def get_gemini_taste_profile_client() -> AsyncGenerator[GeminiTasteProfile
         await client.close()
 
 
-def get_taste_profile_repository(session: AsyncSession) -> UserTasteProfileSQLRepository:
-    return UserTasteProfileSQLRepository(session)
+def get_taste_profile_repository(session: AsyncSession) -> TasteProfileSQLRepository:
+    return TasteProfileSQLRepository(session)
 ```
 
 ## 2. `museflow/infrastructure/entrypoints/cli/commands/profile.py` — new command file
@@ -62,16 +62,16 @@ app = typer.Typer()
 
 @app.command("build")
 def profile_build(
-    email: Annotated[str, typer.Option(help="User email address")],
-    track_limit: Annotated[int, typer.Option(help="Max tracks to process")] = 3000,
-    batch_size: Annotated[int, typer.Option(help="Tracks per Gemini batch")] = 400,
+        email: Annotated[str, typer.Option(help="User email address")],
+        track_limit: Annotated[int, typer.Option(help="Max tracks to process")] = 3000,
+        batch_size: Annotated[int, typer.Option(help="Tracks per Gemini batch")] = 400,
 ) -> None:
     """Build a Gemini master taste profile from your library."""
     anyio.run(_profile_build_logic, email, track_limit, batch_size)
 
 
 async def _profile_build_logic(email: str, track_limit: int, batch_size: int) -> None:
-    from museflow.application.inputs.taste_profile import BuildTasteProfileConfigInput
+    from museflow.application.inputs.taste import BuildTasteProfileConfigInput
     from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
     from museflow.infrastructure.entrypoints.cli.dependencies import (
         get_async_session,

@@ -1,16 +1,15 @@
 # Step 3: Infrastructure — Database
 
 **Part of:** [Master Plan](taste_profile_master_plan.md)
-**Dependencies:** Step 1 (entity), Step 2 (repository port + `get_for_profile` abstract method)
+**Dependencies:** Step 1 (entity), Step 2 (repository port)
 
 ## Files to touch
 
 | Action | File |
 |---|---|
-| Create | `museflow/infrastructure/adapters/database/models/taste_profile.py` |
-| Modify | `museflow/infrastructure/adapters/database/models/__init__.py` (if exists, or the models import location) |
-| Create | `museflow/infrastructure/adapters/database/repositories/taste_profile.py` |
-| Modify | `museflow/infrastructure/adapters/database/repositories/music.py` |
+| Create | `museflow/infrastructure/adapters/database/models/taste.py` |
+| Modify | `museflow/infrastructure/adapters/database/models/__init__.py` (or models import location) |
+| Create | `museflow/infrastructure/adapters/database/repositories/taste.py` |
 | Run | `make db-revision` then `make db-upgrade` |
 
 ## 1. SQLAlchemy model
@@ -18,19 +17,16 @@
 Read `museflow/infrastructure/adapters/database/models/base.py` first to confirm mixin names (`UUIDIdMixin`, `DatetimeTrackMixin`).
 
 ```python
-# museflow/infrastructure/adapters/database/models/taste_profile.py
+# museflow/infrastructure/adapters/database/models/taste.py
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from museflow.domain.entities.taste_profile import UserTasteProfile as UserTasteProfileEntity
-from museflow.domain.types import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile as UserTasteProfileEntity
 from museflow.infrastructure.adapters.database.models.base import Base, DatetimeTrackMixin, UUIDIdMixin
 
 
@@ -71,21 +67,22 @@ class UserTasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True)
 Read `museflow/infrastructure/adapters/database/repositories/music.py` for upsert patterns (`pg_insert`, `.returning()`).
 
 ```python
-# museflow/infrastructure/adapters/database/repositories/taste_profile.py
+# museflow/infrastructure/adapters/database/repositories/taste.py
 from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.ports.repositories.taste_profile import UserTasteProfileRepository
-from museflow.domain.entities.taste_profile import UserTasteProfile
-from museflow.infrastructure.adapters.database.models.taste_profile import UserTasteProfileModel
+from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.types import MusicAdvisor
+from museflow.infrastructure.adapters.database.models.taste import UserTasteProfileModel
 
 
-class UserTasteProfileSQLRepository(UserTasteProfileRepository):
+class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -116,9 +113,7 @@ class UserTasteProfileSQLRepository(UserTasteProfileRepository):
         await self.session.commit()
         return profile_db.to_entity()
 
-    async def get_by_user_and_advisor(
-        self, user_id: uuid.UUID, advisor: str
-    ) -> UserTasteProfile | None:
+    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> UserTasteProfile | None:
         stmt = select(UserTasteProfileModel).where(
             UserTasteProfileModel.user_id == user_id,
             UserTasteProfileModel.advisor == advisor,
@@ -128,26 +123,7 @@ class UserTasteProfileSQLRepository(UserTasteProfileRepository):
         return profile_db.to_entity() if profile_db else None
 ```
 
-Note: import `func` from `sqlalchemy` for `func.now()`.
-
-## 3. Implement `get_for_profile()` in music repository
-
-Open `museflow/infrastructure/adapters/database/repositories/music.py`, find `TrackSQLRepository`, add:
-
-```python
-async def get_for_profile(self, user: User, limit: int, offset: int = 0) -> list[Track]:
-    stmt = (
-        select(TrackModel)
-        .where(TrackModel.user_id == user.id)
-        .order_by(func.coalesce(TrackModel.played_at, TrackModel.added_at).asc().nullslast())
-        .limit(limit)
-        .offset(offset)
-    )
-    result = await self.session.execute(stmt)
-    return [row.to_entity() for row in result.scalars().all()]
-```
-
-## 4. Migration
+## 3. Migration
 
 Make sure the model is imported in the Alembic env (check `env.py` or the models `__init__`). Then:
 
@@ -163,14 +139,12 @@ make db-upgrade
 make db-upgrade
 # Check table exists:
 # psql -c "\d museflow_user_taste_profile"
-make test   # integration tests for the new repo + get_for_profile
+make test
 ```
 
 Integration tests to write:
-- `tests/integration/application/use_cases/test_build_taste_profile.py` (after Step 4/5)
-- `tests/integration/infrastructure/repositories/test_taste_profile_repository.py`
+- `tests/integration/infrastructure/repositories/test_taste_repository.py`
   - `test__upsert__creates_new`
   - `test__upsert__replaces_existing` (same user+advisor, different profile)
-  - `test__get_by_user_and_advisor__found`
-  - `test__get_by_user_and_advisor__not_found`
-- Add branch for `get_for_profile` in existing music repo tests
+  - `test__get__found`
+  - `test__get__not_found`

@@ -494,7 +494,7 @@ class TestTrackSQLRepository:
         assert len(tracks_rock) == 1
         assert tracks_rock[0].id == track_user_db.id
 
-    @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM])
+    @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM and not o.nullable])
     @pytest.mark.parametrize("sort_order", list(SortOrder))
     async def test__get_list__ordering(
         self,
@@ -529,7 +529,7 @@ class TestTrackSQLRepository:
 
         expected_tracks = sorted(tracks, key=key_func, reverse=(sort_order == SortOrder.DESC))
 
-        track_list = await track_repository.get_list(user.id, order_by=order_by, sort_order=sort_order)
+        track_list = await track_repository.get_list(user.id, order=[(order_by, sort_order)])
 
         # Check that we have the expected items.
         assert len(track_list) == len(expected_tracks)
@@ -544,14 +544,66 @@ class TestTrackSQLRepository:
         tracks = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
         track_ids = {t.id for t in tracks}
 
-        random_list_1 = await track_repository.get_list(user.id, order_by=TrackOrderBy.RANDOM)
-        random_list_2 = await track_repository.get_list(user.id, order_by=TrackOrderBy.RANDOM)
+        random_list_1 = await track_repository.get_list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
+        random_list_2 = await track_repository.get_list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
 
         assert len(random_list_1) == len(random_list_2) == 10
         assert {t.id for t in random_list_1} == {t.id for t in random_list_2} == track_ids
 
         # There is a "tiny chance" (1 in 10! ~= 1 in 3.6 million) this fails... If it happens, I will be a millionaire!
         assert [t.id for t in random_list_1] != [t.id for t in random_list_2]
+
+    @pytest.mark.parametrize("order_by", [TrackOrderBy.PLAYED_AT, TrackOrderBy.ADDED_AT])
+    async def test__get_list__ordering__nullable(
+        self,
+        user: User,
+        order_by: TrackOrderBy,
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        field = order_by.value  # "played_at" or "added_at"
+        t1 = await TrackModelFactory.create_async(user_id=user.id, **{field: datetime(2023, 1, 1, tzinfo=UTC)})
+        t2 = await TrackModelFactory.create_async(user_id=user.id, **{field: datetime(2023, 6, 1, tzinfo=UTC)})
+        t3 = await TrackModelFactory.create_async(user_id=user.id, **{field: datetime(2024, 1, 1, tzinfo=UTC)})
+        t4 = await TrackModelFactory.create_async(user_id=user.id, **{field: None})
+
+        tracks_asc = await track_repository.get_list(user.id, order=[(order_by, SortOrder.ASC)])
+        assert [t.id for t in tracks_asc] == [t1.id, t2.id, t3.id, t4.id]
+
+        tracks_desc = await track_repository.get_list(user.id, order=[(order_by, SortOrder.DESC)])
+        assert [t.id for t in tracks_desc] == [t3.id, t2.id, t1.id, t4.id]
+
+    async def test__get_list__ordering__multi_column(
+        self,
+        user: User,
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        # t1: has played_at → first by played_at
+        t1 = await TrackModelFactory.create_async(
+            user_id=user.id,
+            played_at=datetime(2023, 6, 1, tzinfo=UTC),
+            added_at=datetime(2022, 1, 1, tzinfo=UTC),
+        )
+        # t2: no played_at, has added_at → sorted by added_at among nulls
+        t2 = await TrackModelFactory.create_async(
+            user_id=user.id,
+            played_at=None,
+            added_at=datetime(2021, 1, 1, tzinfo=UTC),
+        )
+        t3 = await TrackModelFactory.create_async(
+            user_id=user.id,
+            played_at=None,
+            added_at=datetime(2022, 6, 1, tzinfo=UTC),
+        )
+        # t4: neither played_at nor added_at → last
+        t4 = await TrackModelFactory.create_async(user_id=user.id, played_at=None, added_at=None)
+
+        result = await track_repository.get_list(
+            user.id,
+            order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC), (TrackOrderBy.ADDED_AT, SortOrder.ASC)],
+        )
+        assert [t.id for t in result] == [t1.id, t2.id, t3.id, t4.id]
 
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
     async def test__get_list__pagination(

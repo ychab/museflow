@@ -19,6 +19,7 @@ from museflow.domain.entities.music import Track
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Artist as ArtistModel
@@ -77,8 +78,7 @@ class TrackSQLRepository(TrackRepository):
         provider: MusicProvider | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
-        order_by: TrackOrderBy = TrackOrderBy.CREATED_AT,
-        sort_order: SortOrder = SortOrder.ASC,
+        order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
@@ -113,13 +113,20 @@ class TrackSQLRepository(TrackRepository):
             )
 
         # Ordering
-        column = getattr(TrackModel, order_by.value, TrackModel.created_at)
-        if order_by == TrackOrderBy.RANDOM:
-            stmt = stmt.order_by(func.random())
-        elif sort_order == SortOrder.DESC:
-            stmt = stmt.order_by(column.desc())
-        else:
-            stmt = stmt.order_by(column.asc())
+        for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:
+            if order_by == TrackOrderBy.RANDOM:
+                stmt = stmt.order_by(func.random())
+                break  # RANDOM cannot be combined with further columns
+
+            column = getattr(TrackModel, order_by.value)
+            if order_by.nullable:
+                stmt = stmt.order_by(
+                    column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
+                )
+            elif sort_order == SortOrder.DESC:
+                stmt = stmt.order_by(column.desc())
+            else:
+                stmt = stmt.order_by(column.asc())
 
         # Pagination
         if offset is not None:

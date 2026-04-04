@@ -57,12 +57,22 @@ class TrackOrderBy(StrEnum):
     UPDATED_AT = "updated_at"
     POPULARITY = "popularity"
     TOP_POSITION = "top_position"
+    PLAYED_AT = "played_at"
+    ADDED_AT = "added_at"
     RANDOM = "random"
+
+    @property
+    def nullable(self) -> bool:
+        """True for nullable columns — NULLs are sorted last in both ASC and DESC."""
+        return self in (TrackOrderBy.PLAYED_AT, TrackOrderBy.ADDED_AT)
 
 
 class SortOrder(StrEnum):
     ASC = "asc"
     DESC = "desc"
+
+
+type TrackOrdering = list[tuple[TrackOrderBy, SortOrder]]
 
 
 class AlbumType(StrEnum):
