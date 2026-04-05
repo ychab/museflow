@@ -1,45 +1,8 @@
-from __future__ import annotations
-
 from pydantic import BaseModel
 from pydantic import Field
 
-# --- Request models ---
-
-
-class GeminiSchemaProperty(BaseModel):
-    type: str
-    items: GeminiSchemaProperty | None = None
-    properties: dict[str, GeminiSchemaProperty] | None = None
-    required: list[str] | None = None
-
-    @classmethod
-    def string(cls) -> GeminiSchemaProperty:
-        return cls(type="string")
-
-    @classmethod
-    def number(cls) -> GeminiSchemaProperty:
-        return cls(type="number")
-
-    @classmethod
-    def array(cls, items: GeminiSchemaProperty) -> GeminiSchemaProperty:
-        return cls(type="array", items=items)
-
-    @classmethod
-    def object(
-        cls,
-        properties: dict[str, GeminiSchemaProperty],
-        required: list[str] | None = None,
-    ) -> GeminiSchemaProperty:
-        return cls(type="object", properties=properties, required=required)
-
-
-GeminiSchemaProperty.model_rebuild()
-
-
-class GeminiGenerationConfig(BaseModel):
-    responseMimeType: str
-    responseSchema: GeminiSchemaProperty
-
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerationConfig
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiSchemaProperty
 
 GEMINI_TRACK_SUGGESTIONS_CONFIG = GeminiGenerationConfig(
     responseMimeType="application/json",
@@ -61,22 +24,6 @@ GEMINI_TRACK_SUGGESTIONS_CONFIG = GeminiGenerationConfig(
 )
 
 
-class GeminiRequestPart(BaseModel):
-    text: str
-
-
-class GeminiRequestContent(BaseModel):
-    parts: list[GeminiRequestPart]
-
-
-class GeminiGenerateContentRequest(BaseModel):
-    contents: list[GeminiRequestContent]
-    generationConfig: GeminiGenerationConfig
-
-
-# --- Response models ---
-
-
 class GeminiSuggestedTrack(BaseModel):
     name: str = Field(..., min_length=1)
     artists: list[str] = Field(..., min_length=1)
@@ -85,20 +32,3 @@ class GeminiSuggestedTrack(BaseModel):
 
 class GeminiSuggestedTracksContent(BaseModel):
     tracks: list[GeminiSuggestedTrack]
-
-
-class GeminiResponsePart(BaseModel):
-    text: str
-
-
-class GeminiResponseContent(BaseModel):
-    parts: list[GeminiResponsePart]
-    role: str
-
-
-class GeminiCandidate(BaseModel):
-    content: GeminiResponseContent
-
-
-class GeminiResponse(BaseModel):
-    candidates: list[GeminiCandidate] = []

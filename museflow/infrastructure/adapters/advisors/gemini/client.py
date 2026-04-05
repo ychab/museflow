@@ -21,12 +21,12 @@ from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.infrastructure.adapters.advisors.gemini.mappers import to_track_suggested
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GEMINI_TRACK_SUGGESTIONS_CONFIG
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiGenerateContentRequest
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiRequestContent
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiResponse
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiSuggestedTracksContent
-from museflow.infrastructure.adapters.advisors.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
+from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
+from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 

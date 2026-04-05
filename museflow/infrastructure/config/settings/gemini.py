@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from museflow import BASE_DIR
-from museflow.infrastructure.adapters.advisors.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 
 
 class GeminiSettings(BaseSettings):
