@@ -10,9 +10,6 @@
 | Create | `museflow/application/use_cases/build_taste_profile.py` |
 | Create | `tests/unit/application/use_cases/test_build_taste_profile.py` |
 | Create | `tests/integration/application/use_cases/test_build_taste_profile.py` |
-| Create | `tests/assets/wiremock/gemini/taste_profile_segment.json` |
-| Create | `tests/assets/wiremock/gemini/taste_profile_merge.json` |
-| Create | `tests/assets/wiremock/gemini/taste_profile_reflection.json` |
 
 ## 1. Use case
 
@@ -109,7 +106,7 @@ Use `AsyncMock` for all ports.
 
 `tests/integration/application/use_cases/test_build_taste_profile.py`
 
-- **nominal**: real DB + WireMock Gemini stubs → profile row created in `museflow_user_taste_profile`
+- **nominal**: real DB + WireMock Gemini stubs → profile row created in `museflow_taste_profile`
 - **upsert**: run twice → still 1 row, `updated_at` changes, `tracks_count` updated
 - **empty library**: no tracks in DB for user → raises `EmptyLibraryException`
 

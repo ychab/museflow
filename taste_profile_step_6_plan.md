@@ -22,7 +22,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from museflow.infrastructure.adapters.advisors.gemini.taste import GeminiTasteProfileAdapter  # confirm name in Step 4
+from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 
