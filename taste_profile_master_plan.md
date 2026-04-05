@@ -37,7 +37,7 @@ class TasteProfileData(TypedDict):
 | Decision | Choice | Reason |
 |---|---|---|
 | Profile storage | TypedDict as JSONB | Type-safe, no serialization headache |
-| DB strategy | Upsert (replace) | One row per (user, advisor), simple |
+| DB strategy | Upsert (replace) | One row per (user, profiler), simple |
 | `built_at` field | Dropped | `updated_at` doubles as rebuild time |
 | Resume on failure | No | Restart from scratch — upsert overwrites cleanly |
 | Default batch size | 400 | Token efficiency (Gemini recommendation) |
@@ -65,6 +65,6 @@ class TasteProfileData(TypedDict):
 
 1. `make db-revision && make db-upgrade` — verify `museflow_user_taste_profile` table
 2. `muse profile build --email=...` — runs ~8 Gemini calls, stores profile
-3. `SELECT advisor, tracks_count, logic_version, updated_at FROM museflow_user_taste_profile`
+3. `SELECT profiler, tracks_count, logic_version, updated_at FROM museflow_taste_profile`
 4. `make test` — 100% branch coverage
 5. WireMock stubs needed: `tests/assets/wiremock/gemini/taste_profile_segment.json`, `taste_profile_merge.json`, `taste_profile_reflection.json`

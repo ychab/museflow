@@ -86,18 +86,18 @@ async def _profile_build_logic(email: str, track_limit: int, batch_size: int) ->
         track_repo = get_track_repository(session)
         profile_repo = get_taste_profile_repository(session)
 
-        async with get_gemini_taste_profile_client() as advisor:
+        async with get_gemini_taste_profile_client() as profiler:
             use_case = BuildTasteProfileUseCase(
                 track_repository=track_repo,
                 profile_repository=profile_repo,
-                advisor=advisor,
+                profiler=profiler,
             )
             config = BuildTasteProfileConfigInput(track_limit=track_limit, batch_size=batch_size)
             profile = await use_case.build_profile(user, config)
 
     # Output summary
     typer.echo(f"Profile built: {profile.tracks_count} tracks processed")
-    typer.echo(f"Advisor: {profile.advisor} ({profile.logic_version})")
+    typer.echo(f"Profiler: {profile.profiler} ({profile.logic_version})")
     typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
     if profile.profile["personality_archetype"]:
         typer.echo(f"Archetype: {profile.profile['personality_archetype']}")

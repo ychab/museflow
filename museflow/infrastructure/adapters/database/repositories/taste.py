@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import UserTasteProfile
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 
@@ -19,14 +19,14 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         stmt = pg_insert(TasteProfileModel).values(
             id=profile.id,
             user_id=profile.user_id,
-            advisor=profile.advisor,
+            profiler=profile.profiler,
             profile=profile.profile,
             tracks_count=profile.tracks_count,
             logic_version=profile.logic_version,
         )
 
         upsert_stmt = stmt.on_conflict_do_update(
-            constraint="uq_museflow_taste_profile_user_advisor",
+            constraint="uq_museflow_taste_profile_user_profiler",
             set_={
                 "profile": stmt.excluded.profile,
                 "tracks_count": stmt.excluded.tracks_count,
@@ -40,10 +40,10 @@ class TasteProfileSQLRepository(TasteProfileRepository):
 
         return profile_db.to_entity()
 
-    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> UserTasteProfile | None:
+    async def get(self, user_id: uuid.UUID, profiler: TasteProfiler) -> UserTasteProfile | None:
         stmt = select(TasteProfileModel).where(
             TasteProfileModel.user_id == user_id,
-            TasteProfileModel.advisor == advisor,
+            TasteProfileModel.profiler == profiler,
         )
         profile_db = (await self.session.execute(stmt)).scalar_one_or_none()
         return profile_db.to_entity() if profile_db else None

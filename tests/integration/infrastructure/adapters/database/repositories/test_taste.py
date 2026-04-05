@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
@@ -22,7 +22,7 @@ class TestTasteProfileSQLRepository:
     ) -> None:
         profile = UserTasteProfileFactory.build(
             user_id=user.id,
-            advisor=MusicAdvisor.GEMINI,
+            profiler=TasteProfiler.GEMINI,
             tracks_count=100,
             logic_version="1.0",
         )
@@ -31,7 +31,7 @@ class TestTasteProfileSQLRepository:
 
         assert result.id == profile.id
         assert result.user_id == user.id
-        assert result.advisor == MusicAdvisor.GEMINI
+        assert result.profiler == TasteProfiler.GEMINI
         assert result.tracks_count == 100
         assert result.logic_version == "1.0"
 
@@ -42,7 +42,7 @@ class TestTasteProfileSQLRepository:
     async def test__upsert__update(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
         profile_v1 = UserTasteProfileFactory.build(
             user_id=user.id,
-            advisor=MusicAdvisor.GEMINI,
+            profiler=TasteProfiler.GEMINI,
             tracks_count=10,
             logic_version="1.0",
         )
@@ -50,7 +50,7 @@ class TestTasteProfileSQLRepository:
 
         profile_v2 = UserTasteProfileFactory.build(
             user_id=user.id,
-            advisor=MusicAdvisor.GEMINI,
+            profiler=TasteProfiler.GEMINI,
             tracks_count=99,
             logic_version="2.0",
         )
@@ -66,11 +66,11 @@ class TestTasteProfileSQLRepository:
         profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
         await TasteProfileModelFactory.create_async()  # Another user
 
-        profile_get = await taste_profile_repository.get(user_id=user.id, advisor=MusicAdvisor.GEMINI)
+        profile_get = await taste_profile_repository.get(user_id=user.id, profiler=TasteProfiler.GEMINI)
 
         assert profile_get is not None
         assert profile_get.id == profile_db.id
 
     async def test__get__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
-        result = await taste_profile_repository.get(user_id=uuid.uuid4(), advisor=MusicAdvisor.GEMINI)
+        result = await taste_profile_repository.get(user_id=uuid.uuid4(), profiler=TasteProfiler.GEMINI)
         assert result is None

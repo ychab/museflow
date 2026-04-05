@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TypedDict
 
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import TasteProfiler
 
 
 class TasteEra(TypedDict):
@@ -25,7 +25,7 @@ class TasteProfileData(TypedDict):
 class UserTasteProfile:
     id: uuid.UUID
     user_id: uuid.UUID
-    advisor: MusicAdvisor
+    profiler: TasteProfiler
 
     profile: TasteProfileData
 

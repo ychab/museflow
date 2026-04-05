@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC
 from abc import abstractmethod
 
@@ -7,7 +5,7 @@ from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
 
 
-class TasteProfileAdvisorPort(ABC):
+class TasteProfilerPort(ABC):
     @property
     @abstractmethod
     def display_name(self) -> str: ...

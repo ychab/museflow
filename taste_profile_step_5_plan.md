@@ -27,13 +27,13 @@ import uuid
 from datetime import UTC, datetime
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
-from museflow.application.ports.advisors.taste import TasteProfileAdvisorPort
+from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import EmptyLibraryException  # or nearest equivalent
-from museflow.domain.types import SortOrder, TrackOrderBy, TrackOrdering
+from museflow.domain.types import SortOrder, TasteProfiler, TrackOrderBy, TrackOrdering
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +43,11 @@ class BuildTasteProfileUseCase:
             self,
             track_repository: TrackRepository,
             profile_repository: TasteProfileRepository,
-            advisor: TasteProfileAdvisorPort,
+            profiler: TasteProfilerPort,
     ) -> None:
         self._track_repository = track_repository
         self._profile_repository = profile_repository
-        self._advisor = advisor
+        self._profiler = profiler
 
     async def build_profile(
             self, user: User, config: BuildTasteProfileConfigInput
@@ -63,11 +63,11 @@ class BuildTasteProfileUseCase:
         current_profile: TasteProfileData | None = None
 
         for i, batch in enumerate(itertools.batched(tracks, config.batch_size)):
-            segment = await self._advisor.build_profile_segment(list(batch))
+            segment = await self._profiler.build_profile_segment(list(batch))
             if current_profile is None:
                 current_profile = segment
             else:
-                current_profile = await self._advisor.merge_profiles(current_profile, segment)
+                current_profile = await self._profiler.merge_profiles(current_profile, segment)
             logger.info(
                 f"Taste profile batch {i + 1} processed "
                 f"({min((i + 1) * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
@@ -75,16 +75,16 @@ class BuildTasteProfileUseCase:
 
         assert current_profile is not None  # unreachable: tracks non-empty guarantees ≥1 iteration
 
-        current_profile = await self._advisor.reflect_on_profile(current_profile)
+        current_profile = await self._profiler.reflect_on_profile(current_profile)
         logger.info("Psychographic reflection complete")
 
         profile = UserTasteProfile(
             id=uuid.uuid4(),
             user_id=user.id,
-            advisor=self._advisor.display_name,
+            profiler=TasteProfiler.GEMINI,
             profile=current_profile,
             tracks_count=len(tracks),
-            logic_version=self._advisor.logic_version,
+            logic_version=self._profiler.logic_version,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -93,7 +93,7 @@ class BuildTasteProfileUseCase:
 
 > `itertools.batched` requires Python 3.12+ (available on our 3.13 stack).
 >
-> `advisor=self._advisor.display_name` — the concrete `GeminiTasteProfileAdapter` must return `MusicAdvisor.GEMINI` here (a valid StrEnum value).
+> `profiler=TasteProfiler.GEMINI` — hardcoded since `GeminiTasteProfileAdapter` is the only `TasteProfilerPort` impl for now.
 
 ## 2. Unit tests
 

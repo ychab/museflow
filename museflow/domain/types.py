@@ -15,6 +15,10 @@ class MusicAdvisor(StrEnum):
     GEMINI = "gemini"
 
 
+class TasteProfiler(StrEnum):
+    GEMINI = "gemini"
+
+
 class ArtistSource(IntFlag):
     """Bitmask: an artist can belong to multiple sources simultaneously."""
 
