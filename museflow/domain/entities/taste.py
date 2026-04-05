@@ -22,7 +22,7 @@ class TasteProfileData(TypedDict):
 
 
 @dataclass(frozen=True, kw_only=True)
-class UserTasteProfile:
+class TasteProfile:
     id: uuid.UUID
     user_id: uuid.UUID
     profiler: TasteProfiler

@@ -26,11 +26,11 @@ from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile as UserTasteProfileEntity
+from museflow.domain.entities.taste import TasteProfileData, TasteProfile as TasteProfileEntity
 from museflow.infrastructure.adapters.database.models.base import Base, DatetimeTrackMixin, UUIDIdMixin
 
 
-class UserTasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_user_taste_profile"
     __table_args__ = (
         UniqueConstraint("user_id", "advisor", name="uq_museflow_user_taste_profile_user_advisor"),
@@ -47,8 +47,8 @@ class UserTasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True)
     tracks_count: Mapped[int] = mapped_column(Integer, nullable=False, sort_order=-47)
     logic_version: Mapped[str] = mapped_column(String(32), nullable=False, sort_order=-46)
 
-    def to_entity(self) -> UserTasteProfileEntity:
-        return UserTasteProfileEntity(
+    def to_entity(self) -> TasteProfileEntity:
+        return TasteProfileEntity(
             id=self.id,
             user_id=self.user_id,
             advisor=self.advisor,
@@ -77,18 +77,18 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.types import MusicAdvisor
-from museflow.infrastructure.adapters.database.models.taste import UserTasteProfileModel
+from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 
 class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def upsert(self, profile: UserTasteProfile) -> UserTasteProfile:
+    async def upsert(self, profile: TasteProfile) -> TasteProfile:
         stmt = (
-            pg_insert(UserTasteProfileModel)
+            pg_insert(TasteProfileModel)
             .values(
                 id=profile.id,
                 user_id=profile.user_id,
@@ -100,23 +100,23 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             .on_conflict_do_update(
                 constraint="uq_museflow_user_taste_profile_user_advisor",
                 set_={
-                    "profile": pg_insert(UserTasteProfileModel).excluded.profile,
-                    "tracks_count": pg_insert(UserTasteProfileModel).excluded.tracks_count,
-                    "logic_version": pg_insert(UserTasteProfileModel).excluded.logic_version,
+                    "profile": pg_insert(TasteProfileModel).excluded.profile,
+                    "tracks_count": pg_insert(TasteProfileModel).excluded.tracks_count,
+                    "logic_version": pg_insert(TasteProfileModel).excluded.logic_version,
                     "updated_at": func.now(),
                 },
             )
-            .returning(UserTasteProfileModel)
+            .returning(TasteProfileModel)
         )
         result = await self.session.execute(stmt)
         profile_db = result.scalar_one()
         await self.session.commit()
         return profile_db.to_entity()
 
-    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> UserTasteProfile | None:
-        stmt = select(UserTasteProfileModel).where(
-            UserTasteProfileModel.user_id == user_id,
-            UserTasteProfileModel.advisor == advisor,
+    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> TasteProfile | None:
+        stmt = select(TasteProfileModel).where(
+            TasteProfileModel.user_id == user_id,
+            TasteProfileModel.advisor == advisor,
         )
         result = await self.session.execute(stmt)
         profile_db = result.scalar_one_or_none()

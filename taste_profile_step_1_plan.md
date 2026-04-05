@@ -45,7 +45,7 @@ from museflow.domain.types import TasteProfileData
 
 
 @dataclass(frozen=True, kw_only=True)
-class UserTasteProfile:
+class TasteProfile:
     id: uuid.UUID
     user_id: uuid.UUID
     advisor: str              # e.g. "Gemini"
@@ -58,7 +58,7 @@ class UserTasteProfile:
 
 ## 3. `museflow/domain/entities/__init__.py` — export
 
-Add `UserTasteProfile` to the existing exports.
+Add `TasteProfile` to the existing exports.
 
 ## Verification
 

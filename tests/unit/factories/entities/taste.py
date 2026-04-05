@@ -1,7 +1,7 @@
 from polyfactory.factories import DataclassFactory
 
-from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.entities.taste import TasteProfile
 
 
-class UserTasteProfileFactory(DataclassFactory[UserTasteProfile]):
-    __model__ = UserTasteProfile
+class TasteProfileFactory(DataclassFactory[TasteProfile]):
+    __model__ = TasteProfile

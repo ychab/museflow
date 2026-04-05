@@ -38,7 +38,7 @@ Plan: Gemini Master Taste Profile
 
  New: museflow/domain/entities/taste.py:
  @dataclass(frozen=True, kw_only=True)
- class UserTasteProfile:
+ class TasteProfile:
      id: uuid.UUID
      user_id: uuid.UUID
      advisor: str                  # e.g. "Gemini"
@@ -79,14 +79,14 @@ Plan: Gemini Master Taste Profile
      async def close(self) -> None: ...
 
  New: museflow/application/ports/repositories/taste_profile.py:
- class UserTasteProfileRepository(ABC):
+ class TasteProfileRepository(ABC):
      @abstractmethod
-     async def upsert(self, profile: UserTasteProfile) -> UserTasteProfile: ...
+     async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
 
      @abstractmethod
      async def get_by_user_and_advisor(
          self, user_id: uuid.UUID, advisor: str
-     ) -> UserTasteProfile | None: ...
+     ) -> TasteProfile | None: ...
 
  Modify: museflow/application/ports/repositories/music.py — add to TrackRepository:
  @abstractmethod
@@ -104,11 +104,11 @@ Plan: Gemini Master Taste Profile
      def __init__(
          self,
          track_repository: TrackRepository,
-         profile_repository: UserTasteProfileRepository,
+         profile_repository: TasteProfileRepository,
          advisor: TasteProfileAdvisorPort,
      ) -> None: ...
 
-     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> UserTasteProfile:
+     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
          tracks = await self._track_repository.get_for_profile(user, limit=config.track_limit)
          current_profile: TasteProfileData | None = None
 
@@ -121,7 +121,7 @@ Plan: Gemini Master Taste Profile
          current_profile = await self._advisor.reflect_on_profile(current_profile)  # type: ignore[arg-type]
          logger.info("Psychographic reflection complete")
 
-         profile = UserTasteProfile(
+         profile = TasteProfile(
              id=uuid.uuid4(),
              user_id=user.id,
              advisor=self._advisor.display_name,
@@ -139,7 +139,7 @@ Plan: Gemini Master Taste Profile
  3. Infrastructure — DB
 
  New: museflow/infrastructure/adapters/database/models/taste_profile.py:
- class UserTasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
      __tablename__ = "museflow_user_taste_profile"
      __table_args__ = (UniqueConstraint("user_id", "advisor", name="uq_museflow_user_taste_profile_user_advisor"),)
 
@@ -151,7 +151,7 @@ Plan: Gemini Master Taste Profile
      tracks_count: Mapped[int] = mapped_column(Integer, nullable=False, sort_order=-47)
      logic_version: Mapped[str] = mapped_column(String(32), nullable=False, default="v1.0", sort_order=-46)
 
-     def to_entity(self) -> UserTasteProfile: ...
+     def to_entity(self) -> TasteProfile: ...
 
  Note: id, created_at, updated_at come from mixins (init=False). Do NOT declare them.
 
@@ -247,8 +247,8 @@ Plan: Gemini Master Taste Profile
  6. Exports / __init__ updates
 
  - museflow/application/ports/advisors/__init__.py — export TasteProfileAdvisorPort
- - museflow/application/ports/repositories/__init__.py — export UserTasteProfileRepository
- - museflow/domain/entities/__init__.py — export UserTasteProfile
+ - museflow/application/ports/repositories/__init__.py — export TasteProfileRepository
+ - museflow/domain/entities/__init__.py — export TasteProfile
  - museflow/domain/types.py — already a module, just add the TypedDicts
 
  ---

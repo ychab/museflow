@@ -10,7 +10,7 @@ from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
-from tests.unit.factories.entities.taste import UserTasteProfileFactory
+from tests.unit.factories.entities.taste import TasteProfileFactory
 
 
 class TestTasteProfileSQLRepository:
@@ -20,7 +20,7 @@ class TestTasteProfileSQLRepository:
         user: User,
         taste_profile_repository: TasteProfileRepository,
     ) -> None:
-        profile = UserTasteProfileFactory.build(
+        profile = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
             tracks_count=100,
@@ -40,7 +40,7 @@ class TestTasteProfileSQLRepository:
         assert count == 1
 
     async def test__upsert__update(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
-        profile_v1 = UserTasteProfileFactory.build(
+        profile_v1 = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
             tracks_count=10,
@@ -48,7 +48,7 @@ class TestTasteProfileSQLRepository:
         )
         profile_v1 = await taste_profile_repository.upsert(profile_v1)
 
-        profile_v2 = UserTasteProfileFactory.build(
+        profile_v2 = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
             tracks_count=99,

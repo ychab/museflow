@@ -30,7 +30,7 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.domain.entities.taste import TasteProfileData, UserTasteProfile
+from museflow.domain.entities.taste import TasteProfileData, TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import EmptyLibraryException  # or nearest equivalent
 from museflow.domain.types import SortOrder, TasteProfiler, TrackOrderBy, TrackOrdering
@@ -51,7 +51,7 @@ class BuildTasteProfileUseCase:
 
     async def build_profile(
             self, user: User, config: BuildTasteProfileConfigInput
-    ) -> UserTasteProfile:
+    ) -> TasteProfile:
         tracks = await self._track_repository.get_list(
             user_id=user.id,
             order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC), (TrackOrderBy.ADDED_AT, SortOrder.ASC)],
@@ -78,7 +78,7 @@ class BuildTasteProfileUseCase:
         current_profile = await self._profiler.reflect_on_profile(current_profile)
         logger.info("Psychographic reflection complete")
 
-        profile = UserTasteProfile(
+        profile = TasteProfile(
             id=uuid.uuid4(),
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,

@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
@@ -15,7 +15,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def upsert(self, profile: UserTasteProfile) -> UserTasteProfile:
+    async def upsert(self, profile: TasteProfile) -> TasteProfile:
         stmt = pg_insert(TasteProfileModel).values(
             id=profile.id,
             user_id=profile.user_id,
@@ -40,7 +40,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
 
         return profile_db.to_entity()
 
-    async def get(self, user_id: uuid.UUID, profiler: TasteProfiler) -> UserTasteProfile | None:
+    async def get(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None:
         stmt = select(TasteProfileModel).where(
             TasteProfileModel.user_id == user_id,
             TasteProfileModel.profiler == profiler,

@@ -61,16 +61,16 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 
-from museflow.domain.entities.taste import UserTasteProfile
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.types import MusicAdvisor
 
 
 class TasteProfileRepository(ABC):
     @abstractmethod
-    async def upsert(self, profile: UserTasteProfile) -> UserTasteProfile: ...
+    async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
 
     @abstractmethod
-    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> UserTasteProfile | None: ...
+    async def get(self, user_id: uuid.UUID, advisor: MusicAdvisor) -> TasteProfile | None: ...
 ```
 
 ## 3. Input schema

@@ -9,8 +9,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
+from museflow.domain.entities.taste import TasteProfile as TasteProfileEntity
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.taste import UserTasteProfile as TasteProfileEntity
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
