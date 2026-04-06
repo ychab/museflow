@@ -29,6 +29,10 @@ This quick and dirty document just list the roadmap tasks.
 -> 4. use cases + inputs
 -> 5. infra entrypoints: cli / api
 
+## Tracks
+
+- found a way to add the track.genres? Copied from artist with Spotify? Use another service?
+
 ## Tests
 
 - check if we don't have redondant tests

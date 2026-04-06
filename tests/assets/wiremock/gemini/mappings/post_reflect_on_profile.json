@@ -1,0 +1,17 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/models/gemini-2.5-flash:generateContent",
+    "bodyPatterns": [
+      { "contains": "complete Master Taste Profile" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "taste_profile_reflection.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

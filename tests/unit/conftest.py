@@ -23,6 +23,7 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -189,6 +190,16 @@ async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
 @pytest.fixture
 async def gemini_client() -> AsyncGenerator[GeminiClientAdapter]:
     async with GeminiClientAdapter(
+        api_key="dummy-api-key",
+        model=GeminiModel.FLASH_2_5,
+        max_retry_wait=5,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+async def gemini_profiler_client() -> AsyncGenerator[GeminiTasteProfileAdapter]:
+    async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,
         max_retry_wait=5,

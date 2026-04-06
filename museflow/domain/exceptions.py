@@ -51,6 +51,15 @@ class ProviderRateLimitExceeded(HttpRateLimitExceeded): ...
 class AdvisorRateLimitExceeded(HttpRateLimitExceeded): ...
 
 
+# --- Profiler exceptions ---
+
+
+class ProfilerRateLimitExceeded(HttpRateLimitExceeded): ...
+
+
+class TasteProfileBuildException(Exception): ...
+
+
 # --- Similarity track exceptions ---
 
 

@@ -44,6 +44,7 @@ from museflow.infrastructure.adapters.database.repositories.music import TrackSQ
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -378,6 +379,23 @@ async def gemini_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gemin
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
     async with GeminiClientAdapter(
+        api_key="dummy-api-key",
+        model=GeminiModel.FLASH_2_5,
+        base_url=HttpUrl(base_url) if base_url else None,
+        verify_ssl=False,
+        max_retry_wait=5,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+async def gemini_profiler_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTasteProfileAdapter]:
+    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
+
+    retry_method = GeminiTasteProfileAdapter.make_api_call
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+
+    async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,
         base_url=HttpUrl(base_url) if base_url else None,

@@ -1,0 +1,14 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2022\", \"technical_fingerprint\": {\"energy\": 0.7}, \"dominant_moods\": [\"melancholic\"]}, {\"era_label\": \"Electronic Drift\", \"time_range\": \"2022-2023\", \"technical_fingerprint\": {\"energy\": 0.85}, \"dominant_moods\": [\"euphoric\"]}], \"core_identity\": {\"indie rock\": 0.75, \"electronic\": 0.4}, \"current_vibe\": {\"electronic\": 0.8}, \"personality_archetype\": null, \"life_phase_insights\": []}"
+          }
+        ],
+        "role": "model"
+      }
+    }
+  ]
+}

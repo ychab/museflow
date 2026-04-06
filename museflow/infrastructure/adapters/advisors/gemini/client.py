@@ -27,6 +27,7 @@ from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 
@@ -78,22 +79,6 @@ class GeminiClientAdapter(HttpClientMixin, AdvisorClientPort):
     def display_name(self) -> str:
         return "Gemini"
 
-    @staticmethod
-    def _parse_retry_delay(content: bytes) -> int | None:
-        """Extracts the retryDelay (in seconds) from a Gemini 429 response body.
-
-        Gemini embeds the delay inside error.details[] under the RetryInfo entry,
-        as a string like "38s". Returns None if the body is malformed or missing.
-        """
-        try:
-            body = json.loads(content)
-            for detail in body.get("error", {}).get("details", []):
-                if detail.get("@type", "").endswith("RetryInfo") and "retryDelay" in detail:
-                    return int(float(detail["retryDelay"].rstrip("s")))
-        except (ValueError, KeyError, AttributeError, TypeError):
-            pass
-        return None
-
     @retry(
         retry=retry_if_exception(_is_retryable_error),
         wait=wait_exponential(multiplier=1, min=2, max=60),  # 2 + 4 + 8 + 16 + 32 = 62 seconds
@@ -126,7 +111,7 @@ class GeminiClientAdapter(HttpClientMixin, AdvisorClientPort):
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == codes.TOO_MANY_REQUESTS:
-                retry_delay = self._parse_retry_delay(e.response.content)
+                retry_delay = parse_retry_delay(e.response.content)
                 if retry_delay is not None:
                     if retry_delay > self._max_retry_wait:
                         logger.warning(
