@@ -225,6 +225,33 @@ uv run museflow spotify history --email user@example.com --directory ~/Downloads
 
 On completion, a summary table is printed showing items read, items skipped, unique track IDs found, and tracks created.
 
+### Taste Profile (`taste`)
+
+Build and manage your personal taste profile using AI analysis of your library.
+
+**Build a taste profile:**
+
+Analyzes your imported library tracks with Gemini AI to generate a master taste profile — including era breakdowns, personality archetype, and life-phase insights.
+
+**Prerequisite:** You must have imported your Spotify library first (via `spotify sync` or `spotify history`).
+
+```bash
+uv run museflow taste build --email <email> [OPTIONS]
+```
+
+**Build Options:**
+
+*   `--track-limit`: Maximum number of seed tracks used to build the profile (default: 3000, max: 20000).
+*   `--batch-size`: Number of tracks sent per Gemini batch (default: 400, max: 1000).
+
+Example: Build a taste profile for a user
+
+```bash
+uv run museflow taste build --email user@example.com
+```
+
+On completion, the command prints the number of tracks processed, the profiler model and logic version, the number of musical eras detected, the personality archetype, and any life-phase insights.
+
 **Discover new music:**
 
 Discovers new music for a user based on their listening history and creates a new playlist.
