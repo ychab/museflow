@@ -1,12 +1,12 @@
 import pytest
 
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 
 @pytest.mark.wiremock("gemini")
-class TestGeminiClientAdapter:
-    async def test__get_similar_tracks__nominal(self, gemini_client: GeminiClientAdapter) -> None:
-        tracks_suggested = await gemini_client.get_similar_tracks(
+class TestGeminiAdvisorAdapter:
+    async def test__get_similar_tracks__nominal(self, gemini_advisor: GeminiAdvisorAdapter) -> None:
+        tracks_suggested = await gemini_advisor.get_similar_tracks(
             artist_name="dummy-artist",
             track_name="dummy-track",
             limit=5,

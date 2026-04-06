@@ -48,7 +48,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class GeminiClientAdapter(HttpClientMixin, AdvisorClientPort):
+class GeminiAdvisorAdapter(HttpClientMixin, AdvisorClientPort):
     """Adapter for the Google Gemini API.
 
     This class implements the `AdvisorClientPort` and provides methods to interact

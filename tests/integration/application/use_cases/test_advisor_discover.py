@@ -22,13 +22,13 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         self,
         track_repository: TrackRepository,
         spotify_library: ProviderLibraryPort,
-        lastfm_client: AdvisorClientPort,
+        lastfm_advisor: AdvisorClientPort,
         track_reconciler: TrackReconciler,
     ) -> AdvisorDiscoverUseCase:
         return AdvisorDiscoverUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
-            advisor_client=lastfm_client,
+            advisor_client=lastfm_advisor,
             track_reconciler=track_reconciler,
         )
 
@@ -112,13 +112,13 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
         self,
         track_repository: TrackRepository,
         spotify_library: ProviderLibraryPort,
-        gemini_client: AdvisorClientPort,
+        gemini_advisor: AdvisorClientPort,
         track_reconciler: TrackReconciler,
     ) -> AdvisorDiscoverUseCase:
         return AdvisorDiscoverUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
-            advisor_client=gemini_client,
+            advisor_client=gemini_advisor,
             track_reconciler=track_reconciler,
         )
 

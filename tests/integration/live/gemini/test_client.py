@@ -4,11 +4,11 @@ import pytest
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.domain.entities.music import TrackSuggested
-from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_client
+from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_advisor
 
 
 @pytest.mark.gemini_live
-class TestGeminiClientLive:
+class TestGeminiAdvisorLive:
     """
     Live integration tests against the real Gemini API.
 
@@ -27,12 +27,12 @@ class TestGeminiClientLive:
     """
 
     @pytest.fixture
-    async def gemini_client_live(self) -> AsyncGenerator[AdvisorClientPort]:
-        async with get_gemini_client() as client:
+    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorClientPort]:
+        async with get_gemini_advisor() as client:
             yield client
 
-    async def test__get_similar_tracks(self, gemini_client_live: AdvisorClientPort) -> None:
-        results: list[TrackSuggested] = await gemini_client_live.get_similar_tracks(
+    async def test__get_similar_tracks(self, gemini_advisor_live: AdvisorClientPort) -> None:
+        results: list[TrackSuggested] = await gemini_advisor_live.get_similar_tracks(
             artist_name="Radiohead",
             track_name="Creep",
             limit=5,

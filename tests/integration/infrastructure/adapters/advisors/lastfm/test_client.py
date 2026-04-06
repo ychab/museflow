@@ -4,22 +4,22 @@ from typing import Any
 
 import pytest
 
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.utils.wiremock import WireMockContext
 
 
 @pytest.mark.wiremock("lastfm")
-class TestLastFmClientAdapter:
+class TestLastFmAdvisorAdapter:
     @pytest.fixture
     def wiremock_response(self, request: pytest.FixtureRequest) -> dict[str, Any]:
         filename = getattr(request, "param", "")
         filepath = ASSETS_DIR / "wiremock" / "lastfm" / "__files" / f"{filename}.json"
         return json.loads(filepath.read_text())
 
-    async def test__get_similar_tracks__nominal(self, lastfm_client: LastFmClientAdapter) -> None:
-        tracks_suggested = await lastfm_client.get_similar_tracks(
+    async def test__get_similar_tracks__nominal(self, lastfm_advisor: LastFmAdvisorAdapter) -> None:
+        tracks_suggested = await lastfm_advisor.get_similar_tracks(
             artist_name="dummy-artist",
             track_name="dummy-track",
             limit=20,
@@ -35,7 +35,7 @@ class TestLastFmClientAdapter:
     @pytest.mark.parametrize("wiremock_response", ["tracks_similar_error"], indirect=["wiremock_response"])
     async def test__get_similar_tracks__error(
         self,
-        lastfm_client: LastFmClientAdapter,
+        lastfm_advisor: LastFmAdvisorAdapter,
         wiremock_response: dict[str, Any],
         lastfm_wiremock: WireMockContext,
         caplog: pytest.LogCaptureFixture,
@@ -54,7 +54,7 @@ class TestLastFmClientAdapter:
         )
 
         with caplog.at_level(logging.DEBUG):
-            tracks_suggested = await lastfm_client.get_similar_tracks(
+            tracks_suggested = await lastfm_advisor.get_similar_tracks(
                 artist_name=artist_name,
                 track_name=track_name,
             )

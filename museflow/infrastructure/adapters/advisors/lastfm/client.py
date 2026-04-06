@@ -13,7 +13,7 @@ from museflow.infrastructure.adapters.http import HttpClientMixin
 logger = logging.getLogger(__name__)
 
 
-class LastFmClientAdapter(HttpClientMixin, AdvisorClientPort):
+class LastFmAdvisorAdapter(HttpClientMixin, AdvisorClientPort):
     """Adapter for the Last.fm API.
 
     This class implements the `AdvisorClientPort` and provides methods to interact

@@ -4,11 +4,11 @@ import pytest
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.domain.entities.music import TrackSuggested
-from museflow.infrastructure.entrypoints.cli.dependencies import get_lastfm_client
+from museflow.infrastructure.entrypoints.cli.dependencies import get_lastfm_advisor
 
 
 @pytest.mark.lastfm_live
-class TestLastfmClientLive:
+class TestLastfmAdvisorLive:
     """
     Live integration tests against the real Last.fm API.
 
@@ -27,12 +27,12 @@ class TestLastfmClientLive:
     """
 
     @pytest.fixture
-    async def lastfm_client_live(self) -> AsyncGenerator[AdvisorClientPort]:
-        async with get_lastfm_client() as client:
+    async def lastfm_advisor_live(self) -> AsyncGenerator[AdvisorClientPort]:
+        async with get_lastfm_advisor() as client:
             yield client
 
-    async def test__get_similar_tracks(self, lastfm_client_live: AdvisorClientPort) -> None:
-        results: list[TrackSuggested] = await lastfm_client_live.get_similar_tracks(
+    async def test__get_similar_tracks(self, lastfm_advisor_live: AdvisorClientPort) -> None:
+        results: list[TrackSuggested] = await lastfm_advisor_live.get_similar_tracks(
             artist_name="Radiohead",
             track_name="Creep",
             limit=5,

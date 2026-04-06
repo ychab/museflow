@@ -61,6 +61,9 @@ class TestGeminiTasteProfileAdapter:
     def test__display_name(self, gemini_profiler_client: GeminiTasteProfileAdapter) -> None:
         assert gemini_profiler_client.display_name == "Gemini"
 
+    def test__logic_version(self, gemini_profiler_client: GeminiTasteProfileAdapter) -> None:
+        assert gemini_profiler_client.logic_version == "v1.0"
+
     async def test__retry_on_429__sleeps_and_retries(
         self,
         gemini_profiler_client: GeminiTasteProfileAdapter,

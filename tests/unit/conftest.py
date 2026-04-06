@@ -20,8 +20,8 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -179,8 +179,8 @@ def spotify_library(
 
 
 @pytest.fixture
-async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
-    async with LastFmClientAdapter(
+async def lastfm_advisor() -> AsyncGenerator[LastFmAdvisorAdapter]:
+    async with LastFmAdvisorAdapter(
         client_api_key="dummy-api-key",
         client_secret="dummy-client-secret",
     ) as client:
@@ -188,8 +188,8 @@ async def lastfm_client() -> AsyncGenerator[LastFmClientAdapter]:
 
 
 @pytest.fixture
-async def gemini_client() -> AsyncGenerator[GeminiClientAdapter]:
-    async with GeminiClientAdapter(
+async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
+    async with GeminiAdvisorAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,
         max_retry_wait=5,

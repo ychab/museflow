@@ -9,13 +9,13 @@ from pytest_httpx import HTTPXMock
 
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import SimilarTrackResponseException
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 
-class TestGeminiClientAdapter:
+class TestGeminiAdvisorAdapter:
     @pytest.fixture
     def mock_tenacity_sleep(self) -> Iterable[None]:
-        retry_controller = GeminiClientAdapter.make_api_call.retry  # type: ignore[attr-defined]
+        retry_controller = GeminiAdvisorAdapter.make_api_call.retry  # type: ignore[attr-defined]
         original_sleep = retry_controller.sleep
 
         retry_controller.sleep = mock.AsyncMock(return_value=None)
@@ -24,7 +24,7 @@ class TestGeminiClientAdapter:
 
     async def test__get_similar_tracks__nominal(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -46,7 +46,7 @@ class TestGeminiClientAdapter:
             },
         )
 
-        tracks = await gemini_client.get_similar_tracks(artist_name="Grupo Niche", track_name="La Negra No Quiere")
+        tracks = await gemini_advisor.get_similar_tracks(artist_name="Grupo Niche", track_name="La Negra No Quiere")
 
         assert len(tracks) == 1
         assert tracks[0].name == "Mi Pueblo"
@@ -56,7 +56,7 @@ class TestGeminiClientAdapter:
 
     async def test__get_similar_tracks__empty_candidates(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -65,13 +65,13 @@ class TestGeminiClientAdapter:
             json={"candidates": []},
         )
 
-        tracks = await gemini_client.get_similar_tracks(artist_name="Artist", track_name="Track")
+        tracks = await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
 
         assert tracks == []
 
     async def test__get_similar_tracks__invalid_json_raises(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -90,11 +90,11 @@ class TestGeminiClientAdapter:
         )
 
         with pytest.raises(SimilarTrackResponseException):
-            await gemini_client.get_similar_tracks(artist_name="Artist", track_name="Track")
+            await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
 
     async def test__get_similar_tracks__rate_limit_exhausted(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
@@ -118,13 +118,13 @@ class TestGeminiClientAdapter:
             pytest.raises(AdvisorRateLimitExceeded) as exc_info,
             mock.patch("asyncio.sleep", new_callable=mock.AsyncMock),
         ):
-            await gemini_client.get_similar_tracks(artist_name="Radiohead", track_name="Creep")
+            await gemini_advisor.get_similar_tracks(artist_name="Radiohead", track_name="Creep")
 
         assert "Gemini rate limit exceeded after max retries for 'Creep' by 'Radiohead'" in str(exc_info.value)
 
     async def test__get_similar_tracks__invalid_schema_raises(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -143,14 +143,14 @@ class TestGeminiClientAdapter:
         )
 
         with pytest.raises(SimilarTrackResponseException):
-            await gemini_client.get_similar_tracks(artist_name="Artist", track_name="Track")
+            await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
 
-    def test__display_name(self, gemini_client: GeminiClientAdapter) -> None:
-        assert gemini_client.display_name == "Gemini"
+    def test__display_name(self, gemini_advisor: GeminiAdvisorAdapter) -> None:
+        assert gemini_advisor.display_name == "Gemini"
 
     async def test__make_api_call__429__with_retry_delay__sleeps_and_retries(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
@@ -182,7 +182,7 @@ class TestGeminiClientAdapter:
         )
 
         with mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep:
-            response = await gemini_client.make_api_call(
+            response = await gemini_advisor.make_api_call(
                 method="POST",
                 endpoint="/models/gemini-2.5-flash:generateContent",
             )
@@ -193,10 +193,10 @@ class TestGeminiClientAdapter:
 
     async def test__make_api_call__429__with_retry_delay__exceeds_max(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
-        assert gemini_client._max_retry_wait == 5
+        assert gemini_advisor._max_retry_wait == 5
         retry_delay: int = 10
 
         httpx_mock.add_response(
@@ -215,7 +215,7 @@ class TestGeminiClientAdapter:
         )
 
         with pytest.raises(AdvisorRateLimitExceeded):
-            await gemini_client.make_api_call(
+            await gemini_advisor.make_api_call(
                 method="POST",
                 endpoint="/models/gemini-2.5-flash:generateContent",
             )
@@ -224,7 +224,7 @@ class TestGeminiClientAdapter:
 
     async def test__make_api_call__429__without_retry_delay__exponential_backoff(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
@@ -242,7 +242,7 @@ class TestGeminiClientAdapter:
         )
 
         with mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep:
-            response = await gemini_client.make_api_call(
+            response = await gemini_advisor.make_api_call(
                 method="POST",
                 endpoint="/models/gemini-2.5-flash:generateContent",
             )
@@ -253,7 +253,7 @@ class TestGeminiClientAdapter:
 
     async def test__make_api_call__5xx__retries_and_raises(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
@@ -265,7 +265,7 @@ class TestGeminiClientAdapter:
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await gemini_client.make_api_call(
+            await gemini_advisor.make_api_call(
                 method="POST",
                 endpoint="/models/gemini-2.5-flash:generateContent",
             )
@@ -274,7 +274,7 @@ class TestGeminiClientAdapter:
 
     async def test__make_api_call__no_content__returns_empty(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -283,7 +283,7 @@ class TestGeminiClientAdapter:
             status_code=codes.NO_CONTENT,
         )
 
-        response = await gemini_client.make_api_call(
+        response = await gemini_advisor.make_api_call(
             method="POST", endpoint="/models/gemini-2.5-flash:generateContent"
         )
 
@@ -291,18 +291,18 @@ class TestGeminiClientAdapter:
 
     async def test__make_api_call__network_error__retries_and_raises(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
         httpx_mock.add_exception(httpx.ConnectError("connection refused"), is_reusable=True)
 
         with pytest.raises(httpx.ConnectError):
-            await gemini_client.make_api_call(method="POST", endpoint="/models/gemini-2.5-flash:generateContent")
+            await gemini_advisor.make_api_call(method="POST", endpoint="/models/gemini-2.5-flash:generateContent")
 
     async def test__make_api_call__malformed_json_response__raises(
         self,
-        gemini_client: GeminiClientAdapter,
+        gemini_advisor: GeminiAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -313,4 +313,4 @@ class TestGeminiClientAdapter:
         )
 
         with pytest.raises(ValueError):
-            await gemini_client.make_api_call(method="POST", endpoint="/models/gemini-2.5-flash:generateContent")
+            await gemini_advisor.make_api_call(method="POST", endpoint="/models/gemini-2.5-flash:generateContent")

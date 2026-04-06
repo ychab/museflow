@@ -4,18 +4,20 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.domain.exceptions import SimilarTrackResponseException
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 
 
-class TestLastFmClientAdapter:
-    async def test__get_similar_tracks__none(self, lastfm_client: LastFmClientAdapter, httpx_mock: HTTPXMock) -> None:
+class TestLastFmAdvisorAdapter:
+    async def test__get_similar_tracks__none(
+        self, lastfm_advisor: LastFmAdvisorAdapter, httpx_mock: HTTPXMock
+    ) -> None:
         httpx_mock.add_response(
-            url=re.compile(f"^{re.escape(str(lastfm_client.base_url).rstrip('/'))}.*"),
+            url=re.compile(f"^{re.escape(str(lastfm_advisor.base_url).rstrip('/'))}.*"),
             method="GET",
             json={"similartracks": {"track": []}},
         )
 
-        tracks_suggested = await lastfm_client.get_similar_tracks(
+        tracks_suggested = await lastfm_advisor.get_similar_tracks(
             artist_name="dummy-artist",
             track_name="dummy-track",
             limit=20,
@@ -25,11 +27,11 @@ class TestLastFmClientAdapter:
 
     async def test__get_similar_tracks__response_exception(
         self,
-        lastfm_client: LastFmClientAdapter,
+        lastfm_advisor: LastFmAdvisorAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
-            url=re.compile(f"^{re.escape(str(lastfm_client.base_url).rstrip('/'))}.*"),
+            url=re.compile(f"^{re.escape(str(lastfm_advisor.base_url).rstrip('/'))}.*"),
             method="GET",
             json={
                 "similartracks": {
@@ -49,7 +51,7 @@ class TestLastFmClientAdapter:
         )
 
         with pytest.raises(SimilarTrackResponseException):
-            await lastfm_client.get_similar_tracks(
+            await lastfm_advisor.get_similar_tracks(
                 artist_name="dummy-artist",
                 track_name="dummy-track",
             )

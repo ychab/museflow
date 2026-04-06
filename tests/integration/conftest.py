@@ -33,8 +33,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiClientAdapter
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmClientAdapter
+from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -357,13 +357,13 @@ def spotify_library(
 
 
 @pytest.fixture
-async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmClientAdapter]:
+async def lastfm_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmAdvisorAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_LASTFM_BASE_URL")
 
-    retry_method = LastFmClientAdapter.make_api_call
+    retry_method = LastFmAdvisorAdapter.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
-    async with LastFmClientAdapter(
+    async with LastFmAdvisorAdapter(
         client_api_key="dummy-api-key",
         client_secret="dummy-client-secret",
         base_url=HttpUrl(base_url) if base_url else None,
@@ -372,13 +372,13 @@ async def lastfm_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastF
 
 
 @pytest.fixture
-async def gemini_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiClientAdapter]:
+async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiAdvisorAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
-    retry_method = GeminiClientAdapter.make_api_call
+    retry_method = GeminiAdvisorAdapter.make_api_call
     monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
 
-    async with GeminiClientAdapter(
+    async with GeminiAdvisorAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,
         base_url=HttpUrl(base_url) if base_url else None,
