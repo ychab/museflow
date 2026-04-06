@@ -397,7 +397,9 @@ async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gem
 
     async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
-        model=GeminiModel.FLASH_2_5,
+        segment_model=GeminiModel.FLASH_2_5,
+        merge_model=GeminiModel.FLASH_2_5,
+        reflect_model=GeminiModel.FLASH_2_5,
         base_url=HttpUrl(base_url) if base_url else None,
         verify_ssl=False,
         max_retry_wait=5,

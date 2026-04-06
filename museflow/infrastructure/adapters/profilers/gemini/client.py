@@ -73,7 +73,9 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
     def __init__(
         self,
         api_key: str,
-        model: GeminiModel,
+        segment_model: GeminiModel,
+        merge_model: GeminiModel,
+        reflect_model: GeminiModel,
         base_url: HttpUrl | None = None,
         timeout: float = 120.0,
         verify_ssl: bool = True,
@@ -85,7 +87,9 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             timeout=timeout,
         )
         self._api_key = api_key
-        self._model = model
+        self._segment_model = segment_model
+        self._merge_model = merge_model
+        self._reflect_model = reflect_model
         self._max_retry_wait = max_retry_wait
 
     @property
@@ -153,7 +157,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
 
         return response.json()
 
-    async def _prompt_request(self, prompt: str) -> TasteProfileData:
+    async def _prompt_request(self, prompt: str, model: GeminiModel) -> TasteProfileData:
         request = GeminiGenerateContentRequest(
             contents=[GeminiRequestContent(parts=[GeminiRequestPart(text=prompt)])],
             generationConfig=GEMINI_TASTE_PROFILE_CONFIG,
@@ -162,7 +166,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         try:
             response_data = await self.make_api_call(
                 method="POST",
-                endpoint=f"/models/{self._model}:generateContent",
+                endpoint=f"/models/{model}:generateContent",
                 headers={"x-goog-api-key": self._api_key},
                 json_data=request.model_dump(exclude_none=True),
             )
@@ -199,7 +203,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )
-        return await self._prompt_request(prompt)
+        return await self._prompt_request(prompt, self._segment_model)
 
     async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
         foundation_json = json.dumps(foundation, ensure_ascii=False)
@@ -219,7 +223,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "Return the same JSON structure."
         )
 
-        return await self._prompt_request(prompt)
+        return await self._prompt_request(prompt, self._merge_model)
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
         profile_json = json.dumps(profile, ensure_ascii=False)
@@ -234,4 +238,4 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "Return the full profile JSON with these two fields populated. Keep all other fields unchanged."
         )
 
-        return await self._prompt_request(prompt)
+        return await self._prompt_request(prompt, self._reflect_model)

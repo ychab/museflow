@@ -207,7 +207,9 @@ async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
 async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
     async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
-        model=GeminiModel.FLASH_2_5,
+        segment_model=GeminiModel.FLASH_2_5,
+        merge_model=GeminiModel.FLASH_2_5,
+        reflect_model=GeminiModel.FLASH_2_5,
         max_retry_wait=5,
     ) as client:
         yield client

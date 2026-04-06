@@ -28,19 +28,17 @@ from museflow.infrastructure.config.settings.gemini import gemini_settings
 
 
 @asynccontextmanager
-async def get_gemini_taste_profile_client() -> AsyncGenerator[GeminiTasteProfileAdapter, None]:
-    client = GeminiTasteProfileAdapter(
-        api_key=gemini_settings.api_key.get_secret_value(),
-        model=gemini_settings.model,
-        base_url=str(gemini_settings.base_url),
-        timeout=gemini_settings.http_timeout,
-        verify_ssl=gemini_settings.http_verify_ssl,
-        max_retry_wait=gemini_settings.http_max_retry_wait,
-    )
-    try:
+async def get_gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter, None]:
+    async with GeminiTasteProfileAdapter(
+        api_key=gemini_settings.API_KEY,
+        segment_model=gemini_settings.PROFILER_SEGMENT_MODEL,
+        merge_model=gemini_settings.PROFILER_MERGE_MODEL,
+        reflect_model=gemini_settings.PROFILER_REFLECT_MODEL,
+        base_url=gemini_settings.BASE_URL,
+        timeout=gemini_settings.HTTP_TIMEOUT,
+        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
+    ) as client:
         yield client
-    finally:
-        await client.close()
 
 
 def get_taste_profile_repository(session: AsyncSession) -> TasteProfileSQLRepository:
@@ -50,8 +48,6 @@ def get_taste_profile_repository(session: AsyncSession) -> TasteProfileSQLReposi
 ## 2. `museflow/infrastructure/entrypoints/cli/commands/profile.py` — new command file
 
 ```python
-from __future__ import annotations
-
 from typing import Annotated
 
 import anyio
@@ -75,7 +71,7 @@ async def _profile_build_logic(email: str, track_limit: int, batch_size: int) ->
     from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
     from museflow.infrastructure.entrypoints.cli.dependencies import (
         get_async_session,
-        get_gemini_taste_profile_client,
+        get_gemini_profiler,
         get_taste_profile_repository,
         get_track_repository,
         get_user_by_email,
@@ -86,11 +82,11 @@ async def _profile_build_logic(email: str, track_limit: int, batch_size: int) ->
         track_repo = get_track_repository(session)
         profile_repo = get_taste_profile_repository(session)
 
-        async with get_gemini_taste_profile_client() as profiler:
+        async with get_gemini_profiler() as profiler:
             use_case = BuildTasteProfileUseCase(
-                track_repository=track_repo,
-                profile_repository=profile_repo,
                 profiler=profiler,
+                track_repository=track_repo,
+                taste_profile_repository=profile_repo,
             )
             config = BuildTasteProfileConfigInput(track_limit=track_limit, batch_size=batch_size)
             profile = await use_case.build_profile(user, config)

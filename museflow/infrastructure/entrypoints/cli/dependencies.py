@@ -81,7 +81,7 @@ async def get_lastfm_advisor() -> AsyncGenerator[AdvisorClientPort]:
 async def get_gemini_advisor() -> AsyncGenerator[AdvisorClientPort]:
     async with GeminiAdvisorAdapter(
         api_key=gemini_settings.API_KEY,
-        model=gemini_settings.MODEL,
+        model=gemini_settings.ADVISOR_MODEL,
         base_url=gemini_settings.BASE_URL,
         timeout=gemini_settings.HTTP_TIMEOUT,
         max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
