@@ -4,10 +4,12 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
@@ -19,8 +21,10 @@ from museflow.infrastructure.adapters.database.repositories.auth import OAuthPro
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import ArtistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
@@ -90,6 +94,20 @@ async def get_gemini_advisor() -> AsyncGenerator[AdvisorClientPort]:
 
 
 @asynccontextmanager
+async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
+    async with GeminiTasteProfileAdapter(
+        api_key=gemini_settings.API_KEY,
+        segment_model=gemini_settings.PROFILER_SEGMENT_MODEL,
+        merge_model=gemini_settings.PROFILER_MERGE_MODEL,
+        reflect_model=gemini_settings.PROFILER_REFLECT_MODEL,
+        base_url=gemini_settings.BASE_URL,
+        timeout=gemini_settings.HTTP_TIMEOUT,
+        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
+    ) as client:
+        yield client
+
+
+@asynccontextmanager
 async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorClientPort]:
     match advisor:
         case MusicAdvisor.LASTFM:
@@ -136,6 +154,10 @@ def get_artist_repository(session: AsyncSession) -> ArtistRepository:
 
 def get_track_repository(session: AsyncSession) -> TrackRepository:
     return TrackSQLRepository(session)
+
+
+def get_taste_profile_repository(session: AsyncSession) -> TasteProfileRepository:
+    return TasteProfileSQLRepository(session)
 
 
 # --- Services ---

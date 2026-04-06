@@ -21,6 +21,8 @@ This quick and dirty document just list the roadmap tasks.
 
 ## claude
 
+=> reduce the size of the CLAUDE.md no? Keep the minimum here (always loaded = tokens++)
+
 - to build a big features, better to split it into mutliple plans, written on disk (not in memory). Why not a dir /plans in the root project?
 - then to split plans, it almost always the same pattern:
 -> 1. domain (entities, value objects, etc)
@@ -28,40 +30,19 @@ This quick and dirty document just list the roadmap tasks.
 -> 3. infra port adapters
 -> 4. use cases + inputs
 -> 5. infra entrypoints: cli / api
+- finally, dispatch the plan manually between sub agents
 
 ## Tracks
 
 - found a way to add the track.genres? Copied from artist with Spotify? Use another service?
 
-## profiler
-
-- use another model (pro) to generate the master profile, and flash for other steps?
-
 ## Tests
 
-- check if we don't have redondant tests
+- check if we don't have redondant tests?
 
-## MelodyCurve
+## Codebase
 
-Project Specification: "MelodyCurve" Recommendation Engine1. ObjectiveDevelop a Python-based CLI tool and recommendation engine that analyzes a large music library (CSV/JSON) to generate 10 "hidden gem" recommendations based on user taste and temporal listening patterns.2. Data ArchitectureInput Schema: track_name, artist_name, genre, added_at (ISO 8601), play_count (optional).Data Enrichment: Integration with Spotipy (Spotify API) or Last.fm API to fetch audio_features (danceability, energy, acousticness, etc.).Storage: Local SQLite database for fast querying and persistence of enriched data.3. Implementation PhasesPhase 1: Data Ingestion & CleaningParse the 12,000-track dataset.Handle duplicates and normalize naming conventions.Implement temporal sorting to weigh recent interests higher than "legacy" tastes.Phase 2: Feature EngineeringConnect to a music API to retrieve metadata for the "Optimal Sample" (top 2,000–3,000 tracks).Calculate "Taste Decay": Apply a $e^{-\lambda t}$ weight to tracks based on how long ago they were added.Phase 3: Recommendation LogicImplement a Content-Based Filtering model using Scikit-learn (Cosine Similarity on audio features).Implement a "Discovery" Layer: Filter out any artist already present in the top 20% of the user's library.Phase 4: OutputGenerate a list of 10 tracks with a "Reasoning" field (e.g., "Because you've been listening to more high-energy Synthwave lately").
-
-## AI Music Profiler Integration
-
-Context: I have a database with 12,000 tracks (Artist, Title, Genres, Added_At). I need a Python service to build a "Master Profile" using an LLM.
-
-Database Utility: Create a function get_unprocessed_tracks(limit=300) that finds tracks not yet included in the profile.
-
-Profiling Function: Create an async function generate_profile_segment(tracks) using httpx.
-
-Prompt: "Analyze these tracks and their genres. Return a JSON with mood_profile, subgenre_distribution (top 5), and technical_specs (energy/tempo)."
-
-Merging Logic: Create an async function merge_profiles(old_profile, new_segment).
-
-Prompt: "Combine these two musical profiles. The 'old_profile' is the foundation, the 'new_segment' is the latest update. Produce a single, refined JSON Master Profile."
-
-Main Loop: Build a script that runs until all 12,000 tracks are processed, saving the final Master Profile into the ai_musical_profiles table.
-
-Recommendation Endpoint: Create recommend_from_profile(profile_json, count=10) to generate final suggestions.
+- do we have deadcode?
 
 ## Database
 

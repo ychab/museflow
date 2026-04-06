@@ -13,11 +13,13 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
@@ -173,7 +175,17 @@ def mock_track_repository(
         yield mock_repo
 
 
-# --- Client Mocks ---
+@pytest.fixture
+def mock_taste_profile_repository(
+    target_path: str,
+    mock_dependency_factory: DependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    repo = mock.AsyncMock(spec=TasteProfileRepository)
+    with mock_dependency_factory(f"{target_path}.get_taste_profile_repository", repo) as mock_repo:
+        yield mock_repo
+
+
+# --- Adapter Mocks ---
 
 
 @pytest.fixture
@@ -194,6 +206,16 @@ def mock_advisor_client(
     client = mock.AsyncMock(spec=AdvisorClientPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_advisor_client", client) as mock_client:
         yield mock_client
+
+
+@pytest.fixture
+def mock_gemini_profiler(
+    target_path: str,
+    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    profiler = mock.AsyncMock(spec=TasteProfilerPort)
+    with mock_async_context_dependency_factory(f"{target_path}.get_gemini_profiler", profiler) as mock_profiler:
+        yield mock_profiler
 
 
 # --- Helpers ---
