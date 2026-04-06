@@ -24,9 +24,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__build_profile_segment__nominal(
         self,
         tracks: list[Track],
-        gemini_profiler_client: GeminiTasteProfileAdapter,
+        gemini_profiler: GeminiTasteProfileAdapter,
     ) -> None:
-        profile = await gemini_profiler_client.build_profile_segment(tracks)
+        profile = await gemini_profiler.build_profile_segment(tracks)
 
         assert profile == TasteProfileDataFactory.build(
             taste_timeline=[
@@ -46,9 +46,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__merge_profiles__nominal(
         self,
         profile_data: TasteProfileData,
-        gemini_profiler_client: GeminiTasteProfileAdapter,
+        gemini_profiler: GeminiTasteProfileAdapter,
     ) -> None:
-        profile_merged = await gemini_profiler_client.merge_profiles(profile_data, profile_data)
+        profile_merged = await gemini_profiler.merge_profiles(profile_data, profile_data)
 
         assert profile_merged == TasteProfileDataFactory.build(
             taste_timeline=[
@@ -74,9 +74,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__reflect_on_profile__nominal(
         self,
         profile_data: TasteProfileData,
-        gemini_profiler_client: GeminiTasteProfileAdapter,
+        gemini_profiler: GeminiTasteProfileAdapter,
     ) -> None:
-        profile_reflected = await gemini_profiler_client.reflect_on_profile(profile_data)
+        profile_reflected = await gemini_profiler.reflect_on_profile(profile_data)
 
         assert profile_reflected == TasteProfileDataFactory.build(
             taste_timeline=[

@@ -11,6 +11,7 @@ from museflow.application.ports.repositories.auth import OAuthProviderStateRepos
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -77,6 +78,11 @@ def mock_artist_repository() -> mock.AsyncMock:
 @pytest.fixture
 def mock_track_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=TrackRepository)
+
+
+@pytest.fixture
+def mock_taste_profile_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=TasteProfileRepository)
 
 
 # --- Entity Mocks ---
@@ -198,7 +204,7 @@ async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
 
 
 @pytest.fixture
-async def gemini_profiler_client() -> AsyncGenerator[GeminiTasteProfileAdapter]:
+async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
     async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
         model=GeminiModel.FLASH_2_5,

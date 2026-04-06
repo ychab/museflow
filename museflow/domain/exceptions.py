@@ -60,6 +60,9 @@ class ProfilerRateLimitExceeded(HttpRateLimitExceeded): ...
 class TasteProfileBuildException(Exception): ...
 
 
+class TasteProfileNoSeedException(Exception): ...
+
+
 # --- Similarity track exceptions ---
 
 

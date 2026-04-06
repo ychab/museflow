@@ -389,7 +389,7 @@ async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gemi
 
 
 @pytest.fixture
-async def gemini_profiler_client(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTasteProfileAdapter]:
+async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTasteProfileAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
     retry_method = GeminiTasteProfileAdapter.make_api_call

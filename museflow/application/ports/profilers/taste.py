@@ -3,12 +3,17 @@ from abc import abstractmethod
 
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.types import TasteProfiler
 
 
 class TasteProfilerPort(ABC):
     @property
     @abstractmethod
     def display_name(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def profiler_type(self) -> TasteProfiler: ...
 
     @property
     @abstractmethod

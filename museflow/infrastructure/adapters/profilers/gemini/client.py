@@ -21,6 +21,7 @@ from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import ProfilerRateLimitExceeded
 from museflow.domain.exceptions import TasteProfileBuildException
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
@@ -90,6 +91,10 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
     @property
     def display_name(self) -> str:
         return "Gemini"
+
+    @property
+    def profiler_type(self) -> TasteProfiler:
+        return TasteProfiler.GEMINI
 
     @property
     def logic_version(self) -> str:
