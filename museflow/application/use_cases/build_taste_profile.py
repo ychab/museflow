@@ -1,6 +1,5 @@
 import itertools
 import logging
-import uuid
 from datetime import UTC
 from datetime import datetime
 from typing import cast
@@ -44,22 +43,20 @@ class BuildTasteProfileUseCase:
         current_profile: TasteProfileData | None = None
         batches = list(itertools.batched(tracks, config.batch_size, strict=False))
         for i, batch in enumerate(batches, start=1):
+            logger.info(
+                f"About processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
+            )
             segment = await self._profiler.build_profile_segment(list(batch))
             current_profile = (
                 segment if current_profile is None else await self._profiler.merge_profiles(current_profile, segment)
             )
-            logger.info(
-                f"Taste profile batch {i} processed ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
-            )
-        # Non-None guaranteed
-        current_profile = cast(TasteProfileData, current_profile)
+        current_profile = cast(TasteProfileData, current_profile)  # Non-None guaranteed
 
+        logger.info("About processing psychographic reflection")
         current_profile = await self._profiler.reflect_on_profile(current_profile)
-        logger.info("Psychographic reflection complete")
 
         return await self._taste_profile_repository.upsert(
             TasteProfile(
-                id=uuid.uuid4(),
                 user_id=user.id,
                 profiler=self._profiler.profiler_type,
                 profile=current_profile,

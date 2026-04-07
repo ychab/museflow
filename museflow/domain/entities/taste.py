@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from typing import TypedDict
 
@@ -23,7 +24,7 @@ class TasteProfileData(TypedDict):
 
 @dataclass(frozen=True, kw_only=True)
 class TasteProfile:
-    id: uuid.UUID
+    id: uuid.UUID = field(default_factory=uuid.uuid4)
     user_id: uuid.UUID
     profiler: TasteProfiler
 
