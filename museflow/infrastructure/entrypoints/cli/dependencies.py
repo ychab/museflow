@@ -15,6 +15,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
@@ -69,6 +70,16 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
         max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
+
+
+@asynccontextmanager
+async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyOAuthAdapter]:
+    match provider:
+        case MusicProvider.SPOTIFY:
+            async with get_spotify_oauth() as client:
+                yield client
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 
 
 @asynccontextmanager
@@ -142,6 +153,18 @@ def get_spotify_library_factory(
         auth_token_repository=get_auth_token_repository(session),
         oauth_client=spotify_client,
     )
+
+
+def get_provider_library_factory(
+    provider: MusicProvider,
+    session: AsyncSession,
+    oauth_client: SpotifyOAuthAdapter,
+) -> SpotifyLibraryFactory:
+    match provider:
+        case MusicProvider.SPOTIFY:
+            return get_spotify_library_factory(session=session, spotify_client=oauth_client)
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 
 
 # --- Repositories ---

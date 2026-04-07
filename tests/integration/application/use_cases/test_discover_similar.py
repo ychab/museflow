@@ -2,11 +2,11 @@ from typing import Any
 
 import pytest
 
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
-from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
+from museflow.application.use_cases.discover_similar import DiscoverSimilarUseCase
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
@@ -16,7 +16,7 @@ from tests.integration.utils.wiremock import WireMockContext
 
 
 @pytest.mark.wiremock("lastfm")
-class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
+class TestDiscoverSimilarSpotifyLastFMUseCase:
     @pytest.fixture
     def use_case(
         self,
@@ -24,8 +24,8 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
         spotify_library: ProviderLibraryPort,
         lastfm_advisor: AdvisorClientPort,
         track_reconciler: TrackReconciler,
-    ) -> AdvisorDiscoverUseCase:
-        return AdvisorDiscoverUseCase(
+    ) -> DiscoverSimilarUseCase:
+        return DiscoverSimilarUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
             advisor_client=lastfm_advisor,
@@ -66,7 +66,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
 
     async def test_execute__nominal(
         self,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         user: User,
         track_seed: Track,
         wiremock_lastfm_response: dict[str, Any],
@@ -83,7 +83,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=5,
                 playlist_size=1,
                 max_attempts=1,
@@ -106,7 +106,7 @@ class TestAdvisorDiscoverTracksSpotifyLastFMUseCase:
 
 
 @pytest.mark.wiremock("spotify")
-class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
+class TestDiscoverSimilarSpotifyGeminiUseCase:
     @pytest.fixture
     def use_case(
         self,
@@ -114,8 +114,8 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
         spotify_library: ProviderLibraryPort,
         gemini_advisor: AdvisorClientPort,
         track_reconciler: TrackReconciler,
-    ) -> AdvisorDiscoverUseCase:
-        return AdvisorDiscoverUseCase(
+    ) -> DiscoverSimilarUseCase:
+        return DiscoverSimilarUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
             advisor_client=gemini_advisor,
@@ -133,14 +133,14 @@ class TestAdvisorDiscoverTracksSpotifyGeminiUseCase:
 
     async def test_execute__nominal(
         self,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         user: User,
         track_seed: Track,
         track_repository: TrackRepository,
     ) -> None:
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=5,
                 playlist_size=1,
                 max_attempts=1,

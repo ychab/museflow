@@ -6,30 +6,44 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
-from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
-from museflow.application.use_cases.advisor_discover import DiscoveryResult
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
+from museflow.application.use_cases.discover_similar import DiscoverySimilarAttemptReport
+from museflow.application.use_cases.discover_similar import DiscoverySimilarResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
-from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
+from museflow.infrastructure.entrypoints.cli.commands.discover.similar import discover_similar_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.music import PlaylistFactory
 from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
+TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.similar"
 
-class TestSpotifyDiscoverParserCommand:
+
+@pytest.fixture
+def mock_spotify_client(
+    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    client = mock.AsyncMock(spec=ProviderOAuthPort)
+    with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_provider_oauth", client) as mock_client:
+        yield mock_client
+
+
+class TestDiscoverSimilarParserCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.discover.similar.discover_similar_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = DiscoveryResult(playlist=None, reports=[], tracks=[])
+            patched.return_value = DiscoverySimilarResult(playlist=None, reports=[], tracks=[])
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -37,10 +51,11 @@ class TestSpotifyDiscoverParserCommand:
         result = runner.invoke(
             app,
             [
-                "spotify",
                 "discover",
+                "similar",
                 "--email", "test@example.com",
                 "--advisor", MusicAdvisor.LASTFM,
+                "--provider", MusicProvider.SPOTIFY,
                 "--seed-top",
                 "--seed-saved",
                 "--seed-order-by", TrackOrderBy.RANDOM,
@@ -78,7 +93,7 @@ class TestSpotifyDiscoverParserCommand:
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["spotify", "discover", "--email", email])
+        result = runner.invoke(app, ["discover", "similar", "--email", email])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
@@ -87,7 +102,7 @@ class TestSpotifyDiscoverParserCommand:
     def test__advisor__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--advisor", "foo"],
+            ["discover", "similar", "--email", "test@example.com", "--advisor", "foo"],
         )
         assert result.exit_code != 0
 
@@ -95,10 +110,20 @@ class TestSpotifyDiscoverParserCommand:
         choices = ", ".join([f"'{advisor}'" for advisor in MusicAdvisor])
         assert f"Invalid value for '--advisor': 'foo' is not one of {choices}" in output
 
+    def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(
+            app,
+            ["discover", "similar", "--email", "test@example.com", "--provider", "foo"],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--provider': 'foo' is not" in output
+
     def test__seed_order_by__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--seed-order-by", "foo"],
+            ["discover", "similar", "--email", "test@example.com", "--seed-order-by", "foo"],
         )
         assert result.exit_code != 0
 
@@ -109,7 +134,7 @@ class TestSpotifyDiscoverParserCommand:
     def test__seed_sort_order__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--seed-sort-order", "foo"],
+            ["discover", "similar", "--email", "test@example.com", "--seed-sort-order", "foo"],
         )
         assert result.exit_code != 0
 
@@ -135,7 +160,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--seed-limit", seed_limit],
+            ["discover", "similar", "--email", "test@example.com", "--seed-limit", seed_limit],
         )
         assert result.exit_code != 0
 
@@ -160,7 +185,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--similar-limit", similar_limit],
+            ["discover", "similar", "--email", "test@example.com", "--similar-limit", similar_limit],
         )
         assert result.exit_code != 0
 
@@ -185,7 +210,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--candidate-limit", candidate_limit],
+            ["discover", "similar", "--email", "test@example.com", "--candidate-limit", candidate_limit],
         )
         assert result.exit_code != 0
 
@@ -210,7 +235,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--playlist-size", playlist_size],
+            ["discover", "similar", "--email", "test@example.com", "--playlist-size", playlist_size],
         )
         assert result.exit_code != 0
 
@@ -235,7 +260,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--max-attempts", max_attempts],
+            ["discover", "similar", "--email", "test@example.com", "--max-attempts", max_attempts],
         )
         assert result.exit_code != 0
 
@@ -262,7 +287,7 @@ class TestSpotifyDiscoverParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "discover", "--email", "test@example.com", "--max-tracks-per-artist", max_tracks_per_artist],
+            ["discover", "similar", "--email", "test@example.com", "--max-tracks-per-artist", max_tracks_per_artist],
         )
         assert result.exit_code != 0
 
@@ -270,10 +295,10 @@ class TestSpotifyDiscoverParserCommand:
         assert expected_msg in output
 
 
-class TestSpotifyDiscoverCommand:
+class TestDiscoverSimilarCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.discover_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.discover.similar.discover_similar_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -285,7 +310,7 @@ class TestSpotifyDiscoverCommand:
     ) -> None:
         mock_discover_logic.side_effect = UserNotFound()
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -299,7 +324,7 @@ class TestSpotifyDiscoverCommand:
     ) -> None:
         mock_discover_logic.side_effect = ProviderAuthTokenNotFoundError()
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -313,7 +338,7 @@ class TestSpotifyDiscoverCommand:
     ) -> None:
         mock_discover_logic.side_effect = DiscoveryTrackNoNew()
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -327,7 +352,7 @@ class TestSpotifyDiscoverCommand:
     ) -> None:
         mock_discover_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -339,7 +364,7 @@ class TestSpotifyDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        report = DiscoveryAttemptReport(
+        report = DiscoverySimilarAttemptReport(
             attempt=1,
             tracks_seeds=5,
             tracks_suggested=10,
@@ -352,13 +377,13 @@ class TestSpotifyDiscoverCommand:
         # One track with an album, one without — covers both branches of `track.album.name if track.album else ""`
         track_with_album = TrackFactory.build()
         track_without_album = TrackFactory.build(album=None)
-        mock_discover_logic.return_value = DiscoveryResult(
+        mock_discover_logic.return_value = DiscoverySimilarResult(
             playlist=playlist,
             reports=[report],
             tracks=[track_with_album, track_without_album],
         )
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -370,9 +395,9 @@ class TestSpotifyDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.return_value = DiscoveryResult(playlist=None, reports=[], tracks=[])
+        mock_discover_logic.return_value = DiscoverySimilarResult(playlist=None, reports=[], tracks=[])
 
-        result = runner.invoke(app, ["spotify", "discover", "--email", "test@example.com", "--dry-run"])
+        result = runner.invoke(app, ["discover", "similar", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -387,15 +412,18 @@ class TestSpotifyDiscoverCommand:
     "mock_spotify_client",
     "mock_advisor_client",
 )
-class TestSpotifyDiscoverLogic:
-    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover"
-
+class TestDiscoverSimilarLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await discover_logic(email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfigInput())
+            await discover_similar_logic(
+                email,
+                advisor=MusicAdvisor.LASTFM,
+                provider=MusicProvider.SPOTIFY,
+                config=DiscoverySimilarConfigInput(),
+            )
 
     async def test__auth_token__not_found(
         self,
@@ -407,4 +435,9 @@ class TestSpotifyDiscoverLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await discover_logic(user.email, advisor=MusicAdvisor.LASTFM, config=DiscoveryConfigInput())
+            await discover_similar_logic(
+                user.email,
+                advisor=MusicAdvisor.LASTFM,
+                provider=MusicProvider.SPOTIFY,
+                config=DiscoverySimilarConfigInput(),
+            )

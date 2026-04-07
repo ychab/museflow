@@ -6,7 +6,7 @@ from datetime import UTC
 from datetime import datetime
 
 from museflow import __project_name__
-from museflow.application.inputs.discovery import DiscoveryConfigInput
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
 from museflow.application.ports.advisors.client import AdvisorClientPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
-class DiscoveryAttemptReport:
+class DiscoverySimilarAttemptReport:
     attempt: int = 0
 
     tracks_seeds: int = 0
@@ -37,9 +37,9 @@ class DiscoveryAttemptReport:
 
 
 @dataclass(frozen=True, kw_only=True)
-class DiscoveryResult:
+class DiscoverySimilarResult:
     playlist: Playlist | None
-    reports: list[DiscoveryAttemptReport]
+    reports: list[DiscoverySimilarAttemptReport]
     tracks: list[Track]
 
 
@@ -50,7 +50,7 @@ class TrackScored:
     reconciler_score: ScoreReconciler
 
 
-class AdvisorDiscoverUseCase:
+class DiscoverSimilarUseCase:
     """Use case for discovering new tracks based on a user's library."""
 
     def __init__(
@@ -65,7 +65,9 @@ class AdvisorDiscoverUseCase:
         self._advisor_client = advisor_client
         self._track_reconciler = track_reconciler
 
-    async def create_suggestions_playlist(self, user: User, config: DiscoveryConfigInput) -> DiscoveryResult:
+    async def create_suggestions_playlist(
+        self, user: User, config: DiscoverySimilarConfigInput
+    ) -> DiscoverySimilarResult:
         """Creates a playlist of suggested tracks for a user.
 
         Iterates over seed batches from the user's library until `playlist_size` tracks are
@@ -78,14 +80,14 @@ class AdvisorDiscoverUseCase:
             config: The configuration for the discovery process.
 
         Returns:
-            A DiscoveryResult with the playlist (or ``None`` if dry-run), per-attempt reports,
+            A DiscoverySimilarResult with the playlist (or ``None`` if dry-run), per-attempt reports,
             and the final list of tracks.
 
         Raises:
             DiscoveryTrackNoNew: If no new tracks are found after all attempts.
         """
         tracks_scores: list[TrackScored] = []
-        reports: list[DiscoveryAttemptReport] = []
+        reports: list[DiscoverySimilarAttemptReport] = []
         offset = 0
 
         for attempt in range(1, config.max_attempts + 1):
@@ -106,7 +108,7 @@ class AdvisorDiscoverUseCase:
             )
             if not track_seeds:
                 logger.info("Seeds exhausted, stopping.")
-                reports.append(DiscoveryAttemptReport(attempt=attempt))
+                reports.append(DiscoverySimilarAttemptReport(attempt=attempt))
                 break
 
             offset += config.seed_limit
@@ -116,7 +118,7 @@ class AdvisorDiscoverUseCase:
             tracks_suggested = await self._get_similar_tracks(track_seeds=track_seeds, limit=config.similar_limit)
             if not tracks_suggested:
                 logger.debug(f"Attempt {attempt}: no similar tracks found, continuing...")
-                reports.append(DiscoveryAttemptReport(attempt=attempt, tracks_seeds=len(track_seeds)))
+                reports.append(DiscoverySimilarAttemptReport(attempt=attempt, tracks_seeds=len(track_seeds)))
                 continue
             logger.info(f"Suggested tracks: {len(tracks_suggested)}")
 
@@ -128,7 +130,7 @@ class AdvisorDiscoverUseCase:
             if not tracks_reconciled:
                 logger.debug(f"Attempt {attempt}: no reconciled tracks found, continuing...")
                 reports.append(
-                    DiscoveryAttemptReport(
+                    DiscoverySimilarAttemptReport(
                         attempt=attempt,
                         tracks_seeds=len(track_seeds),
                         tracks_suggested=len(tracks_suggested),
@@ -152,7 +154,7 @@ class AdvisorDiscoverUseCase:
             ]
 
             reports.append(
-                DiscoveryAttemptReport(
+                DiscoverySimilarAttemptReport(
                     attempt=attempt,
                     tracks_seeds=len(track_seeds),
                     tracks_suggested=len(tracks_suggested),
@@ -201,13 +203,13 @@ class AdvisorDiscoverUseCase:
 
         if config.dry_run:
             logger.info("Dry-run mode: skipping playlist creation.")
-            return DiscoveryResult(playlist=None, reports=reports, tracks=tracks)
+            return DiscoverySimilarResult(playlist=None, reports=reports, tracks=tracks)
 
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {self._advisor_client.display_name} - {datetime.now(UTC).isoformat()}",
             tracks=tracks,
         )
-        return DiscoveryResult(playlist=playlist, reports=reports, tracks=tracks)
+        return DiscoverySimilarResult(playlist=playlist, reports=reports, tracks=tracks)
 
     async def _get_similar_tracks(self, track_seeds: list[Track], limit: int) -> list[TrackSuggested]:
         """Gets similar tracks from the advisor for a list of seed tracks.

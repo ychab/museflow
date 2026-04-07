@@ -6,9 +6,9 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.inputs.discovery import DiscoveryConfigInput
-from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryResult
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
+from museflow.application.use_cases.discover_similar import DiscoverSimilarUseCase
+from museflow.application.use_cases.discover_similar import DiscoverySimilarResult
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
@@ -16,23 +16,24 @@ from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
-from museflow.infrastructure.entrypoints.cli.commands.spotify import app
-from museflow.infrastructure.entrypoints.cli.commands.spotify import console
+from museflow.infrastructure.entrypoints.cli.commands.discover import app
+from museflow.infrastructure.entrypoints.cli.commands.discover import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
-from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
+from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
+from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("discover", help="Discover new tracks for a Spotify's user account.")
-def discover(
+@app.command("similar", help="Discover new tracks similar to your library seeds.")
+def similar(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     advisor: MusicAdvisor = typer.Option(default=MusicAdvisor.LASTFM, help="The advisor to discover new musics"),
+    provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     seed_top: bool | None = typer.Option(
         None,
         "--seed-top/--no-seed-top",
@@ -110,14 +111,15 @@ def discover(
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover tracks without creating a playlist"),
 ) -> None:
     """
-    Discover new tracks for a Spotify's user account.
+    Discover new tracks similar to your library seeds.
     """
     try:
         result = asyncio.run(
-            discover_logic(
+            discover_similar_logic(
                 email=email,
                 advisor=advisor,
-                config=DiscoveryConfigInput(
+                provider=provider,
+                config=DiscoverySimilarConfigInput(
                     seed_top=seed_top,
                     seed_saved=seed_saved,
                     seed_genres=seed_genres,
@@ -192,27 +194,29 @@ def discover(
         )
 
 
-async def discover_logic(
+async def discover_similar_logic(
     email: EmailStr,
     advisor: MusicAdvisor,
-    config: DiscoveryConfigInput,
-) -> DiscoveryResult:
+    provider: MusicProvider,
+    config: DiscoverySimilarConfigInput,
+) -> DiscoverySimilarResult:
     """Discovers new music for a user and creates a playlist.
 
     This function orchestrates the discovery process by setting up the necessary
-    dependencies and executing the `AdvisorDiscoverUseCase`.
+    dependencies and executing the DiscoverSimilarUseCase.
 
     Args:
         email: The email of the user.
         advisor: The music advisor to use for getting recommendations.
+        provider: The music provider to use for seeding and playlist creation.
         config: The configuration for the discovery process.
 
     Returns:
-        A DiscoveryResult with the playlist, per-attempt reports, and final tracks.
+        A DiscoverySimilarResult with the playlist, per-attempt reports, and final tracks.
 
     Raises:
         UserNotFound: If the user with the given email is not found.
-        ProviderAuthTokenNotFoundError: If the user's auth token for Spotify is not found.
+        ProviderAuthTokenNotFoundError: If the user's auth token for the provider is not found.
     """
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -221,10 +225,11 @@ async def discover_logic(
         auth_token_repository = get_auth_token_repository(session)
         track_repository = get_track_repository(session)
 
-        spotify_client = await stack.enter_async_context(get_spotify_oauth())
-        spotify_library_factory = get_spotify_library_factory(
+        provider_client = await stack.enter_async_context(get_provider_oauth(provider))
+        provider_library_factory = get_provider_library_factory(
+            provider=provider,
             session=session,
-            spotify_client=spotify_client,
+            oauth_client=provider_client,
         )
 
         advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
@@ -234,15 +239,15 @@ async def discover_logic(
         if not user:
             raise UserNotFound()
 
-        auth_token = await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
         if auth_token is None:
             raise ProviderAuthTokenNotFoundError()
 
-        spotify_library = spotify_library_factory.create(user=user, auth_token=auth_token)
+        provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
-        use_case = AdvisorDiscoverUseCase(
+        use_case = DiscoverSimilarUseCase(
             track_repository=track_repository,
-            provider_library=spotify_library,
+            provider_library=provider_library,
             advisor_client=advisor_adapter,
             track_reconciler=track_reconciler,
         )

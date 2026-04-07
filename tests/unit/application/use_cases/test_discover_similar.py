@@ -3,10 +3,10 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.advisor_discover import AdvisorDiscoverUseCase
-from museflow.application.use_cases.advisor_discover import DiscoveryAttemptReport
-from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
-from museflow.application.use_cases.advisor_discover import DiscoveryResult
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
+from museflow.application.use_cases.discover_similar import DiscoverSimilarUseCase
+from museflow.application.use_cases.discover_similar import DiscoverySimilarAttemptReport
+from museflow.application.use_cases.discover_similar import DiscoverySimilarResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import SimilarTrackResponseException
@@ -18,7 +18,7 @@ from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.music import TrackSuggestedFactory
 
 
-class TestAdvisorDiscoverTracksUseCase:
+class TestDiscoverSimilarUseCase:
     @pytest.fixture
     def use_case(
         self,
@@ -26,8 +26,8 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
-    ) -> AdvisorDiscoverUseCase:
-        return AdvisorDiscoverUseCase(
+    ) -> DiscoverSimilarUseCase:
+        return DiscoverSimilarUseCase(
             track_repository=mock_track_repository,
             provider_library=mock_provider_library,
             advisor_client=mock_advisor_client,
@@ -37,7 +37,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__nominal(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -45,7 +45,7 @@ class TestAdvisorDiscoverTracksUseCase:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Given 2 track seeds — playlist_size=1 ensures the loop stops after attempt 1
-        config = DiscoveryConfigInput(seed_limit=2, similar_limit=2, playlist_size=1, max_attempts=3)
+        config = DiscoverySimilarConfigInput(seed_limit=2, similar_limit=2, playlist_size=1, max_attempts=3)
         track_seeds = TrackFactory.batch(size=2)
         mock_track_repository.get_list.return_value = track_seeds
 
@@ -75,7 +75,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.DEBUG):
             result = await use_case.create_suggestions_playlist(user=user, config=config)
 
-        assert isinstance(result, DiscoveryResult)
+        assert isinstance(result, DiscoverySimilarResult)
 
         # Then check similarity
         assert mock_advisor_client.get_similar_tracks.call_count == len(track_seeds)
@@ -98,7 +98,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         # Then check the report
         assert len(result.reports) == 1
-        assert result.reports[0] == DiscoveryAttemptReport(
+        assert result.reports[0] == DiscoverySimilarAttemptReport(
             attempt=1,
             tracks_seeds=2,
             tracks_suggested=4,
@@ -110,18 +110,18 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__no_seeds__raises(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
+            await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
 
     async def test__similar__none__raises(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -130,14 +130,14 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_advisor_client.get_similar_tracks.return_value = []
 
         with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
+            await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
 
         assert "Attempt 1: no similar tracks found, continuing..." in caplog.text
 
     async def test__similar__response_exception(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
@@ -146,14 +146,14 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_advisor_client.get_similar_tracks.side_effect = SimilarTrackResponseException("Boom")
 
         with caplog.at_level(logging.ERROR), pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
+            await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
 
         assert "An error occurred while fetching similar tracks: Boom" in caplog.text
 
     async def test__reconciled__none__raises(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -167,7 +167,7 @@ class TestAdvisorDiscoverTracksUseCase:
         mock_track_reconciler.reconcile.return_value = None
 
         with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
+            await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
 
         assert f"Track not reconciled: '{track_suggested}'" in caplog.text
         assert "Attempt 1: no reconciled tracks found, continuing..." in caplog.text
@@ -175,7 +175,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__new_tracks__none__raises(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -196,14 +196,14 @@ class TestAdvisorDiscoverTracksUseCase:
         )
 
         with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
-            await use_case.create_suggestions_playlist(user=user, config=DiscoveryConfigInput(max_attempts=1))
+            await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
 
         assert f"Excluded '{reconciled_track}'" in caplog.text
 
     async def test__second_attempt(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -230,7 +230,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # When
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=1,
                 similar_limit=1,
                 playlist_size=2,
@@ -246,7 +246,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__partial_after_max_attempts(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -275,7 +275,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.WARNING):
             result = await use_case.create_suggestions_playlist(
                 user=user,
-                config=DiscoveryConfigInput(
+                config=DiscoverySimilarConfigInput(
                     seed_limit=1,
                     similar_limit=1,
                     playlist_size=5,
@@ -292,7 +292,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__seeds_exhausted_mid_loop(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -317,7 +317,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.INFO):
             result = await use_case.create_suggestions_playlist(
                 user=user,
-                config=DiscoveryConfigInput(
+                config=DiscoverySimilarConfigInput(
                     seed_limit=1,
                     similar_limit=1,
                     playlist_size=5,
@@ -330,12 +330,12 @@ class TestAdvisorDiscoverTracksUseCase:
         assert "Seeds exhausted, stopping." in caplog.text
         assert "playlist_size not reached (1/5) after 5 attempt(s)" in caplog.text
         assert len(result.reports) == 2
-        assert result.reports[1] == DiscoveryAttemptReport(attempt=2)
+        assert result.reports[1] == DiscoverySimilarAttemptReport(attempt=2)
 
     async def test__inter_iteration_dedup(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -358,7 +358,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # When
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=1,
                 similar_limit=1,
                 playlist_size=5,
@@ -374,7 +374,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__trim_by_score(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -403,7 +403,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # When
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=1,
                 similar_limit=3,
                 playlist_size=2,
@@ -422,7 +422,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__artist_cap__exceed(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -460,7 +460,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # When: cap=2, size=4 → A1, A2 (capped), B1 — A3 excluded
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=1,
                 similar_limit=4,
                 playlist_size=4,
@@ -479,7 +479,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__dry_run(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -501,7 +501,7 @@ class TestAdvisorDiscoverTracksUseCase:
         with caplog.at_level(logging.INFO):
             result = await use_case.create_suggestions_playlist(
                 user=user,
-                config=DiscoveryConfigInput(seed_limit=1, max_attempts=1, dry_run=True),
+                config=DiscoverySimilarConfigInput(seed_limit=1, max_attempts=1, dry_run=True),
             )
 
         assert result.playlist is None
@@ -512,7 +512,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__sorting_with_zero_score(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -544,7 +544,7 @@ class TestAdvisorDiscoverTracksUseCase:
         # When
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 playlist_size=3,
                 max_attempts=1,
             ),
@@ -560,7 +560,7 @@ class TestAdvisorDiscoverTracksUseCase:
     async def test__sort__reconciler_breaks_tie_within_band(
         self,
         user: User,
-        use_case: AdvisorDiscoverUseCase,
+        use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_client: mock.AsyncMock,
@@ -592,7 +592,7 @@ class TestAdvisorDiscoverTracksUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoveryConfigInput(
+            config=DiscoverySimilarConfigInput(
                 seed_limit=1,
                 similar_limit=2,
                 playlist_size=2,

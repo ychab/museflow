@@ -3,16 +3,17 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.advisor_discover import DiscoveryConfigInput
+from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicAdvisor
-from museflow.infrastructure.entrypoints.cli.commands.spotify.discover import discover_logic
+from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.discover.similar import discover_similar_logic
 
 from tests.unit.factories.entities.music import PlaylistFactory
 
 
-class TestSpotifyDiscoverLogic:
+class TestDiscoverSimilarLogic:
     """
     The purpose of this test is to check that the user and the auth token are loaded correctly.
     Otherwise, we trust to use case integration tests and prevent duplicate.
@@ -20,7 +21,7 @@ class TestSpotifyDiscoverLogic:
 
     @pytest.fixture
     def mock_use_case(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.discover.AdvisorDiscoverUseCase"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.discover.similar.DiscoverSimilarUseCase"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 
@@ -35,10 +36,11 @@ class TestSpotifyDiscoverLogic:
         new_playlist = PlaylistFactory.build(user_id=user.id)
         mock_use_case.create_suggestions_playlist.return_value = new_playlist
 
-        playlist = await discover_logic(
+        playlist = await discover_similar_logic(
             email=user.email,
             advisor=advisor,
-            config=DiscoveryConfigInput(),
+            provider=MusicProvider.SPOTIFY,
+            config=DiscoverySimilarConfigInput(),
         )
 
         assert playlist == new_playlist
