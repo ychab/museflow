@@ -117,6 +117,33 @@ You can run the application and the database using Docker Compose or the provide
 docker compose up -d
 ```
 
+## Getting Started
+
+Once the application is running and configured, here is the typical flow to go from zero to discovering new music:
+
+```bash
+# 1. Create a user account
+uv run museflow users create --email user@example.com
+
+# 2. Connect your Spotify account (requires the API server to be running)
+uv run museflow spotify connect --email user@example.com
+
+# 3. Sync your Spotify library (top artists, saved tracks, playlists)
+uv run museflow spotify sync --email user@example.com --sync-all
+
+# 4. Import your full streaming history from Spotify's data export
+uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData
+
+# 5. Build your personal taste profile with AI analysis
+uv run museflow taste build --email user@example.com
+
+# 6. Discover new music and generate a playlist
+uv run museflow discover --email user@example.com --advisor gemini
+```
+
+Steps 3 and 4 can be run independently or combined — both populate your library for discovery.
+Step 5 is optional but enriches the recommendations when using the Gemini advisor.
+
 ## CLI User Guide
 
 MuseFlow provides a Command Line Interface (CLI) to manage users and interact with Spotify.
@@ -229,7 +256,7 @@ On completion, a summary table is printed showing items read, items skipped, uni
 
 Build and manage your personal taste profile using AI analysis of your library.
 
-**Build a taste profile:**
+#### `taste build`
 
 Analyzes your imported library tracks with Gemini AI to generate a master taste profile — including era breakdowns, personality archetype, and life-phase insights.
 
@@ -239,7 +266,7 @@ Analyzes your imported library tracks with Gemini AI to generate a master taste 
 uv run museflow taste build --email <email> [OPTIONS]
 ```
 
-**Build Options:**
+**Options:**
 
 *   `--track-limit`: Maximum number of seed tracks used to build the profile (default: 3000, max: 20000).
 *   `--batch-size`: Number of tracks sent per Gemini batch (default: 400, max: 1000).
@@ -252,15 +279,15 @@ uv run museflow taste build --email user@example.com
 
 On completion, the command prints the number of tracks processed, the profiler model and logic version, the number of musical eras detected, the personality archetype, and any life-phase insights.
 
-**Discover new music:**
+### Discover (`discover`)
 
 Discovers new music for a user based on their listening history and creates a new playlist.
 
 ```bash
-uv run museflow spotify discover --email <email> [OPTIONS]
+uv run museflow discover --email <email> [OPTIONS]
 ```
 
-**Discover Options:**
+**Options:**
 
 *   `--advisor`: The music advisor to use for getting recommendations (`last.fm` or `gemini`).
 *   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
@@ -275,10 +302,10 @@ uv run museflow spotify discover --email <email> [OPTIONS]
 Example: Discover new music using top tracks as seeds
 
 ```bash
-uv run museflow spotify discover --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
+uv run museflow discover --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
 ```
 
-**Show account info:**
+### Spotify Account Info (`spotify info`)
 
 Displays diagnostic information about a user's Spotify account: available genres (derived from their library) and the current OAuth token.
 
