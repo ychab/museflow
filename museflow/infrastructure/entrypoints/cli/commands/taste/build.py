@@ -10,10 +10,11 @@ from museflow.application.use_cases.build_taste_profile import BuildTasteProfile
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -36,9 +37,20 @@ def build(
         min=1,
         max=1000,
     ),
+    profiler: TasteProfiler = typer.Option(
+        default=TasteProfiler.GEMINI,
+        help="The profiler to use for building the taste profile",
+    ),
 ) -> None:
     try:
-        profile = asyncio.run(build_logic(email=email, track_limit=track_limit, batch_size=batch_size))
+        profile = asyncio.run(
+            build_logic(
+                email=email,
+                profiler=profiler,
+                track_limit=track_limit,
+                batch_size=batch_size,
+            )
+        )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNoSeedException as e:
@@ -57,10 +69,10 @@ def build(
         typer.echo(f"  - {insight}")
 
 
-async def build_logic(email: EmailStr, track_limit: int, batch_size: int) -> TasteProfile:
+async def build_logic(email: EmailStr, profiler: TasteProfiler, track_limit: int, batch_size: int) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
-        profiler = await stack.enter_async_context(get_gemini_profiler())
+        profiler_adapter = await stack.enter_async_context(get_taste_profiler(profiler))
 
         user_repository = get_user_repository(session)
         track_repository = get_track_repository(session)
@@ -71,7 +83,7 @@ async def build_logic(email: EmailStr, track_limit: int, batch_size: int) -> Tas
             raise UserNotFound()
 
         use_case = BuildTasteProfileUseCase(
-            profiler=profiler,
+            profiler=profiler_adapter,
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
         )

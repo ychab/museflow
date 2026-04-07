@@ -204,7 +204,7 @@ def mock_advisor_client(
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     client = mock.AsyncMock(spec=AdvisorClientPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_client", client) as mock_client:
+    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_adapter", client) as mock_client:
         yield mock_client
 
 
@@ -214,7 +214,7 @@ def mock_gemini_profiler(
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     profiler = mock.AsyncMock(spec=TasteProfilerPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_gemini_profiler", profiler) as mock_profiler:
+    with mock_async_context_dependency_factory(f"{target_path}.get_taste_profiler", profiler) as mock_profiler:
         yield mock_profiler
 
 

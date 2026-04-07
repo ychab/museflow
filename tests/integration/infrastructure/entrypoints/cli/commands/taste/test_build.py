@@ -4,6 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.user import User
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -29,6 +30,6 @@ class TestTasteBuildLogic:
         expected_profile = TasteProfileFactory.build(user_id=user.id)
         mock_use_case.build_profile.return_value = expected_profile
 
-        profile = await build_logic(email=user.email, track_limit=3000, batch_size=400)
+        profile = await build_logic(email=user.email, profiler=TasteProfiler.GEMINI, track_limit=3000, batch_size=400)
 
         assert profile == expected_profile

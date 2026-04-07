@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -245,4 +246,6 @@ class TestTasteBuildLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await build_logic(email="test@example.com", track_limit=3000, batch_size=400)
+            await build_logic(
+                email="test@example.com", profiler=TasteProfiler.GEMINI, track_limit=3000, batch_size=400
+            )

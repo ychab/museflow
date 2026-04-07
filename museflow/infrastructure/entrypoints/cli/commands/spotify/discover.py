@@ -18,7 +18,7 @@ from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.commands.spotify import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_client
+from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_library_factory
@@ -227,7 +227,7 @@ async def discover_logic(
             spotify_client=spotify_client,
         )
 
-        advisor_client = await stack.enter_async_context(get_advisor_client(advisor))
+        advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
         track_reconciler = get_track_reconciler()
 
         user = await user_repository.get_by_email(email)
@@ -243,7 +243,7 @@ async def discover_logic(
         use_case = AdvisorDiscoverUseCase(
             track_repository=track_repository,
             provider_library=spotify_library,
-            advisor_client=advisor_client,
+            advisor_client=advisor_adapter,
             track_reconciler=track_reconciler,
         )
 

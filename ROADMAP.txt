@@ -2,6 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## TASTE PROFILE
+
+- rename the command spotify discover to discover? and another one discover-taste? or even advisor/discover and advisor/taste?
+
 ## discovery improvements
 
 - Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next

@@ -15,6 +15,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -94,6 +95,19 @@ async def get_gemini_advisor() -> AsyncGenerator[AdvisorClientPort]:
 
 
 @asynccontextmanager
+async def get_advisor_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorClientPort]:
+    match advisor:
+        case MusicAdvisor.LASTFM:
+            async with get_lastfm_advisor() as adapter:
+                yield adapter
+        case MusicAdvisor.GEMINI:
+            async with get_gemini_advisor() as adapter:
+                yield adapter
+        case _:
+            raise ValueError(f"Unknown advisor: {advisor}")
+
+
+@asynccontextmanager
 async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
     async with GeminiTasteProfileAdapter(
         api_key=gemini_settings.API_KEY,
@@ -108,16 +122,13 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
 
 
 @asynccontextmanager
-async def get_advisor_client(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorClientPort]:
-    match advisor:
-        case MusicAdvisor.LASTFM:
-            async with get_lastfm_advisor() as client:
-                yield client
-        case MusicAdvisor.GEMINI:
-            async with get_gemini_advisor() as client:
-                yield client
+async def get_taste_profiler(profiler: TasteProfiler) -> AsyncGenerator[TasteProfilerPort]:
+    match profiler:
+        case TasteProfiler.GEMINI:
+            async with get_gemini_profiler() as adapter:
+                yield adapter
         case _:
-            raise ValueError(f"Unknown advisor: {advisor}")
+            raise ValueError(f"Unknown profiler: {profiler}")
 
 
 # --- Session manager ---
