@@ -66,6 +66,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1)
+        mock_track_repository.count.return_value = 7
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
 
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
@@ -98,6 +99,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 2 tracks → 1 batch → 1 build_profile_segment + 1 reflect_on_profile (no merge)
+        mock_track_repository.count.return_value = 2
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=2, user_id=user.id)
 
         for _ in range(2):
@@ -122,6 +124,7 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
+        mock_track_repository.count.return_value = 0
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(TasteProfileNoSeedException):

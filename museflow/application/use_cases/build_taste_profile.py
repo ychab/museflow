@@ -1,5 +1,6 @@
 import itertools
 import logging
+import random
 from datetime import UTC
 from datetime import datetime
 from typing import cast
@@ -30,9 +31,14 @@ class BuildTasteProfileUseCase:
         self._taste_profile_repository = taste_profile_repository
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
+        total = await self._track_repository.count(user_id=user.id)
+        offset = random.randint(0, max(0, total - config.track_limit))
+        logger.debug(f"Taste profile seed: total={total}, limit={config.track_limit}, offset={offset}")
+
         tracks = await self._track_repository.get_list(
             user_id=user.id,
             order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC), (TrackOrderBy.ADDED_AT, SortOrder.ASC)],
+            offset=offset,
             limit=config.track_limit,
         )
         if not tracks:

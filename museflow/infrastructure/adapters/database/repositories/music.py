@@ -72,6 +72,10 @@ class TrackSQLRepository(TrackRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def count(self, user_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user_id)
+        return (await self.session.execute(stmt)).scalar_one()
+
     async def get_list(
         self,
         user_id: uuid.UUID,

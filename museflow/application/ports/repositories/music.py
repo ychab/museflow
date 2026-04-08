@@ -69,6 +69,11 @@ class TrackRepository(ABC):
     """A repository for managing `Track` entities."""
 
     @abstractmethod
+    async def count(self, user_id: uuid.UUID) -> int:
+        """Returns the total number of tracks for a user."""
+        ...
+
+    @abstractmethod
     async def get_list(
         self,
         user_id: uuid.UUID,
