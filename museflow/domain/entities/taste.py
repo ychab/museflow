@@ -8,10 +8,18 @@ from typing import TypedDict
 from museflow.domain.types import TasteProfiler
 
 
+class TechnicalFingerprint(TypedDict):
+    energy: float
+    acousticness: float
+    rhythmic_complexity: float
+    atmospheric: float
+    instrumentalness: float
+
+
 class TasteEra(TypedDict):
     era_label: str  # AI-generated name, e.g. "The Post-Rock Exploration"
     time_range: str  # e.g. "2021-2023"
-    technical_fingerprint: dict[str, float]  # BPM, reverb, energy (0-1 weights)
+    technical_fingerprint: TechnicalFingerprint
     dominant_moods: list[str]
 
 

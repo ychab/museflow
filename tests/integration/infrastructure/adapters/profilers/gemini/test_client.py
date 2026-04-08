@@ -33,7 +33,13 @@ class TestGeminiTasteProfileAdapter:
                 {
                     "era_label": "Indie Exploration",
                     "time_range": "2021-2023",
-                    "technical_fingerprint": {"energy": 0.7},
+                    "technical_fingerprint": {
+                        "energy": 0.7,
+                        "acousticness": 0.6,
+                        "rhythmic_complexity": 0.4,
+                        "atmospheric": 0.5,
+                        "instrumentalness": 0.2,
+                    },
                     "dominant_moods": ["melancholic"],
                 }
             ],
@@ -55,13 +61,25 @@ class TestGeminiTasteProfileAdapter:
                 {
                     "era_label": "Indie Exploration",
                     "time_range": "2021-2022",
-                    "technical_fingerprint": {"energy": 0.7},
+                    "technical_fingerprint": {
+                        "energy": 0.7,
+                        "acousticness": 0.6,
+                        "rhythmic_complexity": 0.4,
+                        "atmospheric": 0.5,
+                        "instrumentalness": 0.2,
+                    },
                     "dominant_moods": ["melancholic"],
                 },
                 {
                     "era_label": "Electronic Drift",
                     "time_range": "2022-2023",
-                    "technical_fingerprint": {"energy": 0.85},
+                    "technical_fingerprint": {
+                        "energy": 0.85,
+                        "acousticness": 0.1,
+                        "rhythmic_complexity": 0.5,
+                        "atmospheric": 0.4,
+                        "instrumentalness": 0.3,
+                    },
                     "dominant_moods": ["euphoric"],
                 },
             ],
@@ -83,7 +101,13 @@ class TestGeminiTasteProfileAdapter:
                 {
                     "era_label": "Indie Exploration",
                     "time_range": "2021-2023",
-                    "technical_fingerprint": {"energy": 0.7},
+                    "technical_fingerprint": {
+                        "energy": 0.7,
+                        "acousticness": 0.6,
+                        "rhythmic_complexity": 0.4,
+                        "atmospheric": 0.5,
+                        "instrumentalness": 0.2,
+                    },
                     "dominant_moods": ["melancholic"],
                 }
             ],

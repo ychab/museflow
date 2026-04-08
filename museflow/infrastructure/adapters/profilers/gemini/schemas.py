@@ -26,7 +26,16 @@ GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
                 properties={
                     "era_label": GeminiSchemaProperty.string(),
                     "time_range": GeminiSchemaProperty.string(),
-                    "technical_fingerprint": GeminiSchemaProperty(type="object"),
+                    "technical_fingerprint": GeminiSchemaProperty.object(
+                        properties={
+                            "energy": GeminiSchemaProperty.number(),
+                            "acousticness": GeminiSchemaProperty.number(),
+                            "rhythmic_complexity": GeminiSchemaProperty.number(),
+                            "atmospheric": GeminiSchemaProperty.number(),
+                            "instrumentalness": GeminiSchemaProperty.number(),
+                        },
+                        required=["energy", "acousticness", "rhythmic_complexity", "atmospheric", "instrumentalness"],
+                    ),
                     "dominant_moods": GeminiSchemaProperty.array(items=GeminiSchemaProperty.string()),
                 },
                 required=["era_label", "time_range", "technical_fingerprint", "dominant_moods"],

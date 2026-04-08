@@ -210,6 +210,13 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             '- "current_vibe": {genre_or_mood: weight 0-1} what this batch reveals right now\n'
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
+            "\nFor each TasteEra, populate technical_fingerprint by inferring numerical values (0.0 to 1.0) "
+            "from the genres present in the batch. Use these genre-to-value guidelines:\n"
+            "- energy: Trap/Metal/Punk → high (~0.8-0.9); Pop/Electronic → mid (~0.5-0.6); Ambient/Classical → low (~0.1-0.2)\n"
+            "- acousticness: Acoustic/Folk/Classical → high (~0.8-0.9); Electronic/Synth → low (~0.05-0.2)\n"
+            "- rhythmic_complexity: Jazz/Math-rock/Polyrhythmic → high (~0.8); 4/4 Pop/EDM → low (~0.2-0.4)\n"
+            "- atmospheric: Ambient/Shoegaze/Post-rock → high (~0.8-0.9); Punk/Trap → low (~0.1-0.2)\n"
+            "- instrumentalness: Instrumental/Classical/Jazz → high (~0.8-0.9); Rap/Pop with lyrics → low (~0.05-0.2)\n"
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )
@@ -226,8 +233,15 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "Rules:\n"
             "- taste_timeline: decide if this segment continues the last era or starts a new one. "
             "Append or extend. Do not let it grow indefinitely — merge consecutive eras if very similar.\n"
-            "- core_identity: weighted blend, foundation heavier (long-term DNA, do not erase)\n"
-            "- current_vibe: new segment heavier (reflects recent pivots)\n"
+            "- core_identity: This is the cumulative DNA. Perform a weighted average heavily biased toward the "
+            "foundation (≈70% foundation, ≈30% new segment). Example: if 'hip-hop' is 0.8 in the foundation "
+            "and 0.2 in the new segment, the merged value should be ~0.7. Never erase existing keys — only "
+            "adjust weights. Add new keys from the segment only if they appear strongly (weight > 0.3).\n"
+            "- current_vibe: Strictly overwrite with the new segment's values. This reflects the listener's "
+            "active trajectory and must mirror the most recent segment exactly.\n"
+            "- technical_fingerprint in each TasteEra: preserve existing era fingerprints unchanged. "
+            "For any new era introduced by this segment, infer numerical values (0.0-1.0) from its genres "
+            "using the same guidelines as the segment builder.\n"
             "- personality_archetype: keep null (set by final pass)\n"
             "- life_phase_insights: keep empty (set by final pass)\n\n"
             "Return the same JSON structure."

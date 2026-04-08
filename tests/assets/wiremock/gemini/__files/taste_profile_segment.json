@@ -4,7 +4,7 @@
       "content": {
         "parts": [
           {
-            "text": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2023\", \"technical_fingerprint\": {\"energy\": 0.7}, \"dominant_moods\": [\"melancholic\"]}], \"core_identity\": {\"indie rock\": 0.8}, \"current_vibe\": {\"indie rock\": 0.9}, \"personality_archetype\": null, \"life_phase_insights\": []}"
+            "text": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2023\", \"technical_fingerprint\": {\"energy\": 0.7, \"acousticness\": 0.6, \"rhythmic_complexity\": 0.4, \"atmospheric\": 0.5, \"instrumentalness\": 0.2}, \"dominant_moods\": [\"melancholic\"]}], \"core_identity\": {\"indie rock\": 0.8}, \"current_vibe\": {\"indie rock\": 0.9}, \"personality_archetype\": null, \"life_phase_insights\": []}"
           }
         ],
         "role": "model"
