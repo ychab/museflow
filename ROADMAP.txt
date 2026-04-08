@@ -2,6 +2,14 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## taste profile build
+
+- why not giving models of the profiler on command line? After all, profiler will inherit the port so... it make sense!
+
+## code design
+
+- replace adapter/client.py by <adapter>/adapter.py
+
 ## discovery improvements
 
 - Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next

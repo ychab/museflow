@@ -118,7 +118,12 @@ class DiscoverSimilarUseCase:
             tracks_suggested = await self._get_similar_tracks(track_seeds=track_seeds, limit=config.similar_limit)
             if not tracks_suggested:
                 logger.debug(f"Attempt {attempt}: no similar tracks found, continuing...")
-                reports.append(DiscoverySimilarAttemptReport(attempt=attempt, tracks_seeds=len(track_seeds)))
+                reports.append(
+                    DiscoverySimilarAttemptReport(
+                        attempt=attempt,
+                        tracks_seeds=len(track_seeds),
+                    )
+                )
                 continue
             logger.info(f"Suggested tracks: {len(tracks_suggested)}")
 
