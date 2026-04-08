@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from typing import Any
 
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
@@ -18,6 +19,10 @@ class TasteProfilerPort(ABC):
     @property
     @abstractmethod
     def logic_version(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def profiler_metadata(self) -> dict[str, Any]: ...
 
     @abstractmethod
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:

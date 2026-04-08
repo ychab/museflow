@@ -23,6 +23,7 @@ class TestTasteProfileSQLRepository:
         profile = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
+            name="my-profile",
             tracks_count=100,
             logic_version="1.0",
         )
@@ -43,6 +44,7 @@ class TestTasteProfileSQLRepository:
         profile_v1 = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
+            name="my-profile",
             tracks_count=10,
             logic_version="1.0",
         )
@@ -51,6 +53,7 @@ class TestTasteProfileSQLRepository:
         profile_v2 = TasteProfileFactory.build(
             user_id=user.id,
             profiler=TasteProfiler.GEMINI,
+            name="my-profile",
             tracks_count=99,
             logic_version="2.0",
         )
@@ -63,14 +66,14 @@ class TestTasteProfileSQLRepository:
         assert profile_v2.logic_version == "2.0"
 
     async def test__get__found(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
-        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
         await TasteProfileModelFactory.create_async()  # Another user
 
-        profile_get = await taste_profile_repository.get(user_id=user.id, profiler=TasteProfiler.GEMINI)
+        profile_get = await taste_profile_repository.get(user_id=user.id, name="my-profile")
 
         assert profile_get is not None
         assert profile_get.id == profile_db.id
 
     async def test__get__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
-        result = await taste_profile_repository.get(user_id=uuid.uuid4(), profiler=TasteProfiler.GEMINI)
+        result = await taste_profile_repository.get(user_id=uuid.uuid4(), name="my-profile")
         assert result is None

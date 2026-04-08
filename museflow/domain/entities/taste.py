@@ -2,6 +2,7 @@ import uuid
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
+from typing import Any
 from typing import TypedDict
 
 from museflow.domain.types import TasteProfiler
@@ -25,11 +26,14 @@ class TasteProfileData(TypedDict):
 @dataclass(frozen=True, kw_only=True)
 class TasteProfile:
     id: uuid.UUID = field(default_factory=uuid.uuid4)
+
+    name: str
     user_id: uuid.UUID
     profiler: TasteProfiler
 
     profile: TasteProfileData
 
+    profiler_metadata: dict[str, Any]
     tracks_count: int
     logic_version: str
 

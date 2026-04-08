@@ -35,6 +35,7 @@ class TestTasteBuildParserCommand:
                 "taste",
                 "build",
                 "--email", "test@example.com",
+                "--name", "my-profile",
                 "--track-limit", "3000",
                 "--batch-size", "40",
             ],
@@ -145,7 +146,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_build_logic.side_effect = UserNotFound()
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -159,7 +160,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_build_logic.side_effect = TasteProfileNoSeedException()
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
 
         output = clean_typer_text(result.stderr)
@@ -173,7 +174,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_build_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
 
         output = clean_typer_text(result.stderr)
@@ -198,7 +199,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_build_logic.return_value = taste_profile
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -224,7 +225,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_build_logic.return_value = taste_profile
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -247,5 +248,9 @@ class TestTasteBuildLogic:
 
         with pytest.raises(UserNotFound):
             await build_logic(
-                email="test@example.com", profiler=TasteProfiler.GEMINI, track_limit=3000, batch_size=400
+                email="test@example.com",
+                profiler=TasteProfiler.GEMINI,
+                name="my-profile",
+                track_limit=3000,
+                batch_size=400,
             )

@@ -3,7 +3,6 @@ from abc import ABC
 from abc import abstractmethod
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.types import TasteProfiler
 
 
 class TasteProfileRepository(ABC):
@@ -11,4 +10,4 @@ class TasteProfileRepository(ABC):
     async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
 
     @abstractmethod
-    async def get(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None: ...
+    async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...

@@ -65,7 +65,9 @@ class BuildTasteProfileUseCase:
             TasteProfile(
                 user_id=user.id,
                 profiler=self._profiler.profiler_type,
+                name=config.name,
                 profile=current_profile,
+                profiler_metadata=self._profiler.profiler_metadata,
                 tracks_count=len(tracks),
                 logic_version=self._profiler.logic_version,
                 created_at=datetime.now(UTC),

@@ -104,6 +104,16 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
     def logic_version(self) -> str:
         return "v1.0"
 
+    @property
+    def profiler_metadata(self) -> dict[str, Any]:
+        return {
+            "models": {
+                "segment": self._segment_model.value,
+                "merge": self._merge_model.value,
+                "reflect": self._reflect_model.value,
+            }
+        }
+
     @retry(
         retry=retry_if_exception(_is_retryable_error),
         wait=wait_exponential(multiplier=1, min=2, max=60),

@@ -23,6 +23,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 @app.command("build", help="Build a master taste profile from your library.")
 def build(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
+    name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
     track_limit: int = typer.Option(
         3000,
         "--track-limit",
@@ -47,6 +48,7 @@ def build(
             build_logic(
                 email=email,
                 profiler=profiler,
+                name=name,
                 track_limit=track_limit,
                 batch_size=batch_size,
             )
@@ -61,6 +63,7 @@ def build(
         raise typer.Exit(code=1) from e
 
     typer.secho(f"\nTaste profile built: {profile.tracks_count} tracks processed", fg=typer.colors.GREEN)
+    typer.echo(f"Name: {profile.name}")
     typer.echo(f"Profiler: {profile.profiler} ({profile.logic_version})")
     typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
     if profile.profile["personality_archetype"]:
@@ -69,7 +72,9 @@ def build(
         typer.echo(f"  - {insight}")
 
 
-async def build_logic(email: EmailStr, profiler: TasteProfiler, track_limit: int, batch_size: int) -> TasteProfile:
+async def build_logic(
+    email: EmailStr, profiler: TasteProfiler, name: str, track_limit: int, batch_size: int
+) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
         profiler_adapter = await stack.enter_async_context(get_taste_profiler(profiler))
@@ -87,6 +92,6 @@ async def build_logic(email: EmailStr, profiler: TasteProfiler, track_limit: int
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
         )
-        config = BuildTasteProfileConfigInput(track_limit=track_limit, batch_size=batch_size)
+        config = BuildTasteProfileConfigInput(name=name, track_limit=track_limit, batch_size=batch_size)
 
         return await use_case.build_profile(user=user, config=config)

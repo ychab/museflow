@@ -19,6 +19,7 @@ class GeminiSettings(BaseSettings):
     API_KEY: str
 
     BASE_URL: HttpUrl = Field(default=HttpUrl("https://generativelanguage.googleapis.com/v1beta/"))
+
     ADVISOR_MODEL: GeminiModel = GeminiModel.FLASH_2_5
     PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_LITE_2_5
     PROFILER_MERGE_MODEL: GeminiModel = GeminiModel.PRO_2_5

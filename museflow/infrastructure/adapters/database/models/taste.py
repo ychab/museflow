@@ -1,5 +1,7 @@
 import uuid
+from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -19,24 +21,32 @@ from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 
 class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_taste_profile"
-    __table_args__ = (UniqueConstraint("user_id", "profiler", name="uq_museflow_taste_profile_user_profiler"),)
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_museflow_taste_profile_user_name"),)
 
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("museflow_user.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     profiler: Mapped[TasteProfiler] = mapped_column(Enum(TasteProfiler), nullable=False)
+
     profile: Mapped[TasteProfileData] = mapped_column(JSONB, nullable=False)
+
+    profiler_metadata: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+    )
     tracks_count: Mapped[int] = mapped_column(Integer, nullable=False)
     logic_version: Mapped[str] = mapped_column(String(32), nullable=False)
 
     def to_entity(self) -> TasteProfileEntity:
         return TasteProfileEntity(
             id=self.id,
+            name=self.name,
             user_id=self.user_id,
             profiler=self.profiler,
             profile=self.profile,
+            profiler_metadata=self.profiler_metadata,
             tracks_count=self.tracks_count,
             logic_version=self.logic_version,
             created_at=self.created_at,

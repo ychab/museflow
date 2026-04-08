@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 41f40a325fb7
+Revision ID: 2d4407f894f8
 Revises:
-Create Date: 2026-04-05 11:09:19.202682
+Create Date: 2026-04-08 13:55:06.980865
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '41f40a325fb7'
+revision: str = '2d4407f894f8'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -78,6 +78,8 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('profiler', sa.Enum('GEMINI', name='tasteprofiler'), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('profiler_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
     sa.Column('profile', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('tracks_count', sa.Integer(), nullable=False),
     sa.Column('logic_version', sa.String(length=32), nullable=False),
@@ -85,7 +87,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'profiler', name='uq_museflow_taste_profile_user_profiler')
+    sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_user_name')
     )
     op.create_index(op.f('ix_museflow_taste_profile_user_id'), 'museflow_taste_profile', ['user_id'], unique=False)
     op.create_table('museflow_track',
