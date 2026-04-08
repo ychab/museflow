@@ -4,10 +4,18 @@ from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerat
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiSchemaProperty
 
 
+class GeminiTechnicalFingerprint(BaseModel):
+    energy: float
+    acousticness: float
+    rhythmic_complexity: float
+    atmospheric: float
+    instrumentalness: float
+
+
 class GeminiTasteEra(BaseModel):
     era_label: str
     time_range: str
-    technical_fingerprint: dict[str, float]
+    technical_fingerprint: GeminiTechnicalFingerprint
     dominant_moods: list[str]
 
 

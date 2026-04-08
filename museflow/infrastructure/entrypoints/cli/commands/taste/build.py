@@ -11,6 +11,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import TasteProfiler
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
@@ -32,11 +33,16 @@ def build(
         max=20000,
     ),
     batch_size: int = typer.Option(
-        400,
+        200,
         "--batch-size",
         help="Batch sizes for profiles",
         min=1,
         max=1000,
+    ),
+    sleep_seconds: float | None = typer.Option(
+        None,
+        "--sleep-seconds",
+        help="Seconds to sleep between batches (default: MUSEFLOW_TASTE_PROFILE_BUILD_SLEEP)",
     ),
     profiler: TasteProfiler = typer.Option(
         default=TasteProfiler.GEMINI,
@@ -51,6 +57,7 @@ def build(
                 name=name,
                 track_limit=track_limit,
                 batch_size=batch_size,
+                sleep_seconds=sleep_seconds if sleep_seconds is not None else app_settings.TASTE_PROFILE_BUILD_SLEEP,
             )
         )
     except UserNotFound as e:
@@ -73,7 +80,12 @@ def build(
 
 
 async def build_logic(
-    email: EmailStr, profiler: TasteProfiler, name: str, track_limit: int, batch_size: int
+    email: EmailStr,
+    profiler: TasteProfiler,
+    name: str,
+    track_limit: int,
+    batch_size: int,
+    sleep_seconds: float,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -92,6 +104,11 @@ async def build_logic(
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
         )
-        config = BuildTasteProfileConfigInput(name=name, track_limit=track_limit, batch_size=batch_size)
+        config = BuildTasteProfileConfigInput(
+            name=name,
+            track_limit=track_limit,
+            batch_size=batch_size,
+            batch_sleep_seconds=sleep_seconds,
+        )
 
         return await use_case.build_profile(user=user, config=config)

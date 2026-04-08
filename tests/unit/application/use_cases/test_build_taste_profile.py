@@ -38,7 +38,11 @@ class TestBuildTasteProfileUseCase:
 
     @pytest.fixture
     def config(self) -> BuildTasteProfileConfigInput:
-        return BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        return BuildTasteProfileConfigInputFactory.build(
+            track_limit=10,
+            batch_size=3,
+            batch_sleep_seconds=0.0,
+        )
 
     @pytest.fixture
     def use_case(
@@ -116,6 +120,71 @@ class TestBuildTasteProfileUseCase:
         assert profile is not None
         assert profile.user_id == user.id
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
+
+    async def test__throttling(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        # 7 tracks → 3 batches (3 / 3 / 1) — sleep called twice (between batch 1→2 and 2→3, not after last)
+        config = BuildTasteProfileConfigInputFactory.build(
+            track_limit=10,
+            batch_size=3,
+            batch_sleep_seconds=1.0,
+        )
+        mock_track_repository.count.return_value = 7
+        mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
+
+        for _ in range(6):
+            httpx_mock.add_response(
+                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                method="POST",
+                json=gemini_response,
+            )
+
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        with mock.patch("museflow.application.use_cases.build_taste_profile.asyncio.sleep") as mock_sleep:
+            await use_case.build_profile(user=user, config=config)
+
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_called_with(1.0)
+
+    async def test__no_throttling(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        # batch_sleep_seconds=0.0 (default from factory) — sleep never called
+        mock_track_repository.count.return_value = 7
+        mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
+
+        for _ in range(6):
+            httpx_mock.add_response(
+                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                method="POST",
+                json=gemini_response,
+            )
+
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        with mock.patch("museflow.application.use_cases.build_taste_profile.asyncio.sleep") as mock_sleep:
+            await use_case.build_profile(user=user, config=config)
+
+        mock_sleep.assert_not_called()
 
     async def test__no_seed(
         self,

@@ -252,5 +252,6 @@ class TestTasteBuildLogic:
                 profiler=TasteProfiler.GEMINI,
                 name="my-profile",
                 track_limit=3000,
-                batch_size=400,
+                batch_size=200,
+                sleep_seconds=0.0,
             )

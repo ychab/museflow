@@ -21,7 +21,11 @@ from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactor
 class TestGeminiBuildTasteProfileUseCase:
     @pytest.fixture
     def config(self) -> BuildTasteProfileConfigInput:
-        return BuildTasteProfileConfigInputFactory.build(track_limit=100, batch_size=5)
+        return BuildTasteProfileConfigInputFactory.build(
+            track_limit=100,
+            batch_size=5,
+            batch_sleep_seconds=0.0,
+        )
 
     @pytest.fixture
     def use_case(
