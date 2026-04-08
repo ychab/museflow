@@ -78,6 +78,7 @@ class TrackRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
+        provider_ids: list[str] | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order: TrackOrdering | None = None,
@@ -89,6 +90,7 @@ class TrackRepository(ABC):
         Args:
             user_id: The ID of the user whose tracks are to be retrieved.
             provider: A provider to filter on.
+            provider_ids: Filter to only return tracks whose provider_id is in this list.
             sources: Whether to include, exclude, or ignore tracks base don their bitmask sources.
             genres: A list of genres to filter on.
             order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].

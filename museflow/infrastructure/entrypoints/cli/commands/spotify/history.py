@@ -92,6 +92,7 @@ def history(
     table.add_row("Items skipped (no URI)", str(report.items_skipped_no_uri))
     table.add_row("Unique track IDs", str(report.unique_track_ids))
     table.add_row("Tracks already known", str(report.tracks_already_known))
+    table.add_row("Tracks played_at updated", str(report.tracks_played_at_updated))
     table.add_row("Tracks fetched", str(report.tracks_fetched))
     table.add_row("Tracks created", str(report.tracks_created))
 

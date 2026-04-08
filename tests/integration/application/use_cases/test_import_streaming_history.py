@@ -1,4 +1,6 @@
 import json
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from typing import Final
@@ -29,17 +31,21 @@ HISTORY_DIR: Final[Path] = ASSETS_DIR / "history"
 @pytest.mark.wiremock("spotify")
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
-    def tracks_json_response(self) -> dict[str, Any]:
+    def track_ids(self) -> list[str]:
+        return [
+            # Same ID's as the history JSON files.
+            "6wb6zxkNTBtcYVkXcvNyJp",
+            "76v0OHTbZGeOZYmaLtEDhQ",
+            "5BuWeANxxuVOZdTCgnaOnp",
+            "4BqYFb5LHhRmmTDsPyUmQg",
+        ]
+
+    @pytest.fixture
+    def tracks_json_response(self, track_ids: list[str]) -> dict[str, Any]:
         return {
             "tracks": [
                 json.loads((ASSETS_DIR / "wiremock" / "spotify" / "__files" / f"track_{track_id}.json").read_text())
-                for track_id in [
-                    # Same ID's as the history JSON files.
-                    "6wb6zxkNTBtcYVkXcvNyJp",
-                    "76v0OHTbZGeOZYmaLtEDhQ",
-                    "5BuWeANxxuVOZdTCgnaOnp",
-                    "4BqYFb5LHhRmmTDsPyUmQg",
-                ]
+                for track_id in track_ids
             ],
         }
 
@@ -80,6 +86,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_uri=0,
             unique_track_ids=4,
             tracks_already_known=0,
+            tracks_played_at_updated=0,
             tracks_fetched=4,
             tracks_created=4,
             tracks_purged=0,
@@ -116,6 +123,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_uri=0,
             unique_track_ids=4,
             tracks_already_known=0,
+            tracks_played_at_updated=0,
             tracks_fetched=4,
             tracks_created=4,
             tracks_purged=0,
@@ -152,6 +160,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_uri=0,
             unique_track_ids=4,
             tracks_already_known=0,
+            tracks_played_at_updated=0,
             tracks_fetched=4,
             tracks_created=4,
             tracks_purged=3,
@@ -160,3 +169,48 @@ class TestImportStreamingHistorySpotifyUseCase:
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.id.in_(track_ids))
         count = (await async_session_db.execute(stmt)).scalar()
         assert count == 0
+
+    async def test__known_tracks__played_at_updated(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_ids: list[str],
+        use_case: ImportStreamingHistoryUseCase,
+    ) -> None:
+        expected_played_at = {
+            track_ids[0]: datetime(2017, 1, 10, 12, 34, 10, tzinfo=UTC),
+            track_ids[1]: datetime(2017, 1, 10, 12, 36, 36, tzinfo=UTC),
+            track_ids[2]: datetime(2023, 4, 15, 10, 50, 44, tzinfo=UTC),
+            track_ids[3]: datetime(2023, 4, 15, 10, 53, 18, tzinfo=UTC),
+        }
+        old_played_at = datetime(2000, 1, 1, tzinfo=UTC)
+
+        for track_id in track_ids:
+            await TrackModelFactory.create_async(
+                user_id=user.id,
+                provider=MusicProvider.SPOTIFY,
+                sources=int(TrackSource.HISTORY),
+                played_at=old_played_at,
+                provider_id=track_id,
+            )
+
+        report = await use_case.import_history(
+            user=user,
+            config=ImportStreamingHistoryConfigInput(
+                directory=HISTORY_DIR,
+                min_ms_played=30_000,
+            ),
+        )
+
+        assert report.tracks_played_at_updated == 4
+        assert report.tracks_fetched == 0
+
+        results = await async_session_db.execute(
+            select(TrackModel).where(
+                TrackModel.user_id == user.id,
+                TrackModel.provider_id.in_(track_ids),
+            )
+        )
+        tracks_by_id = {t.provider_id: t for t in results.scalars().all()}
+        for track_id, expected in expected_played_at.items():
+            assert tracks_by_id[track_id].played_at == expected, f"Wrong played_at for {track_id}"

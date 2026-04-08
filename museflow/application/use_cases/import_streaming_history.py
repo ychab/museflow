@@ -30,6 +30,8 @@ class ImportStreamingHistoryReport:
     unique_track_ids: int = 0
 
     tracks_already_known: int = 0
+    tracks_played_at_updated: int = 0
+
     tracks_fetched: int = 0
     tracks_created: int = 0
     tracks_purged: int = 0
@@ -118,6 +120,21 @@ class ImportStreamingHistoryUseCase:
         unknown_ids = track_provider_ids - known_ids
         logger.info(f"Collected {len(unknown_ids)} unknown track ID's.")
 
+        # Refresh played_at for already-known tracks (bulk_upsert uses GREATEST — safe to re-run)
+        tracks_played_at_updated = 0
+        if known_ids:
+            known_tracks = await self._track_repository.get_list(
+                user_id=user.id,
+                provider=MusicProvider.SPOTIFY,
+                provider_ids=list(known_ids),
+            )
+            updated_tracks = [
+                dataclasses.replace(track, played_at=tracks_ts[track.provider_id]) for track in known_tracks
+            ]
+            await self._track_repository.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
+            tracks_played_at_updated = len(updated_tracks)
+            logger.info(f"Refreshed played_at for {tracks_played_at_updated} already-known tracks.")
+
         # Fetch tracks from the provider in chunks and upsert each chunk immediately.
         # It releases memory but also allows re-running the command without a purge in case of a rate limit bottleneck.
         logger.info(f"\nAbout fetching and upserting {len(unknown_ids)} track's metadata.")
@@ -150,6 +167,7 @@ class ImportStreamingHistoryUseCase:
             items_skipped_no_uri=items_skipped_no_uri,
             unique_track_ids=len(track_provider_ids),
             tracks_already_known=len(known_ids),
+            tracks_played_at_updated=tracks_played_at_updated,
             tracks_fetched=tracks_fetched,
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,

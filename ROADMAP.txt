@@ -2,11 +2,6 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## TASTE PROFILE
-
-- store in DB the models used for each steps?
-- also, can we named (uniq) a profile so that it can be used explicit for a future command discover taste --profile=MY_PROFILE_NAME
-
 ## discovery improvements
 
 - Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next

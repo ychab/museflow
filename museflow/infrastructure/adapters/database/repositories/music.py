@@ -80,6 +80,7 @@ class TrackSQLRepository(TrackRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
+        provider_ids: list[str] | None = None,
         sources: TrackSource | None = None,
         genres: list[str] | None = None,
         order: TrackOrdering | None = None,
@@ -91,6 +92,9 @@ class TrackSQLRepository(TrackRepository):
         # Filtering
         if provider is not None:
             stmt = stmt.where(TrackModel.provider == provider)
+
+        if provider_ids is not None:
+            stmt = stmt.where(TrackModel.provider_id.in_(provider_ids))
 
         if sources is not None:
             stmt = stmt.where(TrackModel.sources.op("&")(int(sources)) != 0)

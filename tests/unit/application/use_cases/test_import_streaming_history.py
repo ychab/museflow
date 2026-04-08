@@ -102,6 +102,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_uri=2,
             unique_track_ids=2,
             tracks_already_known=0,
+            tracks_played_at_updated=0,
             tracks_fetched=2,
             tracks_created=2,
             tracks_purged=0,
@@ -129,7 +130,21 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
+        track1 = TrackFactory.build(
+            provider_id="track1",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+        track2 = TrackFactory.build(
+            provider_id="track2",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
+        mock_track_repository.get_list.return_value = [track1, track2]
 
         report = await use_case.import_history(
             user=user,
@@ -137,10 +152,12 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         assert report.tracks_already_known == 2
+        assert report.tracks_played_at_updated == 2
         assert report.tracks_fetched == 0
         assert report.tracks_created == 0
         mock_provider_library.get_track_by_id.assert_not_called()
-        mock_track_repository.bulk_upsert.assert_not_called()
+        get_list_call = mock_track_repository.get_list.call_args
+        assert set(get_list_call.kwargs["provider_ids"]) == {"track1", "track2"}
 
     @pytest.mark.parametrize(
         "json_file",
@@ -164,7 +181,15 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
+        track2 = TrackFactory.build(
+            provider_id="track2",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track2"])
+        mock_track_repository.get_list.return_value = [track2]
 
         report = await use_case.import_history(
             user=user,
@@ -406,7 +431,21 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
+        track1 = TrackFactory.build(
+            provider_id="track1",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+        track2 = TrackFactory.build(
+            provider_id="track2",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
+        mock_track_repository.get_list.return_value = [track1, track2]
 
         report = await use_case.import_history(
             user=user,
@@ -472,3 +511,54 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert upserted_tracks[1].played_at == datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC)
         assert upserted_tracks[2].played_at == datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC)
         assert upserted_tracks[3].played_at == datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+
+    @pytest.mark.parametrize(
+        "json_file",
+        [
+            {
+                "entries": [
+                    {"ts": "2024-03-01T10:00:00Z", "ms_played": 60000, "spotify_track_uri": "spotify:track:track1"},
+                    {"ts": "2024-03-02T12:00:00Z", "ms_played": 60000, "spotify_track_uri": "spotify:track:track2"},
+                ],
+            },
+        ],
+        indirect=True,
+    )
+    async def test__known_tracks__played_at_refreshed(
+        self,
+        user: User,
+        tmp_path: Path,
+        json_file: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        track1 = TrackFactory.build(
+            provider_id="track1",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+        track2 = TrackFactory.build(
+            provider_id="track2",
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            sources=TrackSource.HISTORY,
+        )
+
+        mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
+        mock_track_repository.get_list.return_value = [track1, track2]
+
+        report = await use_case.import_history(
+            user=user,
+            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
+        )
+
+        assert report.tracks_played_at_updated == 2
+        assert report.tracks_fetched == 0
+        mock_provider_library.get_track_by_id.assert_not_called()
+
+        upserted_tracks: list = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
+        upserted_by_id = {t.provider_id: t for t in upserted_tracks}
+        assert upserted_by_id["track1"].played_at == datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track2"].played_at == datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC)
