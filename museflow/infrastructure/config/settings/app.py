@@ -43,7 +43,7 @@ class AppSettings(BaseSettings):
     RECONCILER_TRACK_MATCH_THRESHOLD: float = 80.0
     RECONCILER_TRACK_SCORE_MINIMUM: float = 60.0
 
-    TASTE_PROFILE_BUILD_SLEEP: float = 10.0
+    TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 10.0
 
     BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)
     BACKEND_CORS_ALLOW_METHODS: list[str] = Field(default=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])

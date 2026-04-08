@@ -57,9 +57,9 @@ class BuildTasteProfileUseCase:
             current_profile = (
                 segment if current_profile is None else await self._profiler.merge_profiles(current_profile, segment)
             )
-            if config.batch_sleep_seconds > 0 and i < len(batches):
-                logger.debug(f"Throttling: sleeping {config.batch_sleep_seconds}s before next batch")
-                await asyncio.sleep(config.batch_sleep_seconds)
+            if config.throttling_sleep_seconds > 0 and i < len(batches):
+                logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
+                await asyncio.sleep(config.throttling_sleep_seconds)
         current_profile = cast(TasteProfileData, current_profile)  # Non-None guaranteed
 
         logger.info("About processing psychographic reflection")

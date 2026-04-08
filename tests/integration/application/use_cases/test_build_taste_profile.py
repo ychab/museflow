@@ -24,7 +24,7 @@ class TestGeminiBuildTasteProfileUseCase:
         return BuildTasteProfileConfigInputFactory.build(
             track_limit=100,
             batch_size=5,
-            batch_sleep_seconds=0.0,
+            throttling_sleep_seconds=0.0,
         )
 
     @pytest.fixture

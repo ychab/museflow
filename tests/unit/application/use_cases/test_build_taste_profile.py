@@ -41,7 +41,7 @@ class TestBuildTasteProfileUseCase:
         return BuildTasteProfileConfigInputFactory.build(
             track_limit=10,
             batch_size=3,
-            batch_sleep_seconds=0.0,
+            throttling_sleep_seconds=0.0,
         )
 
     @pytest.fixture
@@ -136,7 +136,7 @@ class TestBuildTasteProfileUseCase:
         config = BuildTasteProfileConfigInputFactory.build(
             track_limit=10,
             batch_size=3,
-            batch_sleep_seconds=1.0,
+            throttling_sleep_seconds=1.0,
         )
         mock_track_repository.count.return_value = 7
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
@@ -168,7 +168,7 @@ class TestBuildTasteProfileUseCase:
         gemini_response: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        # batch_sleep_seconds=0.0 (default from factory) — sleep never called
+        # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
         mock_track_repository.count.return_value = 7
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
 

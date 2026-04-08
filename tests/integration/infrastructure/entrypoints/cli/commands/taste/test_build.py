@@ -36,7 +36,7 @@ class TestTasteBuildLogic:
             name="my-profile",
             track_limit=3000,
             batch_size=200,
-            sleep_seconds=0.0,
+            throttling_sleep_seconds=0.0,
         )
 
         assert profile == expected_profile

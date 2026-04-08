@@ -39,10 +39,10 @@ def build(
         min=1,
         max=1000,
     ),
-    sleep_seconds: float | None = typer.Option(
+    throttling_sleep_seconds: float | None = typer.Option(
         None,
-        "--sleep-seconds",
-        help="Seconds to sleep between batches (default: MUSEFLOW_TASTE_PROFILE_BUILD_SLEEP)",
+        "--throttling-sleep-seconds",
+        help="Seconds to sleep between batches (default: MUSEFLOW_TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS)",
     ),
     profiler: TasteProfiler = typer.Option(
         default=TasteProfiler.GEMINI,
@@ -57,7 +57,11 @@ def build(
                 name=name,
                 track_limit=track_limit,
                 batch_size=batch_size,
-                sleep_seconds=sleep_seconds if sleep_seconds is not None else app_settings.TASTE_PROFILE_BUILD_SLEEP,
+                throttling_sleep_seconds=(
+                    throttling_sleep_seconds
+                    if throttling_sleep_seconds is not None
+                    else app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS
+                ),
             )
         )
     except UserNotFound as e:
@@ -85,7 +89,7 @@ async def build_logic(
     name: str,
     track_limit: int,
     batch_size: int,
-    sleep_seconds: float,
+    throttling_sleep_seconds: float,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -108,7 +112,7 @@ async def build_logic(
             name=name,
             track_limit=track_limit,
             batch_size=batch_size,
-            batch_sleep_seconds=sleep_seconds,
+            throttling_sleep_seconds=throttling_sleep_seconds,
         )
 
         return await use_case.build_profile(user=user, config=config)
