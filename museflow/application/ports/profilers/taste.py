@@ -34,7 +34,7 @@ class TasteProfilerPort(ABC):
 
     @abstractmethod
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
-        """Final psychographic pass: populate personality_archetype and life_phase_insights."""
+        """Final psychographic pass."""
 
     @abstractmethod
     async def close(self) -> None: ...

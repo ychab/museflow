@@ -23,8 +23,13 @@ class GeminiTasteProfileContent(BaseModel):
     taste_timeline: list[GeminiTasteEra]
     core_identity: dict[str, float]
     current_vibe: dict[str, float]
+
     personality_archetype: str | None = None
     life_phase_insights: list[str] = []
+
+    musical_identity_summary: str | None = None
+    behavioral_traits: dict[str, float] = {}
+    discovery_style: str | None = None
 
 
 GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
@@ -53,6 +58,9 @@ GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
         "current_vibe": GeminiSchemaProperty(type="object"),
         "personality_archetype": GeminiSchemaProperty.string(),
         "life_phase_insights": GeminiSchemaProperty.array(items=GeminiSchemaProperty.string()),
+        "musical_identity_summary": GeminiSchemaProperty.string(),
+        "behavioral_traits": GeminiSchemaProperty(type="object"),
+        "discovery_style": GeminiSchemaProperty.string(),
     },
     required=["taste_timeline", "core_identity", "current_vibe", "life_phase_insights"],
 )

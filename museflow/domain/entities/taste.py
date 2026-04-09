@@ -27,8 +27,15 @@ class TasteProfileData(TypedDict):
     taste_timeline: list[TasteEra]  # chronological map of taste eras
     core_identity: dict[str, float]  # stable DNA, e.g. {"progressive metal": 0.8}
     current_vibe: dict[str, float]  # active trajectory (last ~400 tracks)
-    personality_archetype: str | None  # set by final psychographic pass
-    life_phase_insights: list[str]  # set by final psychographic pass
+
+    # Populated by final psychographic reflection only
+    personality_archetype: str | None
+    life_phase_insights: list[str]
+
+    # Populated by final psychographic reflection only
+    musical_identity_summary: str | None  # 2-3 sentence narrative of the listener's evolution
+    behavioral_traits: dict[str, float]  # e.g. {"openness": 0.9, "rhythmic_dependency": 0.7}
+    discovery_style: str | None  # e.g. "The Digger" or "The Loyalist"
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -58,6 +58,14 @@ class TestGeminiBuildTasteProfileUseCase:
         assert profile.profile["life_phase_insights"] == [
             "Transition from high-energy rock to ambient introspection during 2022"
         ]
+        assert profile.profile["musical_identity_summary"] is not None
+        assert profile.profile["behavioral_traits"] == {
+            "openness": 0.8,
+            "adventurousness": 0.7,
+            "nostalgia_bias": 0.4,
+            "rhythmic_dependency": 0.6,
+        }
+        assert profile.profile["discovery_style"] == "The Deep Diver"
 
         stmt = select(func.count()).where(TasteProfileModel.user_id == user.id)
         count = (await async_session_db.execute(stmt)).scalar_one()

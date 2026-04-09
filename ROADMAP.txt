@@ -22,7 +22,7 @@ This quick and dirty document just list the roadmap tasks.
   differentiate Gemini from Last.fm. Requires extending the port interface or adding an
   optional context argument.
 
-- Cross-advisor confidence signal: run both Last.fm and Gemini in parallel per seed,
+- POSTPONE OR WON'T DO?: Cross-advisor confidence signal: run both Last.fm and Gemini in parallel per seed,
   union the results, and boost the score of tracks that appear in both. Agreement between
   two independent advisors is a strong quality signal. Keep single-advisor as default.
 

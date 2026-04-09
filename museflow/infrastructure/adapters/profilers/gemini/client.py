@@ -254,14 +254,28 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
         profile_json = json.dumps(profile, ensure_ascii=False)
 
+        # Filter Triad for future playlist engine:
+        # current_vibe + technical_fingerprint (from latest era) + behavioral_traits
+        # → when given Mood + Genre inputs, cross-reference all three to generate tailored playlists
+        # (e.g. "Focus" + "Electronic" → check atmospheric score + core urban roots → "Urban-Ambient")
         prompt = (
             "You have the complete Master Taste Profile of a listener across their entire library.\n\n"
             f"Profile:\n{profile_json}\n\n"
-            "Perform a final psychographic reflection. Populate:\n"
+            "Perform a final psychographic reflection. Populate ALL of these fields:\n"
             '- "personality_archetype": one evocative label (e.g. "The Architect of Sound")\n'
             '- "life_phase_insights": list of observed life transitions\n'
-            '  (e.g. "Shift from high-energy industrial to calming ambient during 2024")\n\n'
-            "Return the full profile JSON with these two fields populated. Keep all other fields unchanged."
+            '  (e.g. "Shift from high-energy industrial to calming ambient during 2024")\n'
+            '- "musical_identity_summary": 2-3 sentences in English describing the listener\'s '
+            "musical evolution from the earliest to the most recent era. Be insightful and witty — "
+            "capture the arc, not just the genres.\n"
+            '- "behavioral_traits": object with float scores (0.0–1.0) for exactly these keys:\n'
+            '  "openness" (willingness to explore new genres), '
+            '"adventurousness" (rate of style shifts over time), '
+            '"nostalgia_bias" (weight of older eras in current listening), '
+            '"rhythmic_dependency" (how central rhythm/beat is vs. melody/texture)\n'
+            '- "discovery_style": one short archetype label describing how this listener discovers music\n'
+            '  (e.g. "The Digger", "The Loyalist", "The Trend-Hopper", "The Deep Diver")\n\n'
+            "Return the full profile JSON with all five fields populated. Keep all other fields unchanged."
         )
 
         return await self._prompt_request(prompt, self._reflect_model)

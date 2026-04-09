@@ -23,7 +23,7 @@ class GeminiSettings(BaseSettings):
     ADVISOR_MODEL: GeminiModel = GeminiModel.FLASH_2_5
     PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_3_0_PREVIEW
     PROFILER_MERGE_MODEL: GeminiModel = GeminiModel.PRO_3_1_PREVIEW
-    PROFILER_REFLECT_MODEL: GeminiModel = GeminiModel.FLASH_2_5
+    PROFILER_REFLECT_MODEL: GeminiModel = GeminiModel.PRO_3_1_PREVIEW
 
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5

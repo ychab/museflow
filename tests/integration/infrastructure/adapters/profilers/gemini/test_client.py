@@ -47,6 +47,9 @@ class TestGeminiTasteProfileAdapter:
             current_vibe={"indie rock": 0.9},
             personality_archetype=None,
             life_phase_insights=[],
+            musical_identity_summary=None,
+            behavioral_traits={},
+            discovery_style=None,
         )
 
     async def test__merge_profiles__nominal(
@@ -87,6 +90,9 @@ class TestGeminiTasteProfileAdapter:
             current_vibe={"electronic": 0.8},
             personality_archetype=None,
             life_phase_insights=[],
+            musical_identity_summary=None,
+            behavioral_traits={},
+            discovery_style=None,
         )
 
     async def test__reflect_on_profile__nominal(
@@ -115,4 +121,15 @@ class TestGeminiTasteProfileAdapter:
             current_vibe={"indie rock": 0.9},
             personality_archetype="The Introspective Wanderer",
             life_phase_insights=["Transition from high-energy rock to ambient introspection during 2022"],
+            musical_identity_summary=(
+                "From melancholic indie strumming to pulsing electronic drift, this listener has quietly shed skins "
+                "every two years. The arc is less a genre journey than a search for emotional precision."
+            ),
+            behavioral_traits={
+                "openness": 0.8,
+                "adventurousness": 0.7,
+                "nostalgia_bias": 0.4,
+                "rhythmic_dependency": 0.6,
+            },
+            discovery_style="The Deep Diver",
         )
