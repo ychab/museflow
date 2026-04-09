@@ -2,9 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## taste profile build
+## taste profile
 
 - why not giving models of the profiler on command line? After all, profiler will inherit the port so... it make sense!
+- should we keep the unique name? Or go back to user_id + profiler type as unicity?
 
 ## code design
 
