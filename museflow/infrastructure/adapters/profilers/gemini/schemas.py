@@ -62,7 +62,15 @@ GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
         "behavioral_traits": GeminiSchemaProperty(type="object"),
         "discovery_style": GeminiSchemaProperty.string(),
     },
-    required=["taste_timeline", "core_identity", "current_vibe", "life_phase_insights"],
+    required=[
+        "taste_timeline",
+        "core_identity",
+        "current_vibe",
+        "life_phase_insights",
+        "personality_archetype",
+        "behavioral_traits",
+        "musical_identity_summary",
+    ],
 )
 
 GEMINI_TASTE_PROFILE_CONFIG = GeminiGenerationConfig(
