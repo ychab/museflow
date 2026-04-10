@@ -63,6 +63,9 @@ class TasteProfileBuildException(Exception): ...
 class TasteProfileNoSeedException(Exception): ...
 
 
+class TasteProfileNotFoundException(Exception): ...
+
+
 # --- Similarity track exceptions ---
 
 
