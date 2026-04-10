@@ -1,29 +1,43 @@
 import asyncio
+import dataclasses
 import tempfile
 from contextlib import AsyncExitStack
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import EmailStr
+from pydantic import TypeAdapter
 
 import typer
+from rich.pretty import Pretty
 
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
+from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("view", help="Open a taste profile in the browser.")
+class ViewFormat(StrEnum):
+    json = "json"
+    python = "python"
+    html = "html"
+
+
+@app.command("view", help="View a taste profile.")
 def view(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     name: str = typer.Option(..., help="Profile name (unique per user)"),
+    output_format: ViewFormat = typer.Option(
+        ViewFormat.json, "--format", help="Output format: json, python, or html (browser)"
+    ),
 ) -> None:
     try:
-        filepath = asyncio.run(view_logic(email=email, name=name))
+        taste_profile = asyncio.run(view_logic(email=email, name=name))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundException as e:
@@ -32,12 +46,20 @@ def view(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    file_uri = filepath.absolute().as_uri()
-    typer.echo(f"Opening browser to show the taste profile: {file_uri}")
-    typer.launch(file_uri)
+    if output_format == ViewFormat.json:
+        json_bytes = TypeAdapter(TasteProfile).dump_json(taste_profile, indent=2)
+        console.print_json(json_bytes.decode())
+    elif output_format == ViewFormat.python:
+        console.print(Pretty(dataclasses.asdict(taste_profile)))
+    else:  # html
+        html = generate_profile_html_content(taste_profile)
+        filepath = generate_profile_html_file(html)
+        file_uri = filepath.absolute().as_uri()
+        typer.echo(f"Opening browser to show the taste profile: {file_uri}")
+        typer.launch(file_uri)
 
 
-async def view_logic(email: EmailStr, name: str) -> Path:
+async def view_logic(email: EmailStr, name: str) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
@@ -52,8 +74,7 @@ async def view_logic(email: EmailStr, name: str) -> Path:
         if not taste_profile:
             raise TasteProfileNotFoundException()
 
-        output = generate_profile_html_content(taste_profile)
-        return generate_profile_html_file(output)
+        return taste_profile
 
 
 def generate_profile_html_content(taste_profile: TasteProfile) -> str:
