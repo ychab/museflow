@@ -65,16 +65,16 @@ class BuildTasteProfileUseCase:
         logger.info("About processing psychographic reflection")
         current_profile = await self._profiler.reflect_on_profile(current_profile)
 
-        return await self._taste_profile_repository.upsert(
-            TasteProfile(
-                user_id=user.id,
-                profiler=self._profiler.profiler_type,
-                name=config.name,
-                profile=current_profile,
-                profiler_metadata=self._profiler.profiler_metadata,
-                tracks_count=len(tracks),
-                logic_version=self._profiler.logic_version,
-                created_at=datetime.now(UTC),
-                updated_at=datetime.now(UTC),
-            )
-        )
+        taste_profile = TasteProfile(
+            user_id=user.id,
+            profiler=self._profiler.profiler_type,
+            name=config.name,
+            profile=current_profile,
+            profiler_metadata=self._profiler.profiler_metadata,
+            tracks_count=len(tracks),
+            logic_version=self._profiler.logic_version,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        ).sort_timeline()
+
+        return await self._taste_profile_repository.upsert(taste_profile)

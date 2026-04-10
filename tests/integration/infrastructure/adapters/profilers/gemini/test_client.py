@@ -28,7 +28,7 @@ class TestGeminiTasteProfileAdapter:
     ) -> None:
         profile = await gemini_profiler.build_profile_segment(tracks)
 
-        assert profile == TasteProfileDataFactory.build(
+        assert profile == TasteProfileData(
             taste_timeline=[
                 {
                     "era_label": "Indie Exploration",
@@ -59,7 +59,7 @@ class TestGeminiTasteProfileAdapter:
     ) -> None:
         profile_merged = await gemini_profiler.merge_profiles(profile_data, profile_data)
 
-        assert profile_merged == TasteProfileDataFactory.build(
+        assert profile_merged == TasteProfileData(
             taste_timeline=[
                 {
                     "era_label": "Indie Exploration",
@@ -102,7 +102,7 @@ class TestGeminiTasteProfileAdapter:
     ) -> None:
         profile_reflected = await gemini_profiler.reflect_on_profile(profile_data)
 
-        assert profile_reflected == TasteProfileDataFactory.build(
+        assert profile_reflected == TasteProfileData(
             taste_timeline=[
                 {
                     "era_label": "Indie Exploration",

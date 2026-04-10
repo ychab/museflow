@@ -24,7 +24,8 @@ sorted_timeline = sorted(
 
 # where taste_profile: TasteProfile
 
-- For the command taste build at @museflow/infrastructure/entrypoints/cli/commands/taste/build.py
+- For the command taste build at @museflow/infrastructure/entrypoints/cli/commands/taste/build.py, I would like to add a command flag --models.
+  To do it, we should update the port of
 - why not giving models of the profiler on command line? After all, profiler will inherit the port so... it make sense!
 - should we keep the unique name? Or go back to user_id + profiler type as unicity?
 

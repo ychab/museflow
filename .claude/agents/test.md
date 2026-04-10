@@ -111,12 +111,15 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 | Factory type | Base class | Used for |
 |---|---|---|
 | Domain entity | `DataclassFactory[Entity]` | Unit tests |
+| TypedDict | `TypedDictFactory[TypedDict]` | Unit tests |
 | Pydantic input | `ModelFactory[InputSchema]` | Unit + integration |
 | SQLAlchemy model | `SQLAlchemyFactory[Model]` | Integration tests |
 
 - `__set_relationships__ = False` on all SQLAlchemy factories.
 - `__allow_none_optionals__ = False` on Pydantic input factories.
 - `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base model factory.
+- Chain nested TypedDict factories with `Use(ChildFactory.build)` (e.g. `TasteEra` → `TechnicalFingerprint`).
+- **Never create `_make_*` helper functions** to build test objects. Always use factories. If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
 
 ## Mocking
 

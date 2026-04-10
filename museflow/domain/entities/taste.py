@@ -1,6 +1,8 @@
+import re
 import uuid
 from dataclasses import dataclass
 from dataclasses import field
+from dataclasses import replace
 from datetime import datetime
 from typing import Any
 from typing import TypedDict
@@ -54,3 +56,17 @@ class TasteProfile:
 
     created_at: datetime
     updated_at: datetime
+
+    def sort_timeline(self) -> "TasteProfile":
+        def _key(era: TasteEra) -> str:
+            time_range = era["time_range"]
+            if "Contemporary" in time_range:
+                return "9999-99-99"
+            if "Undated" in time_range or "unknown" in time_range:
+                return "0000-00-00"
+            match = re.search(r"(\d{4}-\d{2}-\d{2})", time_range)
+            return match.group(1) if match else "0000-00-00"
+
+        sorted_timeline = sorted(self.profile["taste_timeline"], key=_key, reverse=True)
+        sorted_profile: TasteProfileData = {**self.profile, "taste_timeline": sorted_timeline}
+        return replace(self, profile=sorted_profile)

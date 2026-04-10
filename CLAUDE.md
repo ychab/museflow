@@ -260,6 +260,16 @@ class TestUserCreateUseCase:
 class UserFactory(DataclassFactory[User]):
     __model__ = User
 
+# TypedDicts — TypedDictFactory (use for TypedDict types like TechnicalFingerprint, TasteEra)
+class TechnicalFingerprintFactory(TypedDictFactory[TechnicalFingerprint]):
+    __model__ = TechnicalFingerprint
+    __set_as_default_factory_for_type__ = True
+
+class TasteEraFactory(TypedDictFactory[TasteEra]):
+    __model__ = TasteEra
+    __set_as_default_factory_for_type__ = True
+    technical_fingerprint = Use(TechnicalFingerprintFactory.build)  # chain nested TypedDicts with Use(ChildFactory.build)
+
 # Pydantic inputs — ModelFactory
 class UserCreateInputFactory(ModelFactory[UserCreateInput]):
     __model__ = UserCreateInput
@@ -275,12 +285,13 @@ class UserModelFactory(BaseModelFactory[User]):
     def hashed_password(cls) -> str:
         return get_password_hasher().hash("testtest")
 ```
-- `DataclassFactory` → domain entities | `ModelFactory` → Pydantic | `SQLAlchemyFactory` → DB models.
+- `DataclassFactory` → domain entities | `TypedDictFactory` → TypedDicts | `ModelFactory` → Pydantic | `SQLAlchemyFactory` → DB models.
 - `__set_relationships__ = False` on all SQLAlchemy factories (conflicts with `MappedAsDataclass`).
 - `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base model factory.
 - `__allow_none_optionals__ = False` on input factories when you always want values.
 - Use `@post_generated` for fields that depend on other generated fields.
 - Use `Use(faker.email)` for realistic field values.
+- **Never create `_make_*` helper functions** to build test objects. Always use factories. If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
 
 ### Assertion Style
 ```python
