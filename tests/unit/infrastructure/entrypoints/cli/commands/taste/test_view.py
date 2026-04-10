@@ -23,6 +23,11 @@ class TestTasteViewParserCommand:
             patched.return_value = Path("/tmp/fake.html")
             yield patched
 
+    @pytest.fixture(autouse=True)
+    def mock_typer_launch(self) -> Iterable[mock.Mock]:
+        with mock.patch("museflow.infrastructure.entrypoints.cli.commands.taste.view.typer.launch") as patched:
+            yield patched
+
     def test__nominal(self, runner: CliRunner) -> None:
         result = runner.invoke(
             app,
