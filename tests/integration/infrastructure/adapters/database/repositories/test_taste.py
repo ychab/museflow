@@ -77,3 +77,18 @@ class TestTasteProfileSQLRepository:
     async def test__get__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
         result = await taste_profile_repository.get(user_id=uuid.uuid4(), name="my-profile")
         assert result is None
+
+    async def test__get_latest__found(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
+        older_db = await TasteProfileModelFactory.create_async(user_id=user.id, profiler=TasteProfiler.GEMINI.value)
+        newer_db = await TasteProfileModelFactory.create_async(user_id=user.id, profiler=TasteProfiler.GEMINI.value)
+
+        result = await taste_profile_repository.get_latest(user_id=user.id, profiler=TasteProfiler.GEMINI)
+
+        assert result is not None
+        assert result.id == newer_db.id
+        assert result.created_at == newer_db.created_at
+        assert result.created_at >= older_db.created_at
+
+    async def test__get_latest__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
+        result = await taste_profile_repository.get_latest(user_id=uuid.uuid4(), profiler=TasteProfiler.GEMINI)
+        assert result is None

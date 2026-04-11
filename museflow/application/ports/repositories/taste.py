@@ -3,6 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.types import TasteProfiler
 
 
 class TasteProfileRepository(ABC):
@@ -11,3 +12,6 @@ class TasteProfileRepository(ABC):
 
     @abstractmethod
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...
+
+    @abstractmethod
+    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None: ...
