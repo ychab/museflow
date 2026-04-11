@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/models/gemini-2.5-flash:generateContent",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.system_instruction"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "discovery_strategy_expansion.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

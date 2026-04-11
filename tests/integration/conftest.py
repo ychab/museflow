@@ -29,6 +29,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
@@ -58,6 +59,7 @@ from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.utils.wiremock import WireMockContext
+from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.inputs.auth import OAuthProviderUserTokenCreateInputFactory
 from tests.unit.factories.inputs.auth import OAuthProviderUserTokenUpdateInputFactory
 from tests.unit.factories.inputs.user import UserCreateInputFactory
@@ -267,6 +269,11 @@ def auth_token_create() -> OAuthProviderUserTokenCreateInput:
 @pytest.fixture
 def auth_token_update() -> OAuthProviderUserTokenUpdateInput:
     return OAuthProviderUserTokenUpdateInputFactory.build()
+
+
+@pytest.fixture
+def taste_profile() -> TasteProfile:
+    return TasteProfileFactory.build()
 
 
 # --- Models DB factories ---

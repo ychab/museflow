@@ -49,6 +49,7 @@ class GeminiRequestContent(BaseModel):
 
 
 class GeminiGenerateContentRequest(BaseModel):
+    system_instruction: GeminiRequestContent | None = None
     contents: list[GeminiRequestContent]
     generationConfig: GeminiGenerationConfig
 

@@ -33,7 +33,8 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 def similar(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     advisor: MusicAdvisorSimilar = typer.Option(
-        default=MusicAdvisorSimilar.LASTFM, help="The advisor to discover new musics"
+        default=MusicAdvisorSimilar.LASTFM,
+        help="The advisor to discover new musics",
     ),
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     seed_top: bool | None = typer.Option(

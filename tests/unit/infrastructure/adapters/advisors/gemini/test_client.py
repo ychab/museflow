@@ -7,8 +7,11 @@ from httpx import codes
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
+from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.exceptions import SimilarTrackResponseException
+from museflow.domain.types import DiscoveryFocus
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 
@@ -144,6 +147,125 @@ class TestGeminiAdvisorAdapter:
 
         with pytest.raises(SimilarTrackResponseException):
             await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
+
+    async def test__get_discovery_strategy__nominal(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "good fit", "strategy_label": "Horizon", "recommended_tracks": [{"name": "Song A", "artists": ["Artist X"], "score": 0.9}], "search_queries": ["post-rock"], "suggested_playlist_name": "My Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        strategy = await gemini_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
+            genre="metal",
+            mood="melancholic",
+            custom_instructions="avoid pop",
+        )
+
+        assert strategy.strategy_label == "Horizon"
+        assert len(strategy.recommended_tracks) == 1
+
+    async def test__get_discovery_strategy__empty_candidates_raises(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={"candidates": []},
+        )
+
+        with pytest.raises(DiscoveryTasteStrategyException):
+            await gemini_advisor.get_discovery_strategy(
+                profile=taste_profile,
+                focus=DiscoveryFocus.EXPANSION,
+                similar_limit=5,
+            )
+
+    async def test__get_discovery_strategy__invalid_json_raises(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [{"text": '{"wrong_key": "oops"}'}],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        with pytest.raises(DiscoveryTasteStrategyException):
+            await gemini_advisor.get_discovery_strategy(
+                profile=taste_profile,
+                focus=DiscoveryFocus.EXPANSION,
+                similar_limit=5,
+            )
+
+    async def test__get_discovery_strategy__rate_limit_exhausted_raises(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+        mock_tenacity_sleep: None,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            status_code=codes.TOO_MANY_REQUESTS,
+            json={
+                "error": {
+                    "code": 429,
+                    "status": "RESOURCE_EXHAUSTED",
+                    "details": [
+                        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "3s"},
+                    ],
+                }
+            },
+            is_reusable=True,
+        )
+
+        with (
+            pytest.raises(AdvisorRateLimitExceeded) as exc_info,
+            mock.patch("asyncio.sleep", new_callable=mock.AsyncMock),
+        ):
+            await gemini_advisor.get_discovery_strategy(
+                profile=taste_profile,
+                focus=DiscoveryFocus.EXPANSION,
+                similar_limit=5,
+            )
+
+        assert "Gemini rate limit exceeded after max retries for discovery strategy" in str(exc_info.value)
 
     def test__display_name(self, gemini_advisor: GeminiAdvisorAdapter) -> None:
         assert gemini_advisor.display_name == "Gemini"
