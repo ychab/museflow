@@ -14,7 +14,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import MusicAdvisorSimilar
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -54,7 +54,7 @@ class TestDiscoverSimilarParserCommand:
                 "discover",
                 "similar",
                 "--email", "test@example.com",
-                "--advisor", MusicAdvisor.LASTFM,
+                "--advisor", MusicAdvisorSimilar.LASTFM,
                 "--provider", MusicProvider.SPOTIFY,
                 "--seed-top",
                 "--seed-saved",
@@ -107,7 +107,7 @@ class TestDiscoverSimilarParserCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
-        choices = ", ".join([f"'{advisor}'" for advisor in MusicAdvisor])
+        choices = ", ".join([f"'{advisor}'" for advisor in MusicAdvisorSimilar])
         assert f"Invalid value for '--advisor': 'foo' is not one of {choices}" in output
 
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -420,7 +420,7 @@ class TestDiscoverSimilarLogic:
         with pytest.raises(UserNotFound):
             await discover_similar_logic(
                 email,
-                advisor=MusicAdvisor.LASTFM,
+                advisor=MusicAdvisorSimilar.LASTFM,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverySimilarConfigInput(),
             )
@@ -437,7 +437,7 @@ class TestDiscoverSimilarLogic:
         with pytest.raises(ProviderAuthTokenNotFoundError):
             await discover_similar_logic(
                 user.email,
-                advisor=MusicAdvisor.LASTFM,
+                advisor=MusicAdvisorSimilar.LASTFM,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverySimilarConfigInput(),
             )

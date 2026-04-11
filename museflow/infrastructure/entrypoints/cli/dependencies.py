@@ -14,7 +14,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.services.reconciler import TrackReconciler
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import MusicAdvisorSimilar
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
@@ -118,19 +118,6 @@ async def get_gemini_taste_advisor() -> AsyncGenerator[AdvisorAgentPort]:
 
 
 @asynccontextmanager
-async def get_advisor_similar_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorSimilarPort]:
-    match advisor:
-        case MusicAdvisor.LASTFM:
-            async with get_lastfm_similar_advisor() as adapter:
-                yield adapter
-        case MusicAdvisor.GEMINI:
-            async with get_gemini_similar_advisor() as adapter:
-                yield adapter
-        case _:
-            raise ValueError(f"Unknown advisor: {advisor}")
-
-
-@asynccontextmanager
 async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
     async with GeminiTasteProfileAdapter(
         api_key=gemini_settings.API_KEY,
@@ -142,6 +129,19 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
         max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
+
+
+@asynccontextmanager
+async def get_advisor_similar_adapter(advisor: MusicAdvisorSimilar) -> AsyncGenerator[AdvisorSimilarPort]:
+    match advisor:
+        case MusicAdvisorSimilar.LASTFM:
+            async with get_lastfm_similar_advisor() as adapter:
+                yield adapter
+        case MusicAdvisorSimilar.GEMINI:
+            async with get_gemini_similar_advisor() as adapter:
+                yield adapter
+        case _:
+            raise ValueError(f"Unknown advisor: {advisor}")
 
 
 @asynccontextmanager
