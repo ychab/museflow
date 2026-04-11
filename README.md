@@ -138,7 +138,9 @@ uv run museflow spotify history --email user@example.com --directory ~/Downloads
 uv run museflow taste build --email user@example.com
 
 # 6. Discover new music and generate a playlist
-uv run museflow discover --email user@example.com --advisor gemini
+uv run museflow discover similar --email user@example.com --advisor last.fm
+# OR: Discover guided by your AI taste profile
+uv run museflow discover taste --email user@example.com
 ```
 
 Steps 3 and 4 can be run independently or combined — both populate your library for discovery.
@@ -279,30 +281,74 @@ uv run museflow taste build --email user@example.com
 
 On completion, the command prints the number of tracks processed, the profiler model and logic version, the number of musical eras detected, the personality archetype, and any life-phase insights.
 
-### Discover (`discover`)
+### Discover Similar (`discover similar`)
 
-Discovers new music for a user based on their listening history and creates a new playlist.
+Discovers new music for a user based on their library seeds and creates a new playlist.
 
 ```bash
-uv run museflow discover --email <email> [OPTIONS]
+uv run museflow discover similar --email <email> [OPTIONS]
 ```
 
 **Options:**
 
-*   `--advisor`: The music advisor to use for getting recommendations (`last.fm` or `gemini`).
+*   `--advisor`: The advisor to use for getting similar tracks (`last.fm`).
+*   `--provider`: The music provider to use (default: `spotify`).
 *   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
 *   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
 *   `--seed-genres`: A list of genres to filter on the seeds (e.g. "rock", "jazz").
-*   `--seed-order-by`: The field to order the seed tracks by (default: `created_at`).
+*   `--seed-order-by`: The field to order the seed tracks by (default: `random`).
 *   `--seed-sort-order`: The sort order for the seed tracks (default: `asc`).
-*   `--seed-limit`: The maximum number of seed tracks to use (default: `50`).
-*   `--similar-limit`: The maximum number of similar tracks to fetch for each seed (default: `5`).
-*   `--candidate-limit`: The maximum number of candidate tracks to consider for reconciliation (default: `10`).
+*   `--seed-limit`: The batch size of seed tracks per attempt (default: `20`, max: `50`).
+*   `--similar-limit`: The maximum number of similar tracks to fetch per seed (default: `5`, max: `20`).
+*   `--candidate-limit`: The maximum number of candidate tracks to search per suggestion (default: `10`, max: `20`).
+*   `--playlist-size`: Target number of tracks in the generated playlist (default: `10`, max: `30`).
+*   `--max-attempts`: Maximum number of seed batches to process before stopping (default: `5`, max: `10`).
+*   `--max-tracks-per-artist`: Maximum tracks per artist in the final playlist (default: `2`, max: `10`).
+*   `--score-band-width`: Width of advisor score bands for tiebreaking by reconciler confidence (default: `0.05`, range: `0.01–0.5`).
+*   `--dry-run`: Discover tracks without creating a playlist.
 
 Example: Discover new music using top tracks as seeds
 
 ```bash
-uv run museflow discover --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
+uv run museflow discover similar --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
+```
+
+### Discover Taste (`discover taste`)
+
+Discovers new music guided by your AI taste profile and creates a new playlist. Unlike `discover similar`, this command uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
+
+**Prerequisite:** You must have built a taste profile first (via `taste build`).
+
+```bash
+uv run museflow discover taste --email <email> [OPTIONS]
+```
+
+**Options:**
+
+*   `--advisor-agent`: The AI advisor agent to use (default: `gemini`).
+*   `--provider`: The music provider to use (default: `spotify`).
+*   `--focus`: The discovery focus strategy (default: `expansion`). Controls how the advisor interprets your taste profile to generate suggestions.
+*   `--name`: Taste profile name to use (defaults to the latest profile).
+*   `--genre`: Optional genre hint for the advisor (e.g. `"jazz"`).
+*   `--mood`: Optional mood hint for the advisor (e.g. `"melancholic"`).
+*   `--custom-instructions`: Optional freeform instructions passed to the advisor.
+*   `--similar-limit`: Number of recommended tracks to request from the advisor (default: `5`, max: `20`).
+*   `--candidate-limit`: Maximum search candidates per suggestion (default: `10`, max: `20`).
+*   `--playlist-size`: Target number of tracks in the generated playlist (default: `10`, max: `30`).
+*   `--max-tracks-per-artist`: Maximum tracks per artist in the final playlist (default: `2`, max: `10`).
+*   `--score-band-width`: Width of advisor score bands for tiebreaking by reconciler confidence (default: `0.05`, range: `0.01–0.5`).
+*   `--dry-run`: Discover tracks without creating a playlist.
+
+Example: Discover new music guided by your taste profile
+
+```bash
+uv run museflow discover taste --email user@example.com --focus expansion --playlist-size 15
+```
+
+Example: Discover jazz tracks with a melancholic mood
+
+```bash
+uv run museflow discover taste --email user@example.com --genre jazz --mood melancholic --dry-run
 ```
 
 ### Spotify Account Info (`spotify info`)

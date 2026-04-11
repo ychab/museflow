@@ -24,13 +24,13 @@ class TestDiscoverSimilarUseCase:
         self,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> DiscoverSimilarUseCase:
         return DiscoverSimilarUseCase(
             track_repository=mock_track_repository,
             provider_library=mock_provider_library,
-            advisor_client=mock_advisor_client,
+            advisor_client=mock_advisor_similar,
             track_reconciler=mock_track_reconciler,
         )
 
@@ -40,7 +40,7 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -54,8 +54,8 @@ class TestDiscoverSimilarUseCase:
             TrackSuggestedFactory.build(score=0.9),
             TrackSuggestedFactory.build(score=0.8),
         ]
-        mock_advisor_client.get_similar_tracks.return_value = tracks_suggested
-        mock_advisor_client.display_name = "Last.fm"
+        mock_advisor_similar.get_similar_tracks.return_value = tracks_suggested
+        mock_advisor_similar.display_name = "Last.fm"
 
         # Given reconciled with one reconciled track for EACH suggestion
         reconciled_tracks = TrackFactory.batch(size=len(track_seeds) * len(tracks_suggested))
@@ -78,7 +78,7 @@ class TestDiscoverSimilarUseCase:
         assert isinstance(result, DiscoverySimilarResult)
 
         # Then check similarity
-        assert mock_advisor_client.get_similar_tracks.call_count == len(track_seeds)
+        assert mock_advisor_similar.get_similar_tracks.call_count == len(track_seeds)
         for i, track_seed in enumerate(track_seeds):
             assert f"Track seed: '{track_seed}' => 2 suggestions" in caplog.text, i
 
@@ -123,11 +123,11 @@ class TestDiscoverSimilarUseCase:
         user: User,
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
-        mock_advisor_client.get_similar_tracks.return_value = []
+        mock_advisor_similar.get_similar_tracks.return_value = []
 
         with caplog.at_level(logging.DEBUG), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
@@ -139,11 +139,11 @@ class TestDiscoverSimilarUseCase:
         user: User,
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
-        mock_advisor_client.get_similar_tracks.side_effect = SimilarTrackResponseException("Boom")
+        mock_advisor_similar.get_similar_tracks.side_effect = SimilarTrackResponseException("Boom")
 
         with caplog.at_level(logging.ERROR), pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(user=user, config=DiscoverySimilarConfigInput(max_attempts=1))
@@ -155,14 +155,14 @@ class TestDiscoverSimilarUseCase:
         user: User,
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         track_suggested = TrackSuggestedFactory.build()
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
-        mock_advisor_client.get_similar_tracks.return_value = [track_suggested]
+        mock_advisor_similar.get_similar_tracks.return_value = [track_suggested]
         mock_provider_library.search_tracks.return_value = [TrackFactory.build()]
         mock_track_reconciler.reconcile.return_value = None
 
@@ -177,13 +177,13 @@ class TestDiscoverSimilarUseCase:
         user: User,
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
-        mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build()]
+        mock_advisor_similar.get_similar_tracks.return_value = [TrackSuggestedFactory.build()]
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -206,12 +206,12 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         # Given: playlist_size=2, each attempt contributes 1 new track
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
-        mock_advisor_client.get_similar_tracks.side_effect = [
+        mock_advisor_similar.get_similar_tracks.side_effect = [
             [TrackSuggestedFactory.build(score=0.9)],
             [TrackSuggestedFactory.build(score=0.8)],
         ]
@@ -249,13 +249,13 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Given: playlist_size=5 but only 2 tracks total across max_attempts=2
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
-        mock_advisor_client.get_similar_tracks.side_effect = [
+        mock_advisor_similar.get_similar_tracks.side_effect = [
             [TrackSuggestedFactory.build(score=0.9)],
             [TrackSuggestedFactory.build(score=0.8)],
         ]
@@ -295,13 +295,13 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Given: DB runs dry on attempt 2
         mock_track_repository.get_list.side_effect = [[TrackFactory.build()], []]
-        mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
+        mock_advisor_similar.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
 
         track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [track]
@@ -338,12 +338,12 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         # Given: same track suggested in both attempts
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
-        mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
+        mock_advisor_similar.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
 
         track_1 = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [track_1]
@@ -377,7 +377,7 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         # Given: 3 tracks found but playlist_size=2 → lowest score trimmed
@@ -388,7 +388,7 @@ class TestDiscoverSimilarUseCase:
             TrackSuggestedFactory.build(name="Mid", score=0.5),
             TrackSuggestedFactory.build(name="Low", score=0.1),
         ]
-        mock_advisor_client.get_similar_tracks.return_value = suggestions
+        mock_advisor_similar.get_similar_tracks.return_value = suggestions
 
         reconciled = {s.name: TrackFactory.build(name=s.name) for s in suggestions}
         mock_provider_library.search_tracks.side_effect = lambda track, **kwargs: [reconciled[track]]
@@ -425,7 +425,7 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         # Given: 3 tracks from artist A (scores 0.9, 0.8, 0.7) + 1 from artist B (score 0.6)
@@ -440,7 +440,7 @@ class TestDiscoverSimilarUseCase:
             TrackSuggestedFactory.build(name="A3", score=0.7),
             TrackSuggestedFactory.build(name="B1", score=0.6),
         ]
-        mock_advisor_client.get_similar_tracks.return_value = suggestions
+        mock_advisor_similar.get_similar_tracks.return_value = suggestions
 
         reconciled = {
             "A1": TrackFactory.build(name="A1", artists=[artist_a]),
@@ -482,12 +482,12 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_track_repository.get_list.return_value = [TrackFactory.build()]
-        mock_advisor_client.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
+        mock_advisor_similar.get_similar_tracks.return_value = [TrackSuggestedFactory.build(score=0.9)]
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -515,7 +515,7 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         # Given one seed
@@ -527,8 +527,8 @@ class TestDiscoverSimilarUseCase:
             TrackSuggestedFactory.build(name="Zero", score=0.0),
             TrackSuggestedFactory.build(name="High", score=0.9),
         ]
-        mock_advisor_client.get_similar_tracks.return_value = suggestions
-        mock_advisor_client.display_name = "Last.fm"
+        mock_advisor_similar.get_similar_tracks.return_value = suggestions
+        mock_advisor_similar.display_name = "Last.fm"
 
         # Given a reconciled track for each track suggested
         reconciled_tracks = {t.name: TrackFactory.build(name=t.name) for t in suggestions}
@@ -563,7 +563,7 @@ class TestDiscoverSimilarUseCase:
         use_case: DiscoverSimilarUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_client: mock.AsyncMock,
+        mock_advisor_similar: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
         """Within the same advisor score band, the higher reconciler score wins."""
@@ -573,7 +573,7 @@ class TestDiscoverSimilarUseCase:
         weak_reconciler_track = TrackFactory.build(name="WeakReconciler")
         strong_reconciler_track = TrackFactory.build(name="StrongReconciler")
 
-        mock_advisor_client.get_similar_tracks.return_value = [
+        mock_advisor_similar.get_similar_tracks.return_value = [
             TrackSuggestedFactory.build(score=0.89),  # higher advisor, weak reconciler
             TrackSuggestedFactory.build(score=0.87),  # lower advisor, strong reconciler
         ]
