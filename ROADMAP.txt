@@ -4,29 +4,11 @@ This quick and dirty document just list the roadmap tasks.
 
 ## taste profile
 
-- order timeline before saving it into the DB. The default function for gemini was:
-
-def get_sort_date(era: dict) -> str:
-    """Extracts a sortable date string from the time_range."""
-    time_range = era.get("time_range", "")
-    if "Contemporary" in time_range or "Undated" in time_range or "unknown" in time_range:
-        return "9999-99-99"  # Force to the top for 'recent first'
-
-    # Find the first date-like pattern YYYY-MM-DD
-    match = re.search(r"(\d{4}-\d{2}-\d{2})", time_range)
-    return match.group(1) if match else "0000-00-00"
-
-sorted_timeline = sorted(
-        taste_profile.profile['taste_timeline'],
-        key=get_sort_date,
-        reverse=True
-    )
-
-# where taste_profile: TasteProfile
-
 - For the command taste build at @museflow/infrastructure/entrypoints/cli/commands/taste/build.py, I would like to add a command flag --models.
-  To do it, we should update the port of
-- why not giving models of the profiler on command line? After all, profiler will inherit the port so... it make sense!
+  To do it, we should update the port of the three methods to accept a "models": list[str] paramter. Then, the only one adapter gemini
+  could try to match it internally and if supported, then it to the request. In that case, we should update the metadata... looks like
+  an inconsistency here.
+
 - should we keep the unique name? Or go back to user_id + profiler type as unicity?
 
 ## code design

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
@@ -83,7 +83,7 @@ async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyO
 
 
 @asynccontextmanager
-async def get_lastfm_advisor() -> AsyncGenerator[AdvisorClientPort]:
+async def get_lastfm_similar_advisor() -> AsyncGenerator[AdvisorSimilarPort]:
     async with LastFmAdvisorAdapter(
         client_api_key=lastfm_settings.CLIENT_API_KEY,
         client_secret=lastfm_settings.CLIENT_SECRET,
@@ -94,7 +94,7 @@ async def get_lastfm_advisor() -> AsyncGenerator[AdvisorClientPort]:
 
 
 @asynccontextmanager
-async def get_gemini_advisor() -> AsyncGenerator[AdvisorClientPort]:
+async def get_gemini_similar_advisor() -> AsyncGenerator[AdvisorSimilarPort]:
     async with GeminiAdvisorAdapter(
         api_key=gemini_settings.API_KEY,
         model=gemini_settings.ADVISOR_MODEL,
@@ -106,13 +106,25 @@ async def get_gemini_advisor() -> AsyncGenerator[AdvisorClientPort]:
 
 
 @asynccontextmanager
-async def get_advisor_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorClientPort]:
+async def get_gemini_taste_advisor() -> AsyncGenerator[AdvisorAgentPort]:
+    async with GeminiAdvisorAdapter(
+        api_key=gemini_settings.API_KEY,
+        model=gemini_settings.ADVISOR_MODEL,
+        base_url=gemini_settings.BASE_URL,
+        timeout=gemini_settings.HTTP_TIMEOUT,
+        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
+    ) as client:
+        yield client
+
+
+@asynccontextmanager
+async def get_advisor_similar_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorSimilarPort]:
     match advisor:
         case MusicAdvisor.LASTFM:
-            async with get_lastfm_advisor() as adapter:
+            async with get_lastfm_similar_advisor() as adapter:
                 yield adapter
         case MusicAdvisor.GEMINI:
-            async with get_gemini_advisor() as adapter:
+            async with get_gemini_similar_advisor() as adapter:
                 yield adapter
         case _:
             raise ValueError(f"Unknown advisor: {advisor}")

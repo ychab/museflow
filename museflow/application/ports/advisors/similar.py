@@ -4,7 +4,7 @@ from abc import abstractmethod
 from museflow.domain.entities.music import TrackSuggested
 
 
-class AdvisorClientPort(ABC):
+class AdvisorSimilarPort(ABC):
     """Abstract port for a music advisor client.
 
     This port defines the contract for clients that interact with music advisor

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from museflow import __project_name__
 from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Playlist
@@ -57,7 +57,7 @@ class DiscoverSimilarUseCase:
         self,
         track_repository: TrackRepository,
         provider_library: ProviderLibraryPort,
-        advisor_client: AdvisorClientPort,
+        advisor_client: AdvisorSimilarPort,
         track_reconciler: TrackReconciler,
     ) -> None:
         self._track_repository = track_repository
@@ -66,7 +66,9 @@ class DiscoverSimilarUseCase:
         self._track_reconciler = track_reconciler
 
     async def create_suggestions_playlist(
-        self, user: User, config: DiscoverySimilarConfigInput
+        self,
+        user: User,
+        config: DiscoverySimilarConfigInput,
     ) -> DiscoverySimilarResult:
         """Creates a playlist of suggested tracks for a user.
 

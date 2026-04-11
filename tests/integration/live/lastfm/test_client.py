@@ -2,9 +2,9 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.domain.entities.music import TrackSuggested
-from museflow.infrastructure.entrypoints.cli.dependencies import get_lastfm_advisor
+from museflow.infrastructure.entrypoints.cli.dependencies import get_lastfm_similar_advisor
 
 
 @pytest.mark.lastfm_live
@@ -27,11 +27,11 @@ class TestLastfmAdvisorLive:
     """
 
     @pytest.fixture
-    async def lastfm_advisor_live(self) -> AsyncGenerator[AdvisorClientPort]:
-        async with get_lastfm_advisor() as client:
+    async def lastfm_advisor_live(self) -> AsyncGenerator[AdvisorSimilarPort]:
+        async with get_lastfm_similar_advisor() as client:
             yield client
 
-    async def test__get_similar_tracks(self, lastfm_advisor_live: AdvisorClientPort) -> None:
+    async def test__get_similar_tracks(self, lastfm_advisor_live: AdvisorSimilarPort) -> None:
         results: list[TrackSuggested] = await lastfm_advisor_live.get_similar_tracks(
             artist_name="Radiohead",
             track_name="Creep",
