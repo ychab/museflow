@@ -18,7 +18,7 @@ from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.discover import app
 from museflow.infrastructure.entrypoints.cli.commands.discover import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
+from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_similar_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
@@ -232,7 +232,7 @@ async def discover_similar_logic(
             oauth_client=provider_client,
         )
 
-        advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
+        advisor_similar = await stack.enter_async_context(get_advisor_similar_adapter(advisor))
         track_reconciler = get_track_reconciler()
 
         user = await user_repository.get_by_email(email)
@@ -248,7 +248,7 @@ async def discover_similar_logic(
         use_case = DiscoverSimilarUseCase(
             track_repository=track_repository,
             provider_library=provider_library,
-            advisor_client=advisor_adapter,
+            advisor_client=advisor_similar,
             track_reconciler=track_reconciler,
         )
 

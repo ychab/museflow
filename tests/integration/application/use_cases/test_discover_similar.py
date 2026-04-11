@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.use_cases.discover_similar import DiscoverSimilarUseCase
@@ -22,7 +22,7 @@ class TestDiscoverSimilarSpotifyLastFMUseCase:
         self,
         track_repository: TrackRepository,
         spotify_library: ProviderLibraryPort,
-        lastfm_advisor: AdvisorClientPort,
+        lastfm_advisor: AdvisorSimilarPort,
         track_reconciler: TrackReconciler,
     ) -> DiscoverSimilarUseCase:
         return DiscoverSimilarUseCase(
@@ -112,7 +112,7 @@ class TestDiscoverSimilarSpotifyGeminiUseCase:
         self,
         track_repository: TrackRepository,
         spotify_library: ProviderLibraryPort,
-        gemini_advisor: AdvisorClientPort,
+        gemini_advisor: AdvisorSimilarPort,
         track_reconciler: TrackReconciler,
     ) -> DiscoverSimilarUseCase:
         return DiscoverSimilarUseCase(

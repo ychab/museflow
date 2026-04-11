@@ -12,7 +12,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -203,8 +203,8 @@ def mock_advisor_client(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    client = mock.AsyncMock(spec=AdvisorClientPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_adapter", client) as mock_client:
+    client = mock.AsyncMock(spec=AdvisorSimilarPort)
+    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_similar_adapter", client) as mock_client:
         yield mock_client
 
 

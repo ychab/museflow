@@ -5,7 +5,7 @@ from pydantic import HttpUrl
 
 import pytest
 
-from museflow.application.ports.advisors.client import AdvisorClientPort
+from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
@@ -132,7 +132,7 @@ def mock_provider_library() -> mock.AsyncMock:
 
 @pytest.fixture
 def mock_advisor_client() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=AdvisorClientPort)
+    return mock.AsyncMock(spec=AdvisorSimilarPort)
 
 
 # --- Service Mocks ---
