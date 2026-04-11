@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.ports.advisors.agent import AdvisorAgentPort
 from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -14,6 +15,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.types import MusicAdvisorAgent
 from museflow.domain.types import MusicAdvisorSimilar
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TasteProfiler
@@ -35,6 +37,11 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 from museflow.infrastructure.config.settings.lastfm import lastfm_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
+
+ADVISOR_AGENT_TO_PROFILER: dict[MusicAdvisorAgent, TasteProfiler] = {
+    MusicAdvisorAgent.GEMINI: TasteProfiler.GEMINI,
+}
+
 
 # --- Security ---
 
@@ -70,16 +77,6 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
         max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
-
-
-@asynccontextmanager
-async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyOAuthAdapter]:
-    match provider:
-        case MusicProvider.SPOTIFY:
-            async with get_spotify_oauth() as client:
-                yield client
-        case _:
-            raise ValueError(f"Unknown provider: {provider}")
 
 
 @asynccontextmanager
@@ -132,6 +129,16 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
 
 
 @asynccontextmanager
+async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyOAuthAdapter]:
+    match provider:
+        case MusicProvider.SPOTIFY:
+            async with get_spotify_oauth() as client:
+                yield client
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
+
+
+@asynccontextmanager
 async def get_advisor_similar_adapter(advisor: MusicAdvisorSimilar) -> AsyncGenerator[AdvisorSimilarPort]:
     match advisor:
         case MusicAdvisorSimilar.LASTFM:
@@ -142,6 +149,16 @@ async def get_advisor_similar_adapter(advisor: MusicAdvisorSimilar) -> AsyncGene
                 yield adapter
         case _:
             raise ValueError(f"Unknown advisor: {advisor}")
+
+
+@asynccontextmanager
+async def get_advisor_agent_adapter(advisor_agent: MusicAdvisorAgent) -> AsyncGenerator[AdvisorAgentPort]:
+    match advisor_agent:
+        case MusicAdvisorAgent.GEMINI:
+            async with get_gemini_taste_advisor() as adapter:
+                yield adapter
+        case _:
+            raise ValueError(f"Unknown advisor agent: {advisor_agent}")
 
 
 @asynccontextmanager

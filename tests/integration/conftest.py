@@ -34,6 +34,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
@@ -65,6 +66,7 @@ from tests.unit.factories.inputs.auth import OAuthProviderUserTokenUpdateInputFa
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 
 
 @pytest.fixture(scope="session")
@@ -274,6 +276,14 @@ def auth_token_update() -> OAuthProviderUserTokenUpdateInput:
 @pytest.fixture
 def taste_profile() -> TasteProfile:
     return TasteProfileFactory.build()
+
+
+# --- Value objects ---
+
+
+@pytest.fixture
+def discovery_taste_strategy(request: pytest.FixtureRequest) -> DiscoveryTasteStrategy:
+    return DiscoveryTasteStrategyFactory.build(**getattr(request, "param", {}))
 
 
 # --- Models DB factories ---
