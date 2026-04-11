@@ -199,7 +199,7 @@ def mock_spotify_client(
 
 
 @pytest.fixture
-def mock_advisor_client(
+def mock_advisor_similar(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
