@@ -70,6 +70,13 @@ def taste(
         min=1,
         max=30,
     ),
+    max_attempts: int = typer.Option(
+        3,
+        "--max-attempts",
+        help="Maximum number of advisor calls before stopping",
+        min=1,
+        max=10,
+    ),
     max_tracks_per_artist: int = typer.Option(
         2,
         "--max-tracks-per-artist",
@@ -109,6 +116,7 @@ def taste(
                     candidate_limit=candidate_limit,
                     score_band_width=score_band_width,
                     playlist_size=playlist_size,
+                    max_attempts=max_attempts,
                     max_tracks_per_artist=max_tracks_per_artist,
                     dry_run=dry_run,
                 ),
@@ -125,7 +133,7 @@ def taste(
         typer.secho("No profile found. Run muse taste build --name <name> first.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except DiscoveryTrackNoNew as e:
-        typer.secho("No new tracks found", fg=typer.colors.RED, err=True)
+        typer.secho("No new tracks found after all attempts", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -139,6 +147,21 @@ def taste(
             border_style="blue",
         )
     )
+
+    # Discovery Report table
+    report_table = Table(title="Discovery Report")
+    report_table.add_column("Attempt", justify="right")
+    report_table.add_column("Suggested", justify="right")
+    report_table.add_column("Survived", justify="right")
+    report_table.add_column("New", justify="right")
+    for report in result.reports:
+        report_table.add_row(
+            str(report.attempt),
+            str(report.tracks_suggested),
+            str(report.tracks_survived),
+            str(report.tracks_new),
+        )
+    console.print(report_table)
 
     # Tracks table
     track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
@@ -180,7 +203,7 @@ async def discover_taste_logic(
         config: The configuration for the discovery process.
 
     Returns:
-        A DiscoverTasteResult with the playlist, strategy, and final tracks.
+        A DiscoverTasteResult with the playlist, strategy, reports, and final tracks.
 
     Raises:
         UserNotFound: If the user with the given email is not found.

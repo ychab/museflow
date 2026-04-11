@@ -203,6 +203,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort
         genre: str | None = None,
         mood: str | None = None,
         custom_instructions: str | None = None,
+        excluded_tracks: list[TrackSuggested] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -219,6 +220,16 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort
             DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
         }
 
+        exclusion_block = ""
+        if excluded_tracks:
+            formatted = "\n".join(f"- {t.artists[0]}: {t.name}" for t in excluded_tracks)
+            exclusion_block = (
+                "### EXCLUSION LIST (DO NOT SUGGEST THESE)\n"
+                "These tracks have already been considered in this session. "
+                "You MUST suggest DIFFERENT tracks and avoid these artists where possible:\n"
+                f"{formatted}\n\n"
+            )
+
         system_prompt = (
             "### ROLE\n"
             'You are the "MuseFlow Navigator," a world-class musicologist.\n'
@@ -227,6 +238,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort
             f"- Core Identity: {core_identity_str}\n"
             f"- Behavioral Traits: {behavioral_traits_str}\n"
             f"- Taste Timeline (oldest → newest): {timeline_summary}\n\n"
+            f"{exclusion_block}"
             "### FOCUS STRATEGIES\n"
             f"- expansion: {focus_descriptions[DiscoveryFocus.EXPANSION]}\n"
             f"- roots_revival: {focus_descriptions[DiscoveryFocus.ROOTS_REVIVAL]}\n"
@@ -234,6 +246,8 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
+            "- recommended_tracks MUST NOT appear in the Exclusion List above.\n"
+            "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
             f"- Provide {similar_limit} recommended tracks, each with a discovery score (0.0–1.0, higher = better fit).\n"
             "- Provide 2-3 specific search_queries to widen the discovery surface.\n"
             "- Keep suggested_playlist_name creative and thematic.\n"
