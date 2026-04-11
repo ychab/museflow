@@ -15,8 +15,18 @@ class MusicAdvisorSimilar(StrEnum):
     GEMINI = "gemini"
 
 
+class MusicAdvisorAgent(StrEnum):
+    GEMINI = "gemini"
+
+
 class TasteProfiler(StrEnum):
     GEMINI = "gemini"
+
+
+class DiscoveryFocus(StrEnum):
+    EXPANSION = "expansion"
+    ROOTS_REVIVAL = "roots_revival"
+    CULTURAL_BRIDGE = "cultural_bridge"
 
 
 class ArtistSource(IntFlag):

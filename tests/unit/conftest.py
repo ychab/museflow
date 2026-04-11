@@ -18,6 +18,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
@@ -31,6 +32,7 @@ from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOA
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
+from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.user import UserFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 
@@ -112,6 +114,14 @@ def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserT
     params.setdefault("user_id", user.id)
 
     return OAuthProviderUserTokenFactory.build(**params)
+
+
+@pytest.fixture
+def taste_profile(request: pytest.FixtureRequest, user: User) -> TasteProfile:
+    params = getattr(request, "param", {})
+    params.setdefault("user_id", user.id)
+
+    return TasteProfileFactory.build(**params)
 
 
 # --- Client Mocks ---

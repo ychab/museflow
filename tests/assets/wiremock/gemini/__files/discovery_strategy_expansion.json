@@ -1,0 +1,14 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"reasoning\": \"Based on your progressive metal roots and electronic explorations, I recommend expanding into post-rock and math rock territories that bridge your technical and atmospheric preferences.\", \"strategy_label\": \"Progressive Horizons\", \"recommended_tracks\": [{\"name\": \"Mi Pueblo\", \"artists\": [\"Grupo Niche\"], \"score\": 1.0}], \"search_queries\": [\"post-rock instrumental\", \"math rock progressive\"], \"suggested_playlist_name\": \"Sonic Expansion - Progressive Horizons\"}"
+          }
+        ],
+        "role": "model"
+      }
+    }
+  ]
+}
