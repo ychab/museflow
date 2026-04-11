@@ -1,6 +1,5 @@
 import logging
 import math
-from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
@@ -10,6 +9,10 @@ from museflow.application.inputs.discovery import DiscoverySimilarConfigInput
 from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.utils.discovery import TrackScored
+from museflow.application.utils.discovery import apply_artist_cap
+from museflow.application.utils.discovery import filter_known_tracks
+from museflow.application.utils.discovery import reconcile_tracks
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
@@ -18,8 +21,6 @@ from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import ScoreAdvisor
-from museflow.domain.types import ScoreReconciler
 from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
@@ -41,13 +42,6 @@ class DiscoverySimilarResult:
     playlist: Playlist | None
     reports: list[DiscoverySimilarAttemptReport]
     tracks: list[Track]
-
-
-@dataclass(frozen=True, kw_only=True)
-class TrackScored:
-    track: Track
-    advisor_score: ScoreAdvisor
-    reconciler_score: ScoreReconciler
 
 
 class DiscoverSimilarUseCase:
@@ -130,9 +124,11 @@ class DiscoverSimilarUseCase:
             logger.info(f"Suggested tracks: {len(tracks_suggested)}")
 
             logger.debug("--- Reconcile suggested tracks ---")
-            tracks_reconciled = await self._reconcile_tracks(
+            tracks_reconciled = await reconcile_tracks(
                 tracks_suggested=tracks_suggested,
                 limit=config.candidate_limit,
+                provider_library=self._provider_library,
+                track_reconciler=self._track_reconciler,
             )
             if not tracks_reconciled:
                 logger.debug(f"Attempt {attempt}: no reconciled tracks found, continuing...")
@@ -147,7 +143,11 @@ class DiscoverSimilarUseCase:
             logger.info(f"Reconciled tracks: {len(tracks_reconciled)}")
 
             logger.debug("--- Deduplicate reconciled tracks ---")
-            tracks_survived = await self._deduplicate_tracks(user=user, tracks_reconciled=tracks_reconciled)
+            tracks_survived = await filter_known_tracks(
+                user=user,
+                tracks_scored=tracks_reconciled,
+                track_repository=self._track_repository,
+            )
             logger.info(f"Survived tracks: {len(tracks_survived)}")
 
             # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
@@ -193,7 +193,7 @@ class DiscoverSimilarUseCase:
         )
 
         # Apply per-artist cap
-        tracks = self._apply_artist_cap(
+        tracks = apply_artist_cap(
             tracks=[ts.track for ts in tracks_scores],
             max_tracks_per_artist=config.max_tracks_per_artist,
         )
@@ -246,89 +246,3 @@ class DiscoverSimilarUseCase:
 
         # Re-order them by score DESC.
         return sorted(tracks_suggested, key=lambda t: t.score, reverse=True)
-
-    async def _reconcile_tracks(self, tracks_suggested: list[TrackSuggested], limit: int) -> list[TrackScored]:
-        """Reconciles suggested tracks with the provider.
-
-        Args:
-            tracks_suggested: A list of tracks suggested by the advisor.
-            limit: The maximum number of search candidates per suggestion.
-
-        Returns:
-            A list of reconciled tracks with their advisor and reconciler scores.
-        """
-        tracks_reconciled: list[TrackScored] = []
-
-        for track_suggested in tracks_suggested:
-            candidates = await self._provider_library.search_tracks(
-                track=track_suggested.name,
-                artists=track_suggested.artists,
-                page_size=limit,
-                log_enabled=False,
-            )
-
-            result = self._track_reconciler.reconcile(
-                track_suggested=track_suggested,
-                candidates=candidates,
-            )
-            if result:
-                best_match, reconciler_score = result
-                tracks_reconciled.append(
-                    TrackScored(
-                        track=best_match,
-                        advisor_score=track_suggested.score,
-                        reconciler_score=reconciler_score,
-                    )
-                )
-                logger.debug(f"Track reconciled: '{track_suggested}'")
-            else:
-                logger.debug(f"Track not reconciled: '{track_suggested}'")
-
-        return tracks_reconciled
-
-    async def _deduplicate_tracks(self, user: User, tracks_reconciled: list[TrackScored]) -> list[TrackScored]:
-        """Deduplicate tracks that are already in the user's library.
-
-        Args:
-            user: The user to check against.
-            tracks_reconciled: A list of scored tracks to filter.
-
-        Returns:
-            A list of scored tracks not in the user's library.
-        """
-        tracks_new: list[TrackScored] = []
-
-        known_identifiers = await self._track_repository.get_known_identifiers(
-            user_id=user.id,
-            isrcs=[ts.track.isrc for ts in tracks_reconciled if ts.track.isrc],
-            fingerprints=[ts.track.fingerprint for ts in tracks_reconciled],
-        )
-
-        for ts in tracks_reconciled:
-            if known_identifiers.is_known(ts.track):
-                logger.debug(f"Excluded '{ts.track}'")
-                continue
-
-            tracks_new.append(ts)
-
-        logger.debug(
-            f"Discovery:\n- {'\n- '.join([f"'{ts.track}'" for ts in tracks_new])}" if tracks_new else "Discovery: None"
-        )
-        return tracks_new
-
-    @staticmethod
-    def _apply_artist_cap(
-        tracks: list[Track],
-        max_tracks_per_artist: int,
-    ) -> list[Track]:
-        tracks_filtered: list[Track] = []
-
-        artist_counts: Counter[str] = Counter()
-        for track in tracks:
-            artist_provider_id = track.artists[0].provider_id  # Pick only the primary artist.
-
-            if artist_counts[artist_provider_id] < max_tracks_per_artist:
-                tracks_filtered.append(track)
-                artist_counts[artist_provider_id] += 1
-
-        return tracks_filtered

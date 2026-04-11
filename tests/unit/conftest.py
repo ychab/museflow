@@ -5,6 +5,7 @@ from pydantic import HttpUrl
 
 import pytest
 
+from museflow.application.ports.advisors.agent import AdvisorAgentPort
 from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -22,6 +23,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
@@ -35,6 +37,7 @@ from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.user import UserFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 
 # --- Security Mocks ---
 
@@ -124,6 +127,14 @@ def taste_profile(request: pytest.FixtureRequest, user: User) -> TasteProfile:
     return TasteProfileFactory.build(**params)
 
 
+# --- Value objects ---
+
+
+@pytest.fixture
+def discovery_taste_strategy(request: pytest.FixtureRequest) -> DiscoveryTasteStrategy:
+    return DiscoveryTasteStrategyFactory.build(**getattr(request, "param", {}))
+
+
 # --- Client Mocks ---
 
 
@@ -141,8 +152,13 @@ def mock_provider_library() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_advisor_client() -> mock.AsyncMock:
+def mock_advisor_similar() -> mock.AsyncMock:
     return mock.AsyncMock(spec=AdvisorSimilarPort)
+
+
+@pytest.fixture
+def mock_advisor_agent() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=AdvisorAgentPort)
 
 
 # --- Service Mocks ---
