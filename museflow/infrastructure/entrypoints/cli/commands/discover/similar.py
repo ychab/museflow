@@ -12,7 +12,7 @@ from museflow.application.use_cases.discover_similar import DiscoverySimilarResu
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicAdvisor
+from museflow.domain.types import MusicAdvisorSimilar
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -32,7 +32,9 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 @app.command("similar", help="Discover new tracks similar to your library seeds.")
 def similar(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    advisor: MusicAdvisor = typer.Option(default=MusicAdvisor.LASTFM, help="The advisor to discover new musics"),
+    advisor: MusicAdvisorSimilar = typer.Option(
+        default=MusicAdvisorSimilar.LASTFM, help="The advisor to discover new musics"
+    ),
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     seed_top: bool | None = typer.Option(
         None,
@@ -196,7 +198,7 @@ def similar(
 
 async def discover_similar_logic(
     email: EmailStr,
-    advisor: MusicAdvisor,
+    advisor: MusicAdvisorSimilar,
     provider: MusicProvider,
     config: DiscoverySimilarConfigInput,
 ) -> DiscoverySimilarResult:

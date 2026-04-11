@@ -10,7 +10,7 @@ class MusicProvider(StrEnum):
     SPOTIFY = "spotify"
 
 
-class MusicAdvisor(StrEnum):
+class MusicAdvisorSimilar(StrEnum):
     LASTFM = "last.fm"
     GEMINI = "gemini"
 
