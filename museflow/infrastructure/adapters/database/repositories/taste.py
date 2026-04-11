@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 
@@ -48,4 +49,16 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             TasteProfileModel.name == name,
         )
         profile_db = (await self.session.execute(stmt)).scalar_one_or_none()
+        return profile_db.to_entity() if profile_db else None
+
+    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None:
+        stmt = (
+            select(TasteProfileModel)
+            .where(TasteProfileModel.user_id == user_id)
+            .where(TasteProfileModel.profiler == profiler.value)
+            .order_by(TasteProfileModel.created_at.desc())
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        profile_db = result.scalar_one_or_none()
         return profile_db.to_entity() if profile_db else None
