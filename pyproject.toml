@@ -14,7 +14,7 @@ authors = [
 ]
 
 dependencies = [
-    "fastapi[standard]>=0.136.0",
+    "fastapi[standard]>=0.136.1",
     "starlette>=1.0.0",
     "pydantic[email]>=2.13.3",
     "pydantic-core>=2.46.3",
@@ -22,7 +22,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.49",
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
-    "typer>=0.24.1",
+    "typer>=0.25.0",
     "rich>=15.0.0",
     "httpx>=0.28.1",
     "argon2-cffi>=25.1.0",
@@ -51,10 +51,10 @@ test = [
 ]
 
 dev = [
-    "pre-commit>=4.5.1",
+    "pre-commit>=4.6.0",
     "deptry>=0.25.1",
-    "ruff>=0.15.11",
-    "mypy>=1.20.1",
+    "ruff>=0.15.12",
+    "mypy>=1.20.2",
     # Note: pydantic[dotenv] is usually redundant if you have python-dotenv or pydantic-settings,
     # but kept here to match your original request.
     # "pydantic[dotenv]>=2.13.3",
