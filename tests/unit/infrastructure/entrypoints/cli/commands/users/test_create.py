@@ -55,15 +55,23 @@ class TestUserCreateParserCommand:
         output = clean_typer_text(result.output)
         assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
 
-    @pytest.mark.parametrize("password", ["test", "".join("test" for _ in range(30))], ids=["too_short", "too_long"])
-    def test__password__invalid__prompt(self, password: str, runner: CliRunner) -> None:
+    @pytest.mark.parametrize(
+        ("password", "expected_msg"),
+        [
+            pytest.param("test", "String should have at least 8 characters", id="too_short"),
+            pytest.param(
+                "".join("test" for _ in range(30)), "String should have at most 100 characters", id="too_long"
+            ),
+        ],
+    )
+    def test__password__invalid__prompt(self, password: str, expected_msg: str, runner: CliRunner) -> None:
         result = runner.invoke(
             app,
             ["users", "create", "--email", "cli_test@example.com"],
             input=f"{password}\n{password}\n",
         )
         assert result.exit_code != 0
-        assert "Password: \nError: The value you entered was invalid." in result.stdout
+        assert f"Error: {expected_msg}" in result.stdout
 
     @pytest.mark.parametrize(
         ("password", "expected_msg"),
