@@ -39,6 +39,7 @@ class TestDiscoverTasteLogic:
         expected_result = DiscoverTasteResult(
             playlist=PlaylistFactory.build(user_id=user.id),
             strategy=discovery_taste_strategy,
+            reports=[],
             tracks=[],
         )
         mock_use_case.create_suggestions_playlist.return_value = expected_result

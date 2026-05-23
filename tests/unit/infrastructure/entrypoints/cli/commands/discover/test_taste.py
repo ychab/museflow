@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
+from museflow.application.use_cases.discover_taste import DiscoverTasteAttemptReport
 from museflow.application.use_cases.discover_taste import DiscoverTasteResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -44,7 +45,7 @@ class TestDiscoverTasteParserCommand:
         target_path = f"{TARGET_PATH}.discover_taste_logic"
         strategy = DiscoveryTasteStrategyFactory.build()
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+            patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -61,6 +62,7 @@ class TestDiscoverTasteParserCommand:
                 "--similar-limit", "10",
                 "--candidate-limit", "10",
                 "--playlist-size", "15",
+                "--max-attempts", "3",
                 "--max-tracks-per-artist", "2",
             ],
         )
@@ -202,6 +204,31 @@ class TestDiscoverTasteParserCommand:
         assert expected_msg in output
 
     @pytest.mark.parametrize(
+        ("max_attempts", "expected_msg"),
+        [
+            pytest.param(0, "Invalid value for '--max-attempts': 0 is not in the range", id="zero"),
+            pytest.param(-1, "Invalid value for '--max-attempts': -1 is not in the range", id="min_exceed"),
+            pytest.param(11, "Invalid value for '--max-attempts': 11 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--max-attempts': 'foo' is not a valid integer", id="string"),
+        ],
+    )
+    def test__max_attempts__invalid(
+        self,
+        runner: CliRunner,
+        max_attempts: Any,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["discover", "taste", "--email", "test@example.com", "--max-attempts", max_attempts],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert expected_msg in output
+
+    @pytest.mark.parametrize(
         ("max_tracks_per_artist", "expected_msg"),
         [
             pytest.param(0, "Invalid value for '--max-tracks-per-artist': 0 is not in the range", id="zero"),
@@ -315,7 +342,7 @@ class TestDiscoverTasteCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "No new tracks found" in output
+        assert "No new tracks found after all attempts" in output
 
     def test__output__exceptions(
         self,
@@ -345,6 +372,7 @@ class TestDiscoverTasteCommand:
         mock_discover_logic.return_value = DiscoverTasteResult(
             playlist=playlist,
             strategy=strategy,
+            reports=[],
             tracks=[track_with_album, track_without_album],
         )
 
@@ -361,13 +389,33 @@ class TestDiscoverTasteCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         strategy = DiscoveryTasteStrategyFactory.build()
-        mock_discover_logic.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+        mock_discover_logic.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
 
         result = runner.invoke(app, ["discover", "taste", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
         assert "Tracks discovered but playlist not created (dry-run mode)" in output
+
+    def test__output__reports_table_rendered(
+        self,
+        mock_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        strategy = DiscoveryTasteStrategyFactory.build()
+        mock_discover_logic.return_value = DiscoverTasteResult(
+            playlist=None,
+            strategy=strategy,
+            reports=[DiscoverTasteAttemptReport(attempt=1, tracks_suggested=5, tracks_survived=3, tracks_new=2)],
+            tracks=[],
+        )
+
+        result = runner.invoke(app, ["discover", "taste", "--email", "test@example.com", "--dry-run"])
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert "Discovery Report" in output
 
 
 @pytest.mark.usefixtures(

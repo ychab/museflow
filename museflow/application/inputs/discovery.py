@@ -57,6 +57,7 @@ class DiscoverTasteConfigInput:
         candidate_limit: Maximum number of search candidates per suggestion.
         score_band_width: Width of advisor score bands for tiebreaking by reconciler confidence.
         playlist_size: Target number of tracks in the generated playlist.
+        max_attempts: Maximum number of advisor calls before stopping.
         max_tracks_per_artist: Maximum tracks per artist in the final playlist.
         dry_run: If True, skip playlist creation.
     """
@@ -71,6 +72,7 @@ class DiscoverTasteConfigInput:
     candidate_limit: int = 10
     score_band_width: float = 0.05
     playlist_size: int = 30
+    max_attempts: int = 5
     max_tracks_per_artist: int = 2
 
     dry_run: bool = False

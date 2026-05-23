@@ -72,6 +72,7 @@ class TestDiscoverTasteUseCase:
         assert result.playlist is playlist
         assert result.strategy is discovery_taste_strategy
         assert len(result.tracks) == 1
+        assert len(result.reports) == 1
 
     async def test__profile_loaded_by_name(
         self,
@@ -171,7 +172,7 @@ class TestDiscoverTasteUseCase:
         with pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(
                 user=user,
-                config=DiscoverTasteConfigInput(),
+                config=DiscoverTasteConfigInput(max_attempts=1),
             )
 
     async def test__dry_run(
@@ -304,7 +305,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5),
+            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1),
         )
 
         assert len(result.tracks) == 1
@@ -345,7 +346,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, dry_run=False),
+            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1, dry_run=False),
         )
 
         assert all(t is not known_track for t in result.tracks)
@@ -387,6 +388,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(
                 playlist_size=10,
                 similar_limit=5,
+                max_attempts=1,
                 max_tracks_per_artist=2,
                 dry_run=False,
             ),
@@ -394,3 +396,158 @@ class TestDiscoverTasteUseCase:
 
         # Only 2 tracks from the same artist should survive the cap
         assert len(result.tracks) <= 2
+
+    async def test__loop_stops_early_when_playlist_size_reached(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        """Loop exits after the first attempt when playlist_size is already reached."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+
+        reconciled_track = TrackFactory.build()
+        mock_track_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=3),
+        )
+
+        mock_advisor_agent.get_discovery_strategy.assert_called_once()
+        assert len(result.reports) == 1
+
+    async def test__loop_accumulates_across_attempts(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+    ) -> None:
+        """Tracks from multiple attempts are merged into the final result."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        track_attempt_1 = TrackFactory.build(isrc="ISRC001")
+        track_attempt_2 = TrackFactory.build(isrc="ISRC002")
+
+        strategy_1 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+            search_queries=[],
+        )
+        strategy_2 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+            search_queries=[],
+        )
+        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+        mock_track_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=2, similar_limit=5, max_attempts=3),
+        )
+
+        assert mock_advisor_agent.get_discovery_strategy.call_count == 2
+        assert len(result.tracks) == 2
+        assert len(result.reports) == 2
+
+    async def test__excluded_tracks_passed_on_second_attempt(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+    ) -> None:
+        """On attempt 2+, the advisor receives the tracks suggested in previous attempts as excluded_tracks."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        suggested_track = TrackSuggestedFactory.build(score=0.9)
+        track_attempt_1 = TrackFactory.build(isrc="ISRC001")
+        track_attempt_2 = TrackFactory.build(isrc="ISRC002")
+
+        strategy_1 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[suggested_track],
+            search_queries=[],
+        )
+        strategy_2 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+            search_queries=[],
+        )
+        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+        mock_track_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=2, similar_limit=5, max_attempts=3),
+        )
+
+        # Attempt 1: excluded_tracks=None
+        first_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[0].kwargs
+        assert first_call_kwargs["excluded_tracks"] is None
+
+        # Attempt 2: excluded_tracks contains the track suggested in attempt 1
+        second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
+        assert second_call_kwargs["excluded_tracks"] == [suggested_track]
+
+    async def test__excluded_tracks_capped_at_50(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+    ) -> None:
+        """The excluded_tracks list passed to the advisor is capped at 50 entries."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        # 60 suggested tracks in attempt 1 — more than the cap of 50
+        many_suggestions = TrackSuggestedFactory.batch(60, score=0.9)
+        strategy_1 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=many_suggestions,
+            search_queries=[],
+        )
+        strategy_2 = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+            search_queries=[],
+        )
+        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+
+        # Attempt 1: all 60 suggestions fail to reconcile → 0 new tracks → loop continues
+        # Attempt 2: produces 1 new track → loop stops
+        new_track = TrackFactory.build(isrc="ISRC_NEW")
+        mock_track_reconciler.reconcile.side_effect = [None] * 60 + [(new_track, 0.9)]
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=60, max_attempts=2),
+        )
+
+        second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
+        excluded = second_call_kwargs["excluded_tracks"]
+        assert excluded is not None
+        assert len(excluded) == 50

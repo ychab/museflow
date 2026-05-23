@@ -7,6 +7,7 @@ from httpx import codes
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
@@ -184,6 +185,44 @@ class TestGeminiAdvisorAdapter:
 
         assert strategy.strategy_label == "Horizon"
         assert len(strategy.recommended_tracks) == 1
+
+    async def test__get_discovery_strategy__with_excluded_tracks_builds_exclusion_block(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "X", "recommended_tracks": [], "search_queries": [], "suggested_playlist_name": "Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        await gemini_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
+            excluded_tracks=[TrackSuggested(name="Some Song", artists=["Some Artist"], score=0.9)],
+        )
+
+        request = httpx_mock.get_requests()[0]
+        body = request.read().decode()
+        assert "EXCLUSION LIST" in body
+        assert "Some Artist" in body
+        assert "Some Song" in body
 
     async def test__get_discovery_strategy__empty_candidates_raises(
         self,
