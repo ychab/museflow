@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "museflow"
-version = "0.1.0"
+version = "1.0.0"
 description = "MuseFlow helps you discover new music by offering recommendations based on your listening history."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -64,7 +64,7 @@ dev = [
 packages = ["museflow"]
 
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "1.0.0"
 commit = true
 commit_args = "--no-verify"
 tag = true
