@@ -63,6 +63,18 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["museflow"]
 
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+commit_args = "--no-verify"
+tag = true
+tag_name = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
 [tool.ruff]
 src = ["museflow", "tests"]
 target-version = "py313"
