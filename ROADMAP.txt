@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## taste profile
 
-- discover taste - add a loop until we reach the final size just like we did for discover similar
-- discovery taste - review cli arg default
 - discovery taste - reviezw output cli command, almost silent at the beginning
 
 - For the command taste build at @museflow/infrastructure/entrypoints/cli/commands/taste/build.py, I would like to add a command flag --models.
