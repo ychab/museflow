@@ -2,20 +2,8 @@ import uuid
 
 import pytest
 
-from tests.integration.factories.models.music import ArtistModelFactory
 from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
-
-
-class TestArtistModelFactory:
-    async def test__user__default(self) -> None:
-        artist_db = await ArtistModelFactory.create_async()
-        assert artist_db.user_id is not None
-
-    async def test__user__provided(self) -> None:
-        user_db = await UserModelFactory.create_async()
-        artist_db = await ArtistModelFactory.create_async(user_id=user_db.id)
-        assert artist_db.user_id == user_db.id
 
 
 class TestTrackModelFactory:

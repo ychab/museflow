@@ -1,9 +1,6 @@
 from enum import StrEnum
 from typing import Final
-from typing import Literal
 from typing import LiteralString
-
-SpotifyTimeRange = Literal["short_term", "medium_term", "long_term"]
 
 LocalUnsupported: Final[LiteralString] = "local_unsupported"
 
@@ -49,9 +46,6 @@ class SpotifyScope(StrEnum):
     def required_scopes(cls) -> str:
         """Returns a space-separated string of required scopes for the application."""
         scopes = [
-            cls.USER_TOP_READ,
-            cls.USER_LIBRARY_READ,
-            cls.PLAYLIST_READ_PRIVATE,
             cls.PLAYLIST_MODIFY_PUBLIC,
             cls.PLAYLIST_MODIFY_PRIVATE,
         ]

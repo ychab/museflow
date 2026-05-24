@@ -12,12 +12,10 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -156,16 +154,6 @@ def mock_auth_token_repository(
 
 
 @pytest.fixture
-def mock_artist_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=ArtistRepository)
-    with mock_dependency_factory(f"{target_path}.get_artist_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
 def mock_track_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
@@ -195,16 +183,6 @@ def mock_spotify_client(
 ) -> Iterable[mock.AsyncMock]:
     client = mock.AsyncMock(spec=ProviderOAuthPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_spotify_oauth", client) as mock_client:
-        yield mock_client
-
-
-@pytest.fixture
-def mock_advisor_similar(
-    target_path: str,
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    client = mock.AsyncMock(spec=AdvisorSimilarPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_advisor_similar_adapter", client) as mock_client:
         yield mock_client
 
 

@@ -13,7 +13,7 @@ You are **read-only**: do not create or edit files. Your output is explanation, 
 museflow/
 ├── domain/          # Pure Python — entities, value objects, ports, domain services
 ├── application/     # Use cases — orchestrate domain via ports (no infrastructure)
-└── infrastructure/  # Implements ports — DB, Spotify, Last.fm, FastAPI, Typer
+└── infrastructure/  # Implements ports — DB, Spotify, Gemini, FastAPI, Typer
 ```
 
 **Dependency direction:** `infrastructure → application → domain` (domain knows nothing about the outside world).

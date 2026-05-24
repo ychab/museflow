@@ -23,15 +23,9 @@ This quick and dirty document just list the roadmap tasks.
   run. Add a discovery_skip table (user_id + fingerprint) checked during deduplication.
   CLI would need a way to mark tracks as skipped (e.g. after dry-run preview).
 
-- Gemini context enrichment: the advisor port only receives artist_name + track_name.
-  Gemini is a generative model — pass it richer context: user's top genres, a mood/energy
-  hint, and what to avoid (e.g. compilations, already-owned tracks). Would meaningfully
-  differentiate Gemini from Last.fm. Requires extending the port interface or adding an
-  optional context argument.
-
-- POSTPONE OR WON'T DO?: Cross-advisor confidence signal: run both Last.fm and Gemini in parallel per seed,
-  union the results, and boost the score of tracks that appear in both. Agreement between
-  two independent advisors is a strong quality signal. Keep single-advisor as default.
+- Gemini context enrichment: pass richer context to the advisor — user's top genres, a mood/energy
+  hint, and what to avoid (e.g. compilations, already-owned tracks). Requires extending the port
+  interface or adding an optional context argument.
 
 
 ## claude

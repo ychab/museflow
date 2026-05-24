@@ -6,7 +6,6 @@ from typing import Annotated
 from typing import Any
 
 from pydantic import AliasPath
-from pydantic import AwareDatetime
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
@@ -53,13 +52,7 @@ class SpotifyPlaylist(SpotifyItem):
     collaborative: bool
 
 
-class SpotifyArtist(SpotifyItem):
-    popularity: int = Field(..., ge=0, le=100)
-    genres: list[str]
-
-
 class SpotifyTrack(SpotifyItem):
-    popularity: int = Field(..., ge=0, le=100)
     duration_ms: NonNegativeInt
     is_local: bool
 
@@ -79,17 +72,7 @@ class SpotifyTrack(SpotifyItem):
         return data
 
 
-class SpotifySavedTrack(BaseModel):
-    added_at: AwareDatetime | None = None
-    track: SpotifyTrack
-
-
-class SpotifyPlaylistTrack(BaseModel):
-    added_at: AwareDatetime | None = None
-    item: SpotifyTrack
-
-
-class SpotifyPage[T: SpotifyItem | SpotifySavedTrack | SpotifyPlaylistTrack](BaseModel):
+class SpotifyPage[T: SpotifyItem](BaseModel):
     """Generic Pydantic model for paginated Spotify API responses.
 
     This model is used to parse responses that contain a list of items,

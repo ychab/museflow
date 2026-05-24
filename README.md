@@ -128,23 +128,17 @@ uv run museflow users create --email user@example.com
 # 2. Connect your Spotify account (requires the API server to be running)
 uv run museflow spotify connect --email user@example.com
 
-# 3. Sync your Spotify library (top artists, saved tracks, playlists)
-uv run museflow spotify sync --email user@example.com --sync-all
-
-# 4. Import your full streaming history from Spotify's data export
+# 3. Import your full streaming history from Spotify's data export
 uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData
 
-# 5. Build your personal taste profile with AI analysis
+# 4. Build your personal taste profile with AI analysis
 uv run museflow taste build --email user@example.com
 
-# 6. Discover new music and generate a playlist
-uv run museflow discover similar --email user@example.com --advisor last.fm
-# OR: Discover guided by your AI taste profile
-uv run museflow discover taste --email user@example.com
+# 5. Discover new music and generate a playlist
+uv run museflow discover --email user@example.com
 ```
 
-Steps 3 and 4 can be run independently or combined — both populate your library for discovery.
-Step 5 is optional but enriches the recommendations when using the Gemini advisor.
+Step 4 is optional but enriches the recommendations.
 
 ## CLI User Guide
 
@@ -198,36 +192,6 @@ uv run museflow spotify connect --email <email>
 *   `--timeout`: Seconds to wait for authentication (default: 60.0).
 *   `--poll-interval`: Seconds between status checks (default: 2.0).
 
-**Sync Spotify data:**
-
-Synchronize the user's items (artists, tracks) into the database.
-
-```bash
-uv run museflow spotify sync --email <email> [OPTIONS]
-```
-
-**Sync Options:**
-
-*   `--sync-all` / `--no-sync-all`: Sync all user's items.
-*   `--purge-all` / `--no-purge-all`: Purge all user's items before syncing.
-*   `--sync-artist-top`: Sync user's top artists.
-*   `--sync-track-top`: Sync user's top tracks.
-*   `--sync-track-saved`: Sync user's saved tracks.
-*   `--sync-track-playlist`: Sync user's playlist tracks.
-*   `--purge-artist-top`: Purge user's top artists.
-*   `--purge-track-top`: Purge user's top tracks.
-*   `--purge-track-saved`: Purge user's saved tracks.
-*   `--purge-track-playlist`: Purge user's playlist tracks.
-*   `--page-limit`: Items to fetch per page (default: 50).
-*   `--time-range`: Time range for top items (short_term, medium_term, long_term).
-*   `--batch-size`: Number of items to bulk upsert (default: 300).
-
-Example: Sync everything for a user
-
-```bash
-uv run museflow spotify sync --email user@example.com --sync-all
-```
-
 **Import streaming history:**
 
 Imports a user's extended streaming history from the JSON files exported via Spotify's [privacy data request](https://www.spotify.com/account/privacy/). Parses all JSON files in the given directory, deduplicates track IDs, fetches unknown tracks from Spotify, and upserts them into the database.
@@ -262,7 +226,7 @@ Build and manage your personal taste profile using AI analysis of your library.
 
 Analyzes your imported library tracks with Gemini AI to generate a master taste profile — including era breakdowns, personality archetype, and life-phase insights.
 
-**Prerequisite:** You must have imported your Spotify library first (via `spotify sync` or `spotify history`).
+**Prerequisite:** You must have imported your streaming history first (via `spotify history`).
 
 ```bash
 uv run museflow taste build --email <email> [OPTIONS]
@@ -281,46 +245,14 @@ uv run museflow taste build --email user@example.com
 
 On completion, the command prints the number of tracks processed, the profiler model and logic version, the number of musical eras detected, the personality archetype, and any life-phase insights.
 
-### Discover Similar (`discover similar`)
+### Discover (`discover`)
 
-Discovers new music for a user based on their library seeds and creates a new playlist.
-
-```bash
-uv run museflow discover similar --email <email> [OPTIONS]
-```
-
-**Options:**
-
-*   `--advisor`: The advisor to use for getting similar tracks (`last.fm`).
-*   `--provider`: The music provider to use (default: `spotify`).
-*   `--seed-top` / `--no-seed-top`: Use the user's top tracks as seeds for discovery.
-*   `--seed-saved` / `--no-seed-saved`: Use the user's saved tracks as seeds for discovery.
-*   `--seed-genres`: A list of genres to filter on the seeds (e.g. "rock", "jazz").
-*   `--seed-order-by`: The field to order the seed tracks by (default: `random`).
-*   `--seed-sort-order`: The sort order for the seed tracks (default: `asc`).
-*   `--seed-limit`: The batch size of seed tracks per attempt (default: `20`, max: `50`).
-*   `--similar-limit`: The maximum number of similar tracks to fetch per seed (default: `5`, max: `20`).
-*   `--candidate-limit`: The maximum number of candidate tracks to search per suggestion (default: `10`, max: `20`).
-*   `--playlist-size`: Target number of tracks in the generated playlist (default: `10`, max: `30`).
-*   `--max-attempts`: Maximum number of seed batches to process before stopping (default: `5`, max: `10`).
-*   `--max-tracks-per-artist`: Maximum tracks per artist in the final playlist (default: `2`, max: `10`).
-*   `--score-band-width`: Width of advisor score bands for tiebreaking by reconciler confidence (default: `0.05`, range: `0.01–0.5`).
-*   `--dry-run`: Discover tracks without creating a playlist.
-
-Example: Discover new music using top tracks as seeds
-
-```bash
-uv run museflow discover similar --email user@example.com --advisor last.fm --seed-top --seed-limit 10 --similar-limit 5
-```
-
-### Discover Taste (`discover taste`)
-
-Discovers new music guided by your AI taste profile and creates a new playlist. Unlike `discover similar`, this command uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
+Discovers new music guided by your AI taste profile and creates a new playlist. Uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
 
 **Prerequisite:** You must have built a taste profile first (via `taste build`).
 
 ```bash
-uv run museflow discover taste --email <email> [OPTIONS]
+uv run museflow discover --email <email> [OPTIONS]
 ```
 
 **Options:**
@@ -342,24 +274,23 @@ uv run museflow discover taste --email <email> [OPTIONS]
 Example: Discover new music guided by your taste profile
 
 ```bash
-uv run museflow discover taste --email user@example.com --focus expansion --playlist-size 15
+uv run museflow discover --email user@example.com --focus expansion --playlist-size 15
 ```
 
 Example: Discover jazz tracks with a melancholic mood
 
 ```bash
-uv run museflow discover taste --email user@example.com --genre jazz --mood melancholic --dry-run
+uv run museflow discover --email user@example.com --genre jazz --mood melancholic --dry-run
 ```
 
 ### Spotify Account Info (`spotify info`)
 
-Displays diagnostic information about a user's Spotify account: available genres (derived from their library) and the current OAuth token.
+Displays diagnostic information about a user's Spotify account.
 
 ```bash
 uv run museflow spotify info --email <email> [OPTIONS]
 ```
 
-*   `--genres` / `--no-genre`: Display the list of genres available in the user's library (default: on).
 *   `--token` / `--no-token`: Display the current Spotify OAuth token (default: on).
 
 ## Development

@@ -15,7 +15,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import StreamingHistoryInvalidFormat
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,6 @@ class ImportStreamingHistoryUseCase:
             tracks_purged = await self._track_repository.purge(
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
-                sources=TrackSource.HISTORY,
             )
             logger.info("History tracks purged.\n")
 

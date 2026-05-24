@@ -74,7 +74,7 @@ up-db:  ## Start database container only
 	docker compose up --detach --wait db
 
 up-wiremock:  ## Start wiremock containers only
-	docker compose up --detach --wait wiremock-spotify wiremock-lastfm wiremock-gemini
+	docker compose up --detach --wait wiremock-spotify wiremock-gemini
 
 up-test: up-db up-wiremock  ## Start DB and Wiremock containers
 

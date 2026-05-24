@@ -16,21 +16,16 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.advisors.agent import AdvisorAgentPort
-from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
-from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.utils import taste as taste_utils
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.mappers import to_discovery_strategy
-from museflow.infrastructure.adapters.advisors.gemini.mappers import to_track_suggested
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GEMINI_DISCOVERY_STRATEGY_CONFIG
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GEMINI_TRACK_SUGGESTIONS_CONFIG
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiDiscoveryStrategyContent
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiSuggestedTracksContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
@@ -57,11 +52,11 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort):
+class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
     """Adapter for the Google Gemini API.
 
-    This class implements the `AdvisorClientPort` and provides methods to interact
-    with the Gemini generative language API to get similar track suggestions. It
+    This class implements the `AdvisorAgentPort` and provides methods to interact
+    with the Gemini generative language API to get AI-driven discovery strategies. It
     includes retry logic for transient network errors and specific HTTP status codes
     via `HttpClientMixin`.
     """
@@ -145,55 +140,6 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorSimilarPort, AdvisorAgentPort
             return {}
 
         return response.json()
-
-    async def get_similar_tracks(self, artist_name: str, track_name: str, limit: int = 5) -> list[TrackSuggested]:
-        request = GeminiGenerateContentRequest(
-            contents=[
-                GeminiRequestContent(
-                    parts=[
-                        GeminiRequestPart(
-                            text=(
-                                f"You are a music recommendation engine. "
-                                f'Suggest {limit} tracks similar to "{track_name}" by "{artist_name}" '
-                                f"based on genre, mood, and musical style. "
-                                f"Return diverse suggestions from different artists. "
-                                f"Do not include the seed track itself. "
-                                f"For each track, assign a similarity score between 0.0 and 1.0 "
-                                f"where 1.0 means nearly identical style."
-                            )
-                        )
-                    ]
-                )
-            ],
-            generationConfig=GEMINI_TRACK_SUGGESTIONS_CONFIG,
-        )
-
-        try:
-            response_data = await self.make_api_call(
-                method="POST",
-                endpoint=f"/models/{self._model}:generateContent",
-                headers={"x-goog-api-key": self._api_key},
-                json_data=request.model_dump(exclude_none=True),
-            )
-        except TryAgain as e:
-            raise AdvisorRateLimitExceeded(
-                f"Gemini rate limit exceeded after max retries for '{track_name}' by '{artist_name}'"
-            ) from e
-
-        envelope = GeminiResponse.model_validate(response_data)
-
-        if not envelope.candidates:
-            return []
-
-        raw_text = envelope.candidates[0].content.parts[0].text
-        try:
-            inner = GeminiSuggestedTracksContent.model_validate(json.loads(raw_text))
-        except (ValidationError, ValueError) as e:
-            raise SimilarTrackResponseException(
-                f"Invalid Gemini response for artist: {artist_name} and track: {track_name}",
-            ) from e
-
-        return [to_track_suggested(track) for track in inner.tracks]
 
     async def get_discovery_strategy(
         self,

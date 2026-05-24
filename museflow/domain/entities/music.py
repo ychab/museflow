@@ -5,11 +5,8 @@ from dataclasses import field
 from datetime import datetime
 
 from museflow.domain.types import AlbumType
-from museflow.domain.types import ArtistSource
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
-from museflow.domain.utils.text import unidecode_lower_text
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -21,25 +18,6 @@ class BaseProviderEntity(ABC):
 
     provider: MusicProvider = MusicProvider.SPOTIFY
     provider_id: str
-
-
-@dataclass(frozen=True, kw_only=True)
-class BaseMediaItem(BaseProviderEntity):
-    popularity: int | None = None
-    genres: list[str] = field(default_factory=list)
-    top_position: int | None = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "genres", [unidecode_lower_text(g) for g in self.genres])
-
-
-@dataclass(frozen=True, kw_only=True)
-class Artist(BaseMediaItem):
-    sources: ArtistSource = ArtistSource(0)
-
-    @property
-    def is_top(self) -> bool:
-        return ArtistSource.TOP in self.sources
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,11 +49,9 @@ class Album:
 
 
 @dataclass(frozen=True, kw_only=True)
-class Track(BaseMediaItem):
+class Track(BaseProviderEntity):
     artists: list[TrackArtist] = field(default_factory=list)
     album: Album | None = None
-
-    sources: TrackSource
 
     isrc: str | None = None
     fingerprint: str = ""
@@ -83,14 +59,11 @@ class Track(BaseMediaItem):
     duration_ms: int
 
     played_at: datetime | None = None
-    added_at: datetime | None = None
 
     def __str__(self) -> str:
         return f"{', '.join([str(artist) for artist in self.artists])} - {self.name}".replace("'", "\\'")
 
     def __post_init__(self) -> None:
-        super().__post_init__()
-
         if not self.name:
             raise ValueError("Track.name must not be empty")
         if not self.provider_id:
@@ -104,22 +77,6 @@ class Track(BaseMediaItem):
                 artist_names=[artist.name for artist in self.artists],
             )
             object.__setattr__(self, "fingerprint", fingerprint_val)
-
-    @property
-    def is_top(self) -> bool:
-        return TrackSource.TOP in self.sources
-
-    @property
-    def is_saved(self) -> bool:
-        return TrackSource.SAVED in self.sources
-
-    @property
-    def is_playlist(self) -> bool:
-        return TrackSource.PLAYLIST in self.sources
-
-    @property
-    def is_history(self) -> bool:
-        return TrackSource.HISTORY in self.sources
 
 
 @dataclass(frozen=True, kw_only=True)

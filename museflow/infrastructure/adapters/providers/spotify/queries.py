@@ -8,7 +8,6 @@ class SpotifySearchTrackQuery(BaseModel):
 
     track: str = Field(min_length=1)
     artists: list[str] = Field(default_factory=list)
-    genres: list[str] = Field(default_factory=list)
     is_new: bool = False
     is_underground: bool = False
     isrc: str | None = None
@@ -30,9 +29,6 @@ class SpotifySearchTrackQuery(BaseModel):
 
         if artist_part := self._build_multiple_params("artist", self.artists):
             parts.append(artist_part)
-
-        if genre_part := self._build_multiple_params("genre", self.genres):
-            parts.append(genre_part)
 
         if self.is_new:
             parts.append("tag:new")

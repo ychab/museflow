@@ -2,9 +2,10 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from museflow.application.ports.advisors.similar import AdvisorSimilarPort
-from museflow.domain.entities.music import TrackSuggested
-from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_similar_advisor
+from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.types import DiscoveryFocus
+from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_taste_advisor
 
 
 @pytest.mark.gemini_live
@@ -27,18 +28,19 @@ class TestGeminiAdvisorLive:
     """
 
     @pytest.fixture
-    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorSimilarPort]:
-        async with get_gemini_similar_advisor() as client:
+    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorAgentPort]:
+        async with get_gemini_taste_advisor() as client:
             yield client
 
-    async def test__get_similar_tracks(self, gemini_advisor_live: AdvisorSimilarPort) -> None:
-        results: list[TrackSuggested] = await gemini_advisor_live.get_similar_tracks(
-            artist_name="Radiohead",
-            track_name="Creep",
-            limit=5,
+    async def test__get_discovery_strategy(
+        self,
+        gemini_advisor_live: AdvisorAgentPort,
+        taste_profile: TasteProfile,
+    ) -> None:
+        strategy = await gemini_advisor_live.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
         )
-        assert len(results) > 0
-        for track in results:
-            assert track.name
-            assert len(track.artists) > 0
-            assert 0.0 <= track.score <= 1.0
+        assert strategy.strategy_label
+        assert len(strategy.recommended_tracks) > 0

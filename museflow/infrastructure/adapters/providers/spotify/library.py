@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -10,30 +9,19 @@ from museflow import __project_name__
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import Artist
-from museflow.domain.entities.music import BaseMediaItem
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderPageValidationError
-from museflow.domain.types import AlbumType
-from museflow.domain.types import ArtistSource
-from museflow.domain.types import TrackSource
-from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_artist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchTrackQuery
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyArtist
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyItem
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylistTrack
-from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifySavedTrack
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
-from museflow.infrastructure.adapters.providers.spotify.types import SpotifyTimeRange
 from museflow.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
@@ -73,11 +61,10 @@ class SpotifyLibraryFactory:
 
 
 class SpotifyLibraryAdapter(ProviderLibraryPort):
-    """Adapter for interacting with the Spotify Web API to retrieve library data.
+    """Adapter for interacting with the Spotify Web API.
 
-    This class implements the `ProviderLibraryPort` interface, providing methods
-    to fetch top artists, top tracks, saved tracks, and playlist tracks from
-    Spotify. It handles pagination and concurrent fetching where appropriate.
+    Implements `ProviderLibraryPort` for track search, bulk track fetching,
+    and playlist creation.
     """
 
     def __init__(
@@ -94,97 +81,10 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Public API
     # -------------------------------------------------------------------------
 
-    async def get_top_artists(
-        self,
-        page_size: int = 50,
-        max_pages: int | None = None,
-        time_range: SpotifyTimeRange | str | None = "long_term",
-    ) -> list[Artist]:
-        return await self._fetch_pages(
-            endpoint="/me/top/artists",
-            page_model=SpotifyPage[SpotifyArtist],
-            page_processor=self._extract_top_artists,
-            params={"time_range": time_range},
-            page_size=page_size,
-            max_pages=max_pages,
-            log_prefix="[TopArtists]",
-        )
-
-    async def get_top_tracks(
-        self,
-        page_size: int = 50,
-        max_pages: int | None = None,
-        time_range: SpotifyTimeRange | str | None = "long_term",
-    ) -> list[Track]:
-        return await self._fetch_pages(
-            endpoint="/me/top/tracks",
-            page_model=SpotifyPage[SpotifyTrack],
-            page_processor=self._extract_top_tracks,
-            params={"time_range": time_range},
-            page_size=page_size,
-            max_pages=max_pages,
-            log_prefix="[TopTracks]",
-        )
-
-    async def get_saved_tracks(self, page_size: int = 50, max_pages: int | None = None) -> list[Track]:
-        return await self._fetch_pages(
-            endpoint="/me/tracks",
-            page_model=SpotifyPage[SpotifySavedTrack],
-            page_processor=self._extract_saved_tracks,
-            page_size=page_size,
-            max_pages=max_pages,
-            log_prefix="[SavedTracks]",
-        )
-
-    async def get_playlist_tracks(self, page_size: int = 50, max_pages: int | None = None) -> list[Track]:
-        """Retrieves tracks from all of the user's playlists.
-
-        This method first fetches all playlists and then fetches the tracks for
-        each playlist concurrently, respecting the `max_concurrency` limit.
-        """
-        playlists = await self._fetch_pages(
-            endpoint="/me/playlists",
-            page_model=SpotifyPage[SpotifyPlaylist],
-            page_processor=self._extract_playlists,
-            page_size=page_size,
-            max_pages=max_pages,
-            log_prefix="[Playlists]",
-        )
-        logger.info(f"Found {len(playlists)} playlists. Fetching tracks...")
-
-        # Use a Semaphore to limit concurrent playlist fetching to avoid rate limits and overwhelming resources.
-        semaphore = asyncio.Semaphore(self.max_concurrency)
-
-        async def _fetch_with_semaphore(playlist: SpotifyPlaylist) -> list[Track]:
-            async with semaphore:
-                return await self._fetch_playlist_tracks(playlist, page_size, max_pages)
-
-        # Fetch in parallel all playlist's tracks with a semaphore.
-        async with asyncio.TaskGroup() as tg:
-            tasks = [tg.create_task(_fetch_with_semaphore(playlist)) for playlist in playlists]
-
-        # Gather all tracks first.
-        tracks = [track for task in tasks for track in task.result()]
-
-        # Deduplicate by fingerprint, preferring album version over single/EP/compilation.
-        # Sort worst→best so last-wins dict comprehension retains the highest-priority version.
-        return list(
-            {
-                t.fingerprint: t
-                for t in sorted(
-                    tracks,
-                    key=lambda t: (
-                        t.album.album_type.priority if t.album and t.album.album_type else AlbumType.UNKNOWN.priority
-                    ),
-                    reverse=True,
-                )
-            }.values()
-        )
-
     async def get_track_by_id(self, track_id: str) -> Track:
         data = await self._execute_request(method="GET", endpoint=f"/tracks/{track_id}")
         spotify_track = SpotifyTrack.model_validate(data)
-        return to_domain_track(spotify_track, user_id=self.user.id, sources=TrackSource.HISTORY)
+        return to_domain_track(spotify_track, user_id=self.user.id)
 
     async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
         tracks: list[Track] = []
@@ -208,13 +108,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 logger.debug(f"Skipping invalid track {item.get('id')} with error: {e}")
                 continue
 
-            tracks.append(
-                to_domain_track(
-                    spotify_track=spotify_track,
-                    user_id=self.user.id,
-                    sources=TrackSource.HISTORY,
-                )
-            )
+            tracks.append(to_domain_track(spotify_track=spotify_track, user_id=self.user.id))
 
         return tracks
 
@@ -222,7 +116,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         self,
         track: str,
         artists: list[str] | None = None,
-        genres: list[str] | None = None,
         is_new: bool = False,
         is_underground: bool = False,
         isrc: str | None = None,
@@ -233,7 +126,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         query_builder = SpotifySearchTrackQuery(
             track=track,
             artists=artists or [],
-            genres=genres or [],
             is_new=is_new,
             is_underground=is_underground,
             isrc=isrc,
@@ -284,45 +176,11 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Core Logic
     # -------------------------------------------------------------------------
 
-    async def _fetch_playlist_tracks(
-        self,
-        playlist: SpotifyPlaylist,
-        page_size: int,
-        max_pages: int | None = None,
-    ) -> list[Track]:
-        tracks: list[Track] = []
-
-        try:
-            tracks = await self._fetch_pages(
-                endpoint=f"/playlists/{playlist.id}/items",
-                page_model=SpotifyPage[SpotifyPlaylistTrack],
-                page_processor=self._extract_playlist_tracks,
-                params={
-                    "fields": "total,limit,offset,items(added_at,item(id,name,href,popularity,duration_ms,is_local,artists(id,name),album(id,name,album_type),external_ids(isrc)))",
-                    "additional_types": "track",
-                },
-                page_size=page_size,
-                max_pages=max_pages,
-                log_prefix=f"[PlaylistTracks({playlist.name})]",
-            )
-        except ProviderPageValidationError as e:
-            # Some playlist pages can return invalid data, like missing ID's due to local files.
-            # Anyway, we don't want to break the entire loop of playlists so we catch it here.
-            logger.exception(
-                f"Skip playlist {playlist.name.strip()} with error: {e}",
-                extra={"playlist_name": playlist.name.strip()},
-            )
-
-        return tracks
-
-    async def _fetch_pages[
-        SpotifyItemType: SpotifyItem | SpotifySavedTrack | SpotifyPlaylistTrack,
-        MediaItemType: BaseMediaItem | SpotifyPlaylist,
-    ](
+    async def _fetch_pages(
         self,
         endpoint: str,
-        page_model: type[SpotifyPage[SpotifyItemType]],
-        page_processor: Callable[[SpotifyPage[SpotifyItemType], int], list[MediaItemType]],
+        page_model: type[SpotifyPage[SpotifyTrack]],
+        page_processor: Callable[[SpotifyPage[SpotifyTrack], int], list[Track]],
         method: str = "GET",
         params: dict[str, Any] | None = None,
         offset: int = 0,
@@ -331,12 +189,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         log_enabled: bool = True,
         log_prefix: str = "",
         response_key: str | None = None,
-    ) -> list[MediaItemType]:
+    ) -> list[Track]:
         """
         Generic method to fetch paginated resources from Spotify.
         Iterates through pages until all items are retrieved or the page_size is reached.
         """
-        items: list[MediaItemType] = []
+        items: list[Track] = []
         pages_count = 0
 
         if log_enabled:
@@ -401,33 +259,5 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Extractors
     # -------------------------------------------------------------------------
 
-    def _extract_playlists(self, page: SpotifyPage[SpotifyPlaylist], *_: Any) -> list[SpotifyPlaylist]:
-        return list(page.items)
-
-    def _extract_top_artists(self, page: SpotifyPage[SpotifyArtist], offset: int) -> list[Artist]:
-        return [
-            to_domain_artist(item, user_id=self.user.id, sources=ArtistSource.TOP, top_position=offset + i + 1)
-            for i, item in enumerate(page.items)
-        ]
-
-    def _extract_top_tracks(self, page: SpotifyPage[SpotifyTrack], offset: int) -> list[Track]:
-        return [
-            to_domain_track(item, user_id=self.user.id, sources=TrackSource.TOP, top_position=offset + i + 1)
-            for i, item in enumerate(page.items)
-        ]
-
-    def _extract_saved_tracks(self, page: SpotifyPage[SpotifySavedTrack], *_: Any) -> list[Track]:
-        return [
-            to_domain_track(item.track, user_id=self.user.id, sources=TrackSource.SAVED, added_at=item.added_at)
-            for item in page.items
-        ]
-
-    def _extract_playlist_tracks(self, page: SpotifyPage[SpotifyPlaylistTrack], *_: Any) -> list[Track]:
-        return [
-            to_domain_track(item.item, user_id=self.user.id, sources=TrackSource.PLAYLIST, added_at=item.added_at)
-            for item in page.items
-            if item.item
-        ]
-
     def _extract_search_tracks(self, page: SpotifyPage[SpotifyTrack], *_: Any) -> list[Track]:
-        return [to_domain_track(item, user_id=self.user.id, sources=TrackSource.SEARCH) for item in page.items if item]
+        return [to_domain_track(item, user_id=self.user.id) for item in page.items if item]

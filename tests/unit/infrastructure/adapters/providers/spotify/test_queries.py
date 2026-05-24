@@ -45,26 +45,10 @@ class TestSpotifySearchTrackQuery:
         ).get_query()
         assert '(artist:"Artist 1" OR artist:"Artist 2" OR artist:"Artist 3")' in q
 
-    def test__field__genres__single(self) -> None:
-        q = SpotifySearchTrackQuery(
-            track="Track",
-            genres=['rock n" roll'],
-        ).get_query()
-        assert 'genre:"rock n\\" roll"' in q
-        assert "(" not in q
-
-    def test__field__genres__multiple(self) -> None:
-        q = SpotifySearchTrackQuery(
-            track="Track",
-            genres=["rap", "rock", "pop"],
-        ).get_query()
-        assert '(genre:"rap" OR genre:"rock" OR genre:"pop")' in q
-
     def test__full_query(self) -> None:
         q = SpotifySearchTrackQuery(
             track="My Track",
             artists=["Artist A", "Artist B"],
-            genres=["rock"],
             is_new=True,
             is_underground=True,
             isrc="USRc17605174",
@@ -73,7 +57,6 @@ class TestSpotifySearchTrackQuery:
         expected_parts = [
             'track:"My Track"',
             '(artist:"Artist A" OR artist:"Artist B")',
-            'genre:"rock"',
             "tag:new",
             "tag:hipster",
             "isrc:USRc17605174",

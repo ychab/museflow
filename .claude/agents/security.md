@@ -10,7 +10,7 @@ You are a security engineer specializing in Python web applications and the Muse
 - **API:** FastAPI with JWT authentication via `get_current_user` dependency
 - **OAuth:** Spotify OAuth flow with state tokens (single-use, consumed via `auth_state_repository.consume()`)
 - **DB:** PostgreSQL via SQLAlchemy ORM (no raw SQL)
-- **External APIs:** Spotify, Last.fm — via httpx with tenacity retries
+- **External APIs:** Spotify, Gemini — via httpx with tenacity retries
 - **Secrets:** Managed via Pydantic `BaseSettings` (env vars only)
 - **CLI:** Typer with typed parameters
 

@@ -60,7 +60,6 @@ class TestTrackReconciler:
         assert 0.0 < score <= 1.0
 
     def test__reconcile__fuzzy_text_match__ignores_noise(self, track_reconciler: TrackReconciler) -> None:
-        # Last.fm suggests a clean name
         track_suggested = TrackSuggestedFactory.build(name="Strobe", artists=["deadmau5"], duration_ms=637000)
 
         # Spotify returns a noisy name
@@ -83,14 +82,12 @@ class TestTrackReconciler:
             name="Strobe",
             artists=TrackArtistFactory.batch(size=1, name="deadmau5"),
             duration_ms=210000,
-            popularity=0,
             album=None,
         )
         original_mix = TrackFactory.build(
             name="Strobe",
             artists=TrackArtistFactory.batch(size=1, name="deadmau5"),
             duration_ms=track_suggested.duration_ms,  # Exact duration match
-            popularity=0,
             album=None,
         )
 
@@ -107,14 +104,12 @@ class TestTrackReconciler:
             name="Starlight",
             artists=TrackArtistFactory.batch(size=1, name="Muse"),
             duration_ms=300000,  # Live version, way too long (300,000 ms -> 60s diff -> No bonus)
-            popularity=0,
             album=None,
         )
         slight_diff_mix = TrackFactory.build(
             name="Starlight",
             artists=TrackArtistFactory.batch(size=1, name="Muse"),
             duration_ms=233000,  # Slightly different master, 7 seconds shorter (233,000 ms -> 7s diff -> +5.0 bonus)
-            popularity=0,
             album=None,
         )
 
@@ -161,14 +156,12 @@ class TestTrackReconciler:
             name=track_suggested.name,
             artists=TrackArtistFactory.batch(size=1, name=track_suggested.artists[0]),
             duration_ms=track_suggested.duration_ms,
-            popularity=0,
             album=AlbumFactory.build(album_type=AlbumType.SINGLE),  # Single (-5.0 penalty)
         )
         ep_release = TrackFactory.build(
             name=track_suggested.name,
             artists=TrackArtistFactory.batch(size=1, name=track_suggested.artists[0]),
             duration_ms=track_suggested.duration_ms,
-            popularity=0,
             album=AlbumFactory.build(album_type=AlbumType.EP),  # EP (-2.0 penalty)
         )
 
@@ -179,31 +172,4 @@ class TestTrackReconciler:
         assert result is not None
         track_reconciled, score = result
         assert track_reconciled is ep_release
-        assert 0.0 < score <= 1.0
-
-    def test__reconcile__tie_breaker__popularity(self, track_reconciler: TrackReconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Creep", artists=["Radiohead"], duration_ms=238000)
-
-        low_pop_release = TrackFactory.build(
-            name=track_suggested.name,
-            artists=TrackArtistFactory.batch(size=1, name=track_suggested.artists[0]),
-            duration_ms=track_suggested.duration_ms,
-            album=AlbumFactory.build(album_type=AlbumType.ALBUM),
-            popularity=20,
-        )
-        high_pop_release = TrackFactory.build(
-            name=track_suggested.name,
-            artists=TrackArtistFactory.batch(size=1, name=track_suggested.artists[0]),
-            duration_ms=track_suggested.duration_ms,
-            album=AlbumFactory.build(album_type=AlbumType.ALBUM),
-            popularity=85,  # Most popular
-        )
-
-        result = track_reconciler.reconcile(
-            track_suggested=track_suggested,
-            candidates=[low_pop_release, high_pop_release],
-        )
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is high_pop_release
         assert 0.0 < score <= 1.0

@@ -84,9 +84,6 @@ class TrackReconciler:
                 final_score += 5.0  # Small bonus for being within 10 seconds
 
         # 3. Provider Metadata Heuristics
-        popularity = candidate.popularity or 0
-        final_score += (popularity / 100.0) * 10.0
-
         album_type = candidate.album.album_type if candidate.album and candidate.album.album_type else ""
         if album_type == AlbumType.COMPILATION:
             final_score -= 15.0

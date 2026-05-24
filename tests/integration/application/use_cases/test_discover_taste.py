@@ -13,8 +13,7 @@ from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdviso
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
 
-@pytest.mark.wiremock("gemini")
-@pytest.mark.wiremock("spotify")
+@pytest.mark.wiremock("gemini", "spotify")
 class TestDiscoverTasteUseCase:
     @pytest.fixture
     def use_case(

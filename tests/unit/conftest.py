@@ -6,11 +6,9 @@ from pydantic import HttpUrl
 import pytest
 
 from museflow.application.ports.advisors.agent import AdvisorAgentPort
-from museflow.application.ports.advisors.similar import AdvisorSimilarPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -25,7 +23,6 @@ from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -73,11 +70,6 @@ def mock_auth_state_repository() -> mock.AsyncMock:
 @pytest.fixture
 def mock_auth_token_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=OAuthProviderTokenRepository)
-
-
-@pytest.fixture
-def mock_artist_repository() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=ArtistRepository)
 
 
 @pytest.fixture
@@ -152,11 +144,6 @@ def mock_provider_library() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_advisor_similar() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=AdvisorSimilarPort)
-
-
-@pytest.fixture
 def mock_advisor_agent() -> mock.AsyncMock:
     return mock.AsyncMock(spec=AdvisorAgentPort)
 
@@ -208,15 +195,6 @@ def spotify_library(
         session_client=spotify_session_client,
         max_concurrency=10,
     )
-
-
-@pytest.fixture
-async def lastfm_advisor() -> AsyncGenerator[LastFmAdvisorAdapter]:
-    async with LastFmAdvisorAdapter(
-        client_api_key="dummy-api-key",
-        client_secret="dummy-client-secret",
-    ) as client:
-        yield client
 
 
 @pytest.fixture

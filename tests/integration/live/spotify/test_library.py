@@ -10,7 +10,6 @@ from museflow.application.ports.repositories.auth import OAuthProviderTokenRepos
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -94,25 +93,8 @@ class TestSpotifyLibraryLive:
         top_track_page = SpotifyPage[SpotifyTrack].model_validate(top_tracks_response)
 
         return [
-            to_domain_track(SpotifyTrack.model_validate(item), user_id=user.id, sources=TrackSource.TOP)
-            for item in top_track_page.items[:3]
+            to_domain_track(SpotifyTrack.model_validate(item), user_id=user.id) for item in top_track_page.items[:3]
         ]
-
-    async def test_top_artists(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
-        top_artists = await spotify_library_live.get_top_artists(page_size=5, max_pages=1)
-        assert len(top_artists) == 5
-
-    async def test_top_tracks(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
-        top_tracks = await spotify_library_live.get_top_tracks(page_size=5, max_pages=1)
-        assert len(top_tracks) == 5
-
-    async def test_saved_tracks(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
-        saved_tracks = await spotify_library_live.get_saved_tracks(page_size=5, max_pages=1)
-        assert len(saved_tracks) == 5
-
-    async def test_playlist_tracks(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
-        playlist_tracks = await spotify_library_live.get_playlist_tracks(page_size=2, max_pages=1)
-        assert len(playlist_tracks) > 0
 
     async def test_get_track_by_id(self, spotify_library_live: SpotifyLibraryAdapter, tracks: list[Track]) -> None:
         track = await spotify_library_live.get_track_by_id(tracks[0].provider_id)

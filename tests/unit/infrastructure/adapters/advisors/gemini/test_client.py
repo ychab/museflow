@@ -11,7 +11,6 @@ from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
-from museflow.domain.exceptions import SimilarTrackResponseException
 from museflow.domain.types import DiscoveryFocus
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
@@ -25,129 +24,6 @@ class TestGeminiAdvisorAdapter:
         retry_controller.sleep = mock.AsyncMock(return_value=None)
         yield
         retry_controller.sleep = original_sleep
-
-    async def test__get_similar_tracks__nominal(
-        self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(
-            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            method="POST",
-            json={
-                "candidates": [
-                    {
-                        "content": {
-                            "parts": [
-                                {
-                                    "text": '{"tracks": [{"name": "Mi Pueblo", "artists": ["Grupo Niche"], "score": 1.0}]}'
-                                }
-                            ],
-                            "role": "model",
-                        }
-                    }
-                ]
-            },
-        )
-
-        tracks = await gemini_advisor.get_similar_tracks(artist_name="Grupo Niche", track_name="La Negra No Quiere")
-
-        assert len(tracks) == 1
-        assert tracks[0].name == "Mi Pueblo"
-        assert tracks[0].artists == ["Grupo Niche"]
-        assert tracks[0].advisor_id is None
-        assert tracks[0].score == pytest.approx(1.0)
-
-    async def test__get_similar_tracks__empty_candidates(
-        self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(
-            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            method="POST",
-            json={"candidates": []},
-        )
-
-        tracks = await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
-
-        assert tracks == []
-
-    async def test__get_similar_tracks__invalid_json_raises(
-        self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(
-            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            method="POST",
-            json={
-                "candidates": [
-                    {
-                        "content": {
-                            "parts": [{"text": "not-valid-json{{{"}],
-                            "role": "model",
-                        }
-                    }
-                ]
-            },
-        )
-
-        with pytest.raises(SimilarTrackResponseException):
-            await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
-
-    async def test__get_similar_tracks__rate_limit_exhausted(
-        self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        httpx_mock: HTTPXMock,
-        mock_tenacity_sleep: None,
-    ) -> None:
-        httpx_mock.add_response(
-            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            method="POST",
-            status_code=codes.TOO_MANY_REQUESTS,
-            json={
-                "error": {
-                    "code": 429,
-                    "status": "RESOURCE_EXHAUSTED",
-                    "details": [
-                        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "3s"},
-                    ],
-                }
-            },
-            is_reusable=True,
-        )
-
-        with (
-            pytest.raises(AdvisorRateLimitExceeded) as exc_info,
-            mock.patch("asyncio.sleep", new_callable=mock.AsyncMock),
-        ):
-            await gemini_advisor.get_similar_tracks(artist_name="Radiohead", track_name="Creep")
-
-        assert "Gemini rate limit exceeded after max retries for 'Creep' by 'Radiohead'" in str(exc_info.value)
-
-    async def test__get_similar_tracks__invalid_schema_raises(
-        self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(
-            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            method="POST",
-            json={
-                "candidates": [
-                    {
-                        "content": {
-                            "parts": [{"text": '{"wrong_key": []}'}],
-                            "role": "model",
-                        }
-                    }
-                ]
-            },
-        )
-
-        with pytest.raises(SimilarTrackResponseException):
-            await gemini_advisor.get_similar_tracks(artist_name="Artist", track_name="Track")
 
     async def test__get_discovery_strategy__nominal(
         self,

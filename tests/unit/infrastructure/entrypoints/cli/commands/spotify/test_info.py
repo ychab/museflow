@@ -5,7 +5,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.spotify.info import SpotifyInfoData
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -16,23 +15,15 @@ class TestSpotifyInfoParserCommand:
     @pytest.fixture(autouse=True)
     def mock_info_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.info.info_logic"
-        with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = SpotifyInfoData()
-            yield patched.return_value
+        with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
+            patched.return_value = None
+            yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
-        # fmt: off
         result = runner.invoke(
             app,
-            [
-                "spotify",
-                "info",
-                "--email", "test@example.com",
-                "--genres",
-                "--token",
-             ]
+            ["spotify", "info", "--email", "test@example.com"],
         )
-        # fmt: on
         assert result.exit_code == 0
 
     @pytest.mark.parametrize(
@@ -71,16 +62,6 @@ class TestSpotifyInfoCommand:
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__no_flags(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
-        result = runner.invoke(
-            app,
-            ["spotify", "info", "--email", "test@example.com", "--no-genre", "--no-token"],
-        )
-
-        output = clean_typer_text(result.stderr)
-        assert result.exit_code != 0
-        assert "At least one --show flag must be provided." in output
-
     def test__user_not_found(
         self,
         runner: CliRunner,
@@ -108,32 +89,6 @@ class TestSpotifyInfoCommand:
         output = clean_typer_text(result.stderr)
         assert "Error: Boom" in output
 
-    def test__genres__print__nominal(
-        self,
-        runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        mock_info_logic.return_value = SpotifyInfoData(genres=["rock", "pop"], token=None)
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--genres"])
-
-        output = clean_typer_text(result.stdout)
-        assert result.exit_code == 0
-        assert "Genres available: - 'rock' - 'pop'" in output
-
-    def test__genres__print__none(
-        self,
-        runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        mock_info_logic.return_value = SpotifyInfoData()
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--genres"])
-
-        output = clean_typer_text(result.stdout)
-        assert result.exit_code == 0
-        assert "" in output
-
     def test__token__print__nominal(
         self,
         runner: CliRunner,
@@ -141,8 +96,8 @@ class TestSpotifyInfoCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
-        mock_info_logic.return_value = SpotifyInfoData(genres=[], token=auth_token)
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--token"])
+        mock_info_logic.return_value = auth_token
+        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
@@ -156,8 +111,8 @@ class TestSpotifyInfoCommand:
         mock_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_info_logic.return_value = SpotifyInfoData()
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--token"])
+        mock_info_logic.return_value = None
+        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0

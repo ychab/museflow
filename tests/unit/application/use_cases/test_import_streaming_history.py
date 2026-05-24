@@ -15,7 +15,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import StreamingHistoryInvalidFormat
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 
 from tests.unit.factories.entities.music import TrackFactory
 
@@ -80,8 +79,8 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        track_1 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY, sources=TrackSource.HISTORY)
-        track_3 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY, sources=TrackSource.HISTORY)
+        track_1 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        track_3 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY)
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset()
         mock_provider_library.get_track_by_id.side_effect = [track_1, track_3]
@@ -134,13 +133,11 @@ class TestImportStreamingHistorySpotifyUseCase:
             provider_id="track1",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
         track2 = TrackFactory.build(
             provider_id="track2",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
@@ -185,7 +182,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             provider_id="track2",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track2"])
@@ -302,7 +298,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             size=3,
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset()
@@ -345,7 +340,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        track_1 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY, sources=TrackSource.HISTORY)
+        track_1 = TrackFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY)
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset()
         mock_provider_library.get_tracks_by_ids.return_value = [track_1]
@@ -385,7 +380,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             size=3,
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
         mock_track_repository.get_known_provider_ids.return_value = frozenset()
         mock_provider_library.get_track_by_id.side_effect = tracks
@@ -435,13 +429,11 @@ class TestImportStreamingHistorySpotifyUseCase:
             provider_id="track1",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
         track2 = TrackFactory.build(
             provider_id="track2",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
@@ -493,7 +485,6 @@ class TestImportStreamingHistorySpotifyUseCase:
                 provider_id=f"track_{i}",
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
-                sources=TrackSource.HISTORY,
             )
             tracks.append(track)
 
@@ -537,13 +528,11 @@ class TestImportStreamingHistorySpotifyUseCase:
             provider_id="track1",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
         track2 = TrackFactory.build(
             provider_id="track2",
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=TrackSource.HISTORY,
         )
 
         mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])

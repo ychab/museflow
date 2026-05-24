@@ -4,6 +4,7 @@ from contextlib import AsyncExitStack
 from pydantic import EmailStr
 
 import typer
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -17,8 +18,6 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisorAgent
 from museflow.domain.types import MusicProvider
-from museflow.infrastructure.entrypoints.cli.commands.discover import app
-from museflow.infrastructure.entrypoints.cli.commands.discover import console
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_AGENT_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_agent_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
@@ -31,9 +30,10 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repos
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
+console = Console()
 
-@app.command("taste", help="Discover new tracks guided by your AI taste profile.")
-def taste(
+
+def discover(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     advisor_agent: MusicAdvisorAgent = typer.Option(
         default=MusicAdvisorAgent.GEMINI,
@@ -178,12 +178,12 @@ def taste(
     # Footer message
     if result.playlist is None:
         typer.secho(
-            "\n\nTracks discovered but playlist not created (dry-run mode) \u26a0\ufe0f",
+            "\n\nTracks discovered but playlist not created (dry-run mode) ⚠️",
             fg=typer.colors.YELLOW,
         )
     else:
         typer.secho(
-            f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! \u2705",
+            f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
             fg=typer.colors.GREEN,
         )
 

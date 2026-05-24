@@ -20,7 +20,6 @@ from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.music import ArtistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -36,12 +35,10 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.advisors.lastfm.client import LastFmAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
-from museflow.infrastructure.adapters.database.repositories.music import ArtistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
@@ -231,11 +228,6 @@ def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenR
 
 
 @pytest.fixture
-def artist_repository(async_session_db: AsyncSession) -> ArtistRepository:
-    return ArtistSQLRepository(async_session_db)
-
-
-@pytest.fixture
 def track_repository(async_session_db: AsyncSession) -> TrackRepository:
     return TrackSQLRepository(async_session_db)
 
@@ -374,21 +366,6 @@ def spotify_library(
 
 
 @pytest.fixture
-async def lastfm_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[LastFmAdvisorAdapter]:
-    base_url: str | None = os.getenv("WIREMOCK_LASTFM_BASE_URL")
-
-    retry_method = LastFmAdvisorAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
-
-    async with LastFmAdvisorAdapter(
-        client_api_key="dummy-api-key",
-        client_secret="dummy-client-secret",
-        base_url=HttpUrl(base_url) if base_url else None,
-    ) as client:
-        yield client
-
-
-@pytest.fixture
 async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiAdvisorAdapter]:
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
@@ -438,12 +415,6 @@ def track_reconciler() -> TrackReconciler:
 @pytest.fixture
 def spotify_wiremock() -> Iterable[WireMockContext]:
     with WireMockContext(base_url=os.getenv("WIREMOCK_SPOTIFY_ADMIN_URL", "")) as wiremock_context:
-        yield wiremock_context
-
-
-@pytest.fixture
-def lastfm_wiremock() -> Iterable[WireMockContext]:
-    with WireMockContext(base_url=os.getenv("WIREMOCK_LASTFM_ADMIN_URL", "")) as wiremock_context:
         yield wiremock_context
 
 

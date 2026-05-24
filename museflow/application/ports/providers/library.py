@@ -1,7 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
 
-from museflow.domain.entities.music import Artist
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 
@@ -9,73 +8,8 @@ from museflow.domain.entities.music import Track
 class ProviderLibraryPort(ABC):
     """A port defining the contract for interacting with a music provider's library.
 
-    This interface abstracts the retrieval of various music entities (artists, tracks)
-    from a user's library on a specific music provider.
+    This interface abstracts track search and playlist creation on a specific music provider.
     """
-
-    @abstractmethod
-    async def get_top_artists(
-        self,
-        page_size: int,
-        max_pages: int | None = None,
-        time_range: str | None = None,
-    ) -> list[Artist]:
-        """Retrieves a list of the user's top artists from the music provider.
-
-        Args:
-            page_size: The maximum number of artists to retrieve per page.
-            max_pages: The maximum number of playlist tracks pages to retrieve.
-            time_range: An optional time frame for which to retrieve top artists
-
-        Returns:
-            A list of `Artist` entities.
-        """
-        ...
-
-    @abstractmethod
-    async def get_top_tracks(
-        self,
-        page_size: int,
-        max_pages: int | None = None,
-        time_range: str | None = None,
-    ) -> list[Track]:
-        """Retrieves a list of the user's top tracks from the music provider.
-
-        Args:
-            page_size: The maximum number of tracks to retrieve per page.
-            max_pages: The maximum number of playlist tracks pages to retrieve.
-            time_range: An optional time frame for which to retrieve top tracks
-
-        Returns:
-            A list of `Track` entities.
-        """
-        ...
-
-    @abstractmethod
-    async def get_saved_tracks(self, page_size: int, max_pages: int | None = None) -> list[Track]:
-        """Retrieves a list of tracks saved (liked) by the user in their music library.
-
-        Args:
-            page_size: The maximum number of saved tracks to retrieve per page.
-            max_pages: The maximum number of playlist tracks pages to retrieve.
-
-        Returns:
-            A list of `Track` entities.
-        """
-        ...
-
-    @abstractmethod
-    async def get_playlist_tracks(self, page_size: int, max_pages: int | None = None) -> list[Track]:
-        """Retrieves a list of tracks from the user's playlists.
-
-        Args:
-            page_size: The maximum number of playlist tracks to retrieve per page.
-            max_pages: The maximum number of playlist tracks pages to retrieve.
-
-        Returns:
-            A list of `Track` entities.
-        """
-        ...
 
     @abstractmethod
     async def get_track_by_id(self, track_id: str) -> Track:
@@ -85,7 +19,7 @@ class ProviderLibraryPort(ABC):
             track_id: The provider-specific track identifier.
 
         Returns:
-            A `Track` entity with source set to HISTORY.
+            A `Track` entity.
         """
         ...
 
@@ -93,13 +27,11 @@ class ProviderLibraryPort(ABC):
     async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
         """Fetches metadata for multiple tracks in a single bulk request.
 
-        Not all providers may support this method, or could be deprecated.
-
         Args:
             track_ids: Provider-specific track identifiers (adapter enforces provider limits).
 
         Returns:
-            A list of `Track` entities for all successfully resolved IDs, source=HISTORY.
+            A list of `Track` entities for all successfully resolved IDs.
         """
         ...
 
@@ -108,7 +40,6 @@ class ProviderLibraryPort(ABC):
         self,
         track: str,
         artists: list[str] | None = None,
-        genres: list[str] | None = None,
         is_new: bool = False,
         is_underground: bool = False,
         isrc: str | None = None,
@@ -121,7 +52,6 @@ class ProviderLibraryPort(ABC):
         Args:
             track: The name of the track to search for.
             artists: A list of artist names to filter by.
-            genres: A list of genres to filter by.
             is_new: Whether to include only new tracks (periodicity depends on the provider).
             is_underground: Whether to include underground tracks (depends on the provider).
             isrc: An optional ISRC (International Standard Recording Code) to filter by.

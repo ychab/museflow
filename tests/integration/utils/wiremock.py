@@ -3,22 +3,14 @@ from typing import Self
 
 import httpx
 
-from wiremock.client import Mapping
-from wiremock.client import MappingRequest
-from wiremock.client import MappingResponse
-from wiremock.client import Mappings
-from wiremock.constants import Config
-
 
 class WireMockContext:
     def __init__(self, base_url: str) -> None:
         self.admin_url = f"{base_url.rstrip('/')}/__admin"
+        self._mapping_ids: list[str] = []
+        self._has_scenarios: bool = False
 
     def __enter__(self) -> Self:
-        # Reset to file-based stubs before the test starts. This guards against a previous
-        # test's __exit__ reset failing silently and leaving dynamic mappings behind, which
-        # would bleed into this test and cause it to receive unexpected responses.
-        httpx.post(f"{self.admin_url}/mappings/reset")
         return self
 
     def __exit__(
@@ -27,11 +19,15 @@ class WireMockContext:
         exc_val: BaseException | None,
         exc_tb: Any | None,
     ) -> None:
-        # Reset all mappings and scenario states to file-based defaults.
-        # Safe because @pytest.mark.wiremock (via --dist=loadgroup) ensures all tests
-        # that share a WireMock server run on the same xdist worker sequentially —
-        # no concurrent worker can have stubs deleted mid-test by this reset.
-        httpx.post(f"{self.admin_url}/mappings/reset")
+        for mapping_id in self._mapping_ids:
+            httpx.delete(f"{self.admin_url}/mappings/{mapping_id}")
+        self._mapping_ids.clear()
+
+        # Reset scenario states only when this context used scenarios, so the next
+        # test that uses the same scenario name starts from the "Started" state.
+        if self._has_scenarios:
+            httpx.post(f"{self.admin_url}/scenarios/reset")
+            self._has_scenarios = False
 
     def create_mapping(
         self,
@@ -45,28 +41,29 @@ class WireMockContext:
         required_state: str | None = None,
         new_state: str | None = None,
     ) -> None:
-        mapping = Mapping(
-            priority=priority,
-            scenario_name=scenario_name,
-            required_scenario_state=required_state,
-            new_scenario_state=new_state,
-            request=MappingRequest(
-                method=method,
-                url_path=url_path,
-                query_parameters={k: {"equalTo": str(v)} for k, v in query_params.items()} if query_params else None,
-            ),
-            response=MappingResponse(
-                status=status,
-                json_body=json_body,
-                headers={"Content-Type": "application/json"},
-            ),
-        )
+        body: dict[str, Any] = {
+            "priority": priority,
+            "request": {
+                "method": method,
+                "urlPath": url_path,
+            },
+            "response": {
+                "status": status,
+                "headers": {"Content-Type": "application/json"},
+            },
+        }
+        if query_params:
+            body["request"]["queryParameters"] = {k: {"equalTo": str(v)} for k, v in query_params.items()}
+        if json_body is not None:
+            body["response"]["jsonBody"] = json_body
+        if scenario_name:
+            body["scenarioName"] = scenario_name
+            self._has_scenarios = True
+        if required_state:
+            body["requiredScenarioState"] = required_state
+        if new_state:
+            body["newScenarioState"] = new_state
 
-        # We need to temporarily configure the final base_url Wiremock container
-        original_base_url = Config.base_url
-        try:
-            Config.base_url = self.admin_url
-            Mappings.create_mapping(mapping)
-        finally:
-            # Restore the global config to avoid side effects with other WireMockContext
-            Config.base_url = original_base_url
+        response = httpx.post(f"{self.admin_url}/mappings", json=body)
+        response.raise_for_status()
+        self._mapping_ids.append(response.json()["id"])

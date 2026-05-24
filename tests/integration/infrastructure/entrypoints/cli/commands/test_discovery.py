@@ -10,7 +10,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.types import MusicAdvisorAgent
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.entrypoints.cli.commands.discover.taste import discover_taste_logic
+from museflow.infrastructure.entrypoints.cli.commands.discovery import discover_taste_logic
 
 from tests.unit.factories.entities.music import PlaylistFactory
 
@@ -23,7 +23,7 @@ class TestDiscoverTasteLogic:
 
     @pytest.fixture
     def mock_use_case(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.discover.taste.DiscoverTasteUseCase"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.discovery.DiscoverTasteUseCase"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 

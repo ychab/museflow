@@ -38,7 +38,7 @@ class BuildTasteProfileUseCase:
 
         tracks = await self._track_repository.get_list(
             user_id=user.id,
-            order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC), (TrackOrderBy.ADDED_AT, SortOrder.ASC)],
+            order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC)],
             offset=offset,
             limit=config.track_limit,
         )

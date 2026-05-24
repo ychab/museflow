@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 2d4407f894f8
+Revision ID: acb90b94912e
 Revises:
-Create Date: 2026-04-08 13:55:06.980865
+Create Date: 2026-05-24 17:51:59.608569
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '2d4407f894f8'
+revision: str = 'acb90b94912e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,25 +31,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_museflow_user_email'), 'museflow_user', ['email'], unique=True)
-    op.create_table('museflow_artist',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('popularity', sa.Integer(), nullable=True),
-    sa.Column('sources', sa.Integer(), nullable=False),
-    sa.Column('top_position', sa.Integer(), nullable=True),
-    sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
-    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
-    sa.Column('provider_id', sa.String(length=512), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider_id', name='uq_museflow_artist_user_provider_id')
-    )
-    op.create_index(op.f('ix_museflow_artist_user_id'), 'museflow_artist', ['user_id'], unique=False)
-    op.create_index('ix_museflow_artist_user_provider', 'museflow_artist', ['user_id', 'provider'], unique=False)
-    op.create_index('ix_museflow_artist_user_sources', 'museflow_artist', ['user_id', 'sources'], unique=False)
     op.create_table('museflow_auth_state',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -76,11 +57,11 @@ def upgrade() -> None:
     )
     op.create_table('museflow_taste_profile',
     sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('profiler', sa.Enum('GEMINI', name='tasteprofiler'), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('profiler_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
     sa.Column('profile', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('profiler_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
     sa.Column('tracks_count', sa.Integer(), nullable=False),
     sa.Column('logic_version', sa.String(length=32), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -93,18 +74,13 @@ def upgrade() -> None:
     op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('artists', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('album', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('duration_ms', sa.Integer(), nullable=False),
     sa.Column('isrc', sa.String(length=512), nullable=True),
     sa.Column('fingerprint', sa.String(length=512), nullable=False),
     sa.Column('played_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('added_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('popularity', sa.Integer(), nullable=True),
-    sa.Column('sources', sa.Integer(), nullable=False),
-    sa.Column('top_position', sa.Integer(), nullable=True),
-    sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
     sa.Column('provider_id', sa.String(length=512), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -119,14 +95,12 @@ def upgrade() -> None:
     op.create_index(op.f('ix_museflow_track_user_id'), 'museflow_track', ['user_id'], unique=False)
     op.create_index('ix_museflow_track_user_isrc', 'museflow_track', ['user_id', 'isrc'], unique=False)
     op.create_index('ix_museflow_track_user_provider', 'museflow_track', ['user_id', 'provider'], unique=False)
-    op.create_index('ix_museflow_track_user_sources', 'museflow_track', ['user_id', 'sources'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index('ix_museflow_track_user_sources', table_name='museflow_track')
     op.drop_index('ix_museflow_track_user_provider', table_name='museflow_track')
     op.drop_index('ix_museflow_track_user_isrc', table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
@@ -139,10 +113,6 @@ def downgrade() -> None:
     op.drop_table('museflow_auth_token')
     op.drop_index(op.f('ix_museflow_auth_state_state'), table_name='museflow_auth_state')
     op.drop_table('museflow_auth_state')
-    op.drop_index('ix_museflow_artist_user_sources', table_name='museflow_artist')
-    op.drop_index('ix_museflow_artist_user_provider', table_name='museflow_artist')
-    op.drop_index(op.f('ix_museflow_artist_user_id'), table_name='museflow_artist')
-    op.drop_table('museflow_artist')
     op.drop_index(op.f('ix_museflow_user_email'), table_name='museflow_user')
     op.drop_table('museflow_user')
     # ### end Alembic commands ###

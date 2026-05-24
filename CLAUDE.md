@@ -38,7 +38,7 @@ museflow/
     │   │   ├── models/       # MappedAsDataclass ORM models
     │   │   └── repositories/ # Port implementations
     │   ├── providers/spotify/
-    │   └── advisors/lastfm/
+    │   └── advisors/gemini/
     ├── config/settings/      # Pydantic settings (SPOTIFY_, DATABASE_, etc.)
     └── entrypoints/
         ├── api/              # FastAPI routes + dependencies
@@ -139,7 +139,7 @@ class UserSQLRepository(UserRepository):
 - `await self.session.commit()` then `await self.session.refresh(obj)` after mutations.
 - Use `pg_insert(...).on_conflict_do_update(...)` for upserts (PostgreSQL-specific).
 
-### External API Adapters (Spotify, Last.fm)
+### External API Adapters (Spotify, Gemini)
 - **DTOs**: Pydantic models matching the external API shape exactly.
 - **Mappers**: Standalone functions `to_domain_track(dto: SpotifyTrack) -> Track`. Complex transformations (fingerprinting, normalization) live here.
 
@@ -304,8 +304,8 @@ for i, item in enumerate(items):
 ```
 
 ### WireMock (External APIs)
-- Spotify/Last.fm API responses are mocked via WireMock in integration tests.
-- Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/lastfm/`.
+- Spotify/Gemini API responses are mocked via WireMock in integration tests.
+- Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/gemini/`.
 - Use the `spotify_wiremock` fixture to configure stubs per-test.
 
 ### Dead End Protocol

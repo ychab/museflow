@@ -159,7 +159,7 @@ class TestGeminiTasteProfileAdapter:
             json=gemini_response,
         )
 
-        tracks = TrackFactory.batch(2, added_at=None, played_at=None)
+        tracks = TrackFactory.batch(2, played_at=None)
         await gemini_profiler.build_profile_segment(tracks)
 
         request = httpx_mock.get_requests()[0]

@@ -17,7 +17,6 @@ from museflow.application.use_cases.import_streaming_history import ImportStream
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
@@ -141,7 +140,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             size=3,
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            sources=int(TrackSource.HISTORY),
         )
         track_ids = [track.id for track in tracks]
 
@@ -189,7 +187,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             await TrackModelFactory.create_async(
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
-                sources=int(TrackSource.HISTORY),
                 played_at=old_played_at,
                 provider_id=track_id,
             )
