@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 
-from museflow.domain.types import AlbumType
 from museflow.domain.types import MusicProvider
 from museflow.domain.utils.text import generate_fingerprint
 
@@ -21,47 +20,20 @@ class BaseProviderEntity(ABC):
 
 
 @dataclass(frozen=True, kw_only=True)
-class TrackArtist:
-    """Represents an artist associated with a specific track.
-
-    This is a simplified representation used within a track context, primarily
-    for display and linking purposes.
-    """
-
-    provider_id: str
-    name: str
-
-    def __post_init__(self) -> None:
-        if not self.name:
-            raise ValueError("TrackArtist.name must not be empty")
-        if not self.provider_id:
-            raise ValueError("TrackArtist.provider_id must not be empty")
-
-    def __str__(self) -> str:
-        return self.name.replace("'", "\\'")
-
-
-@dataclass(frozen=True, kw_only=True)
-class Album:
-    provider_id: str
-    name: str
-    album_type: AlbumType | None = None
-
-
-@dataclass(frozen=True, kw_only=True)
 class Track(BaseProviderEntity):
-    artists: list[TrackArtist] = field(default_factory=list)
-    album: Album | None = None
+    artists: list[str] = field(default_factory=list)
+    album_name: str | None = None
 
-    isrc: str | None = None
     fingerprint: str = ""
-
-    duration_ms: int
 
     played_at: datetime | None = None
 
+    @property
+    def primary_artist(self) -> str:
+        return self.artists[0]
+
     def __str__(self) -> str:
-        return f"{', '.join([str(artist) for artist in self.artists])} - {self.name}".replace("'", "\\'")
+        return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -74,7 +46,7 @@ class Track(BaseProviderEntity):
         if not self.fingerprint:
             fingerprint_val = generate_fingerprint(
                 name=self.name,
-                artist_names=[artist.name for artist in self.artists],
+                artist_names=[self.primary_artist],
             )
             object.__setattr__(self, "fingerprint", fingerprint_val)
 
@@ -85,7 +57,10 @@ class TrackSuggested:
     artists: list[str] = field(default_factory=list)
     advisor_id: str | None = None
     score: float
-    duration_ms: int | None = None
+
+    @property
+    def primary_artist(self) -> str:
+        return self.artists[0]
 
     def __post_init__(self) -> None:
         if not self.name:

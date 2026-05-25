@@ -55,7 +55,7 @@ def _format_tracks(tracks: list[Track]) -> str:
 
     for track in tracks:
         date_label = f"last_played:{track.played_at.date()}" if track.played_at else "no_date"
-        artists = " & ".join(artist.name for artist in track.artists)
+        artists = " & ".join(track.artists)
         lines.append(f"{date_label} | {artists} - {track.name}")
 
     return "\n".join(lines)

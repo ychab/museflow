@@ -64,7 +64,6 @@ async def filter_known_tracks(
 ) -> list[TrackScored]:
     known_identifiers = await track_repository.get_known_identifiers(
         user_id=user.id,
-        isrcs=[ts.track.isrc for ts in tracks_scored if ts.track.isrc],
         fingerprints=[ts.track.fingerprint for ts in tracks_scored],
     )
 
@@ -83,9 +82,9 @@ def apply_artist_cap(tracks: list[Track], max_tracks_per_artist: int) -> list[Tr
     artist_counts: Counter[str] = Counter()
 
     for track in tracks:
-        artist_provider_id = track.artists[0].provider_id
-        if artist_counts[artist_provider_id] < max_tracks_per_artist:
+        primary_artist = track.primary_artist
+        if artist_counts[primary_artist] < max_tracks_per_artist:
             tracks_filtered.append(track)
-            artist_counts[artist_provider_id] += 1
+            artist_counts[primary_artist] += 1
 
     return tracks_filtered

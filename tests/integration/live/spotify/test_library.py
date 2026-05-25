@@ -96,21 +96,6 @@ class TestSpotifyLibraryLive:
             to_domain_track(SpotifyTrack.model_validate(item), user_id=user.id) for item in top_track_page.items[:3]
         ]
 
-    async def test_get_track_by_id(self, spotify_library_live: SpotifyLibraryAdapter, tracks: list[Track]) -> None:
-        track = await spotify_library_live.get_track_by_id(tracks[0].provider_id)
-
-        assert track.provider_id == tracks[0].provider_id
-        assert track.name
-        assert len(track.artists) > 0
-
-    async def test_get_tracks_by_ids(self, spotify_library_live: SpotifyLibraryAdapter, tracks: list[Track]) -> None:
-        ids = [t.provider_id for t in tracks]
-
-        result = await spotify_library_live.get_tracks_by_ids(ids)
-
-        assert len(result) == len(ids)
-        assert all(t.provider_id in ids for t in result)
-
     async def test_search(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
         tracks = await spotify_library_live.search_tracks(track="Mi Pueblo", page_size=5, max_pages=1)
         assert len(tracks) > 0

@@ -5,7 +5,6 @@ from datetime import timedelta
 from typing import Annotated
 from typing import Any
 
-from pydantic import AliasPath
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
@@ -30,14 +29,11 @@ class SpotifyToken(BaseModel):
 
 
 class SpotifyTrackArtist(BaseModel):
-    id: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
 
 
 class SpotifyAlbum(BaseModel):
-    id: str = Field(..., serialization_alias="provider_id")
     name: str
-    album_type: str
 
 
 class SpotifyItem(BaseModel):
@@ -53,13 +49,10 @@ class SpotifyPlaylist(SpotifyItem):
 
 
 class SpotifyTrack(SpotifyItem):
-    duration_ms: NonNegativeInt
     is_local: bool
 
     artists: list[SpotifyTrackArtist]
     album: SpotifyAlbum | None = None
-
-    isrc: str | None = Field(default=None, validation_alias=AliasPath("external_ids", "isrc"))
 
     @model_validator(mode="before")
     @classmethod

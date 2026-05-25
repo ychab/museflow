@@ -170,8 +170,8 @@ def discover(
     track_table.add_column("Track")
     track_table.add_column("Album", style="dim")
     for i, track in enumerate(result.tracks, start=1):
-        artists = ", ".join(str(artist) for artist in track.artists)
-        album_name = track.album.name if track.album else ""
+        artists = ", ".join(track.artists)
+        album_name = track.album_name or ""
         track_table.add_row(str(i), artists, track.name, album_name)
     console.print(track_table)
 

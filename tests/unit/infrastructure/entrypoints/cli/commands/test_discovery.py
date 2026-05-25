@@ -367,7 +367,7 @@ class TestDiscoverTasteCommand:
         playlist = PlaylistFactory.build()
 
         track_with_album = TrackFactory.build()
-        track_without_album = TrackFactory.build(album=None)
+        track_without_album = TrackFactory.build(album_name=None)
         mock_discover_logic.return_value = DiscoverTasteResult(
             playlist=playlist,
             strategy=strategy,

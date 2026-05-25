@@ -4,7 +4,6 @@ from typing import Any
 
 from sqlalchemy import delete
 from sqlalchemy import func
-from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -74,27 +73,17 @@ class TrackSQLRepository(TrackRepository):
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
-        isrcs: list[str],
         fingerprints: list[str],
     ) -> TrackKnowIdentifiers:
-        stmt = select(TrackModel.isrc, TrackModel.fingerprint).where(TrackModel.user_id == user_id)
-
-        conditions = []
-        if isrcs:
-            conditions.append(TrackModel.isrc.in_(isrcs))
-        if fingerprints:
-            conditions.append(TrackModel.fingerprint.in_(fingerprints))
-
-        if conditions:
-            stmt = stmt.where(or_(*conditions))
+        stmt = select(TrackModel.fingerprint).where(
+            TrackModel.user_id == user_id,
+            TrackModel.fingerprint.in_(fingerprints),
+        )
 
         result = await self.session.execute(stmt)
-        rows = result.fetchall()
+        known_fingerprints = frozenset(row.fingerprint for row in result.fetchall())
 
-        known_isrcs = frozenset(row.isrc for row in rows if row.isrc)
-        known_fingerprints = frozenset(row.fingerprint for row in rows if row.fingerprint)
-
-        return TrackKnowIdentifiers(isrcs=known_isrcs, fingerprints=known_fingerprints)
+        return TrackKnowIdentifiers(fingerprints=known_fingerprints)
 
     async def get_known_provider_ids(
         self,

@@ -12,7 +12,6 @@ import pytest
 
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
@@ -44,7 +43,7 @@ class TestTrackSQLRepository:
 
     @pytest.fixture
     def tracks_update(self, tracks: list[Track]) -> list[Track]:
-        return [dataclasses.replace(track, artists=[TrackArtist(name="SCH", provider_id="foo")]) for track in tracks]
+        return [dataclasses.replace(track, artists=["SCH"]) for track in tracks]
 
     @pytest.fixture
     def tracks_mix(self, user: User, tracks: list[Track]) -> list[Track]:
@@ -52,10 +51,7 @@ class TestTrackSQLRepository:
             # 5 created
             *TrackFactory.batch(size=5, user_id=user.id, provider=MusicProvider.SPOTIFY),
             # 5 updated
-            *[
-                dataclasses.replace(track, artists=[TrackArtist(name="SCH", provider_id="foo")])
-                for track in tracks[:5]
-            ],
+            *[dataclasses.replace(track, artists=["SCH"]) for track in tracks[:5]],
         ]
 
     async def test__get_list__none(self, user: User, track_repository: TrackRepository) -> None:
@@ -182,56 +178,22 @@ class TestTrackSQLRepository:
     async def test__get_known_identifiers__none(self, user: User, track_repository: TrackRepository) -> None:
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
-            isrcs=[],
             fingerprints=[],
         )
-        assert not known_identifiers.isrcs
-        assert not known_identifiers.fingerprints
-
-    async def test__get_known_identifiers__isrc(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, isrc="foo", fingerprint="")
-        await TrackModelFactory.create_async(user_id=user.id, isrc="bar", fingerprint="")
-        await TrackModelFactory.create_async(user_id=user.id, isrc="baz", fingerprint="")
-        await TrackModelFactory.create_async(isrc="bar", fingerprint="")  # Another user
-
-        known_identifiers = await track_repository.get_known_identifiers(
-            user_id=user.id,
-            isrcs=["foo", "bar"],
-            fingerprints=["baz"],
-        )
-
-        assert known_identifiers.isrcs == frozenset(["foo", "bar"])
         assert not known_identifiers.fingerprints
 
     async def test__get_known_identifiers__fingerprint(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="foo")
-        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="bar")
-        await TrackModelFactory.create_async(user_id=user.id, isrc=None, fingerprint="baz")
-        await TrackModelFactory.create_async(isrc=None, fingerprint="bar")  # Another user
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="foo")
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="bar")
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="baz")
+        await TrackModelFactory.create_async(fingerprint="bar")  # Another user
 
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
-            isrcs=[],
             fingerprints=["foo", "bar"],
         )
 
-        assert not known_identifiers.isrcs
         assert known_identifiers.fingerprints == frozenset(["foo", "bar"])
-
-    async def test__get_known_identifiers__both(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, isrc="foo", fingerprint="foo")
-        await TrackModelFactory.create_async(user_id=user.id, isrc="bar", fingerprint="bar")
-        await TrackModelFactory.create_async(user_id=user.id, isrc="baz", fingerprint="baz")
-        await TrackModelFactory.create_async(isrc="bar", fingerprint="bar")  # Another user
-
-        known_identifiers = await track_repository.get_known_identifiers(
-            user_id=user.id,
-            isrcs=["foo", "bar"],
-            fingerprints=["baz"],
-        )
-
-        assert not known_identifiers.isrcs == frozenset(["foo", "bar"])
-        assert known_identifiers.fingerprints == frozenset(["foo", "bar", "baz"])
 
     async def test__get_known_provider_ids__nominal(self, user: User, track_repository: TrackRepository) -> None:
         known_1 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
@@ -307,7 +269,7 @@ class TestTrackSQLRepository:
         assert set([t.user_id for t in tracks_db]) == {user.id}
 
         artists = [track_db.artists[0] for track_db in tracks_db]
-        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(tracks_db))]
+        expected_artists = ["SCH" for _ in range(len(tracks_db))]
         assert artists == expected_artists
 
     async def test__bulk_upsert__both(
@@ -330,7 +292,7 @@ class TestTrackSQLRepository:
 
         assert sorted([t.provider_id for t in tracks_db[:5]]) == sorted([str(t.provider_id) for t in tracks_mix[:5]])
         artists = [track_db.artists[0] for track_db in tracks_db[5:]]
-        expected_artists = [{"name": "SCH", "provider_id": "foo"} for _ in range(len(tracks_db[5:]))]
+        expected_artists = ["SCH" for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
 
     async def test__bulk_upsert__played_at_keeps_latest(

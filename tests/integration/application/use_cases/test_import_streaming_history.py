@@ -1,8 +1,6 @@
-import json
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from typing import Final
 
 from sqlalchemy import func
@@ -18,16 +16,13 @@ from museflow.application.use_cases.import_streaming_history import ImportStream
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
-from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.factories.models.music import TrackModelFactory
-from tests.integration.utils.wiremock import WireMockContext
 
 HISTORY_DIR: Final[Path] = ASSETS_DIR / "history"
 
 
-@pytest.mark.wiremock("spotify")
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def track_ids(self) -> list[str]:
@@ -40,30 +35,13 @@ class TestImportStreamingHistorySpotifyUseCase:
         ]
 
     @pytest.fixture
-    def tracks_json_response(self, track_ids: list[str]) -> dict[str, Any]:
-        return {
-            "tracks": [
-                json.loads((ASSETS_DIR / "wiremock" / "spotify" / "__files" / f"track_{track_id}.json").read_text())
-                for track_id in track_ids
-            ],
-        }
+    def use_case(self, track_repository: TrackRepository) -> ImportStreamingHistoryUseCase:
+        return ImportStreamingHistoryUseCase(track_repository=track_repository)
 
-    @pytest.fixture
-    def use_case(
-        self,
-        spotify_library: SpotifyLibraryAdapter,
-        track_repository: TrackRepository,
-    ) -> ImportStreamingHistoryUseCase:
-        return ImportStreamingHistoryUseCase(
-            provider_library=spotify_library,
-            track_repository=track_repository,
-        )
-
-    async def test__nominal__fetch_single(
+    async def test__nominal(
         self,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
-        spotify_wiremock: WireMockContext,
     ) -> None:
         """
         Streaming_History_Audio_2017-2018_1.json : read=3, skip_dur=1, skip_uri=0 → 2 ids
@@ -86,44 +64,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
-            tracks_fetched=4,
-            tracks_created=4,
-            tracks_purged=0,
-        )
-
-    async def test__nominal__fetch_bulk(
-        self,
-        user: User,
-        use_case: ImportStreamingHistoryUseCase,
-        tracks_json_response: dict[str, Any],
-        spotify_wiremock: WireMockContext,
-    ) -> None:
-        spotify_wiremock.create_mapping(
-            method="GET",
-            url_path="/tracks",
-            status=200,
-            json_body=tracks_json_response,
-        )
-
-        report = await use_case.import_history(
-            user=user,
-            config=ImportStreamingHistoryConfigInput(
-                directory=HISTORY_DIR,
-                min_ms_played=30_000,
-                batch_size=50,
-                fetch_bulk=True,
-            ),
-        )
-
-        assert report == ImportStreamingHistoryReport(
-            items_read=6,
-            items_skipped_no_ts=0,
-            items_skipped_duration=2,
-            items_skipped_no_uri=0,
-            unique_track_ids=4,
-            tracks_already_known=0,
-            tracks_played_at_updated=0,
-            tracks_fetched=4,
             tracks_created=4,
             tracks_purged=0,
         )
@@ -133,7 +73,6 @@ class TestImportStreamingHistorySpotifyUseCase:
         async_session_db: AsyncSession,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
-        spotify_wiremock: WireMockContext,
     ) -> None:
         # Create 3 HISTORY tracks for the user to purge.
         tracks = await TrackModelFactory.create_batch_async(
@@ -159,7 +98,6 @@ class TestImportStreamingHistorySpotifyUseCase:
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
-            tracks_fetched=4,
             tracks_created=4,
             tracks_purged=3,
         )
@@ -200,7 +138,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         assert report.tracks_played_at_updated == 4
-        assert report.tracks_fetched == 0
+        assert report.tracks_created == 0
 
         results = await async_session_db.execute(
             select(TrackModel).where(

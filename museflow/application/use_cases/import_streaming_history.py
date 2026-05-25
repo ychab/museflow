@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-import itertools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,8 +8,8 @@ from pathlib import Path
 import ijson
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
-from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.music import TrackRepository
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import StreamingHistoryInvalidFormat
@@ -31,13 +30,16 @@ class ImportStreamingHistoryReport:
     tracks_already_known: int = 0
     tracks_played_at_updated: int = 0
 
-    tracks_fetched: int = 0
     tracks_created: int = 0
     tracks_purged: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
 class _FileParseEntry:
+    name: str
+    artist: str
+    album_name: str | None
+
     provider_id: str
     played_at: datetime
 
@@ -55,12 +57,11 @@ class ImportStreamingHistoryUseCase:
     Import a user's Spotify streaming history from exported JSON files.
 
     Parses all JSON files in the given directory, filters entries by minimum
-    playback duration, deduplicates track IDs, fetches unknown tracks from the
-    provider, and bulk-upserts them into the repository.
+    playback duration, deduplicates track IDs, and bulk-upserts them into
+    the repository directly from file metadata — no external API calls.
     """
 
-    def __init__(self, provider_library: ProviderLibraryPort, track_repository: TrackRepository) -> None:
-        self._provider_library = provider_library
+    def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
     async def import_history(
@@ -86,8 +87,8 @@ class ImportStreamingHistoryUseCase:
             )
             logger.info("History tracks purged.\n")
 
-        # Collect unique track IDs with their latest played_at across all files
-        tracks_ts: dict[str, datetime] = {}  # provider_id → most recent played_at
+        # Collect unique track IDs with their latest played_at and metadata across all files
+        tracks_data: dict[str, _FileParseEntry] = {}  # provider_id → latest entry
         items_read = items_skipped_no_ts = items_skipped_duration = items_skipped_no_uri = 0
 
         for path in json_files:
@@ -98,23 +99,26 @@ class ImportStreamingHistoryUseCase:
             )
 
             for entry in entries:
-                if entry.provider_id not in tracks_ts or entry.played_at > tracks_ts[entry.provider_id]:
-                    tracks_ts[entry.provider_id] = entry.played_at
+                if entry.provider_id not in tracks_data or entry.played_at > tracks_data[entry.provider_id].played_at:
+                    tracks_data[entry.provider_id] = entry
 
             items_read += stats.items_read
             items_skipped_no_ts += stats.items_skipped_no_ts
             items_skipped_duration += stats.items_skipped_duration
             items_skipped_no_uri += stats.items_skipped_no_uri
 
-        track_provider_ids = set(tracks_ts.keys())
+        track_provider_ids = set(tracks_data.keys())
         logger.info(f"Collected {len(track_provider_ids)} unique track ID's.")
 
         # Filter already-known IDs
-        known_ids = await self._track_repository.get_known_provider_ids(
-            user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
-            provider_ids=list(track_provider_ids),
-        )
+        if not track_provider_ids:
+            known_ids: frozenset[str] = frozenset()
+        else:
+            known_ids = await self._track_repository.get_known_provider_ids(
+                user_id=user.id,
+                provider=MusicProvider.SPOTIFY,
+                provider_ids=list(track_provider_ids),
+            )
         unknown_ids = track_provider_ids - known_ids
         logger.info(f"Collected {len(unknown_ids)} unknown track ID's.")
 
@@ -127,37 +131,41 @@ class ImportStreamingHistoryUseCase:
                 provider_ids=list(known_ids),
             )
             updated_tracks = [
-                dataclasses.replace(track, played_at=tracks_ts[track.provider_id]) for track in known_tracks
+                dataclasses.replace(track, played_at=tracks_data[track.provider_id].played_at)
+                for track in known_tracks
             ]
             await self._track_repository.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
             tracks_played_at_updated = len(updated_tracks)
             logger.info(f"Refreshed played_at for {tracks_played_at_updated} already-known tracks.")
 
-        # Fetch tracks from the provider in chunks and upsert each chunk immediately.
-        # It releases memory but also allows re-running the command without a purge in case of a rate limit bottleneck.
-        logger.info(f"\nAbout fetching and upserting {len(unknown_ids)} track's metadata.")
-        tracks_fetched = 0
+        # Build Track entities directly from file metadata and upsert in batches
+        logger.info(f"\nUpserting {len(unknown_ids)} new tracks from file metadata.")
         tracks_created = 0
-        for chunk in itertools.batched(unknown_ids, config.batch_size, strict=False):
-            logger.info(f"... fetching {tracks_fetched + len(chunk)} / {len(unknown_ids)}...")
+        unknown_entries = [tracks_data[pid] for pid in unknown_ids]
 
-            if config.fetch_bulk:
-                chunk_tracks = await self._provider_library.get_tracks_by_ids(list(chunk))
-            else:
-                chunk_tracks = list(
-                    await asyncio.gather(*[self._provider_library.get_track_by_id(tid) for tid in chunk])
+        for offset in range(0, len(unknown_entries), config.batch_size):
+            chunk = unknown_entries[offset : offset + config.batch_size]
+            chunk_tracks = [
+                Track(
+                    user_id=user.id,
+                    provider=MusicProvider.SPOTIFY,
+                    provider_id=entry.provider_id,
+                    name=entry.name,
+                    artists=[entry.artist],
+                    album_name=entry.album_name,
+                    played_at=entry.played_at,
                 )
-            tracks_fetched += len(chunk_tracks)
-
+                for entry in chunk
+            ]
             _, created = await self._track_repository.bulk_upsert(
-                tracks=[
-                    dataclasses.replace(track, played_at=tracks_ts.get(track.provider_id)) for track in chunk_tracks
-                ],
+                tracks=chunk_tracks,
                 batch_size=config.batch_size,
             )
             tracks_created += created
+            logger.info(
+                f"... upserted {min(offset + config.batch_size, len(unknown_entries))} / {len(unknown_entries)}..."
+            )
 
-        # Finally, build and return report
         return ImportStreamingHistoryReport(
             items_read=items_read,
             items_skipped_no_ts=items_skipped_no_ts,
@@ -166,7 +174,6 @@ class ImportStreamingHistoryUseCase:
             unique_track_ids=len(track_provider_ids),
             tracks_already_known=len(known_ids),
             tracks_played_at_updated=tracks_played_at_updated,
-            tracks_fetched=tracks_fetched,
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,
         )
@@ -192,7 +199,7 @@ class ImportStreamingHistoryUseCase:
         Raises:
             StreamingHistoryInvalidFormat: If the file cannot be parsed as valid JSON.
         """
-        track_ts: dict[str, datetime] = {}
+        track_entries: dict[str, _FileParseEntry] = {}
 
         items_read = 0
         items_skipped_no_ts = 0
@@ -215,7 +222,8 @@ class ImportStreamingHistoryUseCase:
                         continue
 
                     uri = item.get("spotify_track_uri")
-                    if uri is None:
+                    name = item.get("master_metadata_track_name")
+                    if uri is None or not name:
                         items_skipped_no_uri += 1
                         continue
 
@@ -225,12 +233,21 @@ class ImportStreamingHistoryUseCase:
                         continue
 
                     track_id = parts[2]
-                    if track_id not in track_ts or ts > track_ts[track_id]:
-                        track_ts[track_id] = ts
+                    artist = item.get("master_metadata_album_artist_name") or ""
+                    album_name = item.get("master_metadata_album_album_name") or None
+
+                    if track_id not in track_entries or ts > track_entries[track_id].played_at:
+                        track_entries[track_id] = _FileParseEntry(
+                            provider_id=track_id,
+                            played_at=ts,
+                            name=name,
+                            artist=artist,
+                            album_name=album_name,
+                        )
         except Exception as exc:
             raise StreamingHistoryInvalidFormat(f"Failed to parse {path}: {exc}") from exc
 
-        entries = [_FileParseEntry(provider_id=tid, played_at=ts) for tid, ts in track_ts.items()]
+        entries = list(track_entries.values())
         stats = _FileParseStats(
             items_read=items_read,
             items_skipped_no_ts=items_skipped_no_ts,

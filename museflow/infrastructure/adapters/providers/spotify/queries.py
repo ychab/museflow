@@ -10,7 +10,6 @@ class SpotifySearchTrackQuery(BaseModel):
     artists: list[str] = Field(default_factory=list)
     is_new: bool = False
     is_underground: bool = False
-    isrc: str | None = None
 
     def _escape(self, val: str) -> str:
         return val.replace('"', '\\"')
@@ -35,8 +34,5 @@ class SpotifySearchTrackQuery(BaseModel):
 
         if self.is_underground:
             parts.append("tag:hipster")
-
-        if self.isrc:
-            parts.append(f"isrc:{self.isrc}")
 
         return " ".join(parts)

@@ -40,11 +40,3 @@ class SortOrder(StrEnum):
 
 
 type TrackOrdering = list[tuple[TrackOrderBy, SortOrder]]
-
-
-class AlbumType(StrEnum):
-    ALBUM = "album"
-    SINGLE = "single"
-    COMPILATION = "compilation"
-    EP = "ep"
-    UNKNOWN = "unknown"

@@ -1,34 +1,18 @@
-from museflow.infrastructure.adapters.database.models import AlbumDict
-from museflow.infrastructure.adapters.database.models import ArtistDict
-
 from tests.integration.factories.models.music import TrackModelFactory
 
 
 class TestTrackModel:
-    async def test__artist_dict(self) -> None:
-        track = await TrackModelFactory.create_async(
-            artists=[
-                ArtistDict(
-                    provider_id="unique-provider-id",
-                    name="foo",
-                ),
-            ],
-        )
-        assert len(track.artists) == 1
-        artist = track.artists[0]
+    async def test__artists__list_of_strings(self) -> None:
+        track = await TrackModelFactory.create_async(artists=["Grupo Niche", "Featured Artist"])
 
-        assert artist["provider_id"] == "unique-provider-id"
-        assert artist["name"] == "foo"
+        assert track.artists == ["Grupo Niche", "Featured Artist"]
 
-    async def test__album_dict(self) -> None:
-        track = await TrackModelFactory.create_async(
-            album=AlbumDict(
-                provider_id="unique-provider-id",
-                name="foo",
-                album_type="compilation",
-            )
-        )
-        assert track.album is not None
-        assert track.album["provider_id"] == "unique-provider-id"
-        assert track.album["name"] == "foo"
-        assert track.album["album_type"] == "compilation"
+    async def test__album_name__string(self) -> None:
+        track = await TrackModelFactory.create_async(album_name="Llegó la Salsa")
+
+        assert track.album_name == "Llegó la Salsa"
+
+    async def test__album_name__none(self) -> None:
+        track = await TrackModelFactory.create_async(album_name=None)
+
+        assert track.album_name is None

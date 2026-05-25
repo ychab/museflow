@@ -22,14 +22,6 @@ class TestSpotifySearchTrackQuery:
 
         assert "tag:hipster" in q
 
-    def test__field__is_isrc(self) -> None:
-        q = SpotifySearchTrackQuery(
-            track="S.D.E",
-            isrc="USRc17605174",
-        ).get_query()
-
-        assert "isrc:USRc17605174" in q
-
     def test__field__artists__single(self) -> None:
         q = SpotifySearchTrackQuery(
             track="Track",
@@ -51,7 +43,6 @@ class TestSpotifySearchTrackQuery:
             artists=["Artist A", "Artist B"],
             is_new=True,
             is_underground=True,
-            isrc="USRc17605174",
         ).get_query()
 
         expected_parts = [
@@ -59,6 +50,5 @@ class TestSpotifySearchTrackQuery:
             '(artist:"Artist A" OR artist:"Artist B")',
             "tag:new",
             "tag:hipster",
-            "isrc:USRc17605174",
         ]
         assert q == " ".join(expected_parts)

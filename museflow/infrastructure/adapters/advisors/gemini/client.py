@@ -168,7 +168,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
 
         exclusion_block = ""
         if excluded_tracks:
-            formatted = "\n".join(f"- {t.artists[0]}: {t.name}" for t in excluded_tracks)
+            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in excluded_tracks)
             exclusion_block = (
                 "### EXCLUSION LIST (DO NOT SUGGEST THESE)\n"
                 "These tracks have already been considered in this session. "

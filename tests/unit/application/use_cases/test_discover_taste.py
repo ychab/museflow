@@ -11,7 +11,6 @@ from museflow.domain.types import TasteProfiler
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 from tests.unit.factories.entities.music import PlaylistFactory
-from tests.unit.factories.entities.music import TrackArtistFactory
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.music import TrackSuggestedFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -250,7 +249,7 @@ class TestDiscoverTasteUseCase:
         """The same track returned by both recommended_tracks and search_queries is deduplicated."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        shared_track = TrackFactory.build(isrc=None)
+        shared_track = TrackFactory.build()
 
         strategy = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=1.0)],
@@ -270,44 +269,6 @@ class TestDiscoverTasteUseCase:
         )
 
         # Only 1 unique track despite 2 paths
-        assert len(result.tracks) == 1
-
-    async def test__dedup_removes_duplicate_isrc(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-        mock_track_reconciler: mock.Mock,
-    ) -> None:
-        """The same track returned twice (same ISRC) is deduplicated."""
-        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-
-        strategy = DiscoveryTasteStrategyFactory.build(
-            recommended_tracks=[
-                TrackSuggestedFactory.build(score=1.0),
-                TrackSuggestedFactory.build(score=0.8),
-            ],
-            search_queries=[],
-        )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
-
-        shared_isrc = "ISRC123"
-        mock_track_reconciler.reconcile.side_effect = [
-            (TrackFactory.build(isrc=shared_isrc), 0.9),
-            (TrackFactory.build(isrc=shared_isrc), 0.8),  # Same ISRC, different object
-        ]
-        mock_provider_library.search_tracks.return_value = []
-        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
-        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
-
-        result = await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1),
-        )
-
         assert len(result.tracks) == 1
 
     async def test__known_tracks_partially_filtered(
@@ -371,13 +332,13 @@ class TestDiscoverTasteUseCase:
         mock_advisor_agent.get_discovery_strategy.return_value = strategy
 
         # All reconcile to tracks with same primary artist
-        artist = TrackArtistFactory.build(provider_id="same-artist-id")
-        track = TrackFactory.build(artists=[artist])
+        artist_name = "SameArtist"
+        track = TrackFactory.build(artists=[artist_name])
 
         mock_track_reconciler.reconcile.side_effect = [
             (track, 0.9),
-            (TrackFactory.build(artists=[artist]), 0.9),
-            (TrackFactory.build(artists=[artist]), 0.9),
+            (TrackFactory.build(artists=[artist_name]), 0.9),
+            (TrackFactory.build(artists=[artist_name]), 0.9),
         ]
         mock_provider_library.search_tracks.return_value = [track]
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -439,8 +400,8 @@ class TestDiscoverTasteUseCase:
         """Tracks from multiple attempts are merged into the final result."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        track_attempt_1 = TrackFactory.build(isrc="ISRC001")
-        track_attempt_2 = TrackFactory.build(isrc="ISRC002")
+        track_attempt_1 = TrackFactory.build()
+        track_attempt_2 = TrackFactory.build()
 
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
@@ -479,8 +440,8 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
         suggested_track = TrackSuggestedFactory.build(score=0.9)
-        track_attempt_1 = TrackFactory.build(isrc="ISRC001")
-        track_attempt_2 = TrackFactory.build(isrc="ISRC002")
+        track_attempt_1 = TrackFactory.build()
+        track_attempt_2 = TrackFactory.build()
 
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[suggested_track],
@@ -536,7 +497,7 @@ class TestDiscoverTasteUseCase:
 
         # Attempt 1: all 60 suggestions fail to reconcile → 0 new tracks → loop continues
         # Attempt 2: produces 1 new track → loop stops
-        new_track = TrackFactory.build(isrc="ISRC_NEW")
+        new_track = TrackFactory.build()
         mock_track_reconciler.reconcile.side_effect = [None] * 60 + [(new_track, 0.9)]
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))

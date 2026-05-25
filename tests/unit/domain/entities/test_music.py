@@ -3,18 +3,7 @@ import uuid
 import pytest
 
 from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackArtist
 from museflow.domain.entities.music import TrackSuggested
-
-
-class TestTrackArtist:
-    def test__name__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackArtist.name must not be empty"):
-            TrackArtist(name="", provider_id="some-id")
-
-    def test__provider_id__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackArtist.provider_id must not be empty"):
-            TrackArtist(name="Queen", provider_id="")
 
 
 class TestTrack:
@@ -23,8 +12,7 @@ class TestTrack:
             user_id=uuid.uuid4(),
             name="foo",
             provider_id=str(uuid.uuid4()),
-            artists=[TrackArtist(name="bar", provider_id=str(uuid.uuid4()))],
-            duration_ms=3 * 60,
+            artists=["bar"],
             fingerprint="baz",
         )
         assert track.fingerprint == "baz"
@@ -34,60 +22,36 @@ class TestTrack:
             user_id=uuid.uuid4(),
             name="foo",
             provider_id=str(uuid.uuid4()),
-            artists=[TrackArtist(name="foo", provider_id=str(uuid.uuid4()))],
-            duration_ms=3 * 60,
+            artists=["foo"],
         )
         assert track.fingerprint != ""
 
+    def test__fingerprint__uses_primary_artist_only(self) -> None:
+        track_single = Track(
+            user_id=uuid.uuid4(),
+            name="Song",
+            provider_id="id1",
+            artists=["Main Artist"],
+        )
+        track_feat = Track(
+            user_id=uuid.uuid4(),
+            name="Song",
+            provider_id="id2",
+            artists=["Main Artist", "Featured Artist"],
+        )
+        assert track_single.fingerprint == track_feat.fingerprint
+
     def test__name__none(self) -> None:
         with pytest.raises(ValueError, match="Track.name must not be empty"):
-            Track(
-                user_id=uuid.uuid4(),
-                name="",
-                provider_id="spotify:track:123",
-                artists=[TrackArtist(name="Queen", provider_id="spotify:artist:456")],
-                duration_ms=180_000,
-            )
+            Track(user_id=uuid.uuid4(), name="", provider_id="spotify:track:123", artists=["Queen"])
 
     def test__provider_id__none(self) -> None:
         with pytest.raises(ValueError, match="Track.provider_id must not be empty"):
-            Track(
-                user_id=uuid.uuid4(),
-                name="Bohemian Rhapsody",
-                provider_id="",
-                artists=[TrackArtist(name="Queen", provider_id="spotify:artist:456")],
-                duration_ms=180_000,
-            )
+            Track(user_id=uuid.uuid4(), name="Bohemian Rhapsody", provider_id="", artists=["Queen"])
 
     def test__artists__none(self) -> None:
         with pytest.raises(ValueError, match="Track must have at least one artist"):
-            Track(
-                user_id=uuid.uuid4(),
-                name="Bohemian Rhapsody",
-                provider_id="spotify:track:123",
-                artists=[],
-                duration_ms=180_000,
-            )
-
-    def test__artist__name__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackArtist.name must not be empty"):
-            Track(
-                user_id=uuid.uuid4(),
-                name="Bohemian Rhapsody",
-                provider_id="spotify:track:123",
-                artists=[TrackArtist(name="", provider_id="spotify:artist:456")],
-                duration_ms=180_000,
-            )
-
-    def test__artist__provider_id__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackArtist.provider_id must not be empty"):
-            Track(
-                user_id=uuid.uuid4(),
-                name="Bohemian Rhapsody",
-                provider_id="spotify:track:123",
-                artists=[TrackArtist(name="Queen", provider_id="")],
-                duration_ms=180_000,
-            )
+            Track(user_id=uuid.uuid4(), name="Bohemian Rhapsody", provider_id="spotify:track:123", artists=[])
 
 
 class TestTrackSuggested:

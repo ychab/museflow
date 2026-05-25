@@ -6,7 +6,6 @@ import pytest
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
-from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
 
@@ -27,7 +26,6 @@ class TestSpotifyHistoryLogic:
     async def test__nominal(
         self,
         user: User,
-        auth_token: OAuthProviderUserToken,
         mock_use_case: mock.AsyncMock,
         tmp_path: Path,
     ) -> None:
@@ -38,7 +36,6 @@ class TestSpotifyHistoryLogic:
             items_skipped_no_uri=50,
             unique_track_ids=750,
             tracks_already_known=300,
-            tracks_fetched=450,
             tracks_created=200,
         )
 
@@ -53,5 +50,4 @@ class TestSpotifyHistoryLogic:
         assert report.items_skipped_no_uri == 50
         assert report.unique_track_ids == 750
         assert report.tracks_already_known == 300
-        assert report.tracks_fetched == 450
         assert report.tracks_created == 200

@@ -147,13 +147,7 @@ class DiscoverTasteUseCase:
 
             # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
             existing_fps = {ts.track.fingerprint for ts in tracks_scores}
-            existing_isrcs = {ts.track.isrc for ts in tracks_scores if ts.track.isrc}
-            tracks_new_this_attempt = [
-                ts
-                for ts in tracks_survived
-                if ts.track.fingerprint not in existing_fps
-                and (not ts.track.isrc or ts.track.isrc not in existing_isrcs)
-            ]
+            tracks_new_this_attempt = [ts for ts in tracks_survived if ts.track.fingerprint not in existing_fps]
 
             reports.append(
                 DiscoverTasteAttemptReport(
@@ -233,20 +227,12 @@ class DiscoverTasteUseCase:
     @staticmethod
     def _dedup_by_identity(tracks_scored: list[TrackScored]) -> list[TrackScored]:
         deduplicated: list[TrackScored] = []
-
         fingerprints: set[str] = set()
-        isrcs: set[str] = set()
 
         for ts in tracks_scored:
             if ts.track.fingerprint in fingerprints:
                 continue
-            if ts.track.isrc and ts.track.isrc in isrcs:
-                continue
-
             fingerprints.add(ts.track.fingerprint)
-            if ts.track.isrc:
-                isrcs.add(ts.track.isrc)
-
             deduplicated.append(ts)
 
         return deduplicated

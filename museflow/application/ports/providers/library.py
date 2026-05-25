@@ -12,37 +12,12 @@ class ProviderLibraryPort(ABC):
     """
 
     @abstractmethod
-    async def get_track_by_id(self, track_id: str) -> Track:
-        """Fetches full track metadata from the music provider by its provider ID.
-
-        Args:
-            track_id: The provider-specific track identifier.
-
-        Returns:
-            A `Track` entity.
-        """
-        ...
-
-    @abstractmethod
-    async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
-        """Fetches metadata for multiple tracks in a single bulk request.
-
-        Args:
-            track_ids: Provider-specific track identifiers (adapter enforces provider limits).
-
-        Returns:
-            A list of `Track` entities for all successfully resolved IDs.
-        """
-        ...
-
-    @abstractmethod
     async def search_tracks(
         self,
         track: str,
         artists: list[str] | None = None,
         is_new: bool = False,
         is_underground: bool = False,
-        isrc: str | None = None,
         page_size: int = 20,
         max_pages: int | None = None,
         log_enabled: bool = True,
@@ -54,7 +29,6 @@ class ProviderLibraryPort(ABC):
             artists: A list of artist names to filter by.
             is_new: Whether to include only new tracks (periodicity depends on the provider).
             is_underground: Whether to include underground tracks (depends on the provider).
-            isrc: An optional ISRC (International Standard Recording Code) to filter by.
             page_size: An optional maximum number of tracks per page.
             max_pages: The maximum number of pages to retrieve.
             log_enabled: Whether to write logs.

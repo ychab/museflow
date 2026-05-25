@@ -63,8 +63,7 @@ class SpotifyLibraryFactory:
 class SpotifyLibraryAdapter(ProviderLibraryPort):
     """Adapter for interacting with the Spotify Web API.
 
-    Implements `ProviderLibraryPort` for track search, bulk track fetching,
-    and playlist creation.
+    Implements `ProviderLibraryPort` for track search and playlist creation.
     """
 
     def __init__(
@@ -81,44 +80,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Public API
     # -------------------------------------------------------------------------
 
-    async def get_track_by_id(self, track_id: str) -> Track:
-        data = await self._execute_request(method="GET", endpoint=f"/tracks/{track_id}")
-        spotify_track = SpotifyTrack.model_validate(data)
-        return to_domain_track(spotify_track, user_id=self.user.id)
-
-    async def get_tracks_by_ids(self, track_ids: list[str]) -> list[Track]:
-        tracks: list[Track] = []
-
-        data = await self._execute_request(
-            method="GET",
-            endpoint="/tracks",
-            params={"ids": ",".join(track_ids)},
-        )
-
-        for item in data.get("tracks", []):
-            if item is None:
-                # Seems weird but indeed, Spotify could return a None entry (instead of returning nothing)
-                # in case the ID's is invalid or doesn't exist anymore.
-                logger.debug("Skipping null track entry in response")
-                continue
-
-            try:
-                spotify_track = SpotifyTrack.model_validate(item)
-            except ValidationError as e:
-                logger.debug(f"Skipping invalid track {item.get('id')} with error: {e}")
-                continue
-
-            tracks.append(to_domain_track(spotify_track=spotify_track, user_id=self.user.id))
-
-        return tracks
-
     async def search_tracks(
         self,
         track: str,
         artists: list[str] | None = None,
         is_new: bool = False,
         is_underground: bool = False,
-        isrc: str | None = None,
         page_size: int = 10,
         max_pages: int | None = None,
         log_enabled: bool = True,
@@ -128,7 +95,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             artists=artists or [],
             is_new=is_new,
             is_underground=is_underground,
-            isrc=isrc,
         )
 
         return await self._fetch_pages(
@@ -190,10 +156,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         log_prefix: str = "",
         response_key: str | None = None,
     ) -> list[Track]:
-        """
-        Generic method to fetch paginated resources from Spotify.
-        Iterates through pages until all items are retrieved or the page_size is reached.
-        """
+        """Generic method to fetch paginated resources from Spotify."""
         items: list[Track] = []
         pages_count = 0
 

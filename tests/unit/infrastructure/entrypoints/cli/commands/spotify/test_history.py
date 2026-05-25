@@ -9,8 +9,6 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
-from museflow.domain.entities.user import User
-from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
@@ -36,7 +34,6 @@ class TestSpotifyHistoryParserCommand:
                 "--directory", str(tmp_path),
                 "--min-duration-played", "10",
                 "--batch-size", "50",
-                "--fetch-bulk",
                 "--purge",
             ],
         )
@@ -129,24 +126,6 @@ class TestSpotifyHistoryCommand:
         output = clean_typer_text(result.stderr)
         assert "User not found with email: test@example.com" in output
 
-    def test__auth_token_not_found(
-        self,
-        mock_history_logic: mock.AsyncMock,
-        runner: CliRunner,
-        clean_typer_text: TextCleaner,
-        tmp_path: Path,
-    ) -> None:
-        mock_history_logic.side_effect = ProviderAuthTokenNotFoundError()
-
-        result = runner.invoke(
-            app,
-            ["spotify", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.stderr)
-        assert "Auth token not found with email: test@example.com. Did you forget to connect?" in output
-
     def test__directory_not_found(
         self,
         mock_history_logic: mock.AsyncMock,
@@ -197,7 +176,6 @@ class TestSpotifyHistoryCommand:
             items_skipped_no_uri=50,
             unique_track_ids=750,
             tracks_already_known=300,
-            tracks_fetched=450,
             tracks_created=200,
         )
 
@@ -215,16 +193,13 @@ class TestSpotifyHistoryCommand:
         assert "Items skipped (no URI) 50" in output
         assert "Unique track IDs 750" in output
         assert "Tracks already known 300" in output
-        assert "Tracks fetched 450" in output
         assert "Tracks created 200" in output
 
 
 @pytest.mark.usefixtures(
     "mock_get_db",
     "mock_user_repository",
-    "mock_auth_token_repository",
     "mock_track_repository",
-    "mock_spotify_client",
 )
 class TestSpotifyHistoryLogicCommand:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.history"
@@ -235,20 +210,5 @@ class TestSpotifyHistoryLogicCommand:
         with pytest.raises(UserNotFound):
             await history_logic(
                 email="test@example.com",
-                config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
-            )
-
-    async def test__auth_token__not_found(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await history_logic(
-                email=user.email,
                 config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
             )

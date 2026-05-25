@@ -47,20 +47,17 @@ class TrackRepository(ABC):
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
-        isrcs: list[str],
         fingerprints: list[str],
     ) -> TrackKnowIdentifiers:
         """
-        Queries the database to find which of the provided ISRCs
-        and Fingerprints are already owned by the user.
+        Queries the database to find which of the provided fingerprints are already owned by the user.
 
         Args:
             user_id: The ID of the user whose known tracks are to be retrieved.
-            isrcs: A list of ISRC to filter on
             fingerprints: A list of fingerprints to filter on
 
         Returns:
-            A value object TrackKnowIdentifiers containing the known ISRC and Fingerprints.
+            A value object TrackKnowIdentifiers containing the known fingerprints.
         """
         ...
 
