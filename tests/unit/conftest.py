@@ -5,7 +5,9 @@ from pydantic import HttpUrl
 
 import pytest
 
+from museflow.application.inputs.history import StreamingHistoryFileStats
 from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
@@ -141,6 +143,13 @@ def mock_provider_oauth(token_payload: OAuthProviderTokenPayload) -> mock.AsyncM
 @pytest.fixture
 def mock_provider_library() -> mock.AsyncMock:
     return mock.AsyncMock(spec=ProviderLibraryPort)
+
+
+@pytest.fixture
+def mock_streaming_history() -> mock.AsyncMock:
+    port = mock.AsyncMock(spec=StreamingHistoryPort)
+    port.parse_file.return_value = ([], StreamingHistoryFileStats())
+    return port
 
 
 @pytest.fixture

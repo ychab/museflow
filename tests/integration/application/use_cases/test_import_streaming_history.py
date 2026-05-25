@@ -9,18 +9,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 
 from tests import ASSETS_DIR
 from tests.integration.factories.models.music import TrackModelFactory
 
-HISTORY_DIR: Final[Path] = ASSETS_DIR / "history"
+HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "samples"
 
 
 class TestImportStreamingHistorySpotifyUseCase:
@@ -35,8 +36,15 @@ class TestImportStreamingHistorySpotifyUseCase:
         ]
 
     @pytest.fixture
-    def use_case(self, track_repository: TrackRepository) -> ImportStreamingHistoryUseCase:
-        return ImportStreamingHistoryUseCase(track_repository=track_repository)
+    def use_case(
+        self,
+        track_repository: TrackRepository,
+        spotify_streaming_history: SpotifyStreamingHistoryAdapter,
+    ) -> ImportStreamingHistoryUseCase:
+        return ImportStreamingHistoryUseCase(
+            track_repository=track_repository,
+            streaming_history=spotify_streaming_history,
+        )
 
     async def test__nominal(
         self,
@@ -50,7 +58,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         """
         report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(
+            config=StreamingHistoryImportConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
             ),
@@ -58,9 +66,9 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         assert report == ImportStreamingHistoryReport(
             items_read=6,
-            items_skipped_no_ts=0,
-            items_skipped_duration=2,
-            items_skipped_no_uri=0,
+            items_skipped_no_timestamp=0,
+            items_skipped_short_play=2,
+            items_skipped_no_track_id=0,
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
@@ -84,7 +92,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(
+            config=StreamingHistoryImportConfigInput(
                 directory=HISTORY_DIR,
                 purge=True,
             ),
@@ -92,9 +100,9 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         assert report == ImportStreamingHistoryReport(
             items_read=6,
-            items_skipped_no_ts=0,
-            items_skipped_duration=2,
-            items_skipped_no_uri=0,
+            items_skipped_no_timestamp=0,
+            items_skipped_short_play=2,
+            items_skipped_no_track_id=0,
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
@@ -131,7 +139,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(
+            config=StreamingHistoryImportConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
             ),

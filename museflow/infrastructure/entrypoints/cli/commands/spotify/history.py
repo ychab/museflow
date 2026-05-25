@@ -8,11 +8,12 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryUseCase
 from museflow.domain.exceptions import StreamingHistoryException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.commands.spotify import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -43,7 +44,7 @@ def history(
 ) -> None:
     start_time = time.perf_counter()
 
-    config = ImportStreamingHistoryConfigInput(
+    config = StreamingHistoryImportConfigInput(
         directory=directory,
         min_ms_played=min_duration_played * 1_000,
         batch_size=batch_size,
@@ -71,9 +72,9 @@ def history(
     table.add_column("Value", justify="right", style="magenta")
 
     table.add_row("Items read", str(report.items_read))
-    table.add_row("Items skipped (no timestamp)", str(report.items_skipped_no_ts))
-    table.add_row("Items skipped (duration)", str(report.items_skipped_duration))
-    table.add_row("Items skipped (no URI)", str(report.items_skipped_no_uri))
+    table.add_row("Items skipped (no timestamp)", str(report.items_skipped_no_timestamp))
+    table.add_row("Items skipped (short play)", str(report.items_skipped_short_play))
+    table.add_row("Items skipped (no track ID)", str(report.items_skipped_no_track_id))
     table.add_row("Unique track IDs", str(report.unique_track_ids))
     table.add_row("Tracks already known", str(report.tracks_already_known))
     table.add_row("Tracks played_at updated", str(report.tracks_played_at_updated))
@@ -82,7 +83,7 @@ def history(
     console.print(table)
 
 
-async def history_logic(email: EmailStr, config: ImportStreamingHistoryConfigInput) -> ImportStreamingHistoryReport:
+async def history_logic(email: EmailStr, config: StreamingHistoryImportConfigInput) -> ImportStreamingHistoryReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
@@ -93,5 +94,8 @@ async def history_logic(email: EmailStr, config: ImportStreamingHistoryConfigInp
         if user is None:
             raise UserNotFound()
 
-        use_case = ImportStreamingHistoryUseCase(track_repository=track_repository)
+        use_case = ImportStreamingHistoryUseCase(
+            track_repository=track_repository,
+            streaming_history=SpotifyStreamingHistoryAdapter(),
+        )
         return await use_case.import_history(user=user, config=config)

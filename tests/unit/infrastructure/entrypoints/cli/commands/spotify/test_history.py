@@ -7,8 +7,9 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
@@ -171,9 +172,9 @@ class TestSpotifyHistoryCommand:
     ) -> None:
         mock_history_logic.return_value = ImportStreamingHistoryReport(
             items_read=1000,
-            items_skipped_no_ts=5,
-            items_skipped_duration=200,
-            items_skipped_no_uri=50,
+            items_skipped_no_timestamp=5,
+            items_skipped_short_play=200,
+            items_skipped_no_track_id=50,
             unique_track_ids=750,
             tracks_already_known=300,
             tracks_created=200,
@@ -189,8 +190,8 @@ class TestSpotifyHistoryCommand:
         assert "Import successful in" in output
         assert "Items read 1000" in output
         assert "Items skipped (no timestamp) 5" in output
-        assert "Items skipped (duration) 200" in output
-        assert "Items skipped (no URI) 50" in output
+        assert "Items skipped (short play) 200" in output
+        assert "Items skipped (no track ID) 50" in output
         assert "Unique track IDs 750" in output
         assert "Tracks already known 300" in output
         assert "Tracks created 200" in output
@@ -204,11 +205,32 @@ class TestSpotifyHistoryCommand:
 class TestSpotifyHistoryLogicCommand:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.history"
 
+    async def test__nominal(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+
+        with mock.patch(f"{self.TARGET_PATH}.ImportStreamingHistoryUseCase") as mock_use_case_cls:
+            mock_use_case = mock.AsyncMock()
+            mock_use_case.import_history.return_value = ImportStreamingHistoryReport()
+            mock_use_case_cls.return_value = mock_use_case
+
+            report = await history_logic(
+                email=user.email,
+                config=StreamingHistoryImportConfigInput(directory=tmp_path),
+            )
+
+        assert report == ImportStreamingHistoryReport()
+        mock_use_case_cls.assert_called_once()
+
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
             await history_logic(
                 email="test@example.com",
-                config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
+                config=StreamingHistoryImportConfigInput(directory=Path("/tmp")),
             )

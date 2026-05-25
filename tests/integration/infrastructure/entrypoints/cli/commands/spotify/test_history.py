@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
@@ -31,9 +31,9 @@ class TestSpotifyHistoryLogic:
     ) -> None:
         mock_use_case.import_history.return_value = ImportStreamingHistoryReport(
             items_read=1000,
-            items_skipped_no_ts=5,
-            items_skipped_duration=200,
-            items_skipped_no_uri=50,
+            items_skipped_no_timestamp=5,
+            items_skipped_short_play=200,
+            items_skipped_no_track_id=50,
             unique_track_ids=750,
             tracks_already_known=300,
             tracks_created=200,
@@ -41,13 +41,13 @@ class TestSpotifyHistoryLogic:
 
         report = await history_logic(
             email=user.email,
-            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
+            config=StreamingHistoryImportConfigInput(directory=tmp_path),
         )
 
         assert report.items_read == 1000
-        assert report.items_skipped_no_ts == 5
-        assert report.items_skipped_duration == 200
-        assert report.items_skipped_no_uri == 50
+        assert report.items_skipped_no_timestamp == 5
+        assert report.items_skipped_short_play == 200
+        assert report.items_skipped_no_track_id == 50
         assert report.unique_track_ids == 750
         assert report.tracks_already_known == 300
         assert report.tracks_created == 200

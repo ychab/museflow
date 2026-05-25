@@ -44,6 +44,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -360,6 +361,11 @@ def spotify_library(
         session_client=spotify_session_client,
         max_concurrency=max_concurrency,
     )
+
+
+@pytest.fixture
+def spotify_streaming_history() -> SpotifyStreamingHistoryAdapter:
+    return SpotifyStreamingHistoryAdapter()
 
 
 # --- Advisor impls ---

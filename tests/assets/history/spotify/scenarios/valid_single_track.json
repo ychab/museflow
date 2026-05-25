@@ -1,0 +1,23 @@
+[
+  {
+    "ts": "2023-06-15T14:22:00Z",
+    "platform": "android",
+    "ms_played": 240000,
+    "conn_country": "FR",
+    "ip_addr": "1.2.3.4",
+    "master_metadata_track_name": "Song Name",
+    "master_metadata_album_artist_name": "Artist Name",
+    "master_metadata_album_album_name": "Album Name",
+    "spotify_track_uri": "spotify:track:abc123",
+    "episode_name": null,
+    "episode_show_name": null,
+    "spotify_episode_uri": null,
+    "reason_start": "trackdone",
+    "reason_end": "trackdone",
+    "shuffle": false,
+    "skipped": false,
+    "offline": false,
+    "offline_timestamp": null,
+    "incognito_mode": false
+  }
+]
