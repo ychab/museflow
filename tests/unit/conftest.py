@@ -202,7 +202,6 @@ def spotify_library(
     return SpotifyLibraryAdapter(
         user=user,
         session_client=spotify_session_client,
-        max_concurrency=10,
     )
 
 

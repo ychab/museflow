@@ -349,17 +349,12 @@ def spotify_session_client(
 
 @pytest.fixture
 def spotify_library(
-    request: pytest.FixtureRequest,
     user: User,
     spotify_session_client: SpotifyOAuthSessionClient,
 ) -> SpotifyLibraryAdapter:
-    params = getattr(request, "param", {})
-    max_concurrency = params.get("max_concurrency", 20)
-
     return SpotifyLibraryAdapter(
         user=user,
         session_client=spotify_session_client,
-        max_concurrency=max_concurrency,
     )
 
 

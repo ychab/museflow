@@ -22,7 +22,6 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPl
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
-from museflow.infrastructure.config.settings.app import app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +69,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         self,
         user: User,
         session_client: SpotifyOAuthSessionClient,
-        max_concurrency: int = app_settings.SYNC_SEMAPHORE_MAX_CONCURRENCY,
     ) -> None:
         self.user = user
         self.session_client = session_client
-        self.max_concurrency = max_concurrency
 
     # -------------------------------------------------------------------------
     # Public API
