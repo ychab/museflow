@@ -13,8 +13,8 @@ from pytest_httpx import HTTPXMock
 from tenacity import TryAgain
 
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.exceptions import ProfilerRateLimitExceeded
 from museflow.domain.exceptions import TasteProfileBuildException
+from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import _is_retryable_error
 
@@ -121,7 +121,7 @@ class TestGeminiTasteProfileAdapter:
             },
         )
 
-        with pytest.raises(ProfilerRateLimitExceeded):
+        with pytest.raises(TasteProfilerRateLimitExceeded):
             await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
 
     async def test__invalid_response__raises_taste_profile_build_exception(
@@ -258,7 +258,7 @@ class TestGeminiTasteProfileAdapter:
             new_callable=mock.AsyncMock,
             side_effect=TryAgain(),
         ):
-            with pytest.raises(ProfilerRateLimitExceeded):
+            with pytest.raises(TasteProfilerRateLimitExceeded):
                 await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
 
 

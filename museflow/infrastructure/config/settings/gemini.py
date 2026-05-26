@@ -22,7 +22,7 @@ class GeminiSettings(BaseSettings):
 
     ADVISOR_MODEL: GeminiModel = GeminiModel.FLASH_2_5
 
-    PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_LITE_3_1
+    PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_2_5
     PROFILER_MERGE_MODEL: GeminiModel = GeminiModel.FLASH_3_5
     PROFILER_REFLECT_MODEL: GeminiModel = GeminiModel.PRO_3_1
 

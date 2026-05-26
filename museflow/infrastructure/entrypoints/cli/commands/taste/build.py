@@ -8,6 +8,7 @@ import typer
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import TasteProfiler
@@ -70,6 +71,13 @@ def build(
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNoSeedException as e:
         typer.secho("No tracks found for this user. Import your library first.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except TasteProfileBuildPausedException as e:
+        typer.secho(
+            f"Build paused at batch {e.batch_index}/{e.total_batches}. Run with --resume to continue.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
         raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)

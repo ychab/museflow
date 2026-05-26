@@ -8,6 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import TasteProfiler
@@ -165,6 +166,21 @@ class TestTasteBuildCommand:
 
         output = clean_typer_text(result.stderr)
         assert "No tracks found for this user" in output
+
+    def test__paused(
+        self,
+        mock_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        mock_build_logic.side_effect = TasteProfileBuildPausedException(4, 25)
+
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        assert result.exit_code == 1
+
+        output = clean_typer_text(result.stderr)
+        assert "Build paused at batch 4/25" in output
+        assert "--resume" in output
 
     def test__generic_exception(
         self,

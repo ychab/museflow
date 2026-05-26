@@ -20,8 +20,8 @@ from tenacity import wait_exponential
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.exceptions import ProfilerRateLimitExceeded
 from museflow.domain.exceptions import TasteProfileBuildException
+from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, ProfilerRateLimitExceeded):
+    if isinstance(exception, TasteProfilerRateLimitExceeded):
         return False  # Rate limit exhausted — let it propagate
 
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
@@ -143,7 +143,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
                             "Gemini profiler rate limit wait exceeds max, aborting",
                             extra={"retry_delay": retry_delay, "max_retry_wait": self._max_retry_wait},
                         )
-                        raise ProfilerRateLimitExceeded(
+                        raise TasteProfilerRateLimitExceeded(
                             f"Gemini rate limit {retry_delay}s exceeds max wait {self._max_retry_wait}s"
                         ) from e
 
@@ -172,7 +172,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
                 json_data=request.model_dump(exclude_none=True),
             )
         except TryAgain as e:
-            raise ProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
+            raise TasteProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
         except httpx.HTTPStatusError as e:
             raise TasteProfileBuildException(f"Gemini API error after max retries: {e.response.status_code}") from e
 

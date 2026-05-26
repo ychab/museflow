@@ -12,9 +12,10 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import ProfilerRateLimitExceeded
 from museflow.domain.exceptions import TasteProfileBuildException
+from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
+from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 
@@ -60,7 +61,6 @@ class BuildTasteProfileUseCase:
             else:
                 logger.warning("No checkpoint found for this profile, starting from scratch")
 
-        failed_batches = 0
         for i, batch in enumerate(batches, start=1):
             if i <= start_batch_index:
                 continue
@@ -76,10 +76,9 @@ class BuildTasteProfileUseCase:
                     if current_profile is None
                     else await self._profiler.merge_profiles(current_profile, segment)
                 )
-            except (ProfilerRateLimitExceeded, TasteProfileBuildException) as e:
-                logger.warning(f"Taste profile batch {i} failed, skipping", extra={"error": str(e)})
-                failed_batches += 1
-                continue
+            except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
+                logger.warning(f"Taste profile batch {i} failed, pausing build", extra={"error": str(e)})
+                raise TasteProfileBuildPausedException(i, len(batches)) from e
 
             await self._taste_profile_repository.save_checkpoint(
                 user_id=user.id,
@@ -95,15 +94,6 @@ class BuildTasteProfileUseCase:
             if config.throttling_sleep_seconds > 0 and i < len(batches):
                 logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
                 await asyncio.sleep(config.throttling_sleep_seconds)
-
-        if current_profile is None:
-            raise TasteProfileNoSeedException("All batches failed — no profile data to save")
-
-        if failed_batches:
-            logger.warning(
-                f"Taste profile built with {failed_batches} skipped batch(es) out of {len(batches)}",
-                extra={"failed_batches": failed_batches, "total_batches": len(batches)},
-            )
 
         logger.info("About processing psychographic reflection")
         current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
