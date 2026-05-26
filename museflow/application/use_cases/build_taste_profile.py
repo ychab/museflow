@@ -12,6 +12,8 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -45,25 +47,66 @@ class BuildTasteProfileUseCase:
         tracks = sorted(tracks, key=lambda t: t.played_at_last or max_dt)
         logger.debug(f"Taste profile seeds: {len(tracks)} tracks (most played, chronological order)")
 
-        # First iteration: no previous profile to merge with — seed the accumulator.
-        # Subsequent iterations: merge the new segment into the running profile.
-        current_profile: TasteProfileData | None = None
         batches = list(itertools.batched(tracks, config.batch_size, strict=False))
+
+        # Load checkpoint if resuming
+        start_batch_index = 0
+        current_profile: TasteProfileData | None = None
+        if config.resume:
+            checkpoint = await self._taste_profile_repository.get_checkpoint(user.id, config.name)
+            if checkpoint is not None:
+                current_profile, start_batch_index = checkpoint
+                logger.info(f"Resuming taste profile from batch {start_batch_index + 1} / {len(batches)}")
+            else:
+                logger.warning("No checkpoint found for this profile, starting from scratch")
+
+        failed_batches = 0
         for i, batch in enumerate(batches, start=1):
+            if i <= start_batch_index:
+                continue
+
             logger.info(
                 f"About processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
             )
-            segment = await self._profiler.build_profile_segment(list(batch))
-            current_profile = (
-                segment if current_profile is None else await self._profiler.merge_profiles(current_profile, segment)
+
+            try:
+                segment = await self._profiler.build_profile_segment(list(batch))
+                current_profile = (
+                    segment
+                    if current_profile is None
+                    else await self._profiler.merge_profiles(current_profile, segment)
+                )
+            except (ProfilerRateLimitExceeded, TasteProfileBuildException) as e:
+                logger.warning(f"Taste profile batch {i} failed, skipping", extra={"error": str(e)})
+                failed_batches += 1
+                continue
+
+            await self._taste_profile_repository.save_checkpoint(
+                user_id=user.id,
+                name=config.name,
+                profiler=self._profiler.profiler_type,
+                logic_version=self._profiler.logic_version,
+                profiler_metadata=self._profiler.profiler_metadata,
+                tracks_count=len(tracks),
+                profile_data=current_profile,
+                batch_index=i,
             )
+
             if config.throttling_sleep_seconds > 0 and i < len(batches):
                 logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
                 await asyncio.sleep(config.throttling_sleep_seconds)
-        current_profile = cast(TasteProfileData, current_profile)  # Non-None guaranteed
+
+        if current_profile is None:
+            raise TasteProfileNoSeedException("All batches failed — no profile data to save")
+
+        if failed_batches:
+            logger.warning(
+                f"Taste profile built with {failed_batches} skipped batch(es) out of {len(batches)}",
+                extra={"failed_batches": failed_batches, "total_batches": len(batches)},
+            )
 
         logger.info("About processing psychographic reflection")
-        current_profile = await self._profiler.reflect_on_profile(current_profile)
+        current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
 
         taste_profile = TasteProfile(
             user_id=user.id,

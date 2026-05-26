@@ -22,13 +22,13 @@ class GeminiSettings(BaseSettings):
 
     ADVISOR_MODEL: GeminiModel = GeminiModel.FLASH_2_5
 
-    PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_LITE_3_1  # Alt: GeminiModel.FLASH_LITE_2_5
-    PROFILER_MERGE_MODEL: GeminiModel = GeminiModel.FLASH_2_5  # Alt: GeminiModel.FLASH_3_1
-    PROFILER_REFLECT_MODEL: GeminiModel = GeminiModel.PRO_3_1  # Alt: GeminiModel.PRO_2_5
+    PROFILER_SEGMENT_MODEL: GeminiModel = GeminiModel.FLASH_LITE_3_1
+    PROFILER_MERGE_MODEL: GeminiModel = GeminiModel.FLASH_3_5
+    PROFILER_REFLECT_MODEL: GeminiModel = GeminiModel.PRO_3_1
 
     HTTP_TIMEOUT: float = 30.0
-    HTTP_MAX_RETRIES: int = 5
-    HTTP_MAX_RETRY_WAIT: int = 60
+    HTTP_MAX_RETRIES: int = 10
+    HTTP_MAX_RETRY_WAIT: int = 120
 
 
 gemini_settings = GeminiSettings()

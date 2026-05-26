@@ -11,6 +11,7 @@ from pydantic import HttpUrl
 from pydantic import ValidationError
 
 from tenacity import TryAgain
+from tenacity import before_sleep_log
 from tenacity import retry
 from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
@@ -111,6 +112,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         retry=retry_if_exception(_is_retryable_error),
         wait=wait_exponential(multiplier=1, min=2, max=60),
         stop=stop_after_attempt(gemini_settings.HTTP_MAX_RETRIES),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
     async def make_api_call(
@@ -149,11 +151,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
                     await asyncio.sleep(retry_delay + 1)
                     raise TryAgain() from e
 
-            logger.exception(
-                "Gemini profiler API error",
-                extra={"status_code": e.response.status_code, "method": method, "endpoint": endpoint},
-            )
-            raise e
+            raise
 
         if response.status_code == codes.NO_CONTENT:
             return {}
@@ -175,6 +173,8 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             )
         except TryAgain as e:
             raise ProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
+        except httpx.HTTPStatusError as e:
+            raise TasteProfileBuildException(f"Gemini API error after max retries: {e.response.status_code}") from e
 
         envelope = GeminiResponse.model_validate(response_data)
         raw_text = envelope.candidates[0].content.parts[0].text

@@ -12,6 +12,8 @@ from museflow.application.use_cases.build_taste_profile import BuildTasteProfile
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 
@@ -216,3 +218,164 @@ class TestBuildTasteProfileUseCase:
 
         with pytest.raises(TasteProfileNoSeedException):
             await use_case.build_profile(user=user, config=config)
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__resume__checkpoint_found(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
+        mock_track_repository.get_list.return_value = tracks
+        mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 1)
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        for _ in range(5):
+            httpx_mock.add_response(
+                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                method="POST",
+                json=gemini_response,
+            )
+
+        await use_case.build_profile(user=user, config=config)
+
+        mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
+        assert mock_taste_profile_repository.save_checkpoint.call_count == 2
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__resume__no_checkpoint(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
+        mock_track_repository.get_list.return_value = tracks
+        mock_taste_profile_repository.get_checkpoint.return_value = None
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        for _ in range(6):
+            httpx_mock.add_response(
+                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                method="POST",
+                json=gemini_response,
+            )
+
+        await use_case.build_profile(user=user, config=config)
+
+        mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__batch_skip__rate_limit_exceeded(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> None:
+        # Batch 1 raises ProfilerRateLimitExceeded — skipped; batches 2 and 3 succeed
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        mock_track_repository.get_list.return_value = tracks
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        with (
+            mock.patch.object(
+                gemini_profiler,
+                "build_profile_segment",
+                new_callable=mock.AsyncMock,
+                side_effect=[ProfilerRateLimitExceeded("rate limit"), profile_data, profile_data],
+            ),
+            mock.patch.object(
+                gemini_profiler,
+                "merge_profiles",
+                new_callable=mock.AsyncMock,
+                return_value=profile_data,
+            ),
+            mock.patch.object(
+                gemini_profiler,
+                "reflect_on_profile",
+                new_callable=mock.AsyncMock,
+                return_value=profile_data,
+            ),
+        ):
+            await use_case.build_profile(user=user, config=config)
+
+        assert mock_taste_profile_repository.save_checkpoint.call_count == 2
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__batch_skip__build_exception(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> None:
+        # Batch 1 raises TasteProfileBuildException (e.g. invalid JSON response) — skipped; rest succeed
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        mock_track_repository.get_list.return_value = tracks
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        with (
+            mock.patch.object(
+                gemini_profiler,
+                "build_profile_segment",
+                new_callable=mock.AsyncMock,
+                side_effect=[TasteProfileBuildException("bad response"), profile_data, profile_data],
+            ),
+            mock.patch.object(
+                gemini_profiler,
+                "merge_profiles",
+                new_callable=mock.AsyncMock,
+                return_value=profile_data,
+            ),
+            mock.patch.object(
+                gemini_profiler,
+                "reflect_on_profile",
+                new_callable=mock.AsyncMock,
+                return_value=profile_data,
+            ),
+        ):
+            await use_case.build_profile(user=user, config=config)
+
+        mock_taste_profile_repository.upsert.assert_called_once()
+
+    @pytest.mark.parametrize("tracks", [2], indirect=True)
+    async def test__all_batches_fail(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+    ) -> None:
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        mock_track_repository.get_list.return_value = tracks
+
+        with mock.patch.object(
+            gemini_profiler,
+            "build_profile_segment",
+            new_callable=mock.AsyncMock,
+            side_effect=ProfilerRateLimitExceeded("exhausted"),
+        ):
+            with pytest.raises(TasteProfileNoSeedException):
+                await use_case.build_profile(user=user, config=config)

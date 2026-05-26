@@ -9,6 +9,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
+from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 
@@ -92,3 +93,107 @@ class TestTasteProfileSQLRepository:
     async def test__get_latest__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
         result = await taste_profile_repository.get_latest(user_id=uuid.uuid4(), profiler=TasteProfiler.GEMINI)
         assert result is None
+
+    async def test__save_checkpoint__creates_and_updates(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        profile_data = TasteProfileDataFactory.build()
+
+        await taste_profile_repository.save_checkpoint(
+            user_id=user.id,
+            name="my-profile",
+            profiler=TasteProfiler.GEMINI,
+            logic_version="v1.0",
+            profiler_metadata={},
+            tracks_count=100,
+            profile_data=profile_data,
+            batch_index=3,
+        )
+
+        stmt = select(TasteProfileModel).where(
+            TasteProfileModel.user_id == user.id,
+            TasteProfileModel.name == "my-profile",
+        )
+        row = (await async_session_db.execute(stmt)).scalar_one()
+        assert row.checkpoint_batch_index == 3
+        assert row.checkpoint_profile is not None
+
+        # Second call updates the checkpoint
+        await taste_profile_repository.save_checkpoint(
+            user_id=user.id,
+            name="my-profile",
+            profiler=TasteProfiler.GEMINI,
+            logic_version="v1.0",
+            profiler_metadata={},
+            tracks_count=100,
+            profile_data=profile_data,
+            batch_index=7,
+        )
+
+        await async_session_db.refresh(row)
+        assert row.checkpoint_batch_index == 7
+
+    async def test__get_checkpoint__found(
+        self,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        profile_data = TasteProfileDataFactory.build()
+
+        await taste_profile_repository.save_checkpoint(
+            user_id=user.id,
+            name="my-profile",
+            profiler=TasteProfiler.GEMINI,
+            logic_version="v1.0",
+            profiler_metadata={},
+            tracks_count=50,
+            profile_data=profile_data,
+            batch_index=5,
+        )
+
+        result = await taste_profile_repository.get_checkpoint(user_id=user.id, name="my-profile")
+
+        assert result is not None
+        checkpoint_profile, checkpoint_index = result
+        assert checkpoint_index == 5
+        assert checkpoint_profile is not None
+
+    async def test__get_checkpoint__not_found(
+        self,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        result = await taste_profile_repository.get_checkpoint(user_id=uuid.uuid4(), name="my-profile")
+        assert result is None
+
+    async def test__get_checkpoint__cleared_after_upsert(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        profile_data = TasteProfileDataFactory.build()
+
+        await taste_profile_repository.save_checkpoint(
+            user_id=user.id,
+            name="my-profile",
+            profiler=TasteProfiler.GEMINI,
+            logic_version="v1.0",
+            profiler_metadata={},
+            tracks_count=100,
+            profile_data=profile_data,
+            batch_index=5,
+        )
+
+        final_profile = TasteProfileFactory.build(user_id=user.id, name="my-profile")
+        await taste_profile_repository.upsert(final_profile)
+
+        stmt = select(TasteProfileModel).where(
+            TasteProfileModel.user_id == user.id,
+            TasteProfileModel.name == "my-profile",
+        )
+        row = (await async_session_db.execute(stmt)).scalar_one()
+        assert row.checkpoint_batch_index is None
+        assert row.checkpoint_profile is None

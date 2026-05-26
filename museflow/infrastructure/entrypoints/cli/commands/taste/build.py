@@ -48,6 +48,7 @@ def build(
         default=TasteProfiler.GEMINI,
         help="The profiler to use for building the taste profile",
     ),
+    resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
 ) -> None:
     try:
         profile = asyncio.run(
@@ -62,6 +63,7 @@ def build(
                     if throttling_sleep_seconds is not None
                     else app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS
                 ),
+                resume=resume,
             )
         )
     except UserNotFound as e:
@@ -90,6 +92,7 @@ async def build_logic(
     track_limit: int,
     batch_size: int,
     throttling_sleep_seconds: float,
+    resume: bool,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -113,6 +116,7 @@ async def build_logic(
             track_limit=track_limit,
             batch_size=batch_size,
             throttling_sleep_seconds=throttling_sleep_seconds,
+            resume=resume,
         )
 
         return await use_case.build_profile(user=user, config=config)

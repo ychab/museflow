@@ -254,4 +254,5 @@ class TestTasteBuildLogic:
                 track_limit=3000,
                 batch_size=200,
                 throttling_sleep_seconds=0.0,
+                resume=False,
             )

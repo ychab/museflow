@@ -206,10 +206,10 @@ class TestGeminiTasteProfileAdapter:
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
-        """429 response with no retryDelay in body falls through to logger.exception and re-raises."""
-        # 429 with empty details → _parse_retry_delay returns None → falls to logger.exception
+        """429 with no retryDelay re-raises HTTPStatusError after all retries are exhausted."""
+        # 429 with empty details → _parse_retry_delay returns None → re-raised as-is
         # Tenacity sees 429 as retryable, so we need HTTP_MAX_RETRIES responses
-        for _ in range(5):
+        for _ in range(10):
             httpx_mock.add_response(
                 url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
                 method="POST",
@@ -225,6 +225,22 @@ class TestGeminiTasteProfileAdapter:
             )
 
         assert exc_info.value.response.status_code == codes.TOO_MANY_REQUESTS
+
+    async def test__make_api_call__5xx_exhausted_raises_taste_profile_build_exception(
+        self,
+        gemini_profiler: GeminiTasteProfileAdapter,
+    ) -> None:
+        """5xx after max retries from make_api_call is wrapped as TasteProfileBuildException."""
+        from httpx import Request
+        from httpx import Response
+
+        request = Request("POST", "https://example.com")
+        response = Response(status_code=503, request=request)
+        exc = httpx.HTTPStatusError("503", request=request, response=response)
+
+        with mock.patch.object(gemini_profiler, "make_api_call", new_callable=mock.AsyncMock, side_effect=exc):
+            with pytest.raises(TasteProfileBuildException):
+                await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
 
     async def test__call_gemini__try_again_exhausted(
         self,

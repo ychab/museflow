@@ -39,6 +39,9 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     tracks_count: Mapped[int] = mapped_column(Integer, nullable=False)
     logic_version: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    checkpoint_profile: Mapped[TasteProfileData | None] = mapped_column(JSONB, nullable=True, default=None)
+    checkpoint_batch_index: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+
     def to_entity(self) -> TasteProfileEntity:
         return TasteProfileEntity(
             id=self.id,
