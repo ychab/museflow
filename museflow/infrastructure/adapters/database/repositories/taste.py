@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
@@ -36,6 +37,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
                 "profiler_metadata": stmt.excluded.profiler_metadata,
                 "tracks_count": stmt.excluded.tracks_count,
                 "logic_version": stmt.excluded.logic_version,
+                "status": TasteProfileStatus.FINISHED,
                 "checkpoint_profile": None,
                 "checkpoint_batch_index": None,
                 "updated_at": func.now(),
@@ -97,6 +99,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
                 "profiler_metadata": insert_stmt.excluded.profiler_metadata,
                 "tracks_count": insert_stmt.excluded.tracks_count,
                 "logic_version": insert_stmt.excluded.logic_version,
+                "status": TasteProfileStatus.BUILDING,
                 "checkpoint_profile": insert_stmt.excluded.checkpoint_profile,
                 "checkpoint_batch_index": insert_stmt.excluded.checkpoint_batch_index,
                 "updated_at": func.now(),

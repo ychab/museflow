@@ -14,6 +14,7 @@ from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisorAgent
@@ -131,6 +132,13 @@ def discover(
         raise typer.Exit(code=1) from e
     except TasteProfileNotFoundException as e:
         typer.secho("No profile found. Run muse taste build --name <name> first.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except TasteProfileStatusNotReadyException as e:
+        typer.secho(
+            "Taste profile is still being built. Run `muse taste build` to completion first.",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(code=1) from e
     except DiscoveryTrackNoNew as e:
         typer.secho("No new tracks found after all attempts", fg=typer.colors.RED, err=True)

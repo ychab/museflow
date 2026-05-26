@@ -4,9 +4,11 @@ import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.types import TasteProfiler
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
@@ -145,6 +147,22 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository.get_latest.return_value = None
 
         with pytest.raises(TasteProfileNotFoundException):
+            await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(),
+            )
+
+    async def test__taste_profile_status_not_ready(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(
+            user_id=user.id, status=TasteProfileStatus.BUILDING
+        )
+
+        with pytest.raises(TasteProfileStatusNotReadyException):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(),

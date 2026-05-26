@@ -7,6 +7,7 @@ from polyfactory.factories import TypedDictFactory
 from museflow.domain.entities.taste import TasteEra
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.taste import TechnicalFingerprint
 
 
@@ -32,3 +33,4 @@ class TasteProfileFactory(DataclassFactory[TasteProfile]):
     __model__ = TasteProfile
 
     profiler_metadata: dict[str, Any] = {}
+    status = TasteProfileStatus.FINISHED

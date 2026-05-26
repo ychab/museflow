@@ -66,6 +66,9 @@ class TasteProfileNoSeedException(Exception): ...
 class TasteProfileNotFoundException(Exception): ...
 
 
+class TasteProfileStatusNotReadyException(Exception): ...
+
+
 # --- Discovery track exceptions ---
 
 

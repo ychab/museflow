@@ -17,9 +17,11 @@ from museflow.application.utils.discovery import reconcile_tracks
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import TasteProfiler
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
@@ -93,6 +95,8 @@ class DiscoverTasteUseCase:
 
         if profile is None:
             raise TasteProfileNotFoundException()
+        elif profile.status == TasteProfileStatus.BUILDING:
+            raise TasteProfileStatusNotReadyException()
 
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []

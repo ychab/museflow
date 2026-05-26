@@ -14,6 +14,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisorAgent
@@ -328,6 +329,20 @@ class TestDiscoverTasteCommand:
 
         output = clean_typer_text(result.stderr)
         assert "No profile found. Run muse taste build --name <name> first." in output
+
+    def test__taste_profile_status_not_ready(
+        self,
+        mock_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        mock_discover_logic.side_effect = TasteProfileStatusNotReadyException()
+
+        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.stderr)
+        assert "Taste profile is still being built. Run `muse taste build` to completion first." in output
 
     def test__no_track_new_found(
         self,

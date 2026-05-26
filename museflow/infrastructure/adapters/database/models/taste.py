@@ -13,6 +13,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.taste import TasteProfile as TasteProfileEntity
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
@@ -39,6 +40,9 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     tracks_count: Mapped[int] = mapped_column(Integer, nullable=False)
     logic_version: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    status: Mapped[TasteProfileStatus] = mapped_column(
+        Enum(TasteProfileStatus), nullable=False, server_default=TasteProfileStatus.FINISHED.name
+    )
     checkpoint_profile: Mapped[TasteProfileData | None] = mapped_column(JSONB, nullable=True, default=None)
     checkpoint_batch_index: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
@@ -52,6 +56,7 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             profiler_metadata=self.profiler_metadata,
             tracks_count=self.tracks_count,
             logic_version=self.logic_version,
+            status=self.status,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )

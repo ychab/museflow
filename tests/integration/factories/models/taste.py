@@ -4,6 +4,7 @@ from polyfactory import Use
 from polyfactory.factories import TypedDictFactory
 
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 from tests.integration.factories.models.base import BaseModelFactory
@@ -18,6 +19,7 @@ class TasteProfileModelFactory(BaseModelFactory[TasteProfileModel]):
     __model__ = TasteProfileModel
 
     profile = Use(TasteProfileDataFactory.build)
+    status = TasteProfileStatus.FINISHED
 
     @classmethod
     async def create_async(cls, **kwargs: Any) -> TasteProfileModel:
