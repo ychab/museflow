@@ -110,6 +110,8 @@ class TestTrackSQLRepository:
                 key_func = operator.attrgetter("created_at")
             case TrackOrderBy.UPDATED_AT:
                 key_func = operator.attrgetter("updated_at")
+            case TrackOrderBy.PLAYED_COUNT:
+                key_func = operator.attrgetter("played_count")
             case _:
                 pytest.fail(f"Unhandled sort key: {order_by}")
                 return
@@ -145,15 +147,15 @@ class TestTrackSQLRepository:
         tracks_other: list[Track],
         track_repository: TrackRepository,
     ) -> None:
-        t1 = await TrackModelFactory.create_async(user_id=user.id, played_at=datetime(2023, 1, 1, tzinfo=UTC))
-        t2 = await TrackModelFactory.create_async(user_id=user.id, played_at=datetime(2023, 6, 1, tzinfo=UTC))
-        t3 = await TrackModelFactory.create_async(user_id=user.id, played_at=datetime(2024, 1, 1, tzinfo=UTC))
-        t4 = await TrackModelFactory.create_async(user_id=user.id, played_at=None)
+        t1 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=datetime(2023, 1, 1, tzinfo=UTC))
+        t2 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=datetime(2023, 6, 1, tzinfo=UTC))
+        t3 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=datetime(2024, 1, 1, tzinfo=UTC))
+        t4 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=None)
 
-        tracks_asc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC)])
+        tracks_asc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.ASC)])
         assert [t.id for t in tracks_asc] == [t1.id, t2.id, t3.id, t4.id]
 
-        tracks_desc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT, SortOrder.DESC)])
+        tracks_desc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.DESC)])
         assert [t.id for t in tracks_desc] == [t3.id, t2.id, t1.id, t4.id]
 
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
@@ -295,7 +297,7 @@ class TestTrackSQLRepository:
         expected_artists = ["SCH" for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
 
-    async def test__bulk_upsert__played_at_keeps_latest(
+    async def test__bulk_upsert__played_at_last_keeps_latest(
         self,
         user: User,
         track_repository: TrackRepository,
@@ -304,19 +306,57 @@ class TestTrackSQLRepository:
         older = datetime(2023, 1, 1, tzinfo=UTC)
         newer = datetime(2023, 6, 1, tzinfo=UTC)
 
-        track = TrackFactory.build(user_id=user.id, played_at=older)
+        track = TrackFactory.build(user_id=user.id, played_at_last=older)
         await track_repository.bulk_upsert([track], batch_size=1)
 
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at=newer)], batch_size=1)
+        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_last=newer)], batch_size=1)
 
         stmt = select(TrackModel).where(TrackModel.id == track.id)
         track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at == newer
+        assert track_db.played_at_last == newer
 
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at=older)], batch_size=1)
+        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_last=older)], batch_size=1)
 
         track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at == newer
+        assert track_db.played_at_last == newer
+
+    async def test__bulk_upsert__played_at_first_keeps_earliest(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        async_session_db: AsyncSession,
+    ) -> None:
+        earlier = datetime(2020, 1, 1, tzinfo=UTC)
+        later = datetime(2023, 6, 1, tzinfo=UTC)
+
+        track = TrackFactory.build(user_id=user.id, played_at_first=later)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_first=earlier)], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.played_at_first == earlier
+
+        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_first=later)], batch_size=1)
+
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.played_at_first == earlier
+
+    async def test__bulk_upsert__played_count_accumulates(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        async_session_db: AsyncSession,
+    ) -> None:
+        track = TrackFactory.build(user_id=user.id, played_count=3)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        await track_repository.bulk_upsert([dataclasses.replace(track, played_count=7)], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.played_count == 10
 
     async def test__purge(
         self,

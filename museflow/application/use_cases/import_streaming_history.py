@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 
 from museflow.application.inputs.history import StreamingHistoryEntry
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
@@ -25,6 +26,7 @@ class ImportStreamingHistoryReport:
 
     tracks_already_known: int = 0
     tracks_played_at_updated: int = 0
+    plays_total: int = 0
 
     tracks_created: int = 0
     tracks_purged: int = 0
@@ -66,23 +68,26 @@ class ImportStreamingHistoryUseCase:
             )
             logger.info("History tracks purged.\n")
 
-        # Collect unique track IDs with their latest played_at and metadata across all files
-        tracks_data: dict[str, StreamingHistoryEntry] = {}  # provider_id → latest entry
+        # Collect all play events per track across all files
+        track_metadata: dict[str, StreamingHistoryEntry] = {}  # provider_id → first entry seen (for field values)
+        track_play_times: dict[str, list[datetime]] = {}  # provider_id → all played_at timestamps
         items_read = items_skipped_no_timestamp = items_skipped_short_play = items_skipped_no_track_id = 0
 
         for path in json_files:
             entries, stats = await self._streaming_history.parse_file(path=path, min_ms_played=config.min_ms_played)
 
             for entry in entries:
-                if entry.provider_id not in tracks_data or entry.played_at > tracks_data[entry.provider_id].played_at:
-                    tracks_data[entry.provider_id] = entry
+                if entry.provider_id not in track_metadata:
+                    track_metadata[entry.provider_id] = entry
+                    track_play_times[entry.provider_id] = []
+                track_play_times[entry.provider_id].append(entry.played_at)
 
             items_read += stats.items_read
             items_skipped_no_timestamp += stats.items_skipped_no_timestamp
             items_skipped_short_play += stats.items_skipped_short_play
             items_skipped_no_track_id += stats.items_skipped_no_track_id
 
-        track_provider_ids = set(tracks_data.keys())
+        track_provider_ids = set(track_metadata.keys())
         logger.info(f"Collected {len(track_provider_ids)} unique track ID's.")
 
         # Filter already-known IDs
@@ -97,7 +102,7 @@ class ImportStreamingHistoryUseCase:
         unknown_ids = track_provider_ids - known_ids
         logger.info(f"Collected {len(unknown_ids)} unknown track ID's.")
 
-        # Refresh played_at for already-known tracks (bulk_upsert uses GREATEST — safe to re-run)
+        # Refresh play data for already-known tracks (upsert uses GREATEST/LEAST/+ — safe to re-run)
         tracks_played_at_updated = 0
         if known_ids:
             known_tracks = await self._track_repository.get_list(
@@ -106,17 +111,22 @@ class ImportStreamingHistoryUseCase:
                 provider_ids=list(known_ids),
             )
             updated_tracks = [
-                dataclasses.replace(track, played_at=tracks_data[track.provider_id].played_at)
+                dataclasses.replace(
+                    track,
+                    played_at_last=max(track_play_times[track.provider_id]),
+                    played_at_first=min(track_play_times[track.provider_id]),
+                    played_count=len(track_play_times[track.provider_id]),
+                )
                 for track in known_tracks
             ]
             await self._track_repository.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
             tracks_played_at_updated = len(updated_tracks)
-            logger.info(f"Refreshed played_at for {tracks_played_at_updated} already-known tracks.")
+            logger.info(f"Refreshed play data for {tracks_played_at_updated} already-known tracks.")
 
         # Build Track entities directly from file metadata and upsert in batches
         logger.info(f"\nUpserting {len(unknown_ids)} new tracks from file metadata.")
         tracks_created = 0
-        unknown_entries = [tracks_data[pid] for pid in unknown_ids]
+        unknown_entries = [track_metadata[pid] for pid in unknown_ids]
 
         for offset in range(0, len(unknown_entries), config.batch_size):
             chunk = unknown_entries[offset : offset + config.batch_size]
@@ -128,7 +138,9 @@ class ImportStreamingHistoryUseCase:
                     name=entry.name,
                     artists=[entry.artist],
                     album_name=entry.album_name,
-                    played_at=entry.played_at,
+                    played_at_last=max(track_play_times[entry.provider_id]),
+                    played_at_first=min(track_play_times[entry.provider_id]),
+                    played_count=len(track_play_times[entry.provider_id]),
                 )
                 for entry in chunk
             ]
@@ -149,6 +161,7 @@ class ImportStreamingHistoryUseCase:
             unique_track_ids=len(track_provider_ids),
             tracks_already_known=len(known_ids),
             tracks_played_at_updated=tracks_played_at_updated,
+            plays_total=sum(len(v) for v in track_play_times.values()),
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,
         )

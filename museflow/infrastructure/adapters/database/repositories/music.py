@@ -23,10 +23,6 @@ class TrackSQLRepository(TrackRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def count(self, user_id: uuid.UUID) -> int:
-        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user_id)
-        return (await self.session.execute(stmt)).scalar_one()
-
     async def get_list(
         self,
         user_id: uuid.UUID,
@@ -120,7 +116,16 @@ class TrackSQLRepository(TrackRepository):
                 index_elements=index_elements,
                 set_={
                     key: (
-                        func.greatest(getattr(TrackModel, key), excluded[key]) if key == "played_at" else excluded[key]
+                        func.greatest(getattr(TrackModel, key), excluded[key])
+                        if key == "played_at_last"
+                        else func.least(
+                            func.coalesce(getattr(TrackModel, key), excluded[key]),
+                            func.coalesce(excluded[key], getattr(TrackModel, key)),
+                        )
+                        if key == "played_at_first"
+                        else getattr(TrackModel, key) + excluded[key]
+                        if key == "played_count"
+                        else excluded[key]
                     )
                     for key in tracks_chunk[0]
                     if key not in index_excluded

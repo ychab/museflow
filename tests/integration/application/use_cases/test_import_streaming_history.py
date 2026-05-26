@@ -72,6 +72,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
+            plays_total=4,
             tracks_created=4,
             tracks_purged=0,
         )
@@ -106,6 +107,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             unique_track_ids=4,
             tracks_already_known=0,
             tracks_played_at_updated=0,
+            plays_total=4,
             tracks_created=4,
             tracks_purged=3,
         )
@@ -133,7 +135,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             await TrackModelFactory.create_async(
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
-                played_at=old_played_at,
+                played_at_last=old_played_at,
                 provider_id=track_id,
             )
 
@@ -156,4 +158,4 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
         tracks_by_id = {t.provider_id: t for t in results.scalars().all()}
         for track_id, expected in expected_played_at.items():
-            assert tracks_by_id[track_id].played_at == expected, f"Wrong played_at for {track_id}"
+            assert tracks_by_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"

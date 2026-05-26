@@ -12,11 +12,6 @@ class TrackRepository(ABC):
     """A repository for managing `Track` entities."""
 
     @abstractmethod
-    async def count(self, user_id: uuid.UUID) -> int:
-        """Returns the total number of tracks for a user."""
-        ...
-
-    @abstractmethod
     async def get_list(
         self,
         user_id: uuid.UUID,
@@ -33,7 +28,7 @@ class TrackRepository(ABC):
             provider: A provider to filter on.
             provider_ids: Filter to only return tracks whose provider_id is in this list.
             order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
-                   Use RANDOM as the sole entry for random ordering. Nullable columns (PLAYED_AT)
+                   Use RANDOM as the sole entry for random ordering. Nullable columns
                    always sort NULLs last regardless of direction.
             offset: The number of tracks to skip before starting to collect the result set.
             limit: The maximum number of tracks to return.

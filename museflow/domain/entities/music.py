@@ -26,7 +26,9 @@ class Track(BaseProviderEntity):
 
     fingerprint: str = ""
 
-    played_at: datetime | None = None
+    played_at_first: datetime | None = None
+    played_at_last: datetime | None = None
+    played_count: int = 1
 
     @property
     def primary_artist(self) -> str:

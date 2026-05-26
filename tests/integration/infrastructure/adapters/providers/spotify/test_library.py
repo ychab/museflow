@@ -30,7 +30,7 @@ class TestSpotifyLibrary:
         assert track_first.artists[0] == "Grupo Niche"
         assert track_first.provider == MusicProvider.SPOTIFY
         assert track_first.provider_id == "30xocklvViCtxktihAEZM8"
-        assert track_first.played_at is None
+        assert track_first.played_at_last is None
 
         track_last = tracks[-1]
         assert track_last.id is not None
@@ -40,7 +40,7 @@ class TestSpotifyLibrary:
         assert track_last.artists[0] == "Grupo Niche"
         assert track_last.provider == MusicProvider.SPOTIFY
         assert track_last.provider_id == "0K81HUG9YhPp6khuUEAH9g"
-        assert track_last.played_at is None
+        assert track_last.played_at_last is None
 
     async def test__search__max_pages(
         self,

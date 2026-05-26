@@ -119,7 +119,10 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - `__allow_none_optionals__ = False` on Pydantic input factories.
 - `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base model factory.
 - Chain nested TypedDict factories with `Use(ChildFactory.build)` (e.g. `TasteEra` → `TechnicalFingerprint`).
-- **Never create `_make_*` helper functions** to build test objects. Always use factories. If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
+- **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
+  - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
+  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.
+  - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
 
 ## Mocking
 

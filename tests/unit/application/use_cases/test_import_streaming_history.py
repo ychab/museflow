@@ -64,6 +64,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             unique_track_ids=2,
             tracks_already_known=0,
             tracks_played_at_updated=0,
+            plays_total=2,
             tracks_created=2,
             tracks_purged=0,
         )
@@ -267,10 +268,10 @@ class TestImportStreamingHistorySpotifyUseCase:
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
         upserted_by_id = {t.provider_id: t for t in upserted}
 
-        assert upserted_by_id["track_1"].played_at == datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC)
-        assert upserted_by_id["track_2"].played_at == datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC)
-        assert upserted_by_id["track_3"].played_at == datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC)
-        assert upserted_by_id["track_4"].played_at == datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track_1"].played_at_last == datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track_2"].played_at_last == datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track_3"].played_at_last == datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track_4"].played_at_last == datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
 
     async def test__known_tracks__played_at_refreshed(
         self,
@@ -306,5 +307,5 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
         upserted_by_id = {t.provider_id: t for t in upserted}
-        assert upserted_by_id["track1"].played_at == datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC)
-        assert upserted_by_id["track2"].played_at == datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track1"].played_at_last == datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC)
+        assert upserted_by_id["track2"].played_at_last == datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC)

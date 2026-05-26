@@ -54,9 +54,10 @@ def _format_tracks(tracks: list[Track]) -> str:
     lines = []
 
     for track in tracks:
-        date_label = f"last_played:{track.played_at.date()}" if track.played_at else "no_date"
+        first = track.played_at_first.date() if track.played_at_first else "?"
+        last = track.played_at_last.date() if track.played_at_last else "?"
         artists = " & ".join(track.artists)
-        lines.append(f"{date_label} | {artists} - {track.name}")
+        lines.append(f"first:{first} | last:{last} | plays:{track.played_count} | {artists} - {track.name}")
 
     return "\n".join(lines)
 
@@ -186,10 +187,10 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         return cast(TasteProfileData, content.model_dump())
 
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
-        dates = [t.played_at for t in tracks if t.played_at]
+        dates = [t.played_at_last for t in tracks if t.played_at_last]
         if dates:
-            min_date = min(d for d in dates if d is not None).date()
-            max_date = max(d for d in dates if d is not None).date()
+            min_date = min(dates).date()
+            max_date = max(dates).date()
             date_range = f"{min_date} to {max_date}"
         else:
             date_range = "unknown period"

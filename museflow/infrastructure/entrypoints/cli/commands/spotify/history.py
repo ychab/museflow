@@ -77,7 +77,8 @@ def history(
     table.add_row("Items skipped (no track ID)", str(report.items_skipped_no_track_id))
     table.add_row("Unique track IDs", str(report.unique_track_ids))
     table.add_row("Tracks already known", str(report.tracks_already_known))
-    table.add_row("Tracks played_at updated", str(report.tracks_played_at_updated))
+    table.add_row("Tracks play data updated", str(report.tracks_played_at_updated))
+    table.add_row("Total play events", str(report.plays_total))
     table.add_row("Tracks created", str(report.tracks_created))
 
     console.print(table)

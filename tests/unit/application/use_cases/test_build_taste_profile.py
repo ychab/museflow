@@ -1,4 +1,6 @@
 import json
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 from unittest import mock
 
@@ -7,6 +9,7 @@ from pytest_httpx import HTTPXMock
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import TasteProfileNoSeedException
@@ -45,6 +48,18 @@ class TestBuildTasteProfileUseCase:
         )
 
     @pytest.fixture
+    def tracks(self, request: pytest.FixtureRequest, user: User) -> list[Track]:
+        size: int = request.param
+        return [
+            TrackFactory.build(
+                user_id=user.id,
+                played_at_last=datetime(2020, 1, i + 1, tzinfo=UTC),
+                played_at_first=datetime(2019, 1, i + 1, tzinfo=UTC),
+            )
+            for i in range(size)
+        ]
+
+    @pytest.fixture
     def use_case(
         self,
         gemini_profiler: GeminiTasteProfileAdapter,
@@ -57,11 +72,13 @@ class TestBuildTasteProfileUseCase:
             taste_profile_repository=mock_taste_profile_repository,
         )
 
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__nominal__multiple_batches(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         gemini_profiler: GeminiTasteProfileAdapter,
@@ -70,8 +87,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1)
-        mock_track_repository.count.return_value = 7
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
+        mock_track_repository.get_list.return_value = tracks
 
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
         for _ in range(6):
@@ -90,11 +106,13 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert.assert_called_once()
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
+    @pytest.mark.parametrize("tracks", [2], indirect=True)
     async def test__nominal__single_batch(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         gemini_profiler: GeminiTasteProfileAdapter,
@@ -103,8 +121,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 2 tracks → 1 batch → 1 build_profile_segment + 1 reflect_on_profile (no merge)
-        mock_track_repository.count.return_value = 2
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=2, user_id=user.id)
+        mock_track_repository.get_list.return_value = tracks
 
         for _ in range(2):
             httpx_mock.add_response(
@@ -121,10 +138,12 @@ class TestBuildTasteProfileUseCase:
         assert profile.user_id == user.id
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__throttling(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         gemini_profiler: GeminiTasteProfileAdapter,
@@ -138,8 +157,7 @@ class TestBuildTasteProfileUseCase:
             batch_size=3,
             throttling_sleep_seconds=1.0,
         )
-        mock_track_repository.count.return_value = 7
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
+        mock_track_repository.get_list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -156,11 +174,13 @@ class TestBuildTasteProfileUseCase:
         assert mock_sleep.call_count == 2
         mock_sleep.assert_called_with(1.0)
 
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__no_throttling(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         gemini_profiler: GeminiTasteProfileAdapter,
@@ -169,8 +189,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
-        mock_track_repository.count.return_value = 7
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=7, user_id=user.id)
+        mock_track_repository.get_list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -193,7 +212,6 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.count.return_value = 0
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(TasteProfileNoSeedException):

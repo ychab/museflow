@@ -5,6 +5,7 @@ from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Index
+from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
@@ -44,7 +45,9 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
     fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
 
-    played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    played_at_first: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    played_at_last: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    played_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     def to_entity(self) -> TrackEntity:
         return TrackEntity(
@@ -56,5 +59,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             artists=self.artists,
             album_name=self.album_name,
             fingerprint=self.fingerprint,
-            played_at=self.played_at,
+            played_at_first=self.played_at_first,
+            played_at_last=self.played_at_last,
+            played_count=self.played_count,
         )

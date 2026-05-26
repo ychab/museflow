@@ -1,7 +1,6 @@
 import asyncio
 import itertools
 import logging
-import random
 from datetime import UTC
 from datetime import datetime
 from typing import cast
@@ -32,18 +31,19 @@ class BuildTasteProfileUseCase:
         self._taste_profile_repository = taste_profile_repository
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
-        total = await self._track_repository.count(user_id=user.id)
-        offset = random.randint(0, max(0, total - config.track_limit))
-        logger.debug(f"Taste profile seed: total={total}, limit={config.track_limit}, offset={offset}")
-
+        # Select the most-listened tracks as seeds (best signal quality)
         tracks = await self._track_repository.get_list(
             user_id=user.id,
-            order=[(TrackOrderBy.PLAYED_AT, SortOrder.ASC)],
-            offset=offset,
+            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
             limit=config.track_limit,
         )
         if not tracks:
             raise TasteProfileNoSeedException(f"No tracks found for user {user.id}")
+
+        # Re-sort chronologically so Gemini builds coherent taste eras from date-range batches.
+        max_dt = datetime.max.replace(tzinfo=UTC)
+        tracks = sorted(tracks, key=lambda t: t.played_at_last or max_dt)
+        logger.debug(f"Taste profile seeds: {len(tracks)} tracks (most played, chronological order)")
 
         # First iteration: no previous profile to merge with — seed the accumulator.
         # Subsequent iterations: merge the new segment into the running profile.

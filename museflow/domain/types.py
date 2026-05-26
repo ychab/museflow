@@ -25,13 +25,15 @@ class DiscoveryFocus(StrEnum):
 class TrackOrderBy(StrEnum):
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
-    PLAYED_AT = "played_at"
+    PLAYED_AT_LAST = "played_at_last"
+    PLAYED_AT_FIRST = "played_at_first"
+    PLAYED_COUNT = "played_count"
     RANDOM = "random"
 
     @property
     def nullable(self) -> bool:
         """True for nullable columns — NULLs are sorted last in both ASC and DESC."""
-        return self == TrackOrderBy.PLAYED_AT
+        return self in (TrackOrderBy.PLAYED_AT_LAST, TrackOrderBy.PLAYED_AT_FIRST)
 
 
 class SortOrder(StrEnum):

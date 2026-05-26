@@ -291,7 +291,10 @@ class UserModelFactory(BaseModelFactory[User]):
 - `__allow_none_optionals__ = False` on input factories when you always want values.
 - Use `@post_generated` for fields that depend on other generated fields.
 - Use `Use(faker.email)` for realistic field values.
-- **Never create `_make_*` helper functions** to build test objects. Always use factories. If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
+- **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
+  - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
+  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.
+  - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
 
 ### Assertion Style
 ```python
