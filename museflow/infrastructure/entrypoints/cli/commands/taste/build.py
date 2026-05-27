@@ -40,11 +40,6 @@ def build(
         min=1,
         max=1000,
     ),
-    throttling_sleep_seconds: float | None = typer.Option(
-        None,
-        "--throttling-sleep-seconds",
-        help="Seconds to sleep between batches (default: MUSEFLOW_TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS)",
-    ),
     profiler: TasteProfiler = typer.Option(
         default=TasteProfiler.GEMINI,
         help="The profiler to use for building the taste profile",
@@ -59,11 +54,6 @@ def build(
                 name=name,
                 track_limit=track_limit,
                 batch_size=batch_size,
-                throttling_sleep_seconds=(
-                    throttling_sleep_seconds
-                    if throttling_sleep_seconds is not None
-                    else app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS
-                ),
                 resume=resume,
             )
         )
@@ -99,7 +89,6 @@ async def build_logic(
     name: str,
     track_limit: int,
     batch_size: int,
-    throttling_sleep_seconds: float,
     resume: bool,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
@@ -123,7 +112,7 @@ async def build_logic(
             name=name,
             track_limit=track_limit,
             batch_size=batch_size,
-            throttling_sleep_seconds=throttling_sleep_seconds,
+            throttling_sleep_seconds=app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS,
             resume=resume,
         )
 
