@@ -26,7 +26,7 @@ class TestTasteViewParserCommand:
 
     @pytest.fixture(autouse=True)
     def mock_typer_launch(self) -> Iterable[mock.Mock]:
-        with mock.patch("museflow.infrastructure.entrypoints.cli.commands.taste.view.typer.launch") as patched:
+        with mock.patch("museflow.infrastructure.entrypoints.cli.commands.taste.view.webbrowser.open") as patched:
             yield patched
 
     def test__nominal(self, runner: CliRunner, mock_typer_launch: mock.Mock) -> None:

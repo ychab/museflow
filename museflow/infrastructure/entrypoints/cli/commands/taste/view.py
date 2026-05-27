@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import tempfile
+import webbrowser
 from contextlib import AsyncExitStack
 from enum import StrEnum
 from pathlib import Path
@@ -56,7 +57,7 @@ def view(
         filepath = generate_profile_html_file(html)
         file_uri = filepath.absolute().as_uri()
         typer.echo(f"Opening browser to show the taste profile: {file_uri}")
-        typer.launch(file_uri)
+        webbrowser.open(file_uri)
 
 
 async def view_logic(email: EmailStr, name: str) -> TasteProfile:
