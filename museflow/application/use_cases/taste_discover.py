@@ -123,7 +123,7 @@ class DiscoverTasteUseCase:
                 genre=config.genre,
                 mood=config.mood,
                 custom_instructions=config.custom_instructions,
-                excluded_tracks=tracks_suggested[:50] or None,
+                excluded_tracks=list(tracks_suggested) or None,
                 blacklisted_artists=blacklisted_artists,
                 blacklisted_tracks=blacklisted_tracks,
             )

@@ -495,7 +495,7 @@ class TestDiscoverTasteUseCase:
         second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
         assert second_call_kwargs["excluded_tracks"] == [suggested_track]
 
-    async def test__excluded_tracks_capped_at_50(
+    async def test__excluded_tracks_passes_full_history(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -505,10 +505,10 @@ class TestDiscoverTasteUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> None:
-        """The excluded_tracks list passed to the advisor is capped at 50 entries."""
+        """The excluded_tracks list passed to the advisor contains all previously suggested tracks."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        # 60 suggested tracks in attempt 1 — more than the cap of 50
+        # 60 suggested tracks in attempt 1
         many_suggestions = TrackSuggestedFactory.batch(60, score=0.9)
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=many_suggestions,
@@ -536,7 +536,7 @@ class TestDiscoverTasteUseCase:
         second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
         excluded = second_call_kwargs["excluded_tracks"]
         assert excluded is not None
-        assert len(excluded) == 50
+        assert len(excluded) == 60
 
     async def test__blacklist_empty__advisor_receives_none(
         self,
