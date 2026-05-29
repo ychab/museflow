@@ -18,6 +18,35 @@ class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def list(self, user_id: uuid.UUID) -> list[TasteProfile]:
+        stmt = (
+            select(TasteProfileModel)
+            .where(TasteProfileModel.user_id == user_id)
+            .order_by(TasteProfileModel.updated_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return [row.to_entity() for row in result.scalars()]
+
+    async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None:
+        stmt = select(TasteProfileModel).where(
+            TasteProfileModel.user_id == user_id,
+            TasteProfileModel.name == name,
+        )
+        profile_db = (await self.session.execute(stmt)).scalar_one_or_none()
+        return profile_db.to_entity() if profile_db else None
+
+    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None:
+        stmt = (
+            select(TasteProfileModel)
+            .where(TasteProfileModel.user_id == user_id)
+            .where(TasteProfileModel.profiler == profiler.value)
+            .order_by(TasteProfileModel.created_at.desc())
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        profile_db = result.scalar_one_or_none()
+        return profile_db.to_entity() if profile_db else None
+
     async def upsert(self, profile: TasteProfile) -> TasteProfile:
         stmt = pg_insert(TasteProfileModel).values(
             id=profile.id,
@@ -48,26 +77,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         await self.session.commit()
 
         return profile_db.to_entity()
-
-    async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None:
-        stmt = select(TasteProfileModel).where(
-            TasteProfileModel.user_id == user_id,
-            TasteProfileModel.name == name,
-        )
-        profile_db = (await self.session.execute(stmt)).scalar_one_or_none()
-        return profile_db.to_entity() if profile_db else None
-
-    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None:
-        stmt = (
-            select(TasteProfileModel)
-            .where(TasteProfileModel.user_id == user_id)
-            .where(TasteProfileModel.profiler == profiler.value)
-            .order_by(TasteProfileModel.created_at.desc())
-            .limit(1)
-        )
-        result = await self.session.execute(stmt)
-        profile_db = result.scalar_one_or_none()
-        return profile_db.to_entity() if profile_db else None
 
     async def save_checkpoint(
         self,

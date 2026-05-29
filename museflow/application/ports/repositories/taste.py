@@ -10,13 +10,16 @@ from museflow.domain.types import TasteProfiler
 
 class TasteProfileRepository(ABC):
     @abstractmethod
-    async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
+    async def list(self, user_id: uuid.UUID) -> list[TasteProfile]: ...
 
     @abstractmethod
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...
 
     @abstractmethod
     async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None: ...
+
+    @abstractmethod
+    async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
 
     @abstractmethod
     async def save_checkpoint(
