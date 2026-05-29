@@ -174,7 +174,13 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         except TryAgain as e:
             raise TasteProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
         except httpx.HTTPStatusError as e:
-            raise TasteProfileBuildException(f"Gemini API error after max retries: {e.response.status_code}") from e
+            try:
+                error_detail = e.response.json()["error"]["message"]
+            except (KeyError, ValueError):
+                error_detail = e.response.text
+            raise TasteProfileBuildException(
+                f"Gemini API error after max retries: {e.response.status_code} — {error_detail}"
+            ) from e
 
         envelope = GeminiResponse.model_validate(response_data)
         raw_text = envelope.candidates[0].content.parts[0].text

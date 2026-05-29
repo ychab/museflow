@@ -226,21 +226,45 @@ class TestGeminiTasteProfileAdapter:
 
         assert exc_info.value.response.status_code == codes.TOO_MANY_REQUESTS
 
-    async def test__make_api_call__5xx_exhausted_raises_taste_profile_build_exception(
+    @pytest.mark.parametrize(
+        ("content", "content_type", "expected_detail"),
+        [
+            pytest.param(
+                json.dumps({"error": {"code": 400, "message": "API key not valid"}}).encode(),
+                "application/json",
+                "API key not valid",
+                id="json_error_body",
+            ),
+            pytest.param(
+                b"Service Unavailable",
+                "text/plain",
+                "Service Unavailable",
+                id="non_json_body",
+            ),
+        ],
+    )
+    async def test__make_api_call__http_error_raises_taste_profile_build_exception(
         self,
         gemini_profiler: GeminiTasteProfileAdapter,
+        content: bytes,
+        content_type: str,
+        expected_detail: str,
     ) -> None:
-        """5xx after max retries from make_api_call is wrapped as TasteProfileBuildException."""
-        from httpx import Request
-        from httpx import Response
-
+        """HTTPStatusError from make_api_call is wrapped as TasteProfileBuildException with error detail."""
         request = Request("POST", "https://example.com")
-        response = Response(status_code=503, request=request)
-        exc = httpx.HTTPStatusError("503", request=request, response=response)
+        response = Response(
+            status_code=400,
+            request=request,
+            content=content,
+            headers={"content-type": content_type},
+        )
+        exc = httpx.HTTPStatusError("error", request=request, response=response)
 
         with mock.patch.object(gemini_profiler, "make_api_call", new_callable=mock.AsyncMock, side_effect=exc):
-            with pytest.raises(TasteProfileBuildException):
+            with pytest.raises(TasteProfileBuildException) as exc_info:
                 await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
+
+        assert expected_detail in str(exc_info.value)
 
     async def test__call_gemini__try_again_exhausted(
         self,
