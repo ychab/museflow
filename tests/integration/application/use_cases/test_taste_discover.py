@@ -5,7 +5,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
+from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import TasteProfiler

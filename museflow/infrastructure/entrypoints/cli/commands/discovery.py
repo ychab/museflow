@@ -9,8 +9,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.use_cases.discover_taste import DiscoverTasteResult
-from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
+from museflow.application.use_cases.taste_discover import DiscoverTasteResult
+from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundException

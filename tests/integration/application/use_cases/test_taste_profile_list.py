@@ -1,5 +1,5 @@
 from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.use_cases.list_taste_profiles import list_taste_profiles
+from museflow.application.use_cases.taste_profile_list import list_taste_profiles
 from museflow.domain.entities.user import User
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory

@@ -6,7 +6,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
-from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
+from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException

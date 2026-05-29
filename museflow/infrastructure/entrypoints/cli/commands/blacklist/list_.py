@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from museflow.application.use_cases.list_blacklist import list_blacklist
+from museflow.application.use_cases.blacklist_list import list_blacklist
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app

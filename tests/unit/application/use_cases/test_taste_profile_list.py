@@ -1,6 +1,6 @@
 from unittest import mock
 
-from museflow.application.use_cases.list_taste_profiles import list_taste_profiles
+from museflow.application.use_cases.taste_profile_list import list_taste_profiles
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
 

@@ -6,7 +6,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.remove_from_blacklist import RemoveFromBlacklistUseCase
+from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistUseCase
 from museflow.domain.exceptions import BlacklistItemNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app

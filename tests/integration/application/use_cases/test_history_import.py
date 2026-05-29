@@ -11,8 +11,8 @@ import pytest
 
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.ports.repositories.music import TrackRepository
-from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
-from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryUseCase
+from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
+from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel

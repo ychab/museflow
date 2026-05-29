@@ -8,8 +8,8 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
-from museflow.application.use_cases.discover_taste import DiscoverTasteAttemptReport
-from museflow.application.use_cases.discover_taste import DiscoverTasteResult
+from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptReport
+from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError

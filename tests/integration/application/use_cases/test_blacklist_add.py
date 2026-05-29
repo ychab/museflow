@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.use_cases.add_to_blacklist import AddToBlacklistUseCase
+from museflow.application.use_cases.blacklist_add import AddToBlacklistUseCase
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
 from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrack as BlacklistedTrackModel

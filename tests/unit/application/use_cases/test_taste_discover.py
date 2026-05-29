@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
+from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew

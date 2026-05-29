@@ -9,8 +9,8 @@ import typer
 from rich.table import Table
 
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
-from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryReport
-from museflow.application.use_cases.import_streaming_history import ImportStreamingHistoryUseCase
+from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
+from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.exceptions import StreamingHistoryException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter

@@ -8,7 +8,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
-from museflow.application.use_cases.build_taste_profile import BuildTasteProfileUseCase
+from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
@@ -171,7 +171,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        with mock.patch("museflow.application.use_cases.build_taste_profile.asyncio.sleep") as mock_sleep:
+        with mock.patch("museflow.application.use_cases.taste_profile_build.asyncio.sleep") as mock_sleep:
             await use_case.build_profile(user=user, config=config)
 
         assert mock_sleep.call_count == 2
@@ -203,7 +203,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        with mock.patch("museflow.application.use_cases.build_taste_profile.asyncio.sleep") as mock_sleep:
+        with mock.patch("museflow.application.use_cases.taste_profile_build.asyncio.sleep") as mock_sleep:
             await use_case.build_profile(user=user, config=config)
 
         mock_sleep.assert_not_called()

@@ -1,5 +1,5 @@
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.use_cases.list_blacklist import list_blacklist
+from museflow.application.use_cases.blacklist_list import list_blacklist
 from museflow.domain.entities.user import User
 
 from tests.integration.factories.models.blacklist import BlacklistedArtistModelFactory

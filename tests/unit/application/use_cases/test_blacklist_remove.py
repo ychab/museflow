@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.remove_from_blacklist import RemoveFromBlacklistUseCase
+from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistUseCase
 from museflow.domain.exceptions import BlacklistItemNotFoundError
 
 

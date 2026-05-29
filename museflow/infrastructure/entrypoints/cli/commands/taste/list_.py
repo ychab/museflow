@@ -6,7 +6,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.use_cases.list_taste_profiles import list_taste_profiles
+from museflow.application.use_cases.taste_profile_list import list_taste_profiles
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
