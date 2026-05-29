@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 10cfb105a1b5
+Revision ID: 2fc0a194d8fe
 Revises:
-Create Date: 2026-05-26 16:42:24.049620
+Create Date: 2026-05-29 11:19:00.954229
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '10cfb105a1b5'
+revision: str = '2fc0a194d8fe'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -54,6 +54,29 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'provider', name='uq_user_provider_auth_token')
+    )
+    op.create_table('museflow_blacklisted_artist',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('artist_name', sa.String(length=512), nullable=False),
+    sa.Column('fingerprint', sa.String(length=512), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'fingerprint', name='uq_museflow_blacklisted_artist_user_fp')
+    )
+    op.create_table('museflow_blacklisted_track',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=512), nullable=False),
+    sa.Column('artist_name', sa.String(length=512), nullable=False),
+    sa.Column('fingerprint', sa.String(length=512), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'fingerprint', name='uq_museflow_blacklisted_track_user_fp')
     )
     op.create_table('museflow_taste_profile',
     sa.Column('id', sa.UUID(), nullable=False),
@@ -109,6 +132,8 @@ def downgrade() -> None:
     op.drop_table('museflow_track')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')
     op.drop_table('museflow_taste_profile')
+    op.drop_table('museflow_blacklisted_track')
+    op.drop_table('museflow_blacklisted_artist')
     op.drop_table('museflow_auth_token')
     op.drop_index(op.f('ix_museflow_auth_state_state'), table_name='museflow_auth_state')
     op.drop_table('museflow_auth_state')
