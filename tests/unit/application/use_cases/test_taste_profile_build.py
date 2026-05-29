@@ -305,6 +305,7 @@ class TestBuildTasteProfileUseCase:
 
         assert exc_info.value.batch_index == 1
         assert exc_info.value.total_batches == 3
+        assert exc_info.value.reason == "rate limit"
         mock_taste_profile_repository.save_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
@@ -333,6 +334,7 @@ class TestBuildTasteProfileUseCase:
 
         assert exc_info.value.batch_index == 1
         assert exc_info.value.total_batches == 3
+        assert exc_info.value.reason == "bad response"
         mock_taste_profile_repository.save_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
@@ -362,5 +364,6 @@ class TestBuildTasteProfileUseCase:
 
         assert exc_info.value.batch_index == 2
         assert exc_info.value.total_batches == 3
+        assert exc_info.value.reason == "rate limit"
         mock_taste_profile_repository.save_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()

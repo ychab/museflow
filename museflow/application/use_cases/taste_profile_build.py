@@ -77,8 +77,8 @@ class BuildTasteProfileUseCase:
                     else await self._profiler.merge_profiles(current_profile, segment)
                 )
             except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
-                logger.warning(f"Taste profile batch {i} failed, pausing build", extra={"error": str(e)})
-                raise TasteProfileBuildPausedException(i, len(batches)) from e
+                logger.warning(f"Taste profile batch {i} failed, pausing build: {e}")
+                raise TasteProfileBuildPausedException(i, len(batches), reason=str(e)) from e
 
             await self._taste_profile_repository.save_checkpoint(
                 user_id=user.id,

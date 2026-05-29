@@ -61,10 +61,11 @@ class TasteProfileBuildException(Exception): ...
 
 
 class TasteProfileBuildPausedException(Exception):
-    def __init__(self, batch_index: int, total_batches: int) -> None:
+    def __init__(self, batch_index: int, total_batches: int, reason: str) -> None:
         self.batch_index = batch_index
         self.total_batches = total_batches
-        super().__init__(f"Build paused at batch {batch_index}/{total_batches} — use --resume to continue")
+        self.reason = reason
+        super().__init__(f"Build paused at batch {batch_index}/{total_batches} — {reason} — use --resume to continue")
 
 
 class TasteProfileNoSeedException(Exception): ...

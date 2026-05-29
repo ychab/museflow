@@ -64,7 +64,7 @@ def build(
         raise typer.Exit(code=1) from e
     except TasteProfileBuildPausedException as e:
         typer.secho(
-            f"Build paused at batch {e.batch_index}/{e.total_batches}. Run with --resume to continue.",
+            f"Build paused at batch {e.batch_index}/{e.total_batches}: {e.reason}\nRun with --resume to continue.",
             fg=typer.colors.YELLOW,
             err=True,
         )
