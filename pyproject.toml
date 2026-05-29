@@ -31,6 +31,7 @@ dependencies = [
     "rapidfuzz>=3.14.5",
     "unidecode>=1.4.0",
     "ijson>=3.5.0",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -54,6 +55,7 @@ dev = [
     "deptry>=0.25.1",
     "ruff>=0.15.13",
     "mypy>=2.1.0",
+    "types-pyyaml>=6.0",
     # Note: pydantic[dotenv] is usually redundant if you have python-dotenv or pydantic-settings,
     # but kept here to match your original request.
     # "pydantic[dotenv]>=2.13.4",
