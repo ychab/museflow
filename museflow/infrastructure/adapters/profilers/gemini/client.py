@@ -205,8 +205,8 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             f"Analyze these {len(tracks)} tracks from [{date_range}]. Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
             '- "taste_timeline": one TasteEra for this batch\n'
-            '- "core_identity": {genre_or_mood: weight 0-1} long-term affinity signals\n'
-            '- "current_vibe": {genre_or_mood: weight 0-1} what this batch reveals right now\n'
+            '- "core_identity": [{"key": genre_or_mood, "value": weight 0-1}] long-term affinity signals\n'
+            '- "current_vibe": [{"key": genre_or_mood, "value": weight 0-1}] what this batch reveals right now\n'
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
             "\nFor each TasteEra, populate technical_fingerprint by inferring numerical values (0.0 to 1.0) "

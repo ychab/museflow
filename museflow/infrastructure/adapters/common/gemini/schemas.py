@@ -9,7 +9,6 @@ class GeminiSchemaProperty(BaseModel):
     items: "GeminiSchemaProperty | None" = None
     properties: "dict[str, GeminiSchemaProperty] | None" = None
     required: list[str] | None = None
-    additionalProperties: "GeminiSchemaProperty | None" = None
 
     @classmethod
     def string(cls) -> "GeminiSchemaProperty":

@@ -47,11 +47,17 @@ class TestGeminiTasteProfileAdapter:
         params = getattr(request, "param", {})
         profile = params.get("profile", profile_data)
 
+        serializable = {
+            **profile,
+            "core_identity": [{"key": k, "value": v} for k, v in profile["core_identity"].items()],
+            "current_vibe": [{"key": k, "value": v} for k, v in profile["current_vibe"].items()],
+        }
+
         return {
             "candidates": [
                 {
                     "content": {
-                        "parts": [{"text": json.dumps(profile)}],
+                        "parts": [{"text": json.dumps(serializable)}],
                         "role": "model",
                     }
                 }

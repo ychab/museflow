@@ -31,11 +31,17 @@ class TestBuildTasteProfileUseCase:
 
     @pytest.fixture
     def gemini_response(self, profile_data: TasteProfileData) -> dict[str, Any]:
+        serializable = {
+            **profile_data,
+            "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
+            "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
+        }
+
         return {
             "candidates": [
                 {
                     "content": {
-                        "parts": [{"text": json.dumps(profile_data)}],
+                        "parts": [{"text": json.dumps(serializable)}],
                         "role": "model",
                     }
                 }

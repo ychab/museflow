@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import field_validator
 
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerationConfig
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiSchemaProperty
@@ -31,6 +32,13 @@ class GeminiTasteProfileContent(BaseModel):
     behavioral_traits: dict[str, float] = {}
     discovery_style: str | None = None
 
+    @field_validator("core_identity", "current_vibe", mode="before")
+    @classmethod
+    def _from_key_value_list(cls, v: object) -> dict[str, float]:
+        if not isinstance(v, list):
+            raise ValueError(f"expected a list of {{key, value}} objects, got {type(v).__name__}")
+        return {item["key"]: item["value"] for item in v}
+
 
 GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
     properties={
@@ -54,12 +62,36 @@ GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
                 required=["era_label", "time_range", "technical_fingerprint", "dominant_moods"],
             ),
         ),
-        "core_identity": GeminiSchemaProperty(type="object", additionalProperties=GeminiSchemaProperty.number()),
-        "current_vibe": GeminiSchemaProperty(type="object", additionalProperties=GeminiSchemaProperty.number()),
+        "core_identity": GeminiSchemaProperty.array(
+            items=GeminiSchemaProperty.object(
+                properties={
+                    "key": GeminiSchemaProperty.string(),
+                    "value": GeminiSchemaProperty.number(),
+                },
+                required=["key", "value"],
+            )
+        ),
+        "current_vibe": GeminiSchemaProperty.array(
+            items=GeminiSchemaProperty.object(
+                properties={
+                    "key": GeminiSchemaProperty.string(),
+                    "value": GeminiSchemaProperty.number(),
+                },
+                required=["key", "value"],
+            )
+        ),
         "personality_archetype": GeminiSchemaProperty.string(),
         "life_phase_insights": GeminiSchemaProperty.array(items=GeminiSchemaProperty.string()),
         "musical_identity_summary": GeminiSchemaProperty.string(),
-        "behavioral_traits": GeminiSchemaProperty(type="object", additionalProperties=GeminiSchemaProperty.number()),
+        "behavioral_traits": GeminiSchemaProperty.object(
+            properties={
+                "openness": GeminiSchemaProperty.number(),
+                "adventurousness": GeminiSchemaProperty.number(),
+                "nostalgia_bias": GeminiSchemaProperty.number(),
+                "rhythmic_dependency": GeminiSchemaProperty.number(),
+            },
+            required=["openness", "adventurousness", "nostalgia_bias", "rhythmic_dependency"],
+        ),
         "discovery_style": GeminiSchemaProperty.string(),
     },
     required=[
