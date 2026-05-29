@@ -2,6 +2,7 @@ import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.use_cases.discover_taste import DiscoverTasteUseCase
@@ -20,6 +21,7 @@ class TestDiscoverTasteUseCase:
         self,
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
+        blacklist_repository: BlacklistRepository,
         spotify_library: ProviderLibraryPort,
         gemini_advisor: GeminiAdvisorAdapter,
         track_reconciler: TrackReconciler,
@@ -27,6 +29,7 @@ class TestDiscoverTasteUseCase:
         return DiscoverTasteUseCase(
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
+            blacklist_repository=blacklist_repository,
             provider_library=spotify_library,
             advisor_agent=gemini_advisor,
             track_reconciler=track_reconciler,

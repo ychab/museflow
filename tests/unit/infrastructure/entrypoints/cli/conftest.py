@@ -16,6 +16,7 @@ from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -160,6 +161,16 @@ def mock_track_repository(
 ) -> Iterable[mock.AsyncMock]:
     repo = mock.AsyncMock(spec=TrackRepository)
     with mock_dependency_factory(f"{target_path}.get_track_repository", repo) as mock_repo:
+        yield mock_repo
+
+
+@pytest.fixture
+def mock_blacklist_repository(
+    target_path: str,
+    mock_dependency_factory: DependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    repo = mock.AsyncMock(spec=BlacklistRepository)
+    with mock_dependency_factory(f"{target_path}.get_blacklist_repository", repo) as mock_repo:
         yield mock_repo
 
 

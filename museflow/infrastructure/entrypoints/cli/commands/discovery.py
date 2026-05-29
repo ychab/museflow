@@ -22,6 +22,7 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_AGENT_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_agent_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
@@ -227,6 +228,7 @@ async def discover_taste_logic(
         auth_token_repository = get_auth_token_repository(session)
         track_repository = get_track_repository(session)
         taste_profile_repository = get_taste_profile_repository(session)
+        blacklist_repository = get_blacklist_repository(session)
 
         provider_client = await stack.enter_async_context(get_provider_oauth(provider))
         provider_library_factory = get_provider_library_factory(
@@ -255,6 +257,7 @@ async def discover_taste_logic(
             advisor_agent=advisor_agent_adapter,
             track_reconciler=track_reconciler,
             profiler=profiler,
+            blacklist_repository=blacklist_repository,
         )
 
         return await use_case.create_suggestions_playlist(user=user, config=config)

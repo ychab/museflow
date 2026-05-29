@@ -27,6 +27,12 @@ This quick and dirty document just list the roadmap tasks.
   hint, and what to avoid (e.g. compilations, already-owned tracks). Requires extending the port
   interface or adding an optional context argument.
 
+- I have discover that most of the time, at least with rap, what I like the most is the work of the beatmaker. Finally,
+  a lot of artist can unfortunately easily replaced: without deep lyrics, they are just a voice with a signature that any AI can replaced!
+  I discover the new feature songDNA on Spotify and it's allow me to discover the beatmaker behind the production of the artists I like the most:
+  => I like almost 1/2 too, no matter the artist! We should definitively take a look on this track and dig it!
+  Example: Seezy, Sirius
+
 
 ## claude
 

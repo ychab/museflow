@@ -93,6 +93,23 @@ class TestMyFeature:
     async def test__raises_when_<condition>(self, ...) -> None: ...
 ```
 
+## CLI Command Tests
+
+Each CLI command gets **3 unit test classes** and **1 integration test class**. Canonical example: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
+
+**Unit test classes (per command):**
+- `TestXParserCommand` — autouse-mock the `*_logic` function; test only Typer argument/option parsing (invalid email format, invalid UUID, etc.)
+- `TestXCommand` — autouse-mock the `*_logic` function; test the command function's own behavior: success output messages, try/except branches
+- `TestXLogic` — set `TARGET_PATH` as a class attribute pointing to the command's module; use `@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", ...)` to patch CLI dependencies; test the logic function's own branches (user not found, etc.)
+
+**Integration test class (per command):**
+- `TestXLogic` — real DB; **happy-path only**. Error-path tests (user not found, item not found) belong in the unit `TestXLogic`.
+
+**Key rules:**
+- Never mix parsing validation into `TestXCommand`, never mix command body behavior into `TestXParserCommand`
+- Each `TestXLogic` class must define `TARGET_PATH` as a class attribute (the conftest `target_path` fixture reads it from there first)
+- No inner imports anywhere in test files — all imports at module level
+
 ## Fixtures
 
 ```

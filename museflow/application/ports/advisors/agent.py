@@ -26,6 +26,8 @@ class AdvisorAgentPort(ABC):
         mood: str | None = None,
         custom_instructions: str | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
+        blacklisted_artists: list[str] | None = None,
+        blacklisted_tracks: list[str] | None = None,
     ) -> DiscoveryTasteStrategy: ...
 
     @abstractmethod

@@ -20,6 +20,7 @@ from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -39,6 +40,7 @@ from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.database.models import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
+from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
@@ -236,6 +238,11 @@ def track_repository(async_session_db: AsyncSession) -> TrackRepository:
 @pytest.fixture
 def taste_profile_repository(async_session_db: AsyncSession) -> TasteProfileRepository:
     return TasteProfileSQLRepository(async_session_db)
+
+
+@pytest.fixture
+def blacklist_repository(async_session_db: AsyncSession) -> BlacklistRepository:
+    return BlacklistSQLRepository(async_session_db)
 
 
 # --- Entity factories ---

@@ -5,6 +5,7 @@ import typer
 from museflow import __version__
 from museflow.infrastructure.config.loggers import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.cli.commands import blacklist
 from museflow.infrastructure.entrypoints.cli.commands import spotify
 from museflow.infrastructure.entrypoints.cli.commands import taste
 from museflow.infrastructure.entrypoints.cli.commands import users
@@ -22,6 +23,7 @@ app = typer.Typer(
 app.add_typer(users.app, name="users", help="User management commands")
 app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
 app.add_typer(taste.app, name="taste", help="Taste profile commands")
+app.add_typer(blacklist.app, name="blacklist", help="Manage your music blacklist")
 app.command("discover", help="Discover new tracks guided by your AI taste profile.")(discover_command)
 
 

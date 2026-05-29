@@ -351,3 +351,43 @@ class TestGeminiAdvisorAdapter:
 
         with pytest.raises(ValueError):
             await gemini_advisor.make_api_call(method="POST", endpoint="/models/gemini-2.5-flash:generateContent")
+
+    async def test__get_discovery_strategy__with_blacklisted_builds_sections(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "X", "recommended_tracks": [], "search_queries": [], "suggested_playlist_name": "Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        await gemini_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
+            blacklisted_artists=["Taylor Swift"],
+            blacklisted_tracks=["Shake It Off by Taylor Swift"],
+        )
+
+        request = httpx_mock.get_requests()[0]
+        body = request.read().decode()
+        assert "PERMANENTLY BLACKLISTED ARTISTS" in body
+        assert "Taylor Swift" in body
+        assert "PERMANENTLY BLACKLISTED TRACKS" in body
+        assert "Shake It Off by Taylor Swift" in body

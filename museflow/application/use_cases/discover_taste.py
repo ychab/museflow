@@ -8,6 +8,7 @@ from museflow import __project_name__
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorAgentPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.utils.discovery import TrackScored
@@ -24,6 +25,8 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import TasteProfiler
+from museflow.domain.utils.text import normalize_text
+from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 logger = logging.getLogger(__name__)
@@ -52,6 +55,7 @@ class DiscoverTasteUseCase:
         self,
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
+        blacklist_repository: BlacklistRepository,
         provider_library: ProviderLibraryPort,
         advisor_agent: AdvisorAgentPort,
         track_reconciler: TrackReconciler,
@@ -59,6 +63,7 @@ class DiscoverTasteUseCase:
     ) -> None:
         self._track_repository = track_repository
         self._taste_profile_repository = taste_profile_repository
+        self._blacklist_repository = blacklist_repository
         self._provider_library = provider_library
         self._advisor_agent = advisor_agent
         self._track_reconciler = track_reconciler
@@ -98,6 +103,10 @@ class DiscoverTasteUseCase:
         elif profile.status == TasteProfileStatus.BUILDING:
             raise TasteProfileStatusNotReadyException()
 
+        blacklist = await self._blacklist_repository.get_all_for_user(user.id)
+        blacklisted_artists = blacklist.artist_names or None
+        blacklisted_tracks = blacklist.track_display_strings or None
+
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []
         reports: list[DiscoverTasteAttemptReport] = []
@@ -115,6 +124,8 @@ class DiscoverTasteUseCase:
                 mood=config.mood,
                 custom_instructions=config.custom_instructions,
                 excluded_tracks=tracks_suggested[:50] or None,
+                blacklisted_artists=blacklisted_artists,
+                blacklisted_tracks=blacklisted_tracks,
             )
             tracks_suggested.extend(strategy.recommended_tracks)
             logger.info(
@@ -139,6 +150,10 @@ class DiscoverTasteUseCase:
 
             # Merge and intra-attempt dedup
             tracks_all = self._dedup_by_identity(tracks_reconciled + tracks_searched)
+
+            # Remove blacklisted artists and tracks (safety net in case the advisor ignored instructions)
+            if not blacklist.is_empty:
+                tracks_all = [ts for ts in tracks_all if not self._is_blacklisted(ts.track, blacklist)]
 
             # Remove known tracks
             logger.debug("--- Filter known tracks ---")
@@ -211,6 +226,12 @@ class DiscoverTasteUseCase:
             tracks=tracks,
         )
         return DiscoverTasteResult(playlist=playlist, strategy=strategy, reports=reports, tracks=tracks)
+
+    @staticmethod
+    def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:
+        if track.fingerprint in blacklist.track_fingerprints:
+            return True
+        return bool({normalize_text(a) for a in track.artists} & blacklist.artist_fingerprints)
 
     async def _search_query_tracks(self, search_queries: list[str]) -> list[TrackScored]:
         tracks_scored: list[TrackScored] = []

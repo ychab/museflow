@@ -150,6 +150,8 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
         mood: str | None = None,
         custom_instructions: str | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
+        blacklisted_artists: list[str] | None = None,
+        blacklisted_tracks: list[str] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -166,15 +168,30 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
         }
 
-        exclusion_block = ""
+        exclusion_parts: list[str] = []
         if excluded_tracks:
             formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in excluded_tracks)
-            exclusion_block = (
+            exclusion_parts.append(
                 "### EXCLUSION LIST (DO NOT SUGGEST THESE)\n"
                 "These tracks have already been considered in this session. "
                 "You MUST suggest DIFFERENT tracks and avoid these artists where possible:\n"
-                f"{formatted}\n\n"
+                f"{formatted}"
             )
+        if blacklisted_artists:
+            formatted = "\n".join(f"- {a}" for a in blacklisted_artists)
+            exclusion_parts.append(
+                "### PERMANENTLY BLACKLISTED ARTISTS (NEVER SUGGEST)\n"
+                "The user has permanently excluded these artists. Do NOT suggest any track by them:\n"
+                f"{formatted}"
+            )
+        if blacklisted_tracks:
+            formatted = "\n".join(f"- {t}" for t in blacklisted_tracks)
+            exclusion_parts.append(
+                "### PERMANENTLY BLACKLISTED TRACKS (NEVER SUGGEST)\n"
+                "The user has permanently excluded these tracks:\n"
+                f"{formatted}"
+            )
+        exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
 
         system_prompt = (
             "### ROLE\n"
@@ -192,7 +209,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
-            "- recommended_tracks MUST NOT appear in the Exclusion List above.\n"
+            "- recommended_tracks MUST NOT appear in any exclusion or blacklist section above.\n"
             "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
             f"- Provide {similar_limit} recommended tracks, each with a discovery score (0.0–1.0, higher = better fit).\n"
             "- Provide 2-3 specific search_queries to widen the discovery surface.\n"

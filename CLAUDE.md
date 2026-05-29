@@ -78,9 +78,9 @@ class UserRepository(ABC):
 **Default — standalone async function:**
 ```python
 async def user_create(
-    user_in: UserCreateInput,
-    user_repository: UserRepository,
-    password_hasher: PasswordHasherPort,
+    user_in: UserCreateInput,           # inputs first
+    user_repository: UserRepository,    # repositories next
+    password_hasher: PasswordHasherPort, # other ports last
 ) -> User:
     ...
 ```
@@ -143,6 +143,10 @@ class UserSQLRepository(UserRepository):
 - **DTOs**: Pydantic models matching the external API shape exactly.
 - **Mappers**: Standalone functions `to_domain_track(dto: SpotifyTrack) -> Track`. Complex transformations (fingerprinting, normalization) live here.
 
+### CLI Entrypoints
+- Each Typer command is a thin sync wrapper that calls `asyncio.run()` on a co-located async function.
+- Name the async helper `<command>_logic` (e.g. `add_artists_logic`, `purge_logic`) — never a `_`-prefixed private name.
+
 ## Naming Conventions
 | Suffix | Meaning | Type |
 |--------|---------|------|
@@ -155,6 +159,7 @@ class UserSQLRepository(UserRepository):
 - 100% strict type hints everywhere — including tests. Native union: `str | None`. IDs: `uuid.UUID`.
 - No `Any` unless justified. Ruff line length: 119.
 - Async everywhere: FastAPI, SQLAlchemy, httpx.
+- **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
 
 ## Logging
 ```python
@@ -193,8 +198,10 @@ Tests are the **contract with our users**. They must be clean, clear, and easy t
 - **Integration tests** are the primary focus — test full flows with a real DB and WireMock for external APIs.
 - **Unit tests** fill gaps — complex domain logic and edge cases hard to reach via integration.
 - **Do not mirror happy paths**: if a happy path is already covered by an integration test, do not add a unit test for the same flow — it creates maintenance duplication with no extra confidence.
+- **Error paths belong in unit tests, not integration tests**: if a branch raises a domain exception or handles an error condition, cover it with a unit test using `AsyncMock` — not an integration test. Integration tests prove the happy path works with real infrastructure; unit tests prove the logic branches fire correctly.
 - **Use `AsyncMock` for repositories**: do not implement fake (in-memory) repositories. `AsyncMock` is appropriate here: complex repository methods (filtering, bulk upsert) are hard to fake correctly, and integration tests already validate the port contract.
 - **All test code is typed** — fixtures, test functions, factories, helpers all have strict type annotations.
+- **No inner imports in test functions** — all imports at module level. If an inner import feels necessary to avoid a circular import, fix the source module design instead.
 
 ### Test File Mirror
 ```
@@ -202,6 +209,8 @@ museflow/application/use_cases/user_create.py
 → tests/unit/application/use_cases/test_user_create.py
 → tests/integration/application/use_cases/test_user_create.py
 ```
+
+**One test file per source file.** Never consolidate multiple source modules into a single test file.
 
 ### Fixture Scoping Strategy
 Fixtures are organized in `conftest.py` files at each directory level. Scope is chosen carefully:
@@ -254,6 +263,23 @@ class TestUserCreateUseCase:
 - Use `async_session_db` (auto-rollback, autouse) by default — fast and isolated.
 - Use `async_session_trans` ONLY when testing code that explicitly commits — slower, uses TRUNCATE.
 
+### CLI Command Tests
+
+Each CLI command gets **3 unit test classes** and **1 integration test class**. Canonical example: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
+
+**Unit test classes (per command):**
+- `TestXParserCommand` — autouse-mock the `*_logic` function; test only Typer argument/option parsing (invalid email format, invalid UUID, etc.)
+- `TestXCommand` — autouse-mock the `*_logic` function; test the command function's own behavior: success output messages, try/except branches
+- `TestXLogic` — set `TARGET_PATH` as a class attribute pointing to the command's module; use `@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", ...)` to patch CLI dependencies; test the logic function's own branches (user not found, etc.)
+
+**Integration test class (per command):**
+- `TestXLogic` — real DB; **happy-path only**. Error-path tests (user not found, item not found) belong in the unit `TestXLogic`.
+
+**Key rules:**
+- Never mix parsing validation into `TestXCommand`, and never mix command body behavior into `TestXParserCommand`
+- The `target_path` fixture resolves from `TARGET_PATH` on the class first, then the module — always set it on `TestXLogic` classes since each logic function lives in its own module
+- No inner imports anywhere in test files — all imports at module level
+
 ### Factories
 ```python
 # Domain entities — DataclassFactory
@@ -291,6 +317,7 @@ class UserModelFactory(BaseModelFactory[User]):
 - `__allow_none_optionals__ = False` on input factories when you always want values.
 - Use `@post_generated` for fields that depend on other generated fields.
 - Use `Use(faker.email)` for realistic field values.
+- **Don't override what polyfactory handles automatically:** `uuid.UUID` fields are auto-generated. Fields with `default` or `default_factory` on the entity are respected when `__use_defaults__ = True` is set on the factory — use this on `DataclassFactory` subclasses instead of re-declaring the default (e.g. `fingerprint = ""`). Only add explicit overrides for realistic faker values (names, sentences, emails) or test-specific fixed values.
 - **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
   - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
   - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.

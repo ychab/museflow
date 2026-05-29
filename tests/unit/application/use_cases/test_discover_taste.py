@@ -10,8 +10,11 @@ from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.types import TasteProfiler
+from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
+from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
+from tests.unit.factories.entities.blacklist import BlacklistedTrackFactory
 from tests.unit.factories.entities.music import PlaylistFactory
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.music import TrackSuggestedFactory
@@ -25,10 +28,13 @@ class TestDiscoverTasteUseCase:
         self,
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
+        mock_blacklist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_agent: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> DiscoverTasteUseCase:
+        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist()
+
         return DiscoverTasteUseCase(
             track_repository=mock_track_repository,
             taste_profile_repository=mock_taste_profile_repository,
@@ -36,6 +42,7 @@ class TestDiscoverTasteUseCase:
             advisor_agent=mock_advisor_agent,
             track_reconciler=mock_track_reconciler,
             profiler=TasteProfiler.GEMINI,
+            blacklist_repository=mock_blacklist_repository,
         )
 
     @pytest.mark.parametrize("discovery_taste_strategy", [{"search_queries": []}], indirect=True)
@@ -530,3 +537,139 @@ class TestDiscoverTasteUseCase:
         excluded = second_call_kwargs["excluded_tracks"]
         assert excluded is not None
         assert len(excluded) == 50
+
+    async def test__blacklist_empty__advisor_receives_none(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        """When blacklist is empty, advisor receives None for blacklisted_artists and blacklisted_tracks."""
+        track = TrackFactory.build()
+
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_track_reconciler.reconcile.return_value = (track, 0.9)
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
+        )
+
+        call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args.kwargs
+        assert call_kwargs["blacklisted_artists"] is None
+        assert call_kwargs["blacklisted_tracks"] is None
+
+    async def test__blacklist_nonempty__advisor_receives_lists(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        mock_blacklist_repository: mock.AsyncMock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        """When blacklist has entries, advisor receives populated artist and track lists."""
+        artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift")
+        track_entry = BlacklistedTrackFactory.build(name="Shake It Off", artist_name="Taylor Swift")
+        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
+
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+
+        track = TrackFactory.build()
+        mock_track_reconciler.reconcile.return_value = (track, 0.9)
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
+        )
+
+        call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args.kwargs
+        assert call_kwargs["blacklisted_artists"] == ["Taylor Swift"]
+        assert call_kwargs["blacklisted_tracks"] == ["Shake It Off by Taylor Swift"]
+
+    async def test__blacklisted_artist_track_filtered(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        mock_blacklist_repository: mock.AsyncMock,
+    ) -> None:
+        """Tracks from a blacklisted artist are removed before filtering known tracks."""
+        artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift", fingerprint="")
+
+        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(artists=[artist])
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        blacklisted_track = TrackFactory.build(artists=["Taylor Swift"])
+        clean_track = TrackFactory.build(artists=["Ed Sheeran"])
+
+        strategy = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=TrackSuggestedFactory.batch(2, score=0.9),
+            search_queries=[],
+        )
+        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_track_reconciler.reconcile.side_effect = [(blacklisted_track, 0.9), (clean_track, 0.9)]
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1, dry_run=False),
+        )
+
+        assert all("Taylor Swift" not in t.artists for t in result.tracks)
+        assert len(result.tracks) == 1
+
+    async def test__blacklisted_track_filtered_by_fingerprint(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        mock_blacklist_repository: mock.AsyncMock,
+    ) -> None:
+        """Tracks whose fingerprint matches the blacklist are removed."""
+        blacklisted_track = TrackFactory.build(name="Shake It Off", artists=["Taylor Swift"])
+        track_entry = BlacklistedTrackFactory.build(fingerprint=blacklisted_track.fingerprint)
+        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(tracks=[track_entry])
+
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        strategy = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+            search_queries=[],
+        )
+        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_track_reconciler.reconcile.return_value = (blacklisted_track, 0.9)
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+
+        with pytest.raises(DiscoveryTrackNoNew):
+            await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=1),
+            )
