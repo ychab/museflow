@@ -158,7 +158,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
         timeline_summary = taste_utils.timeline_summary(data)
         core_identity_str = taste_utils.core_identity_summary(data)
         behavioral_traits_str = taste_utils.behavioral_traits_summary(data)
-        producer_affinities_str = taste_utils.producer_affinities_summary(data)
+        creator_affinities_str = taste_utils.creator_affinities_summary(data)
         archetype = taste_utils.personality_archetype(data)
         oldest_era = taste_utils.oldest_era_label(data)
         current_era = taste_utils.current_era_label(data)
@@ -167,10 +167,10 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             DiscoveryFocus.EXPANSION: "Find high-probability cousin genres not yet explored.",
             DiscoveryFocus.ROOTS_REVIVAL: f"Find modern tracks replicating the technical fingerprint of the oldest era ({oldest_era}).",
             DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
-            DiscoveryFocus.PRODUCER_LINEAGE: (
-                "Find tracks by DIFFERENT artists produced by the producers in the user's Producer Affinities. "
-                "This applies across all genres (rap, pop, rock, reggaeton, salsa, etc.) — "
-                "the producer's sonic signature must be clearly recognizable in the recommended track."
+            DiscoveryFocus.CREATOR_LINEAGE: (
+                "Find tracks by DIFFERENT artists made by the same beatmaker or composer listed in the user's Creator Affinities. "
+                "This applies across all genres (rap, pop, classical, jazz, etc.) — "
+                "the creator's sonic signature or compositional style must be clearly recognizable in the recommended track."
             ),
         }
 
@@ -199,10 +199,10 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             )
         exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
 
-        producer_lineage_constraint = (
-            "- For producer_lineage: populate producer_reason for each track (name the specific producer). "
-            "Only recommend tracks you are genuinely confident were produced by the target producer.\n"
-            if focus == DiscoveryFocus.PRODUCER_LINEAGE
+        creator_lineage_constraint = (
+            "- For creator_lineage: populate creator_reason for each track (name the specific beatmaker or composer). "
+            "Only recommend tracks you are genuinely confident were created by the target creator.\n"
+            if focus == DiscoveryFocus.CREATOR_LINEAGE
             else ""
         )
 
@@ -213,14 +213,14 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             f"### USER IDENTITY: {archetype}\n"
             f"- Core Identity: {core_identity_str}\n"
             f"- Behavioral Traits: {behavioral_traits_str}\n"
-            f"- Producer Affinities: {producer_affinities_str}\n"
+            f"- Creator Affinities (beatmakers / composers): {creator_affinities_str}\n"
             f"- Taste Timeline (oldest → newest): {timeline_summary}\n\n"
             f"{exclusion_block}"
             "### FOCUS STRATEGIES\n"
             f"- expansion: {focus_descriptions[DiscoveryFocus.EXPANSION]}\n"
             f"- roots_revival: {focus_descriptions[DiscoveryFocus.ROOTS_REVIVAL]}\n"
             f"- cultural_bridge: {focus_descriptions[DiscoveryFocus.CULTURAL_BRIDGE]}\n"
-            f"- producer_lineage: {focus_descriptions[DiscoveryFocus.PRODUCER_LINEAGE]}\n\n"
+            f"- creator_lineage: {focus_descriptions[DiscoveryFocus.CREATOR_LINEAGE]}\n\n"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
@@ -229,7 +229,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             f"- Provide {similar_limit} recommended tracks, each with a discovery score (0.0–1.0, higher = better fit).\n"
             "- Provide 2-3 specific search_queries to widen the discovery surface.\n"
             "- Keep suggested_playlist_name creative and thematic.\n"
-            f"{producer_lineage_constraint}"
+            f"{creator_lineage_constraint}"
         )
 
         user_parts = [f"Apply the '{focus.value}' focus strategy."]

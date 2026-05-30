@@ -166,8 +166,8 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
             </div>
 
             <div class="glass-card p-8 rounded-[2rem]">
-                <h2 class="text-orange-400 font-bold uppercase text-[10px] tracking-widest mb-6">Producer Affinities</h2>
-                {('<div class="space-y-4">' + "".join(f'<div class="flex items-center gap-4"><div class="text-sm font-medium w-40 truncate">{k}</div><div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-orange-500 h-full" style="width: {v * 100}%"></div></div><div class="text-xs font-mono text-slate-500">{v:.2f}</div></div>' for k, v in sorted(taste_profile.profile.get('producer_affinities', {}).items(), key=lambda x: x[1], reverse=True)) + '</div>') if taste_profile.profile.get('producer_affinities') else '<p class="text-slate-500 text-sm italic">No producer affinities tracked yet.</p>'}
+                <h2 class="text-orange-400 font-bold uppercase text-[10px] tracking-widest mb-6">Creator Affinities <span class="text-slate-500 normal-case tracking-normal font-normal">Beatmakers &amp; Composers</span></h2>
+                {('<div class="space-y-4">' + "".join(f'<div class="flex items-center gap-4"><div class="text-sm font-medium w-40 truncate">{k}</div><div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-orange-500 h-full" style="width: {v * 100}%"></div></div><div class="text-xs font-mono text-slate-500">{v:.2f}</div></div>' for k, v in sorted(taste_profile.profile.get('creator_affinities', {}).items(), key=lambda x: x[1], reverse=True)) + '</div>') if taste_profile.profile.get('creator_affinities') else '<p class="text-slate-500 text-sm italic">No creator affinities tracked yet.</p>'}
             </div>
 
             <section class="glass-card p-10 rounded-[2rem]">

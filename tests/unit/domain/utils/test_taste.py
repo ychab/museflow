@@ -2,11 +2,11 @@ import pytest
 
 from museflow.domain.utils.taste import behavioral_traits_summary
 from museflow.domain.utils.taste import core_identity_summary
+from museflow.domain.utils.taste import creator_affinities_summary
 from museflow.domain.utils.taste import current_era_label
 from museflow.domain.utils.taste import era_sort_key
 from museflow.domain.utils.taste import oldest_era_label
 from museflow.domain.utils.taste import personality_archetype
-from museflow.domain.utils.taste import producer_affinities_summary
 from museflow.domain.utils.taste import timeline_summary
 
 from tests.unit.factories.entities.taste import TasteEraFactory
@@ -114,21 +114,21 @@ class TestCurrentEraLabel:
         assert current_era_label(profile) == "current era"
 
 
-class TestProducerAffinitiesSummary:
+class TestCreatorAffinitiesSummary:
     def test__nominal(self) -> None:
         profile = TasteProfileDataFactory.build(
-            producer_affinities={"Metro Boomin": 0.9, "Pharrell": 0.7, "Rick Rubin": 0.5}
+            creator_affinities={"Metro Boomin": 0.9, "Pharrell": 0.7, "Rick Rubin": 0.5}
         )
-        result = producer_affinities_summary(profile)
+        result = creator_affinities_summary(profile)
         assert result == "Metro Boomin (0.90), Pharrell (0.70), Rick Rubin (0.50)"
 
     def test__empty_affinities_returns_none(self) -> None:
-        profile = TasteProfileDataFactory.build(producer_affinities={})
-        assert producer_affinities_summary(profile) == "none"
+        profile = TasteProfileDataFactory.build(creator_affinities={})
+        assert creator_affinities_summary(profile) == "none"
 
     def test__top_n_limits_results(self) -> None:
         profile = TasteProfileDataFactory.build(
-            producer_affinities={"a": 0.9, "b": 0.8, "c": 0.7, "d": 0.6, "e": 0.5, "f": 0.4}
+            creator_affinities={"a": 0.9, "b": 0.8, "c": 0.7, "d": 0.6, "e": 0.5, "f": 0.4}
         )
-        result = producer_affinities_summary(profile, top_n=2)
+        result = creator_affinities_summary(profile, top_n=2)
         assert result == "a (0.90), b (0.80)"

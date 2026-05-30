@@ -59,7 +59,7 @@ class TrackSuggested:
     artists: list[str] = field(default_factory=list)
     advisor_id: str | None = None
     score: float
-    producer_reason: str | None = None
+    creator_reason: str | None = None
 
     @property
     def primary_artist(self) -> str:

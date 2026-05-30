@@ -12,7 +12,7 @@ class TestGeminiTasteProfileContent:
             "taste_timeline": [],
             "core_identity": [{"key": "indie rock", "value": 0.8}],
             "current_vibe": [{"key": "indie rock", "value": 0.9}],
-            "producer_affinities": [],
+            "creator_affinities": [],
         }
 
     def test__from_key_value_list__rejects_dict(self, payload: dict[object, object]) -> None:
@@ -20,5 +20,5 @@ class TestGeminiTasteProfileContent:
             GeminiTasteProfileContent.model_validate({**payload, "core_identity": {"indie rock": 0.8}})
 
     def test__from_key_value_list__none_returns_empty_dict(self, payload: dict[object, object]) -> None:
-        content = GeminiTasteProfileContent.model_validate({**payload, "producer_affinities": None})
-        assert content.producer_affinities == {}
+        content = GeminiTasteProfileContent.model_validate({**payload, "creator_affinities": None})
+        assert content.creator_affinities == {}

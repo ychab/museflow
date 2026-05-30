@@ -392,7 +392,7 @@ class TestGeminiAdvisorAdapter:
         assert "PERMANENTLY BLACKLISTED TRACKS" in body
         assert "Shake It Off by Taylor Swift" in body
 
-    async def test__get_discovery_strategy__producer_lineage_focus_injects_constraint(
+    async def test__get_discovery_strategy__creator_lineage_focus_injects_constraint(
         self,
         gemini_advisor: GeminiAdvisorAdapter,
         taste_profile: TasteProfile,
@@ -407,7 +407,7 @@ class TestGeminiAdvisorAdapter:
                         "content": {
                             "parts": [
                                 {
-                                    "text": '{"reasoning": "ok", "strategy_label": "Producer Lineage", "recommended_tracks": [{"name": "Song X", "artists": ["Artist Y"], "score": 0.9, "producer_reason": "Produced by Metro Boomin"}], "search_queries": ["metro boomin beats"], "suggested_playlist_name": "Producer Lineage Mix"}'
+                                    "text": '{"reasoning": "ok", "strategy_label": "Creator Lineage", "recommended_tracks": [{"name": "Song X", "artists": ["Artist Y"], "score": 0.9, "creator_reason": "Produced by Metro Boomin"}], "search_queries": ["metro boomin beats"], "suggested_playlist_name": "Creator Lineage Mix"}'
                                 }
                             ],
                             "role": "model",
@@ -419,14 +419,14 @@ class TestGeminiAdvisorAdapter:
 
         strategy = await gemini_advisor.get_discovery_strategy(
             profile=taste_profile,
-            focus=DiscoveryFocus.PRODUCER_LINEAGE,
+            focus=DiscoveryFocus.CREATOR_LINEAGE,
             similar_limit=5,
         )
 
         request = httpx_mock.get_requests()[0]
         body = request.read().decode()
-        assert "producer_lineage" in body
-        assert "producer_reason" in body
-        assert "Producer Affinities" in body
-        assert strategy.strategy_label == "Producer Lineage"
-        assert strategy.recommended_tracks[0].producer_reason == "Produced by Metro Boomin"
+        assert "creator_lineage" in body
+        assert "creator_reason" in body
+        assert "Creator Affinities" in body
+        assert strategy.strategy_label == "Creator Lineage"
+        assert strategy.recommended_tracks[0].creator_reason == "Produced by Metro Boomin"

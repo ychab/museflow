@@ -36,7 +36,9 @@ class TasteProfileData(TypedDict):
     taste_timeline: list[TasteEra]  # chronological map of taste eras
     core_identity: dict[str, float]  # stable DNA, e.g. {"progressive metal": 0.8}
     current_vibe: dict[str, float]  # active trajectory (last ~400 tracks)
-    producer_affinities: dict[str, float]  # e.g. {"Metro Boomin": 0.9, "Pharrell": 0.7}
+    creator_affinities: dict[
+        str, float
+    ]  # beatmaker (rap), composer (classical/jazz), or well-known songwriter-producer (pop)
 
     # Populated by final psychographic reflection only
     personality_archetype: str | None

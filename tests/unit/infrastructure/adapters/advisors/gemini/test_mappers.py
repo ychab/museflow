@@ -38,12 +38,12 @@ class TestToTrackSuggested:
         result = to_track_suggested(track)
         assert result.artists == ["A", "B", "C"]
 
-    def test__producer_reason_passed_through(self) -> None:
-        track = GeminiSuggestedTrack(name="Song", artists=["Artist"], score=0.7, producer_reason="Metro Boomin")
+    def test__creator_reason_passed_through(self) -> None:
+        track = GeminiSuggestedTrack(name="Song", artists=["Artist"], score=0.7, creator_reason="Metro Boomin")
         result = to_track_suggested(track)
-        assert result.producer_reason == "Metro Boomin"
+        assert result.creator_reason == "Metro Boomin"
 
-    def test__producer_reason_none_by_default(self) -> None:
+    def test__creator_reason_none_by_default(self) -> None:
         track = GeminiSuggestedTrack(name="Song", artists=["Artist"], score=0.7)
         result = to_track_suggested(track)
-        assert result.producer_reason is None
+        assert result.creator_reason is None
