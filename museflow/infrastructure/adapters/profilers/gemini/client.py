@@ -36,6 +36,8 @@ from museflow.infrastructure.config.settings.gemini import gemini_settings
 
 logger = logging.getLogger(__name__)
 
+_MAX_PRODUCERS_PER_SEGMENT = 10  # conservative enough to reduce hallucinations; merge logic prunes the rest
+
 
 def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, TasteProfilerRateLimitExceeded):
@@ -207,6 +209,10 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             '- "taste_timeline": one TasteEra for this batch\n'
             '- "core_identity": [{"key": genre_or_mood, "value": weight 0-1}] long-term affinity signals\n'
             '- "current_vibe": [{"key": genre_or_mood, "value": weight 0-1}] what this batch reveals right now\n'
+            f'- "producer_affinities": [{{"key": producer_name, "value": weight 0-1}}] — identify producers '
+            f"(across all genres: rap, pop, rock, reggaeton, etc.) you are HIGHLY CONFIDENT about from the "
+            f"artist and track names. Only include if confidence is very high. Leave empty if uncertain. "
+            f"Return at most {_MAX_PRODUCERS_PER_SEGMENT} producers total.\n"
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
             "\nFor each TasteEra, populate technical_fingerprint by inferring numerical values (0.0 to 1.0) "
@@ -248,6 +254,11 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "   - Keep all existing 'technical_fingerprint' values in previous eras UNCHANGED.\n"
             "   - personality_archetype: keep null.\n"
             "   - life_phase_insights: keep empty.\n\n"
+            "5. producer_affinities (The Producers):\n"
+            "   - If Foundation is empty, initialize with Segment values.\n"
+            "   - If not empty, apply weighted average: (Foundation * 0.7) + (Segment * 0.3).\n"
+            "   - Prune entries where the merged weight is < 0.1.\n"
+            "   - IMPORTANT: Only keep producers you are very confident about. Omit any uncertain entries.\n\n"
             "Return the full merged JSON. Be mathematically precise and preserve all keys."
         )
 
@@ -277,7 +288,8 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             '"rhythmic_dependency" (how central rhythm/beat is vs. melody/texture)\n'
             '- "discovery_style": one short archetype label describing how this listener discovers music\n'
             '  (e.g. "The Digger", "The Loyalist", "The Trend-Hopper", "The Deep Diver")\n\n'
-            "Return the full profile JSON with all five fields populated. Keep all other fields unchanged."
+            "Return the full profile JSON with all five fields populated. "
+            "Keep all other fields unchanged, including producer_affinities — do NOT modify or remove it."
         )
 
         return await self._prompt_request(prompt, self._reflect_model)

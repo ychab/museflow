@@ -35,6 +35,7 @@ class TestBuildTasteProfileUseCase:
             **profile_data,
             "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
             "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
+            "producer_affinities": [{"key": k, "value": v} for k, v in profile_data["producer_affinities"].items()],
         }
 
         return {

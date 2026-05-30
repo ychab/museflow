@@ -28,6 +28,7 @@ class GeminiSuggestedTrack(BaseModel):
     name: str = Field(..., min_length=1)
     artists: list[str] = Field(..., min_length=1)
     score: float
+    producer_reason: str | None = None
 
 
 class GeminiSuggestedTracksContent(BaseModel):
@@ -46,6 +47,7 @@ GEMINI_DISCOVERY_STRATEGY_CONFIG = GeminiGenerationConfig(
                         "name": GeminiSchemaProperty.string(),
                         "artists": GeminiSchemaProperty.array(items=GeminiSchemaProperty.string()),
                         "score": GeminiSchemaProperty.number(),
+                        "producer_reason": GeminiSchemaProperty.string(),
                     },
                     required=["name", "artists", "score"],
                 )

@@ -20,6 +20,7 @@ class DiscoveryFocus(StrEnum):
     EXPANSION = "expansion"
     ROOTS_REVIVAL = "roots_revival"
     CULTURAL_BRIDGE = "cultural_bridge"
+    PRODUCER_LINEAGE = "producer_lineage"
 
 
 class TrackOrderBy(StrEnum):

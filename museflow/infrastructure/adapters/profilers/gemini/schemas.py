@@ -24,6 +24,7 @@ class GeminiTasteProfileContent(BaseModel):
     taste_timeline: list[GeminiTasteEra]
     core_identity: dict[str, float]
     current_vibe: dict[str, float]
+    producer_affinities: dict[str, float] = {}
 
     personality_archetype: str | None = None
     life_phase_insights: list[str] = []
@@ -32,9 +33,11 @@ class GeminiTasteProfileContent(BaseModel):
     behavioral_traits: dict[str, float] = {}
     discovery_style: str | None = None
 
-    @field_validator("core_identity", "current_vibe", mode="before")
+    @field_validator("core_identity", "current_vibe", "producer_affinities", mode="before")
     @classmethod
     def _from_key_value_list(cls, v: object) -> dict[str, float]:
+        if v is None:
+            return {}
         if not isinstance(v, list):
             raise ValueError(f"expected a list of {{key, value}} objects, got {type(v).__name__}")
         return {item["key"]: item["value"] for item in v}
@@ -72,6 +75,15 @@ GEMINI_TASTE_PROFILE_RESPONSE_SCHEMA = GeminiSchemaProperty.object(
             )
         ),
         "current_vibe": GeminiSchemaProperty.array(
+            items=GeminiSchemaProperty.object(
+                properties={
+                    "key": GeminiSchemaProperty.string(),
+                    "value": GeminiSchemaProperty.number(),
+                },
+                required=["key", "value"],
+            )
+        ),
+        "producer_affinities": GeminiSchemaProperty.array(
             items=GeminiSchemaProperty.object(
                 properties={
                     "key": GeminiSchemaProperty.string(),

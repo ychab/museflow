@@ -36,6 +36,12 @@ def personality_archetype(profile: "TasteProfileData") -> str:
     return profile.get("personality_archetype") or "unknown"
 
 
+def producer_affinities_summary(profile: "TasteProfileData", top_n: int = 5) -> str:
+    affinities = profile.get("producer_affinities", {})
+    top = sorted(affinities.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+    return ", ".join(f"{k} ({v:.2f})" for k, v in top) or "none"
+
+
 def oldest_era_label(profile: "TasteProfileData") -> str:
     eras = profile.get("taste_timeline", [])
     return eras[0]["era_label"] if eras else "earliest era"

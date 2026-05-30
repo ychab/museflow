@@ -51,6 +51,7 @@ class TestGeminiTasteProfileAdapter:
             **profile,
             "core_identity": [{"key": k, "value": v} for k, v in profile["core_identity"].items()],
             "current_vibe": [{"key": k, "value": v} for k, v in profile["current_vibe"].items()],
+            "producer_affinities": [{"key": k, "value": v} for k, v in profile["producer_affinities"].items()],
         }
 
         return {

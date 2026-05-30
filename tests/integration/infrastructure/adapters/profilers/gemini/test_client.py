@@ -45,6 +45,7 @@ class TestGeminiTasteProfileAdapter:
             ],
             core_identity={"indie rock": 0.8},
             current_vibe={"indie rock": 0.9},
+            producer_affinities={},
             personality_archetype=None,
             life_phase_insights=[],
             musical_identity_summary=None,
@@ -88,6 +89,7 @@ class TestGeminiTasteProfileAdapter:
             ],
             core_identity={"indie rock": 0.75, "electronic": 0.4},
             current_vibe={"electronic": 0.8},
+            producer_affinities={},
             personality_archetype=None,
             life_phase_insights=[],
             musical_identity_summary=None,
@@ -119,6 +121,7 @@ class TestGeminiTasteProfileAdapter:
             ],
             core_identity={"indie rock": 0.8},
             current_vibe={"indie rock": 0.9},
+            producer_affinities={"Rick Rubin": 0.85},
             personality_archetype="The Introspective Wanderer",
             life_phase_insights=["Transition from high-energy rock to ambient introspection during 2022"],
             musical_identity_summary=(

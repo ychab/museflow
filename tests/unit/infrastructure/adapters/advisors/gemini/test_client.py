@@ -391,3 +391,42 @@ class TestGeminiAdvisorAdapter:
         assert "Taylor Swift" in body
         assert "PERMANENTLY BLACKLISTED TRACKS" in body
         assert "Shake It Off by Taylor Swift" in body
+
+    async def test__get_discovery_strategy__producer_lineage_focus_injects_constraint(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "Producer Lineage", "recommended_tracks": [{"name": "Song X", "artists": ["Artist Y"], "score": 0.9, "producer_reason": "Produced by Metro Boomin"}], "search_queries": ["metro boomin beats"], "suggested_playlist_name": "Producer Lineage Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        strategy = await gemini_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.PRODUCER_LINEAGE,
+            similar_limit=5,
+        )
+
+        request = httpx_mock.get_requests()[0]
+        body = request.read().decode()
+        assert "producer_lineage" in body
+        assert "producer_reason" in body
+        assert "Producer Affinities" in body
+        assert strategy.strategy_label == "Producer Lineage"
+        assert strategy.recommended_tracks[0].producer_reason == "Produced by Metro Boomin"

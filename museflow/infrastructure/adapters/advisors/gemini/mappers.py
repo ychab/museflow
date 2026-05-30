@@ -10,6 +10,7 @@ def to_track_suggested(track: GeminiSuggestedTrack) -> TrackSuggested:
         artists=track.artists,
         advisor_id=None,
         score=max(0.0, min(1.0, track.score)),
+        producer_reason=track.producer_reason,
     )
 
 
