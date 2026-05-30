@@ -165,6 +165,11 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
                 </div>
             </div>
 
+            <div class="glass-card p-8 rounded-[2rem]">
+                <h2 class="text-orange-400 font-bold uppercase text-[10px] tracking-widest mb-6">Producer Affinities</h2>
+                {('<div class="space-y-4">' + "".join(f'<div class="flex items-center gap-4"><div class="text-sm font-medium w-40 truncate">{k}</div><div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-orange-500 h-full" style="width: {v * 100}%"></div></div><div class="text-xs font-mono text-slate-500">{v:.2f}</div></div>' for k, v in sorted(taste_profile.profile.get('producer_affinities', {}).items(), key=lambda x: x[1], reverse=True)) + '</div>') if taste_profile.profile.get('producer_affinities') else '<p class="text-slate-500 text-sm italic">No producer affinities tracked yet.</p>'}
+            </div>
+
             <section class="glass-card p-10 rounded-[2rem]">
                 <h2 class="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-10">Taste Evolution ({len(taste_profile.profile['taste_timeline'])} Eras)</h2>
                 <div class="ml-6 border-l border-slate-800 pl-10 space-y-12">
@@ -189,6 +194,7 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
                 <div class="flex gap-6">
                     <span>Logic: {taste_profile.logic_version}</span>
                     <span>Profiler: {taste_profile.profiler}</span>
+                    <span>Status: {taste_profile.status}</span>
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-0">
                     <span>Reflect Model: {taste_profile.profiler_metadata.get('models', {}).get('reflect', 'N/A')}</span>
