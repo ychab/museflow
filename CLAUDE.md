@@ -318,7 +318,7 @@ class UserModelFactory(BaseModelFactory[User]):
 - Use `@post_generated` for fields that depend on other generated fields.
 - Use `Use(faker.email)` for realistic field values.
 - **Don't override what polyfactory handles automatically:** `uuid.UUID` fields are auto-generated. Fields with `default` or `default_factory` on the entity are respected when `__use_defaults__ = True` is set on the factory — use this on `DataclassFactory` subclasses instead of re-declaring the default (e.g. `fingerprint = ""`). Only add explicit overrides for realistic faker values (names, sentences, emails) or test-specific fixed values.
-- **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
+- **Never create module-level helper functions or class-level helper methods** (including `_make_*`, `_build_*`, or any `_`-prefixed function/method) to build or parametrize test data:
   - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
   - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.
   - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
