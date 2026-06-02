@@ -9,10 +9,14 @@ from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.entities.user import User
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.types import DiscoveryFocus
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+
+from tests.unit.factories.entities.taste import TasteProfileDataFactory
+from tests.unit.factories.entities.taste import TasteProfileFactory
 
 
 class TestGeminiAdvisorAdapter:
@@ -391,3 +395,79 @@ class TestGeminiAdvisorAdapter:
         assert "Taylor Swift" in body
         assert "PERMANENTLY BLACKLISTED TRACKS" in body
         assert "Shake It Off by Taylor Swift" in body
+
+    async def test__get_discovery_strategy__comfort_zone_risk_calibration(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        user: User,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        profile = TasteProfileFactory.build(
+            user_id=user.id,
+            profile=TasteProfileDataFactory.build(behavioral_traits={"openness": 0.3, "adventurousness": 0.3}),
+        )
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "X", "recommended_tracks": [], "search_queries": [], "suggested_playlist_name": "Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        await gemini_advisor.get_discovery_strategy(
+            profile=profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
+        )
+
+        body = httpx_mock.get_requests()[0].read().decode()
+        assert "comfort zones" in body
+
+    async def test__get_discovery_strategy__adventurous_risk_calibration(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        user: User,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        profile = TasteProfileFactory.build(
+            user_id=user.id,
+            profile=TasteProfileDataFactory.build(behavioral_traits={"openness": 0.8, "adventurousness": 0.5}),
+        )
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "X", "recommended_tracks": [], "search_queries": [], "suggested_playlist_name": "Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+
+        await gemini_advisor.get_discovery_strategy(
+            profile=profile,
+            focus=DiscoveryFocus.EXPANSION,
+            similar_limit=5,
+        )
+
+        body = httpx_mock.get_requests()[0].read().decode()
+        assert "adventurous" in body

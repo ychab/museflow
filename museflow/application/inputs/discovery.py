@@ -28,10 +28,10 @@ class DiscoverTasteConfigInput:
     mood: str | None = None
     custom_instructions: str | None = None
 
-    similar_limit: int = 20
+    similar_limit: int = 10
     candidate_limit: int = 10
     score_band_width: float = 0.05
-    playlist_size: int = 30
+    playlist_size: int = 10
     max_attempts: int = 5
     max_tracks_per_artist: int = 2
 

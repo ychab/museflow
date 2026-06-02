@@ -157,10 +157,23 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
 
         timeline_summary = taste_utils.timeline_summary(data)
         core_identity_str = taste_utils.core_identity_summary(data)
+        current_vibe_str = taste_utils.current_vibe_summary(data)
         behavioral_traits_str = taste_utils.behavioral_traits_summary(data)
         archetype = taste_utils.personality_archetype(data)
         oldest_era = taste_utils.oldest_era_label(data)
         current_era = taste_utils.current_era_label(data)
+
+        traits = data.get("behavioral_traits", {})
+        openness = traits.get("openness", 0.5)
+        adventurousness = traits.get("adventurousness", 0.5)
+        if openness < 0.4 and adventurousness < 0.4:
+            risk_calibration = (
+                "User prefers sonic comfort zones — stay close to established core identity. No genre leaps."
+            )
+        elif openness > 0.7 or adventurousness > 0.7:
+            risk_calibration = "User is adventurous — push into niche, adjacent, or crossover territory confidently."
+        else:
+            risk_calibration = "User is moderately open — occasional adjacent genre exploration is fine, but anchor to known strengths."
 
         focus_descriptions = {
             DiscoveryFocus.EXPANSION: "Find high-probability cousin genres not yet explored.",
@@ -199,8 +212,11 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             "Your goal: recommend NEW music the user has never heard, based on their Taste Profile.\n\n"
             f"### USER IDENTITY: {archetype}\n"
             f"- Core Identity: {core_identity_str}\n"
+            f"- Current Active Vibe: {current_vibe_str}\n"
             f"- Behavioral Traits: {behavioral_traits_str}\n"
             f"- Taste Timeline (oldest → newest): {timeline_summary}\n\n"
+            "### RISK CALIBRATION\n"
+            f"{risk_calibration}\n\n"
             f"{exclusion_block}"
             "### FOCUS STRATEGIES\n"
             f"- expansion: {focus_descriptions[DiscoveryFocus.EXPANSION]}\n"
@@ -211,7 +227,10 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
             "- recommended_tracks MUST NOT appear in any exclusion or blacklist section above.\n"
             "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
-            f"- Provide {similar_limit} recommended tracks, each with a discovery score (0.0–1.0, higher = better fit).\n"
+            f"- Provide up to {similar_limit} recommended tracks, each with a discovery score (0.0–1.0).\n"
+            "- Quality over quantity: only include a track if your confidence score would be ≥ 0.7.\n"
+            "  If you only have 5 high-confidence picks, return 5 — do not pad with uncertain ones.\n"
+            "  Score interpretation: 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
             "- Provide 2-3 specific search_queries to widen the discovery surface.\n"
             "- Keep suggested_playlist_name creative and thematic.\n"
         )

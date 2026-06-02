@@ -44,3 +44,9 @@ def oldest_era_label(profile: "TasteProfileData") -> str:
 def current_era_label(profile: "TasteProfileData") -> str:
     eras = profile.get("taste_timeline", [])
     return eras[-1]["era_label"] if eras else "current era"
+
+
+def current_vibe_summary(profile: "TasteProfileData", top_n: int = 5) -> str:
+    vibe = profile.get("current_vibe", {})
+    top = sorted(vibe.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+    return ", ".join(f"{k} ({v:.2f})" for k, v in top) or "unknown"

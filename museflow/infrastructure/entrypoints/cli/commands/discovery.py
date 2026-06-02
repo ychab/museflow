@@ -52,7 +52,7 @@ def discover(
         help="Optional freeform instructions for the advisor",
     ),
     similar_limit: int = typer.Option(
-        20,
+        10,
         "--similar-limit",
         help="Number of recommended tracks to request from the advisor",
         min=1,

@@ -3,6 +3,7 @@ import pytest
 from museflow.domain.utils.taste import behavioral_traits_summary
 from museflow.domain.utils.taste import core_identity_summary
 from museflow.domain.utils.taste import current_era_label
+from museflow.domain.utils.taste import current_vibe_summary
 from museflow.domain.utils.taste import era_sort_key
 from museflow.domain.utils.taste import oldest_era_label
 from museflow.domain.utils.taste import personality_archetype
@@ -62,6 +63,17 @@ class TestCoreIdentitySummary:
         )
         result = core_identity_summary(profile, top_n=2)
         assert result == "a (0.90), b (0.80)"
+
+
+class TestCurrentVibeSummary:
+    def test__nominal(self) -> None:
+        profile = TasteProfileDataFactory.build(current_vibe={"dream pop": 0.8, "shoegaze": 0.6})
+        result = current_vibe_summary(profile)
+        assert result == "dream pop (0.80), shoegaze (0.60)"
+
+    def test__empty_current_vibe(self) -> None:
+        profile = TasteProfileDataFactory.build(current_vibe={})
+        assert current_vibe_summary(profile) == "unknown"
 
 
 class TestBehavioralTraitsSummary:
