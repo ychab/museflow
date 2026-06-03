@@ -7,7 +7,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptReport
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.user import User
@@ -19,34 +18,28 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisorAgent
 from museflow.domain.types import MusicProvider
-from museflow.infrastructure.entrypoints.cli.commands.discovery import discover_taste_logic
+from museflow.infrastructure.entrypoints.cli.commands.discover.create import create_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
 from tests.unit.factories.entities.music import PlaylistFactory
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
-TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discovery"
+TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.create"
 
 
-@pytest.fixture
-def mock_spotify_client(
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    client = mock.AsyncMock(spec=ProviderOAuthPort)
-    with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_provider_oauth", client) as mock_client:
-        yield mock_client
-
-
-class TestDiscoverTasteParserCommand:
+class TestCreateParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = f"{TARGET_PATH}.discover_taste_logic"
+    def mock_create_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = f"{TARGET_PATH}.create_logic"
         strategy = DiscoveryTasteStrategyFactory.build()
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
+            patched.return_value = DiscoverTasteResult(
+                provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=[], tracks=[]
+            )
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -54,7 +47,7 @@ class TestDiscoverTasteParserCommand:
         result = runner.invoke(
             app,
             [
-                "discover",
+                "discover", "create",
                 "--email", "test@example.com",
                 "--advisor-agent", MusicAdvisorAgent.GEMINI,
                 "--provider", MusicProvider.SPOTIFY,
@@ -91,7 +84,7 @@ class TestDiscoverTasteParserCommand:
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["discover", "--email", email])
+        result = runner.invoke(app, ["discover", "create", "--email", email])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
@@ -100,7 +93,7 @@ class TestDiscoverTasteParserCommand:
     def test__advisor_agent__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--advisor-agent", "foo"],
+            ["discover", "create", "--email", "test@example.com", "--advisor-agent", "foo"],
         )
         assert result.exit_code != 0
 
@@ -110,7 +103,7 @@ class TestDiscoverTasteParserCommand:
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--provider", "foo"],
+            ["discover", "create", "--email", "test@example.com", "--provider", "foo"],
         )
         assert result.exit_code != 0
 
@@ -120,7 +113,7 @@ class TestDiscoverTasteParserCommand:
     def test__focus__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--focus", "foo"],
+            ["discover", "create", "--email", "test@example.com", "--focus", "foo"],
         )
         assert result.exit_code != 0
 
@@ -146,7 +139,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--similar-limit", similar_limit],
+            ["discover", "create", "--email", "test@example.com", "--similar-limit", similar_limit],
         )
         assert result.exit_code != 0
 
@@ -171,7 +164,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--candidate-limit", candidate_limit],
+            ["discover", "create", "--email", "test@example.com", "--candidate-limit", candidate_limit],
         )
         assert result.exit_code != 0
 
@@ -196,7 +189,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--playlist-size", playlist_size],
+            ["discover", "create", "--email", "test@example.com", "--playlist-size", playlist_size],
         )
         assert result.exit_code != 0
 
@@ -221,7 +214,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--max-attempts", max_attempts],
+            ["discover", "create", "--email", "test@example.com", "--max-attempts", max_attempts],
         )
         assert result.exit_code != 0
 
@@ -248,7 +241,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--max-tracks-per-artist", max_tracks_per_artist],
+            ["discover", "create", "--email", "test@example.com", "--max-tracks-per-artist", max_tracks_per_artist],
         )
         assert result.exit_code != 0
 
@@ -273,7 +266,7 @@ class TestDiscoverTasteParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["discover", "--email", "test@example.com", "--score-band-width", score_band_width],
+            ["discover", "create", "--email", "test@example.com", "--score-band-width", score_band_width],
         )
         assert result.exit_code != 0
 
@@ -281,22 +274,22 @@ class TestDiscoverTasteParserCommand:
         assert expected_msg in output
 
 
-class TestDiscoverTasteCommand:
+class TestCreateCommand:
     @pytest.fixture(autouse=True)
-    def mock_discover_logic(self) -> Iterable[mock.Mock]:
-        target_path = f"{TARGET_PATH}.discover_taste_logic"
+    def mock_create_logic(self) -> Iterable[mock.Mock]:
+        target_path = f"{TARGET_PATH}.create_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = UserNotFound()
+        mock_create_logic.side_effect = UserNotFound()
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -304,13 +297,13 @@ class TestDiscoverTasteCommand:
 
     def test__auth_token_not_found(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = ProviderAuthTokenNotFoundError()
+        mock_create_logic.side_effect = ProviderAuthTokenNotFoundError()
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -318,13 +311,13 @@ class TestDiscoverTasteCommand:
 
     def test__taste_profile_not_found(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = TasteProfileNotFoundException()
+        mock_create_logic.side_effect = TasteProfileNotFoundException()
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -332,13 +325,13 @@ class TestDiscoverTasteCommand:
 
     def test__taste_profile_status_not_ready(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = TasteProfileStatusNotReadyException()
+        mock_create_logic.side_effect = TasteProfileStatusNotReadyException()
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -346,13 +339,13 @@ class TestDiscoverTasteCommand:
 
     def test__no_track_new_found(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = DiscoveryTrackNoNew()
+        mock_create_logic.side_effect = DiscoveryTrackNoNew()
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -360,13 +353,13 @@ class TestDiscoverTasteCommand:
 
     def test__output__exceptions(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_discover_logic.side_effect = Exception("Boom")
+        mock_create_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -374,7 +367,7 @@ class TestDiscoverTasteCommand:
 
     def test__output__playlist_created(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
@@ -383,29 +376,56 @@ class TestDiscoverTasteCommand:
 
         track_with_album = TrackFactory.build()
         track_without_album = TrackFactory.build(album_name=None)
-        mock_discover_logic.return_value = DiscoverTasteResult(
-            playlist=playlist,
+        mock_create_logic.return_value = DiscoverTasteResult(
+            provider_playlist=playlist,
+            discovery_playlist=None,
             strategy=strategy,
             reports=[],
             tracks=[track_with_album, track_without_album],
         )
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
         assert "Suggested tracks successfully saved into playlist 'Progressive Horizons'!" in output
 
+    def test__output__playlist_created_with_discovery_playlist(
+        self,
+        mock_create_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        strategy = DiscoveryTasteStrategyFactory.build(suggested_playlist_name="Progressive Horizons")
+        playlist = PlaylistFactory.build()
+        discovery_playlist = DiscoveryPlaylistFactory.build()
+        mock_create_logic.return_value = DiscoverTasteResult(
+            provider_playlist=playlist,
+            discovery_playlist=discovery_playlist,
+            strategy=strategy,
+            reports=[],
+            tracks=[],
+        )
+
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com"])
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert f"Saved playlist ID: {discovery_playlist.id}" in output
+        assert "Rate it later: muse discover rate" in output
+
     def test__output__dry_run(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         strategy = DiscoveryTasteStrategyFactory.build()
-        mock_discover_logic.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
+        mock_create_logic.return_value = DiscoverTasteResult(
+            provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=[], tracks=[]
+        )
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com", "--dry-run"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -413,19 +433,20 @@ class TestDiscoverTasteCommand:
 
     def test__output__reports_table_rendered(
         self,
-        mock_discover_logic: mock.AsyncMock,
+        mock_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         strategy = DiscoveryTasteStrategyFactory.build()
-        mock_discover_logic.return_value = DiscoverTasteResult(
-            playlist=None,
+        mock_create_logic.return_value = DiscoverTasteResult(
+            provider_playlist=None,
+            discovery_playlist=None,
             strategy=strategy,
             reports=[DiscoverTasteAttemptReport(attempt=1, tracks_suggested=5, tracks_survived=3, tracks_new=2)],
             tracks=[],
         )
 
-        result = runner.invoke(app, ["discover", "--email", "test@example.com", "--dry-run"])
+        result = runner.invoke(app, ["discover", "create", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -438,9 +459,13 @@ class TestDiscoverTasteCommand:
     "mock_auth_token_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
-    "mock_spotify_client",
+    "mock_blacklist_repository",
+    "mock_discovery_playlist_repository",
+    "mock_provider_oauth",
 )
-class TestDiscoverTasteLogic:
+class TestCreateLogic:
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.create"
+
     @pytest.fixture(autouse=True)
     def mock_advisor_agent(
         self,
@@ -454,7 +479,7 @@ class TestDiscoverTasteLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await discover_taste_logic(
+            await create_logic(
                 "test@example.com",
                 advisor_agent=MusicAdvisorAgent.GEMINI,
                 provider=MusicProvider.SPOTIFY,
@@ -471,7 +496,7 @@ class TestDiscoverTasteLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
-            await discover_taste_logic(
+            await create_logic(
                 user.email,
                 advisor_agent=MusicAdvisorAgent.GEMINI,
                 provider=MusicProvider.SPOTIFY,

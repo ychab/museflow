@@ -29,20 +29,23 @@ class TestDiscoverTasteUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
+        mock_discovery_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor_agent: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
     ) -> DiscoverTasteUseCase:
         mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist()
+        mock_discovery_playlist_repository.save.side_effect = lambda p: p
 
         return DiscoverTasteUseCase(
             track_repository=mock_track_repository,
             taste_profile_repository=mock_taste_profile_repository,
+            blacklist_repository=mock_blacklist_repository,
+            discovery_playlist_repository=mock_discovery_playlist_repository,
             provider_library=mock_provider_library,
             advisor_agent=mock_advisor_agent,
             track_reconciler=mock_track_reconciler,
             profiler=TasteProfiler.GEMINI,
-            blacklist_repository=mock_blacklist_repository,
         )
 
     @pytest.mark.parametrize("discovery_taste_strategy", [{"search_queries": []}], indirect=True)
@@ -77,7 +80,7 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.playlist is playlist
+        assert result.provider_playlist is playlist
         assert result.strategy is discovery_taste_strategy
         assert len(result.tracks) == 1
         assert len(result.reports) == 1
@@ -227,7 +230,7 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.playlist is None
+        assert result.provider_playlist is None
         mock_provider_library.create_playlist.assert_not_called()
 
     async def test__search_queries_contribute_tracks(

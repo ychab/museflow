@@ -83,13 +83,16 @@ class TasteProfileStatusNotReadyException(Exception): ...
 class BlacklistItemNotFoundError(Exception): ...
 
 
-# --- Discovery track exceptions ---
+# --- Discovery exceptions ---
 
 
 class DiscoveryTrackNoNew(Exception): ...
 
 
 class DiscoveryTasteStrategyException(Exception): ...
+
+
+class DiscoveryPlaylistNotFoundError(Exception): ...
 
 
 # --- Streaming history exceptions ---

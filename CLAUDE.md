@@ -112,10 +112,14 @@ class Track(MusicItemMixin, Base, kw_only=True):
     artists: Mapped[list[ArtistDict]] = mapped_column(JSONB, nullable=False, default_factory=list)
     genres: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default_factory=list)
 
+    @classmethod
+    def from_entity(cls, entity: TrackEntity) -> "Track":
+        return cls(id=entity.id, name=entity.name, ...)
+
     def to_entity(self) -> TrackEntity:
         return TrackEntity(id=self.id, name=self.name, ...)
 ```
-- Use `MappedAsDataclass + Base`. Always implement `to_entity(self) -> Entity`.
+- Use `MappedAsDataclass + Base`. Always implement both `from_entity(cls, entity) -> Model` and `to_entity(self) -> Entity` — they are symmetric: `from_entity` maps domain → DB, `to_entity` maps DB → domain. Repositories use `from_entity` to build DB objects; never instantiate models field-by-field in a repository.
 - Auto-fields (`id`, `created_at`, `updated_at`) come from mixins: `init=False` + `sort_order`.
 - Use `JSONB` for nested structures (from `sqlalchemy.dialects.postgresql`).
 - Use `ARRAY(String)` for string lists (from `sqlalchemy.dialects.postgresql`).

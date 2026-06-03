@@ -19,11 +19,13 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisorAgent
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.discover import app
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_AGENT_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_agent_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
+from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
@@ -35,7 +37,8 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 console = Console()
 
 
-def discover(
+@app.command("create")
+def create(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     advisor_agent: MusicAdvisorAgent = typer.Option(
         default=MusicAdvisorAgent.GEMINI,
@@ -99,12 +102,10 @@ def discover(
         help="Discover tracks without creating a playlist",
     ),
 ) -> None:
-    """
-    Discover new tracks guided by your AI taste profile.
-    """
+    """Discover new tracks guided by your AI taste profile."""
     try:
         result = asyncio.run(
-            discover_taste_logic(
+            create_logic(
                 email=email,
                 advisor_agent=advisor_agent,
                 provider=provider,
@@ -148,7 +149,6 @@ def discover(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    # Rich Panel with AI reasoning
     console.print(
         Panel(
             result.strategy.reasoning,
@@ -157,7 +157,6 @@ def discover(
         )
     )
 
-    # Discovery Report table
     report_table = Table(title="Discovery Report")
     report_table.add_column("Attempt", justify="right")
     report_table.add_column("Suggested", justify="right")
@@ -172,7 +171,6 @@ def discover(
         )
     console.print(report_table)
 
-    # Tracks table
     track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
     track_table.add_column("#", justify="right", style="dim")
     track_table.add_column("Artist(s)")
@@ -184,8 +182,7 @@ def discover(
         track_table.add_row(str(i), artists, track.name, album_name)
     console.print(track_table)
 
-    # Footer message
-    if result.playlist is None:
+    if result.provider_playlist is None:
         typer.secho(
             "\n\nTracks discovered but playlist not created (dry-run mode) ⚠️",
             fg=typer.colors.YELLOW,
@@ -195,9 +192,15 @@ def discover(
             f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
             fg=typer.colors.GREEN,
         )
+        if result.discovery_playlist is not None:
+            typer.secho(f"Saved playlist ID: {result.discovery_playlist.id}", fg=typer.colors.CYAN)
+            typer.secho(
+                f"  Rate it later: muse discover rate {result.discovery_playlist.id} --email {email}",
+                fg=typer.colors.CYAN,
+            )
 
 
-async def discover_taste_logic(
+async def create_logic(
     email: EmailStr,
     advisor_agent: MusicAdvisorAgent,
     provider: MusicProvider,
@@ -229,6 +232,7 @@ async def discover_taste_logic(
         track_repository = get_track_repository(session)
         taste_profile_repository = get_taste_profile_repository(session)
         blacklist_repository = get_blacklist_repository(session)
+        discovery_playlist_repository = get_discovery_playlist_repository(session)
 
         provider_client = await stack.enter_async_context(get_provider_oauth(provider))
         provider_library_factory = get_provider_library_factory(
@@ -253,11 +257,12 @@ async def discover_taste_logic(
         use_case = DiscoverTasteUseCase(
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
+            blacklist_repository=blacklist_repository,
+            discovery_playlist_repository=discovery_playlist_repository,
             provider_library=provider_library,
             advisor_agent=advisor_agent_adapter,
             track_reconciler=track_reconciler,
             profiler=profiler,
-            blacklist_repository=blacklist_repository,
         )
 
         return await use_case.create_suggestions_playlist(user=user, config=config)

@@ -43,6 +43,8 @@ class AppSettings(BaseSettings):
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
+    DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3
+
     BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)
     BACKEND_CORS_ALLOW_METHODS: list[str] = Field(default=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
     BACKEND_CORS_ALLOW_HEADERS: list[str] = Field(

@@ -12,6 +12,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -88,6 +89,11 @@ def mock_taste_profile_repository() -> mock.AsyncMock:
 @pytest.fixture
 def mock_blacklist_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=BlacklistRepository)
+
+
+@pytest.fixture
+def mock_discovery_playlist_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=DiscoveryPlaylistRepository)
 
 
 # --- Entity Mocks ---

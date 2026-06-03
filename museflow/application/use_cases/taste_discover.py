@@ -1,5 +1,6 @@
 import logging
 import math
+import uuid
 from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
@@ -9,12 +10,15 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorAgentPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
 from museflow.application.utils.discovery import reconcile_tracks
+from museflow.domain.entities.discovery import DiscoveryPlaylist
+from museflow.domain.entities.discovery import DiscoveryPlaylistTrack
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
@@ -42,7 +46,8 @@ class DiscoverTasteAttemptReport:
 
 @dataclass(frozen=True, kw_only=True)
 class DiscoverTasteResult:
-    playlist: Playlist | None
+    provider_playlist: Playlist | None
+    discovery_playlist: DiscoveryPlaylist | None
     strategy: DiscoveryTasteStrategy
     reports: list[DiscoverTasteAttemptReport]
     tracks: list[Track]
@@ -56,6 +61,7 @@ class DiscoverTasteUseCase:
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
         blacklist_repository: BlacklistRepository,
+        discovery_playlist_repository: DiscoveryPlaylistRepository,
         provider_library: ProviderLibraryPort,
         advisor_agent: AdvisorAgentPort,
         track_reconciler: TrackReconciler,
@@ -64,6 +70,7 @@ class DiscoverTasteUseCase:
         self._track_repository = track_repository
         self._taste_profile_repository = taste_profile_repository
         self._blacklist_repository = blacklist_repository
+        self._discovery_playlist_repository = discovery_playlist_repository
         self._provider_library = provider_library
         self._advisor_agent = advisor_agent
         self._track_reconciler = track_reconciler
@@ -219,13 +226,52 @@ class DiscoverTasteUseCase:
 
         if config.dry_run:
             logger.info("Dry-run mode: skipping playlist creation.")
-            return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
+            return DiscoverTasteResult(
+                provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=reports, tracks=tracks
+            )
 
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat()}",
             tracks=tracks,
         )
-        return DiscoverTasteResult(playlist=playlist, strategy=strategy, reports=reports, tracks=tracks)
+
+        now = datetime.now(UTC)
+        dp_id = uuid.uuid4()
+        dp = DiscoveryPlaylist(
+            id=dp_id,
+            user_id=user.id,
+            profile_id=profile.id,
+            provider=playlist.provider,
+            provider_id=playlist.provider_id,
+            tracks=[
+                DiscoveryPlaylistTrack(
+                    playlist_id=dp_id,
+                    provider=track.provider,
+                    provider_id=track.provider_id,
+                    track_name=track.name,
+                    artist_names=track.artists,
+                    position=i,
+                )
+                for i, track in enumerate(tracks)
+            ],
+            name=strategy.suggested_playlist_name,
+            reasoning=strategy.reasoning,
+            focus=config.focus,
+            genre=config.genre,
+            mood=config.mood,
+            custom_instructions=config.custom_instructions,
+            created_at=now,
+            updated_at=now,
+        )
+        discovery_playlist = await self._discovery_playlist_repository.save(dp)
+
+        return DiscoverTasteResult(
+            provider_playlist=playlist,
+            discovery_playlist=discovery_playlist,
+            strategy=strategy,
+            reports=reports,
+            tracks=tracks,
+        )
 
     @staticmethod
     def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:

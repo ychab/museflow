@@ -6,32 +6,9 @@ This quick and dirty document just list the roadmap tasks.
 
 - discovery taste - reviezw output cli command, almost silent at the beginning
 
-- For the command taste build at @museflow/infrastructure/entrypoints/cli/commands/taste/build.py, I would like to add a command flag --models.
-  To do it, we should update the port of the three methods to accept a "models": list[str] paramter. Then, the only one adapter gemini
-  could try to match it internally and if supported, then it to the request. In that case, we should update the metadata... looks like
-  an inconsistency here.
-
-- should we keep the unique name? Or go back to user_id + profiler type as unicity?
-
 ## code design
 
 - replace adapter/client.py by <adapter>/adapter.py
-
-## discovery improvements
-
-- Blacklist / skip memory: no feedback loop today — rejected tracks resurface on the next
-  run. Add a discovery_skip table (user_id + fingerprint) checked during deduplication.
-  CLI would need a way to mark tracks as skipped (e.g. after dry-run preview).
-
-- Gemini context enrichment: pass richer context to the advisor — user's top genres, a mood/energy
-  hint, and what to avoid (e.g. compilations, already-owned tracks). Requires extending the port
-  interface or adding an optional context argument.
-
-- I have discover that most of the time, at least with rap, what I like the most is the work of the beatmaker. Finally,
-  a lot of artist can unfortunately easily replaced: without deep lyrics, they are just a voice with a signature that any AI can replaced!
-  I discover the new feature songDNA on Spotify and it's allow me to discover the beatmaker behind the production of the artists I like the most:
-  => I like almost 1/2 too, no matter the artist! We should definitively take a look on this track and dig it!
-  Example: Seezy, Sirius
 
 
 ## claude
@@ -39,17 +16,6 @@ This quick and dirty document just list the roadmap tasks.
 => reduce the size of the CLAUDE.md no? Keep the minimum here (always loaded = tokens++)
 
 - to build a big features, better to split it into mutliple plans, written on disk (not in memory). Why not a dir /plans in the root project?
-- then to split plans, it almost always the same pattern:
--> 1. domain (entities, value objects, etc)
--> 2. application ports
--> 3. infra port adapters
--> 4. use cases + inputs
--> 5. infra entrypoints: cli / api
-- finally, dispatch the plan manually between sub agents
-
-## Tracks
-
-- found a way to add the track.genres? Copied from artist with Spotify? Use another service?
 
 ## Tests
 
@@ -59,22 +25,10 @@ This quick and dirty document just list the roadmap tasks.
 
 - do we have deadcode?
 
-## Database
-
-- Monitor get_list(genres=...) query performance as user count grows.
-  Add GIN index on genres (artist + track) when per-user row counts
-  make the genre subquery scan measurably slow. Use EXPLAIN ANALYZE
-  to confirm before adding — the planner may prefer the B-tree path
-  longer than expected.
-
-  => MusicItemMixin:: Index(f"ix_{cls.__tablename__}_genres", "genres", postgresql_using="gin"),
-
 ## advisor
 
-- found other providers for recommendations (listenbrainz or musicbrainz)?
-    => tastedive API
+- found other AI providers for recommendations?
     => openai
-    => spotify search with hipster / new tags, etc?
 
 ## direnv
 

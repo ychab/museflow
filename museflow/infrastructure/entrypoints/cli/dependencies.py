@@ -8,6 +8,7 @@ from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -21,6 +22,7 @@ from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdviso
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
+from museflow.infrastructure.adapters.database.repositories.discovery import DiscoveryPlaylistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.music import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
@@ -181,6 +183,10 @@ def get_taste_profile_repository(session: AsyncSession) -> TasteProfileRepositor
 
 def get_blacklist_repository(session: AsyncSession) -> BlacklistRepository:
     return BlacklistSQLRepository(session)
+
+
+def get_discovery_playlist_repository(session: AsyncSession) -> DiscoveryPlaylistRepository:
+    return DiscoveryPlaylistSQLRepository(session)
 
 
 # --- Services ---

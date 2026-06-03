@@ -16,6 +16,10 @@ class TasteProfiler(StrEnum):
     GEMINI = "gemini"
 
 
+DISCOVERY_TRACK_SCORE_MIN: int = 0
+DISCOVERY_TRACK_SCORE_MAX: int = 10
+
+
 class DiscoveryFocus(StrEnum):
     EXPANSION = "expansion"
     ROOTS_REVIVAL = "roots_revival"
