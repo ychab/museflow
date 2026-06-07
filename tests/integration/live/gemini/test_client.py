@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.types import DiscoveryFocus
 from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_taste_advisor
@@ -28,13 +28,13 @@ class TestGeminiAdvisorLive:
     """
 
     @pytest.fixture
-    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorAgentPort]:
+    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorPort]:
         async with get_gemini_taste_advisor() as client:
             yield client
 
     async def test__get_discovery_strategy(
         self,
-        gemini_advisor_live: AdvisorAgentPort,
+        gemini_advisor_live: AdvisorPort,
         taste_profile: TasteProfile,
     ) -> None:
         strategy = await gemini_advisor_live.get_discovery_strategy(

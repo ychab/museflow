@@ -16,7 +16,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import MusicAdvisorAgent
+from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.discover.create import create_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -49,7 +49,7 @@ class TestCreateParserCommand:
             [
                 "discover", "create",
                 "--email", "test@example.com",
-                "--advisor-agent", MusicAdvisorAgent.GEMINI,
+                "--advisor", MusicAdvisor.GEMINI,
                 "--provider", MusicProvider.SPOTIFY,
                 "--focus", DiscoveryFocus.EXPANSION,
                 "--similar-limit", "10",
@@ -90,15 +90,15 @@ class TestCreateParserCommand:
         output = clean_typer_text(result.output)
         assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
 
-    def test__advisor_agent__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+    def test__advisor__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
             app,
-            ["discover", "create", "--email", "test@example.com", "--advisor-agent", "foo"],
+            ["discover", "create", "--email", "test@example.com", "--advisor", "foo"],
         )
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
-        assert "Invalid value for '--advisor-agent': 'foo' is not" in output
+        assert "Invalid value for '--advisor': 'foo' is not" in output
 
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
@@ -467,12 +467,12 @@ class TestCreateLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.create"
 
     @pytest.fixture(autouse=True)
-    def mock_advisor_agent(
+    def mock_advisor(
         self,
         mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
     ) -> Iterable[mock.AsyncMock]:
         client = mock.AsyncMock()
-        with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor_agent_adapter", client) as mock_client:
+        with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor_adapter", client) as mock_client:
             yield mock_client
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
@@ -481,7 +481,7 @@ class TestCreateLogic:
         with pytest.raises(UserNotFound):
             await create_logic(
                 "test@example.com",
-                advisor_agent=MusicAdvisorAgent.GEMINI,
+                advisor=MusicAdvisor.GEMINI,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverTasteConfigInput(),
             )
@@ -498,7 +498,7 @@ class TestCreateLogic:
         with pytest.raises(ProviderAuthTokenNotFoundError):
             await create_logic(
                 user.email,
-                advisor_agent=MusicAdvisorAgent.GEMINI,
+                advisor=MusicAdvisor.GEMINI,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverTasteConfigInput(),
             )

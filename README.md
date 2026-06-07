@@ -257,7 +257,7 @@ uv run museflow discover --email <email> [OPTIONS]
 
 **Options:**
 
-*   `--advisor-agent`: The AI advisor agent to use (default: `gemini`).
+*   `--advisor`: The AI advisor to use (default: `gemini`).
 *   `--provider`: The music provider to use (default: `spotify`).
 *   `--focus`: The discovery focus strategy (default: `expansion`). Controls how the advisor interprets your taste profile to generate suggestions.
 *   `--name`: Taste profile name to use (defaults to the latest profile).

@@ -17,11 +17,11 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import MusicAdvisorAgent
+from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.discover import app
-from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_AGENT_TO_PROFILER
-from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_agent_adapter
+from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_TO_PROFILER
+from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -40,9 +40,9 @@ console = Console()
 @app.command("create")
 def create(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    advisor_agent: MusicAdvisorAgent = typer.Option(
-        default=MusicAdvisorAgent.GEMINI,
-        help="The AI advisor agent to use",
+    advisor: MusicAdvisor = typer.Option(
+        default=MusicAdvisor.GEMINI,
+        help="The AI advisor to use",
     ),
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     focus: DiscoveryFocus = typer.Option(default=DiscoveryFocus.EXPANSION, help="The discovery focus strategy"),
@@ -107,7 +107,7 @@ def create(
         result = asyncio.run(
             create_logic(
                 email=email,
-                advisor_agent=advisor_agent,
+                advisor=advisor,
                 provider=provider,
                 config=DiscoverTasteConfigInput(
                     focus=focus,
@@ -206,7 +206,7 @@ def create(
 
 async def create_logic(
     email: EmailStr,
-    advisor_agent: MusicAdvisorAgent,
+    advisor: MusicAdvisor,
     provider: MusicProvider,
     config: DiscoverTasteConfigInput,
 ) -> DiscoverTasteResult:
@@ -214,7 +214,7 @@ async def create_logic(
 
     Args:
         email: The email of the user.
-        advisor_agent: The AI advisor agent to use.
+        advisor: The AI advisor to use.
         provider: The music provider to use for search and playlist creation.
         config: The configuration for the discovery process.
 
@@ -226,7 +226,7 @@ async def create_logic(
         ProviderAuthTokenNotFoundError: If the user's auth token for the provider is not found.
         TasteProfileNotFoundException: If no matching taste profile is found.
     """
-    profiler = ADVISOR_AGENT_TO_PROFILER[advisor_agent]
+    profiler = ADVISOR_TO_PROFILER[advisor]
 
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -245,7 +245,7 @@ async def create_logic(
             oauth_client=provider_client,
         )
 
-        advisor_agent_adapter = await stack.enter_async_context(get_advisor_agent_adapter(advisor_agent))
+        advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
         track_reconciler = get_track_reconciler()
 
         user = await user_repository.get_by_email(email)
@@ -264,7 +264,7 @@ async def create_logic(
             blacklist_repository=blacklist_repository,
             discovery_playlist_repository=discovery_playlist_repository,
             provider_library=provider_library,
-            advisor_agent=advisor_agent_adapter,
+            advisor=advisor_adapter,
             track_reconciler=track_reconciler,
             profiler=profiler,
         )

@@ -55,7 +55,7 @@ class TestDiscoverTasteUseCase:
         mock_blacklist_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         track_roundtrip: None,
     ) -> DiscoverTasteUseCase:
@@ -68,7 +68,7 @@ class TestDiscoverTasteUseCase:
             blacklist_repository=mock_blacklist_repository,
             discovery_playlist_repository=mock_discovery_playlist_repository,
             provider_library=mock_provider_library,
-            advisor_agent=mock_advisor_agent,
+            advisor=mock_advisor,
             track_reconciler=mock_track_reconciler,
             profiler=TasteProfiler.GEMINI,
         )
@@ -81,12 +81,12 @@ class TestDiscoverTasteUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -116,13 +116,13 @@ class TestDiscoverTasteUseCase:
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
         mock_taste_profile_repository.get.return_value = TasteProfileFactory.build(user_id=user.id, name="my-profile")
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -144,13 +144,13 @@ class TestDiscoverTasteUseCase:
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -208,14 +208,14 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         mock_provider_library.search_tracks.return_value = []
         mock_track_reconciler.reconcile.return_value = None
@@ -232,14 +232,14 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]
@@ -263,7 +263,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -276,7 +276,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[],
             search_queries=["post-rock instrumental"],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
         mock_provider_library.search_tracks.return_value = [query_track]
         mock_track_reconciler.reconcile.return_value = None
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -294,7 +294,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -308,7 +308,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[TrackSuggestedFactory.build(score=1.0)],
             search_queries=["some query"],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
 
         # Both paths resolve to the same fingerprint
         mock_track_reconciler.reconcile.return_value = (shared_track, 0.9)
@@ -329,7 +329,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -344,7 +344,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=TrackSuggestedFactory.batch(2, score=0.9),
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
 
         # First suggestion reconciles to known_track, second to unknown_track
         mock_track_reconciler.reconcile.side_effect = [(known_track, 0.9), (unknown_track, 0.9)]
@@ -371,7 +371,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -382,7 +382,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=TrackSuggestedFactory.batch(3, score=0.9),  # 3 suggestions for the same artist
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
 
         # All reconcile to tracks with same primary artist
         artist_name = "SameArtist"
@@ -416,7 +416,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -424,7 +424,7 @@ class TestDiscoverTasteUseCase:
     ) -> None:
         """Loop exits after the first attempt when playlist_size is already reached."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_track_reconciler.reconcile.return_value = (reconciled_track, 0.9)
@@ -437,7 +437,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=3),
         )
 
-        mock_advisor_agent.get_discovery_strategy.assert_called_once()
+        mock_advisor.get_discovery_strategy.assert_called_once()
         assert len(result.reports) == 1
 
     async def test__loop_accumulates_across_attempts(
@@ -445,7 +445,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -464,7 +464,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+        mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
         mock_track_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -475,7 +475,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_size=2, similar_limit=5, max_attempts=3),
         )
 
-        assert mock_advisor_agent.get_discovery_strategy.call_count == 2
+        assert mock_advisor.get_discovery_strategy.call_count == 2
         assert len(result.tracks) == 2
         assert len(result.reports) == 2
 
@@ -484,7 +484,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -504,7 +504,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+        mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
         mock_track_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -516,11 +516,11 @@ class TestDiscoverTasteUseCase:
         )
 
         # Attempt 1: excluded_tracks=None
-        first_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[0].kwargs
+        first_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[0].kwargs
         assert first_call_kwargs["excluded_tracks"] is None
 
         # Attempt 2: excluded_tracks contains the track suggested in attempt 1
-        second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
+        second_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[1].kwargs
         assert second_call_kwargs["excluded_tracks"] == [suggested_track]
 
     async def test__excluded_tracks_passes_full_history(
@@ -528,7 +528,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -546,7 +546,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
+        mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
 
         # Attempt 1: all 60 suggestions fail to reconcile → 0 new tracks → loop continues
         # Attempt 2: produces 1 new track → loop stops
@@ -561,7 +561,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=60, max_attempts=2),
         )
 
-        second_call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args_list[1].kwargs
+        second_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[1].kwargs
         excluded = second_call_kwargs["excluded_tracks"]
         assert excluded is not None
         assert len(excluded) == 60
@@ -571,7 +571,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -581,7 +581,7 @@ class TestDiscoverTasteUseCase:
         track = TrackFactory.build()
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
         mock_track_reconciler.reconcile.return_value = (track, 0.9)
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -592,7 +592,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
         )
 
-        call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args.kwargs
+        call_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
         assert call_kwargs["blacklisted_artists"] is None
         assert call_kwargs["blacklisted_tracks"] is None
 
@@ -601,7 +601,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -614,7 +614,7 @@ class TestDiscoverTasteUseCase:
         mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         track = TrackFactory.build()
         mock_track_reconciler.reconcile.return_value = (track, 0.9)
@@ -627,7 +627,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
         )
 
-        call_kwargs = mock_advisor_agent.get_discovery_strategy.call_args.kwargs
+        call_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
         assert call_kwargs["blacklisted_artists"] == ["Taylor Swift"]
         assert call_kwargs["blacklisted_tracks"] == ["Shake It Off by Taylor Swift"]
 
@@ -636,7 +636,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -655,7 +655,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=TrackSuggestedFactory.batch(2, score=0.9),
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
         mock_track_reconciler.reconcile.side_effect = [(blacklisted_track, 0.9), (clean_track, 0.9)]
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -674,7 +674,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -691,7 +691,7 @@ class TestDiscoverTasteUseCase:
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
             search_queries=[],
         )
-        mock_advisor_agent.get_discovery_strategy.return_value = strategy
+        mock_advisor.get_discovery_strategy.return_value = strategy
         mock_track_reconciler.reconcile.return_value = (blacklisted_track, 0.9)
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -707,7 +707,7 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor_agent: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
@@ -715,7 +715,7 @@ class TestDiscoverTasteUseCase:
     ) -> None:
         """Discovered tracks are upserted into museflow_track with source=DISCOVERY and played_count=0."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
         reconciled_track = TrackFactory.build()
         mock_provider_library.search_tracks.return_value = [reconciled_track]

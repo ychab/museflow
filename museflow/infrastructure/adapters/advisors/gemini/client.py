@@ -15,7 +15,7 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
-from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
@@ -52,10 +52,10 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class GeminiAdvisorAdapter(HttpClientMixin, AdvisorAgentPort):
+class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
     """Adapter for the Google Gemini API.
 
-    This class implements the `AdvisorAgentPort` and provides methods to interact
+    This class implements the `AdvisorPort` and provides methods to interact
     with the Gemini generative language API to get AI-driven discovery strategies. It
     includes retry logic for transient network errors and specific HTTP status codes
     via `HttpClientMixin`.

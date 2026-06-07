@@ -34,7 +34,7 @@ class TestDiscoverTasteUseCase:
             blacklist_repository=blacklist_repository,
             discovery_playlist_repository=discovery_playlist_repository,
             provider_library=spotify_library,
-            advisor_agent=gemini_advisor,
+            advisor=gemini_advisor,
             track_reconciler=track_reconciler,
             profiler=TasteProfiler.GEMINI,
         )

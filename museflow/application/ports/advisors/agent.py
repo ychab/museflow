@@ -7,13 +7,13 @@ from museflow.domain.types import DiscoveryFocus
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 
-class AdvisorAgentPort(ABC):
-    """Abstract port for an AI advisor agent that generates discovery strategies."""
+class AdvisorPort(ABC):
+    """Abstract port for an AI advisor that generates discovery strategies."""
 
     @property
     @abstractmethod
     def display_name(self) -> str:
-        """The display name of the advisor agent."""
+        """The display name of the advisor."""
         ...
 
     @abstractmethod
@@ -32,5 +32,5 @@ class AdvisorAgentPort(ABC):
 
     @abstractmethod
     async def close(self) -> None:
-        """Closes the agent's resources, like the underlying HTTP client."""
+        """Closes the advisor's resources, like the underlying HTTP client."""
         ...

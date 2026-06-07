@@ -18,7 +18,7 @@ class MusicProvider(StrEnum):
     SPOTIFY = "spotify"
 
 
-class MusicAdvisorAgent(StrEnum):
+class MusicAdvisor(StrEnum):
     GEMINI = "gemini"
 
 

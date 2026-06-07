@@ -6,7 +6,7 @@ from pydantic import HttpUrl
 import pytest
 
 from museflow.application.inputs.history import StreamingHistoryFileStats
-from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -165,8 +165,8 @@ def mock_streaming_history() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_advisor_agent() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=AdvisorAgentPort)
+def mock_advisor() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=AdvisorPort)
 
 
 # --- Service Mocks ---

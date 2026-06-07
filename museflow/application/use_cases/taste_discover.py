@@ -8,7 +8,7 @@ from datetime import datetime
 
 from museflow import __project_name__
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.ports.advisors.agent import AdvisorAgentPort
+from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
 from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
@@ -64,7 +64,7 @@ class DiscoverTasteUseCase:
         blacklist_repository: BlacklistRepository,
         discovery_playlist_repository: DiscoveryPlaylistRepository,
         provider_library: ProviderLibraryPort,
-        advisor_agent: AdvisorAgentPort,
+        advisor: AdvisorPort,
         track_reconciler: TrackReconciler,
         profiler: TasteProfiler,
     ) -> None:
@@ -73,7 +73,7 @@ class DiscoverTasteUseCase:
         self._blacklist_repository = blacklist_repository
         self._discovery_playlist_repository = discovery_playlist_repository
         self._provider_library = provider_library
-        self._advisor_agent = advisor_agent
+        self._advisor = advisor
         self._track_reconciler = track_reconciler
         self._profiler = profiler
 
@@ -124,7 +124,7 @@ class DiscoverTasteUseCase:
             logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
 
             logger.debug("--- Discovery strategy ---")
-            strategy = await self._advisor_agent.get_discovery_strategy(
+            strategy = await self._advisor.get_discovery_strategy(
                 profile=profile,
                 focus=config.focus,
                 similar_limit=config.similar_limit,
