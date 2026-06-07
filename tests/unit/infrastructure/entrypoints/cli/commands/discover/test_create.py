@@ -412,7 +412,7 @@ class TestCreateCommand:
 
         output = clean_typer_text(result.stdout)
         assert f"Saved playlist ID: {discovery_playlist.id}" in output
-        assert "Rate it later: muse discover rate" in output
+        assert "Rate tracks: muse rate" in output
 
     def test__output__dry_run(
         self,

@@ -3,6 +3,7 @@ import uuid
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -41,6 +42,7 @@ def to_domain_track(
         provider_id=spotify_track.id,
         artists=[artist.name for artist in spotify_track.artists],
         album_name=spotify_track.album.name if spotify_track.album else None,
+        source=TrackSource.HISTORY,
     )
 
 

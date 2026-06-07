@@ -83,6 +83,15 @@ class TasteProfileStatusNotReadyException(Exception): ...
 class BlacklistItemNotFoundError(Exception): ...
 
 
+# --- Track exceptions ---
+
+
+class TrackNotFoundError(Exception): ...
+
+
+class RateScoreInvalidException(Exception): ...
+
+
 # --- Discovery exceptions ---
 
 

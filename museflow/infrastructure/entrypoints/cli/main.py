@@ -7,6 +7,7 @@ from museflow.infrastructure.config.loggers import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands import blacklist
 from museflow.infrastructure.entrypoints.cli.commands import discover
+from museflow.infrastructure.entrypoints.cli.commands import rate
 from museflow.infrastructure.entrypoints.cli.commands import spotify
 from museflow.infrastructure.entrypoints.cli.commands import taste
 from museflow.infrastructure.entrypoints.cli.commands import users
@@ -25,6 +26,7 @@ app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
 app.add_typer(taste.app, name="taste", help="Taste profile commands")
 app.add_typer(blacklist.app, name="blacklist", help="Manage your music blacklist")
 app.add_typer(discover.app, name="discover", help="Discover new tracks and manage playlists")
+app.add_typer(rate.app, name="rate", help="Rate a track")
 
 
 def version_callback(show_version: bool) -> None:

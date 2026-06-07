@@ -1,15 +1,18 @@
+import uuid
 from unittest import mock
 
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.types import TasteProfiler
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
@@ -24,6 +27,27 @@ from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyF
 
 class TestDiscoverTasteUseCase:
     @pytest.fixture
+    def track_roundtrip(self, mock_track_repository: mock.AsyncMock) -> None:
+        """Simulates the bulk_upsert → get_list roundtrip using local state instead of call_args inspection."""
+        upserted: list[Track] = []
+
+        async def _bulk_upsert(tracks: list[Track], *, batch_size: int = 100) -> tuple[list[uuid.UUID], int]:
+            upserted.extend(tracks)
+            return ([], 0)
+
+        async def _get_list(
+            *_: object,
+            provider_ids: list[str] | None = None,
+            **__: object,
+        ) -> list[Track]:
+            if provider_ids is None:
+                return list(upserted)
+            return [t for t in upserted if t.provider_id in provider_ids]
+
+        mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
+        mock_track_repository.get_list.side_effect = _get_list
+
+    @pytest.fixture
     def use_case(
         self,
         mock_track_repository: mock.AsyncMock,
@@ -33,6 +57,7 @@ class TestDiscoverTasteUseCase:
         mock_provider_library: mock.AsyncMock,
         mock_advisor_agent: mock.AsyncMock,
         mock_track_reconciler: mock.Mock,
+        track_roundtrip: None,
     ) -> DiscoverTasteUseCase:
         mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist()
         mock_discovery_playlist_repository.save.side_effect = lambda p: p
@@ -676,3 +701,35 @@ class TestDiscoverTasteUseCase:
                 user=user,
                 config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=1),
             )
+
+    async def test__discovery_tracks_upserted_to_museflow_track(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor_agent: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_track_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        """Discovered tracks are upserted into museflow_track with source=DISCOVERY and played_count=0."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor_agent.get_discovery_strategy.return_value = discovery_taste_strategy
+
+        reconciled_track = TrackFactory.build()
+        mock_provider_library.search_tracks.return_value = [reconciled_track]
+        mock_track_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, dry_run=False),
+        )
+
+        mock_track_repository.bulk_upsert.assert_awaited_once()
+        upserted_tracks = mock_track_repository.bulk_upsert.call_args[0][0]
+        assert len(upserted_tracks) == 1
+        assert upserted_tracks[0].source == TrackSource.DISCOVERY
+        assert upserted_tracks[0].played_count == 0

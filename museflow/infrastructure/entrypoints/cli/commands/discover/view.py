@@ -63,15 +63,16 @@ async def view_logic(email: str, playlist_id: uuid.UUID) -> None:
 
     track_table = Table(title="Tracks")
     track_table.add_column("#", justify="right", style="dim")
+    track_table.add_column("ID", style="dim")
     track_table.add_column("Artist(s)")
     track_table.add_column("Track")
     track_table.add_column("Score", justify="center")
-    for track in playlist.tracks:
-        score_display = str(track.score) if track.score is not None else "—"
+    for i, track in enumerate(playlist.tracks, start=1):
         track_table.add_row(
-            str(track.position + 1),
-            ", ".join(track.artist_names),
-            track.track_name,
-            score_display,
+            str(i),
+            str(track.id),
+            ", ".join(track.artists),
+            track.name,
+            str(track.score) if track.score is not None else "—",
         )
     console.print(track_table)

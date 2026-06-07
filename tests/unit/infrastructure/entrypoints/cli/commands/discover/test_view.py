@@ -13,7 +13,7 @@ from museflow.infrastructure.entrypoints.cli.commands.discover.view import view_
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
-from tests.unit.factories.entities.discovery import DiscoveryPlaylistTrackFactory
+from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.view"
@@ -123,8 +123,8 @@ class TestViewLogic:
         mock_user_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
     ) -> None:
-        track_with_score = DiscoveryPlaylistTrackFactory.build(score=8, artist_names=["Artist"])
-        track_without_score = DiscoveryPlaylistTrackFactory.build(score=None, artist_names=["Other"])
+        track_with_score = TrackFactory.build(score=8, artists=["Artist"])
+        track_without_score = TrackFactory.build(score=None, artists=["Other"])
         playlist = DiscoveryPlaylistFactory.build(tracks=[track_with_score, track_without_score])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist

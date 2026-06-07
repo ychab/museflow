@@ -5,6 +5,7 @@ from dataclasses import field
 from datetime import datetime
 
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
 
 
@@ -29,6 +30,9 @@ class Track(BaseProviderEntity):
     played_at_first: datetime | None = None
     played_at_last: datetime | None = None
     played_count: int = 1
+
+    source: TrackSource = TrackSource.HISTORY
+    score: int | None = None
 
     @property
     def primary_artist(self) -> str:

@@ -4,21 +4,18 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import pytest
-
 from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
+from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.infrastructure.adapters.database.models.discovery import DiscoveryPlaylist as DiscoveryPlaylistModel
 from museflow.infrastructure.adapters.database.models.discovery import (
     DiscoveryPlaylistTrack as DiscoveryPlaylistTrackModel,
 )
 
 from tests.integration.factories.models.discovery import DiscoveryPlaylistModelFactory
-from tests.integration.factories.models.discovery import DiscoveryPlaylistTrackModelFactory
+from tests.integration.factories.models.music import TrackModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
-from tests.unit.factories.entities.discovery import DiscoveryPlaylistTrackFactory
 
 
 class TestDiscoveryPlaylistSQLRepository:
@@ -26,16 +23,16 @@ class TestDiscoveryPlaylistSQLRepository:
         self,
         async_session_db: AsyncSession,
         user: User,
+        track_repository: TrackRepository,
         discovery_playlist_repository: DiscoveryPlaylistRepository,
     ) -> None:
         taste_profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
+        # Create a real Track in museflow_track first (FK constraint)
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+        track = track_db.to_entity()
+
         playlist_id = uuid.uuid4()
-        track = DiscoveryPlaylistTrackFactory.build(
-            playlist_id=playlist_id,
-            position=0,
-            artist_names=["Test Artist"],
-        )
         playlist = DiscoveryPlaylistFactory.build(
             id=playlist_id,
             user_id=user.id,
@@ -74,9 +71,12 @@ class TestDiscoveryPlaylistSQLRepository:
     ) -> None:
         taste_profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
+        track_db_1 = await TrackModelFactory.create_async(user_id=user.id)
+        track_db_2 = await TrackModelFactory.create_async(user_id=user.id)
+        track_1 = track_db_1.to_entity()
+        track_2 = track_db_2.to_entity()
+
         playlist_id = uuid.uuid4()
-        track_1 = DiscoveryPlaylistTrackFactory.build(playlist_id=playlist_id, position=0, artist_names=["Artist One"])
-        track_2 = DiscoveryPlaylistTrackFactory.build(playlist_id=playlist_id, position=1, artist_names=["Artist Two"])
         playlist = DiscoveryPlaylistFactory.build(
             id=playlist_id,
             user_id=user.id,
@@ -117,8 +117,9 @@ class TestDiscoveryPlaylistSQLRepository:
         user: User,
         discovery_playlist_repository: DiscoveryPlaylistRepository,
     ) -> None:
-        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id)
-        await DiscoveryPlaylistTrackModelFactory.create_async(playlist_id=pl_db.id)
+        # Playlist has a track in the DB, but list() should not hydrate tracks
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
 
         playlists = await discovery_playlist_repository.list(user.id)
 
@@ -131,8 +132,8 @@ class TestDiscoveryPlaylistSQLRepository:
         user: User,
         discovery_playlist_repository: DiscoveryPlaylistRepository,
     ) -> None:
-        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id)
-        track_db = await DiscoveryPlaylistTrackModelFactory.create_async(playlist_id=pl_db.id, position=0)
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
 
         result = await discovery_playlist_repository.get(user.id, pl_db.id)
 
@@ -158,25 +159,3 @@ class TestDiscoveryPlaylistSQLRepository:
 
         result = await discovery_playlist_repository.get(uuid.uuid4(), pl_db.id)
         assert result is None
-
-    async def test__rate_track__updates_score(
-        self,
-        async_session_db: AsyncSession,
-        user: User,
-        discovery_playlist_repository: DiscoveryPlaylistRepository,
-    ) -> None:
-        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id)
-        track_db = await DiscoveryPlaylistTrackModelFactory.create_async(playlist_id=pl_db.id, position=0)
-
-        await discovery_playlist_repository.rate_track(user.id, track_db.id, 7)
-
-        await async_session_db.refresh(track_db)
-        assert track_db.score == 7
-
-    async def test__rate_track__raises_when_track_not_found(
-        self,
-        user: User,
-        discovery_playlist_repository: DiscoveryPlaylistRepository,
-    ) -> None:
-        with pytest.raises(DiscoveryPlaylistNotFoundError):
-            await discovery_playlist_repository.rate_track(user.id, uuid.uuid4(), 5)

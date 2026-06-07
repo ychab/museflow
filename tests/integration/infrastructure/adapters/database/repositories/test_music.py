@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import operator
+import uuid
 from datetime import UTC
 from datetime import datetime
 
@@ -13,12 +14,14 @@ import pytest
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 from tests.unit.factories.entities.music import TrackFactory
 
 
@@ -383,3 +386,35 @@ class TestTrackSQLRepository:
         stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 2
+
+    async def test__rate__updates_score(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+
+        await track_repository.rate(user_id=user.id, track_id=track_db.id, score=7)
+
+        stmt = select(TrackModel).where(TrackModel.id == track_db.id)
+        updated = (await async_session_db.execute(stmt)).scalar_one()
+        assert updated.score == 7
+
+    async def test__rate__raises_when_track_not_found(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        with pytest.raises(TrackNotFoundError):
+            await track_repository.rate(user_id=user.id, track_id=uuid.uuid4(), score=5)
+
+    async def test__rate__raises_when_wrong_user(
+        self,
+        track_repository: TrackRepository,
+    ) -> None:
+        other_user_db = await UserModelFactory.create_async()
+        track_db = await TrackModelFactory.create_async(user_id=other_user_db.id)
+
+        with pytest.raises(TrackNotFoundError):
+            await track_repository.rate(user_id=uuid.uuid4(), track_id=track_db.id, score=5)

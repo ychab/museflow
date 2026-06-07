@@ -93,6 +93,15 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
+    async def rate(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
+        """Persist a user rating on a track.
+
+        Raises:
+            TrackNotFoundError: If the track is not found for this user.
+        """
+        ...
+
+    @abstractmethod
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         """Deletes all tracks for a user + provider.
 

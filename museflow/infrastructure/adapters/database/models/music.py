@@ -14,6 +14,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.music import Track as TrackEntity
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
@@ -49,6 +50,9 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     played_at_last: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     played_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
+    source: Mapped[int] = mapped_column(Integer, nullable=False, default=int(TrackSource.HISTORY))
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+
     def to_entity(self) -> TrackEntity:
         return TrackEntity(
             id=self.id,
@@ -62,4 +66,6 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             played_at_first=self.played_at_first,
             played_at_last=self.played_at_last,
             played_count=self.played_count,
+            source=TrackSource(self.source),
+            score=self.score,
         )

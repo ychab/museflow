@@ -6,11 +6,13 @@ from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import text
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Track
+from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -125,6 +127,10 @@ class TrackSQLRepository(TrackRepository):
                         if key == "played_at_first"
                         else getattr(TrackModel, key) + excluded[key]
                         if key == "played_count"
+                        else getattr(TrackModel, key).op("|")(excluded[key])
+                        if key == "source"
+                        else func.coalesce(getattr(TrackModel, key), excluded[key])
+                        if key == "score"
                         else excluded[key]
                     )
                     for key in tracks_chunk[0]
@@ -144,6 +150,18 @@ class TrackSQLRepository(TrackRepository):
         await self.session.commit()
 
         return track_ids, created_count
+
+    async def rate(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
+        stmt = (
+            update(TrackModel)
+            .where(TrackModel.id == track_id, TrackModel.user_id == user_id)
+            .values(score=score)
+            .returning(TrackModel.id)
+        )
+        result = await self.session.execute(stmt)
+        if result.scalar_one_or_none() is None:
+            raise TrackNotFoundError()
+        await self.session.commit()
 
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.provider == provider)

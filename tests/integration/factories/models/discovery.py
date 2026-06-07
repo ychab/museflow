@@ -1,6 +1,8 @@
 import uuid
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from museflow.infrastructure.adapters.database.models.discovery import DiscoveryPlaylist as DiscoveryPlaylistModel
 from museflow.infrastructure.adapters.database.models.discovery import (
     DiscoveryPlaylistTrack as DiscoveryPlaylistTrackModel,
@@ -20,6 +22,8 @@ class DiscoveryPlaylistModelFactory(BaseModelFactory[DiscoveryPlaylistModel]):
 
     @classmethod
     async def create_async(cls, **kwargs: Any) -> DiscoveryPlaylistModel:
+        track_ids: list[uuid.UUID] = kwargs.pop("track_ids", [])
+
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
@@ -28,18 +32,13 @@ class DiscoveryPlaylistModelFactory(BaseModelFactory[DiscoveryPlaylistModel]):
             taste_profile = await TasteProfileModelFactory.create_async(user_id=kwargs["user_id"])
             kwargs["profile_id"] = taste_profile.id
 
-        return await super().create_async(**kwargs)
+        playlist = await super().create_async(**kwargs)
 
+        if track_ids:
+            session = cls.__async_session__
+            assert isinstance(session, AsyncSession)
+            for i, track_id in enumerate(track_ids):
+                session.add(DiscoveryPlaylistTrackModel(playlist_id=playlist.id, track_id=track_id, position=i))
+            await session.flush()
 
-class DiscoveryPlaylistTrackModelFactory(BaseModelFactory[DiscoveryPlaylistTrackModel]):
-    __model__ = DiscoveryPlaylistTrackModel
-
-    score = None
-    artist_names = ["Test Artist"]
-
-    @classmethod
-    async def create_async(cls, **kwargs: Any) -> DiscoveryPlaylistTrackModel:
-        if "playlist_id" not in kwargs:
-            playlist = await DiscoveryPlaylistModelFactory.create_async(user_id=kwargs.get("user_id", uuid.uuid4()))
-            kwargs["playlist_id"] = playlist.id
-        return await super().create_async(**kwargs)
+        return playlist

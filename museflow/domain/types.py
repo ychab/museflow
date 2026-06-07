@@ -1,7 +1,17 @@
+from enum import IntFlag
 from enum import StrEnum
 
+type TrackOrdering = list[tuple[TrackOrderBy, SortOrder]]
 type ScoreAdvisor = float
 type ScoreReconciler = float
+
+DISCOVERY_TRACK_SCORE_MIN: int = 0
+DISCOVERY_TRACK_SCORE_MAX: int = 10
+
+
+class TrackSource(IntFlag):
+    HISTORY = 1
+    DISCOVERY = 2
 
 
 class MusicProvider(StrEnum):
@@ -14,10 +24,6 @@ class MusicAdvisorAgent(StrEnum):
 
 class TasteProfiler(StrEnum):
     GEMINI = "gemini"
-
-
-DISCOVERY_TRACK_SCORE_MIN: int = 0
-DISCOVERY_TRACK_SCORE_MAX: int = 10
 
 
 class DiscoveryFocus(StrEnum):
@@ -43,6 +49,3 @@ class TrackOrderBy(StrEnum):
 class SortOrder(StrEnum):
     ASC = "asc"
     DESC = "desc"
-
-
-type TrackOrdering = list[tuple[TrackOrderBy, SortOrder]]

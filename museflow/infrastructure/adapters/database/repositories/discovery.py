@@ -2,16 +2,15 @@ import uuid
 from dataclasses import replace
 
 from sqlalchemy import select
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
 from museflow.domain.entities.discovery import DiscoveryPlaylist
-from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.infrastructure.adapters.database.models.discovery import DiscoveryPlaylist as DiscoveryPlaylistDB
 from museflow.infrastructure.adapters.database.models.discovery import (
     DiscoveryPlaylistTrack as DiscoveryPlaylistTrackDB,
 )
+from museflow.infrastructure.adapters.database.models.music import Track as TrackDB
 
 
 class DiscoveryPlaylistSQLRepository(DiscoveryPlaylistRepository):
@@ -22,8 +21,8 @@ class DiscoveryPlaylistSQLRepository(DiscoveryPlaylistRepository):
         playlist_db = DiscoveryPlaylistDB.from_entity(playlist)
         self.session.add(playlist_db)
 
-        for track in playlist.tracks:
-            self.session.add(DiscoveryPlaylistTrackDB.from_entity(track))
+        for i, track in enumerate(playlist.tracks):
+            self.session.add(DiscoveryPlaylistTrackDB(playlist_id=playlist.id, track_id=track.id, position=i))
 
         await self.session.commit()
         await self.session.refresh(playlist_db)
@@ -40,8 +39,9 @@ class DiscoveryPlaylistSQLRepository(DiscoveryPlaylistRepository):
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> DiscoveryPlaylist | None:
         stmt = (
-            select(DiscoveryPlaylistDB, DiscoveryPlaylistTrackDB)
+            select(DiscoveryPlaylistDB, TrackDB)
             .join(DiscoveryPlaylistTrackDB, DiscoveryPlaylistTrackDB.playlist_id == DiscoveryPlaylistDB.id)
+            .join(TrackDB, TrackDB.id == DiscoveryPlaylistTrackDB.track_id)
             .where(DiscoveryPlaylistDB.id == playlist_id, DiscoveryPlaylistDB.user_id == user_id)
             .order_by(DiscoveryPlaylistTrackDB.position)
         )
@@ -53,22 +53,3 @@ class DiscoveryPlaylistSQLRepository(DiscoveryPlaylistRepository):
         playlist_db, _ = rows[0]
         tracks = [track_db.to_entity() for _, track_db in rows]
         return replace(playlist_db.to_entity(), tracks=tracks)
-
-    async def rate_track(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
-        stmt = (
-            update(DiscoveryPlaylistTrackDB)
-            .where(
-                DiscoveryPlaylistTrackDB.id == track_id,
-                DiscoveryPlaylistTrackDB.playlist_id.in_(
-                    select(DiscoveryPlaylistDB.id).where(DiscoveryPlaylistDB.user_id == user_id)
-                ),
-            )
-            .values(score=score)
-            .returning(DiscoveryPlaylistTrackDB.id)
-        )
-
-        result = await self.session.execute(stmt)
-        if result.scalar_one_or_none() is None:
-            raise DiscoveryPlaylistNotFoundError()
-
-        await self.session.commit()

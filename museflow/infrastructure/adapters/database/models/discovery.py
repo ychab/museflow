@@ -5,12 +5,10 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Text
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.discovery import DiscoveryPlaylist as DiscoveryPlaylistEntity
-from museflow.domain.entities.discovery import DiscoveryPlaylistTrack as DiscoveryPlaylistTrackEntity
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.database.models.base import Base
@@ -80,7 +78,9 @@ class DiscoveryPlaylist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         )
 
 
-class DiscoveryPlaylistTrack(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class DiscoveryPlaylistTrack(UUIDIdMixin, Base, kw_only=True):
+    """Join table linking discovery playlists to tracks in museflow_track."""
+
     __tablename__ = "museflow_discovery_playlist_track"
 
     playlist_id: Mapped[uuid.UUID] = mapped_column(
@@ -89,43 +89,9 @@ class DiscoveryPlaylistTrack(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True
         index=True,
         sort_order=-50,
     )
-
-    # Provider
-    provider: Mapped[MusicProvider] = mapped_column(Enum(MusicProvider), nullable=False, sort_order=-48)
-    provider_id: Mapped[str] = mapped_column(String(512), nullable=False, sort_order=-47)
-
-    # Track metadata
-    track_name: Mapped[str] = mapped_column(String(512), nullable=False)
-    artist_names: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default_factory=list)
-    position: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    # Computed / feedback
-    fingerprint: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
-    score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
-
-    @classmethod
-    def from_entity(cls, entity: DiscoveryPlaylistTrackEntity) -> "DiscoveryPlaylistTrack":
-        return cls(
-            id=entity.id,
-            playlist_id=entity.playlist_id,
-            provider=entity.provider,
-            provider_id=entity.provider_id,
-            track_name=entity.track_name,
-            artist_names=entity.artist_names,
-            position=entity.position,
-            fingerprint=entity.fingerprint,
-            score=entity.score,
-        )
-
-    def to_entity(self) -> DiscoveryPlaylistTrackEntity:
-        return DiscoveryPlaylistTrackEntity(
-            id=self.id,
-            playlist_id=self.playlist_id,
-            provider=self.provider,
-            provider_id=self.provider_id,
-            track_name=self.track_name,
-            artist_names=self.artist_names,
-            position=self.position,
-            fingerprint=self.fingerprint,
-            score=self.score,
-        )
+    track_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("museflow_track.id", ondelete="CASCADE"),
+        nullable=False,
+        sort_order=-49,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, sort_order=-48)

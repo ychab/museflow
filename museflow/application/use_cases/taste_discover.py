@@ -2,6 +2,7 @@ import logging
 import math
 import uuid
 from dataclasses import dataclass
+from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
 
@@ -18,7 +19,6 @@ from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
 from museflow.application.utils.discovery import reconcile_tracks
 from museflow.domain.entities.discovery import DiscoveryPlaylist
-from museflow.domain.entities.discovery import DiscoveryPlaylistTrack
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
@@ -29,6 +29,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.services.reconciler import TrackReconciler
 from museflow.domain.types import TasteProfiler
+from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
@@ -230,30 +231,33 @@ class DiscoverTasteUseCase:
                 provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=reports, tracks=tracks
             )
 
+        # Upsert discovery tracks into museflow_track so they're excluded from future sessions
+        discovery_tracks = [
+            replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
+            for t in tracks
+        ]
+        await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
+        # Fetch back to get the actual DB UUIDs (needed for the join table FK)
+        tracks_db = await self._track_repository.get_list(
+            user_id=user.id,
+            provider_ids=[t.provider_id for t in discovery_tracks],
+        )
+        provider_id_to_track = {t.provider_id: t for t in tracks_db}
+        tracks_with_ids = [provider_id_to_track[t.provider_id] for t in discovery_tracks]
+
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat()}",
             tracks=tracks,
         )
 
         now = datetime.now(UTC)
-        dp_id = uuid.uuid4()
         dp = DiscoveryPlaylist(
-            id=dp_id,
+            id=uuid.uuid4(),
             user_id=user.id,
             profile_id=profile.id,
             provider=playlist.provider,
             provider_id=playlist.provider_id,
-            tracks=[
-                DiscoveryPlaylistTrack(
-                    playlist_id=dp_id,
-                    provider=track.provider,
-                    provider_id=track.provider_id,
-                    track_name=track.name,
-                    artist_names=track.artists,
-                    position=i,
-                )
-                for i, track in enumerate(tracks)
-            ],
+            tracks=tracks_with_ids,
             name=strategy.suggested_playlist_name,
             reasoning=strategy.reasoning,
             focus=config.focus,
@@ -270,7 +274,7 @@ class DiscoverTasteUseCase:
             discovery_playlist=discovery_playlist,
             strategy=strategy,
             reports=reports,
-            tracks=tracks,
+            tracks=tracks_with_ids,
         )
 
     @staticmethod
