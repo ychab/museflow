@@ -1,0 +1,217 @@
+"""initial schema
+
+Revision ID: initial
+Revises:
+Create Date: 2026-06-07 00:00:00.000000
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+revision: str = "initial"
+down_revision: Union[str, Sequence[str], None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    op.create_table(
+        "museflow_user",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("hashed_password", sa.String(length=255), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_museflow_user_email"), "museflow_user", ["email"], unique=True)
+
+    op.create_table(
+        "museflow_auth_state",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.Enum("SPOTIFY", name="musicprovider"), nullable=False),
+        sa.Column("state", sa.String(length=512), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "provider", name="uq_user_provider_auth_state"),
+    )
+    op.create_index(op.f("ix_museflow_auth_state_state"), "museflow_auth_state", ["state"], unique=True)
+
+    op.create_table(
+        "museflow_auth_token",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("provider", sa.Enum("SPOTIFY", name="musicprovider", create_type=False), nullable=False),
+        sa.Column("token_type", sa.String(length=512), nullable=False),
+        sa.Column("token_access", sa.String(length=512), nullable=False),
+        sa.Column("token_refresh", sa.String(length=512), nullable=False),
+        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "provider", name="uq_user_provider_auth_token"),
+    )
+
+    op.create_table(
+        "museflow_blacklisted_artist",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("artist_name", sa.String(length=512), nullable=False),
+        sa.Column("fingerprint", sa.String(length=512), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "fingerprint", name="uq_museflow_blacklisted_artist_user_fp"),
+    )
+
+    op.create_table(
+        "museflow_blacklisted_track",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=512), nullable=False),
+        sa.Column("artist_name", sa.String(length=512), nullable=False),
+        sa.Column("fingerprint", sa.String(length=512), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "fingerprint", name="uq_museflow_blacklisted_track_user_fp"),
+    )
+
+    op.create_table(
+        "museflow_taste_profile",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("profiler", sa.Enum("GEMINI", name="tasteprofiler"), nullable=False),
+        sa.Column("profile", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "profiler_metadata",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column("tracks_count", sa.Integer(), nullable=False),
+        sa.Column("logic_version", sa.String(length=32), nullable=False),
+        sa.Column(
+            "status",
+            sa.Enum("BUILDING", "FINISHED", name="tasteprofilestatus"),
+            server_default="FINISHED",
+            nullable=False,
+        ),
+        sa.Column("checkpoint_profile", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("checkpoint_batch_index", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "name", name="uq_museflow_taste_profile_user_name"),
+    )
+    op.create_index(op.f("ix_museflow_taste_profile_user_id"), "museflow_taste_profile", ["user_id"], unique=False)
+
+    op.create_table(
+        "museflow_track",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("artists", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("album_name", sa.String(length=512), nullable=True),
+        sa.Column("fingerprint", sa.String(length=512), nullable=False),
+        sa.Column("played_at_first", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("played_at_last", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("played_count", sa.Integer(), nullable=False),
+        sa.Column("provider", sa.Enum("SPOTIFY", name="musicprovider", create_type=False), nullable=False),
+        sa.Column("provider_id", sa.String(length=512), nullable=False),
+        sa.Column("source", sa.Integer(), nullable=False),
+        sa.Column("score", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "provider_id", name="uq_museflow_track_user_provider_id"),
+    )
+    op.create_index(op.f("ix_museflow_track_fingerprint"), "museflow_track", ["fingerprint"], unique=False)
+    op.create_index("ix_museflow_track_user_fingerprint", "museflow_track", ["user_id", "fingerprint"], unique=False)
+    op.create_index(op.f("ix_museflow_track_user_id"), "museflow_track", ["user_id"], unique=False)
+    op.create_index("ix_museflow_track_user_provider", "museflow_track", ["user_id", "provider"], unique=False)
+
+    op.create_table(
+        "museflow_discovery_playlist",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("profile_id", sa.UUID(), nullable=False),
+        sa.Column("provider", postgresql.ENUM("SPOTIFY", name="musicprovider", create_type=False), nullable=False),
+        sa.Column("provider_id", sa.String(length=512), nullable=False),
+        sa.Column("name", sa.String(length=512), nullable=False),
+        sa.Column("reasoning", sa.Text(), nullable=False),
+        sa.Column(
+            "focus",
+            sa.Enum("EXPANSION", "ROOTS_REVIVAL", "CULTURAL_BRIDGE", name="discoveryfocus"),
+            nullable=False,
+        ),
+        sa.Column("genre", sa.String(length=255), nullable=True),
+        sa.Column("mood", sa.String(length=255), nullable=True),
+        sa.Column("custom_instructions", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["profile_id"], ["museflow_taste_profile.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_museflow_discovery_playlist_user_id"), "museflow_discovery_playlist", ["user_id"], unique=False
+    )
+
+    op.create_table(
+        "museflow_discovery_playlist_track",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("playlist_id", sa.UUID(), nullable=False),
+        sa.Column("track_id", sa.UUID(), nullable=False),
+        sa.Column("position", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["playlist_id"], ["museflow_discovery_playlist.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["track_id"], ["museflow_track.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_museflow_discovery_playlist_track_playlist_id"),
+        "museflow_discovery_playlist_track",
+        ["playlist_id"],
+        unique=False,
+    )
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    op.drop_index(
+        op.f("ix_museflow_discovery_playlist_track_playlist_id"),
+        table_name="museflow_discovery_playlist_track",
+    )
+    op.drop_table("museflow_discovery_playlist_track")
+    op.drop_index(op.f("ix_museflow_discovery_playlist_user_id"), table_name="museflow_discovery_playlist")
+    op.drop_table("museflow_discovery_playlist")
+    op.drop_index("ix_museflow_track_user_provider", table_name="museflow_track")
+    op.drop_index(op.f("ix_museflow_track_user_id"), table_name="museflow_track")
+    op.drop_index("ix_museflow_track_user_fingerprint", table_name="museflow_track")
+    op.drop_index(op.f("ix_museflow_track_fingerprint"), table_name="museflow_track")
+    op.drop_table("museflow_track")
+    op.drop_index(op.f("ix_museflow_taste_profile_user_id"), table_name="museflow_taste_profile")
+    op.drop_table("museflow_taste_profile")
+    op.drop_table("museflow_blacklisted_track")
+    op.drop_table("museflow_blacklisted_artist")
+    op.drop_table("museflow_auth_token")
+    op.drop_index(op.f("ix_museflow_auth_state_state"), table_name="museflow_auth_state")
+    op.drop_table("museflow_auth_state")
+    op.drop_index(op.f("ix_museflow_user_email"), table_name="museflow_user")
+    op.drop_table("museflow_user")
+    sa.Enum(name="discoveryfocus").drop(op.get_bind())
+    sa.Enum(name="tasteprofilestatus").drop(op.get_bind())
+    sa.Enum(name="tasteprofiler").drop(op.get_bind())
+    sa.Enum(name="musicprovider").drop(op.get_bind())
