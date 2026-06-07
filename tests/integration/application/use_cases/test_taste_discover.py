@@ -50,8 +50,8 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
-                playlist_size=1,
-                similar_limit=5,
+                playlist_limit=1,
+                advisor_limit=5,
                 dry_run=False,
             ),
         )
@@ -76,8 +76,8 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
-                playlist_size=1,
-                similar_limit=5,
+                playlist_limit=1,
+                advisor_limit=5,
                 dry_run=True,
             ),
         )

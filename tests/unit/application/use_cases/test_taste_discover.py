@@ -99,8 +99,8 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
-                playlist_size=1,
-                similar_limit=5,
+                playlist_limit=1,
+                advisor_limit=5,
                 dry_run=False,
             ),
         )
@@ -132,7 +132,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(profile_name="my-profile", playlist_size=1, similar_limit=5),
+            config=DiscoverTasteConfigInput(profile_name="my-profile", playlist_limit=1, advisor_limit=5),
         )
 
         mock_taste_profile_repository.get.assert_called_once_with(user_id=user.id, name="my-profile")
@@ -162,8 +162,8 @@ class TestDiscoverTasteUseCase:
             user=user,
             config=DiscoverTasteConfigInput(
                 profile_name=None,
-                playlist_size=1,
-                similar_limit=5,
+                playlist_limit=1,
+                advisor_limit=5,
             ),
         )
 
@@ -249,8 +249,8 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
-                playlist_size=1,
-                similar_limit=5,
+                playlist_limit=1,
+                advisor_limit=5,
                 dry_run=True,
             ),
         )
@@ -284,7 +284,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5),
         )
 
         assert len(result.tracks) == 1
@@ -318,7 +318,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5),
+            config=DiscoverTasteConfigInput(playlist_limit=10, advisor_limit=5),
         )
 
         # Only 1 unique track despite 2 paths
@@ -360,7 +360,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1, dry_run=False),
+            config=DiscoverTasteConfigInput(playlist_limit=10, advisor_limit=5, max_attempts=1, dry_run=False),
         )
 
         assert all(t is not known_track for t in result.tracks)
@@ -400,8 +400,8 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
-                playlist_size=10,
-                similar_limit=5,
+                playlist_limit=10,
+                advisor_limit=5,
                 max_attempts=1,
                 max_tracks_per_artist=2,
                 dry_run=False,
@@ -411,7 +411,7 @@ class TestDiscoverTasteUseCase:
         # Only 2 tracks from the same artist should survive the cap
         assert len(result.tracks) <= 2
 
-    async def test__loop_stops_early_when_playlist_size_reached(
+    async def test__loop_stops_early_when_playlist_limit_reached(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -422,7 +422,7 @@ class TestDiscoverTasteUseCase:
         mock_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
-        """Loop exits after the first attempt when playlist_size is already reached."""
+        """Loop exits after the first attempt when playlist_limit is already reached."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
@@ -434,7 +434,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=3),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, max_attempts=3),
         )
 
         mock_advisor.get_discovery_strategy.assert_called_once()
@@ -472,7 +472,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=2, similar_limit=5, max_attempts=3),
+            config=DiscoverTasteConfigInput(playlist_limit=2, advisor_limit=5, max_attempts=3),
         )
 
         assert mock_advisor.get_discovery_strategy.call_count == 2
@@ -512,7 +512,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=2, similar_limit=5, max_attempts=3),
+            config=DiscoverTasteConfigInput(playlist_limit=2, advisor_limit=5, max_attempts=3),
         )
 
         # Attempt 1: excluded_tracks=None
@@ -558,7 +558,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=60, max_attempts=2),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=60, max_attempts=2),
         )
 
         second_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[1].kwargs
@@ -589,7 +589,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5),
         )
 
         call_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
@@ -624,7 +624,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5),
         )
 
         call_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
@@ -663,7 +663,7 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=10, similar_limit=5, max_attempts=1, dry_run=False),
+            config=DiscoverTasteConfigInput(playlist_limit=10, advisor_limit=5, max_attempts=1, dry_run=False),
         )
 
         assert all("Taylor Swift" not in t.artists for t in result.tracks)
@@ -699,7 +699,7 @@ class TestDiscoverTasteUseCase:
         with pytest.raises(DiscoveryTrackNoNew):
             await use_case.create_suggestions_playlist(
                 user=user,
-                config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, max_attempts=1),
+                config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, max_attempts=1),
             )
 
     async def test__discovery_tracks_upserted_to_museflow_track(
@@ -725,7 +725,7 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_size=1, similar_limit=5, dry_run=False),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, dry_run=False),
         )
 
         mock_track_repository.bulk_upsert.assert_awaited_once()

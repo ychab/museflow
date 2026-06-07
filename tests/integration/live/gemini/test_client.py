@@ -40,7 +40,7 @@ class TestGeminiAdvisorLive:
         strategy = await gemini_advisor_live.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
         )
         assert strategy.strategy_label
         assert len(strategy.recommended_tracks) > 0

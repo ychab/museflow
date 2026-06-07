@@ -85,7 +85,7 @@ class DiscoverTasteUseCase:
         """Creates a playlist of suggested tracks guided by the user's taste profile.
 
         Iterates up to `max_attempts` times, each time calling the advisor with an exclusion
-        list of previously suggested tracks. Stops early once `playlist_size` tracks are
+        list of previously suggested tracks. Stops early once `playlist_limit` tracks are
         accumulated.
 
         Args:
@@ -127,7 +127,7 @@ class DiscoverTasteUseCase:
             strategy = await self._advisor.get_discovery_strategy(
                 profile=profile,
                 focus=config.focus,
-                similar_limit=config.similar_limit,
+                advisor_limit=config.advisor_limit,
                 genre=config.genre,
                 mood=config.mood,
                 custom_instructions=config.custom_instructions,
@@ -145,7 +145,7 @@ class DiscoverTasteUseCase:
             logger.debug("--- Reconciliation ---")
             tracks_reconciled = await reconcile_tracks(
                 tracks_suggested=strategy.recommended_tracks,
-                limit=config.candidate_limit,
+                limit=config.reconciler_limit,
                 provider_library=self._provider_library,
                 reconciler=self._reconciler,
             )
@@ -192,7 +192,7 @@ class DiscoverTasteUseCase:
                 extra={"attempt": attempt, "total": len(tracks_scores)},
             )
 
-            if len(tracks_scores) >= config.playlist_size:
+            if len(tracks_scores) >= config.playlist_limit:
                 break
 
         if not tracks_scores:
@@ -215,14 +215,14 @@ class DiscoverTasteUseCase:
             max_tracks_per_artist=config.max_tracks_per_artist,
         )
 
-        # Trim to the final playlist size
-        tracks = tracks[: config.playlist_size]
+        # Trim to the final playlist limit
+        tracks = tracks[: config.playlist_limit]
 
-        if len(tracks) < config.playlist_size:
+        if len(tracks) < config.playlist_limit:
             logger.warning(
-                f"playlist_size not reached ({len(tracks)}/{config.playlist_size}) "
+                f"playlist_limit not reached ({len(tracks)}/{config.playlist_limit}) "
                 f"after {config.max_attempts} attempt(s)",
-                extra={"found": len(tracks), "target": config.playlist_size},
+                extra={"found": len(tracks), "target": config.playlist_limit},
             )
 
         if config.dry_run:

@@ -14,10 +14,10 @@ class DiscoverTasteConfigInput:
         genre: Optional genre filter hint passed to the advisor agent.
         mood: Optional mood hint passed to the advisor agent.
         custom_instructions: Optional freeform instructions for the advisor agent.
-        similar_limit: Number of recommended tracks to request from the advisor.
-        candidate_limit: Maximum number of search candidates per suggestion.
+        advisor_limit: Number of recommended tracks to request from the advisor.
+        reconciler_limit: Maximum number of search candidates per suggestion.
         score_band_width: Width of advisor score bands for tiebreaking by reconciler confidence.
-        playlist_size: Target number of tracks in the generated playlist.
+        playlist_limit: Target number of tracks in the generated playlist.
         max_attempts: Maximum number of advisor calls before stopping.
         max_tracks_per_artist: Maximum tracks per artist in the final playlist.
         dry_run: If True, skip playlist creation.
@@ -29,12 +29,12 @@ class DiscoverTasteConfigInput:
     mood: str | None = None
     custom_instructions: str | None = None
 
-    similar_limit: int = 10
-    candidate_limit: int = 10
+    advisor_limit: int = 10
+    reconciler_limit: int = 10
     score_band_width: float = 0.05
-    playlist_size: int = 10
+    playlist_limit: int = 10
     max_attempts: int = 5
-    max_tracks_per_artist: int = 2
+    max_tracks_per_artist: int = 3
 
     dry_run: bool = False
 

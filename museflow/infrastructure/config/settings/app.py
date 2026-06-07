@@ -43,6 +43,7 @@ class AppSettings(BaseSettings):
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
+    DISCOVERY_SCORE_BAND_WIDTH: float = 0.05
     DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3
 
     BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)

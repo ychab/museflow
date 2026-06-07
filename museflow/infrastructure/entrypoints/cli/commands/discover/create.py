@@ -19,6 +19,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.discover import app
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
@@ -54,23 +55,23 @@ def create(
         "--custom-instructions",
         help="Optional freeform instructions for the advisor",
     ),
-    similar_limit: int = typer.Option(
+    advisor_limit: int = typer.Option(
         10,
-        "--similar-limit",
+        "--advisor-limit",
         help="Number of recommended tracks to request from the advisor",
         min=1,
         max=20,
     ),
-    candidate_limit: int = typer.Option(
+    reconciler_limit: int = typer.Option(
         10,
-        "--candidate-limit",
+        "--reconciler-limit",
         help="Maximum search candidates per suggestion",
         min=1,
         max=20,
     ),
-    playlist_size: int = typer.Option(
+    playlist_limit: int = typer.Option(
         10,
-        "--playlist-size",
+        "--playlist-limit",
         help="Target number of tracks in the generated playlist",
         min=1,
         max=30,
@@ -83,18 +84,11 @@ def create(
         max=10,
     ),
     max_tracks_per_artist: int = typer.Option(
-        2,
+        3,
         "--max-tracks-per-artist",
         help="Maximum tracks per artist in the final playlist",
         min=1,
         max=10,
-    ),
-    score_band_width: float = typer.Option(
-        0.05,
-        "--score-band-width",
-        help="Width of advisor score bands for tiebreaking by reconciler confidence (0–1)",
-        min=0.01,
-        max=0.5,
     ),
     dry_run: bool = typer.Option(
         False,
@@ -115,10 +109,10 @@ def create(
                     genre=genre,
                     mood=mood,
                     custom_instructions=custom_instructions,
-                    similar_limit=similar_limit,
-                    candidate_limit=candidate_limit,
-                    score_band_width=score_band_width,
-                    playlist_size=playlist_size,
+                    advisor_limit=advisor_limit,
+                    reconciler_limit=reconciler_limit,
+                    score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
+                    playlist_limit=playlist_limit,
                     max_attempts=max_attempts,
                     max_tracks_per_artist=max_tracks_per_artist,
                     dry_run=dry_run,

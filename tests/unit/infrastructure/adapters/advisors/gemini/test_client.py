@@ -57,7 +57,7 @@ class TestGeminiAdvisorAdapter:
         strategy = await gemini_advisor.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
             genre="metal",
             mood="melancholic",
             custom_instructions="avoid pop",
@@ -94,7 +94,7 @@ class TestGeminiAdvisorAdapter:
         await gemini_advisor.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
             excluded_tracks=[TrackSuggested(name="Some Song", artists=["Some Artist"], score=0.9)],
         )
 
@@ -120,7 +120,7 @@ class TestGeminiAdvisorAdapter:
             await gemini_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
-                similar_limit=5,
+                advisor_limit=5,
             )
 
     async def test__get_discovery_strategy__invalid_json_raises(
@@ -148,7 +148,7 @@ class TestGeminiAdvisorAdapter:
             await gemini_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
-                similar_limit=5,
+                advisor_limit=5,
             )
 
     async def test__get_discovery_strategy__rate_limit_exhausted_raises(
@@ -181,7 +181,7 @@ class TestGeminiAdvisorAdapter:
             await gemini_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
-                similar_limit=5,
+                advisor_limit=5,
             )
 
         assert "Gemini rate limit exceeded after max retries for discovery strategy" in str(exc_info.value)
@@ -384,7 +384,7 @@ class TestGeminiAdvisorAdapter:
         await gemini_advisor.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
             blacklisted_artists=["Taylor Swift"],
             blacklisted_tracks=["Shake It Off by Taylor Swift"],
         )
@@ -428,7 +428,7 @@ class TestGeminiAdvisorAdapter:
         await gemini_advisor.get_discovery_strategy(
             profile=profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
         )
 
         body = httpx_mock.get_requests()[0].read().decode()
@@ -466,7 +466,7 @@ class TestGeminiAdvisorAdapter:
         await gemini_advisor.get_discovery_strategy(
             profile=profile,
             focus=DiscoveryFocus.EXPANSION,
-            similar_limit=5,
+            advisor_limit=5,
         )
 
         body = httpx_mock.get_requests()[0].read().decode()

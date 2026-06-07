@@ -145,7 +145,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
         self,
         profile: TasteProfile,
         focus: DiscoveryFocus,
-        similar_limit: int,
+        advisor_limit: int,
         genre: str | None = None,
         mood: str | None = None,
         custom_instructions: str | None = None,
@@ -227,7 +227,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
             "- recommended_tracks MUST NOT appear in any exclusion or blacklist section above.\n"
             "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
-            f"- Provide up to {similar_limit} recommended tracks, each with a discovery score (0.0–1.0).\n"
+            f"- Provide up to {advisor_limit} recommended tracks, each with a discovery score (0.0–1.0).\n"
             "- Quality over quantity: only include a track if your confidence score would be ≥ 0.7.\n"
             "  If you only have 5 high-confidence picks, return 5 — do not pad with uncertain ones.\n"
             "  Score interpretation: 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"

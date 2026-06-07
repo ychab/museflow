@@ -21,7 +21,7 @@ class AdvisorPort(ABC):
         self,
         profile: TasteProfile,
         focus: DiscoveryFocus,
-        similar_limit: int,
+        advisor_limit: int,
         genre: str | None = None,
         mood: str | None = None,
         custom_instructions: str | None = None,
