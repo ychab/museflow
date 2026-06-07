@@ -11,7 +11,7 @@ from museflow.domain.value_objects.music import TrackNormalized
 logger = logging.getLogger(__name__)
 
 
-class TrackReconciler:
+class Reconciler:
     """Domain service responsible for reconciling tracks using fuzzy text matching."""
 
     def __init__(self, match_threshold: float = 80.0, score_minimum: float = 60.0) -> None:

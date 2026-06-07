@@ -8,7 +8,7 @@ from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
-from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
@@ -26,7 +26,7 @@ class TestDiscoverTasteUseCase:
         discovery_playlist_repository: DiscoveryPlaylistRepository,
         spotify_library: ProviderLibraryPort,
         gemini_advisor: GeminiAdvisorAdapter,
-        track_reconciler: TrackReconciler,
+        reconciler: Reconciler,
     ) -> DiscoverTasteUseCase:
         return DiscoverTasteUseCase(
             track_repository=track_repository,
@@ -35,7 +35,7 @@ class TestDiscoverTasteUseCase:
             discovery_playlist_repository=discovery_playlist_repository,
             provider_library=spotify_library,
             advisor=gemini_advisor,
-            track_reconciler=track_reconciler,
+            reconciler=reconciler,
             profiler=TasteProfiler.GEMINI,
         )
 

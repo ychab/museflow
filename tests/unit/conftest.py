@@ -23,7 +23,7 @@ from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
-from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
@@ -173,8 +173,8 @@ def mock_advisor() -> mock.AsyncMock:
 
 
 @pytest.fixture
-def mock_track_reconciler() -> mock.Mock:
-    return mock.Mock(spec=TrackReconciler)
+def mock_reconciler() -> mock.Mock:
+    return mock.Mock(spec=Reconciler)
 
 
 # --- Adapters ---
@@ -243,9 +243,9 @@ async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
 
 
 @pytest.fixture
-def track_reconciler(request: pytest.FixtureRequest) -> TrackReconciler:
+def reconciler(request: pytest.FixtureRequest) -> Reconciler:
     params = getattr(request, "param", {})
     match_threshold = params.get("match_threshold", 80.0)
     score_minimum = params.get("score_minimum", 60.0)
 
-    return TrackReconciler(match_threshold=match_threshold, score_minimum=score_minimum)
+    return Reconciler(match_threshold=match_threshold, score_minimum=score_minimum)

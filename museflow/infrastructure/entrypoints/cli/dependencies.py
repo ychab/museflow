@@ -14,7 +14,7 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
-from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TasteProfiler
@@ -192,8 +192,8 @@ def get_discovery_playlist_repository(session: AsyncSession) -> DiscoveryPlaylis
 # --- Services ---
 
 
-def get_track_reconciler() -> TrackReconciler:
-    return TrackReconciler(
-        match_threshold=app_settings.RECONCILER_TRACK_MATCH_THRESHOLD,
-        score_minimum=app_settings.RECONCILER_TRACK_SCORE_MINIMUM,
+def get_reconciler() -> Reconciler:
+    return Reconciler(
+        match_threshold=app_settings.RECONCILER_MATCH_THRESHOLD,
+        score_minimum=app_settings.RECONCILER_SCORE_MINIMUM,
     )

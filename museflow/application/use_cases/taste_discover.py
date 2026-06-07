@@ -27,7 +27,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
-from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import TasteProfiler
 from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import normalize_text
@@ -65,7 +65,7 @@ class DiscoverTasteUseCase:
         discovery_playlist_repository: DiscoveryPlaylistRepository,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
-        track_reconciler: TrackReconciler,
+        reconciler: Reconciler,
         profiler: TasteProfiler,
     ) -> None:
         self._track_repository = track_repository
@@ -74,7 +74,7 @@ class DiscoverTasteUseCase:
         self._discovery_playlist_repository = discovery_playlist_repository
         self._provider_library = provider_library
         self._advisor = advisor
-        self._track_reconciler = track_reconciler
+        self._reconciler = reconciler
         self._profiler = profiler
 
     async def create_suggestions_playlist(
@@ -147,7 +147,7 @@ class DiscoverTasteUseCase:
                 tracks_suggested=strategy.recommended_tracks,
                 limit=config.candidate_limit,
                 provider_library=self._provider_library,
-                track_reconciler=self._track_reconciler,
+                reconciler=self._reconciler,
             )
             logger.info(f"Reconciled recommended tracks: {len(tracks_reconciled)}")
 

@@ -24,7 +24,7 @@ museflow/
 ├── domain/          # Pure Python — NO framework imports ever
 │   ├── entities/    # frozen dataclasses
 │   ├── value_objects/
-│   ├── services/    # domain services (e.g., TrackReconciler)
+│   ├── services/    # domain services (e.g., Reconciler)
 │   ├── utils/       # pure functions (text normalization, fingerprinting)
 │   ├── exceptions.py
 │   └── types.py     # enums and type aliases

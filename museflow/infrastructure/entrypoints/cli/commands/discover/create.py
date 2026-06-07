@@ -28,8 +28,8 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
+from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -246,7 +246,7 @@ async def create_logic(
         )
 
         advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
-        track_reconciler = get_track_reconciler()
+        reconciler = get_reconciler()
 
         user = await user_repository.get_by_email(email)
         if not user:
@@ -265,7 +265,7 @@ async def create_logic(
             discovery_playlist_repository=discovery_playlist_repository,
             provider_library=provider_library,
             advisor=advisor_adapter,
-            track_reconciler=track_reconciler,
+            reconciler=reconciler,
             profiler=profiler,
         )
 

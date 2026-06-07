@@ -7,7 +7,7 @@ from museflow.application.ports.repositories.music import TrackRepository
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.user import User
-from museflow.domain.services.reconciler import TrackReconciler
+from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import ScoreAdvisor
 from museflow.domain.types import ScoreReconciler
 
@@ -25,7 +25,7 @@ async def reconcile_tracks(
     tracks_suggested: list[TrackSuggested],
     limit: int,
     provider_library: ProviderLibraryPort,
-    track_reconciler: TrackReconciler,
+    reconciler: Reconciler,
 ) -> list[TrackScored]:
     tracks_reconciled: list[TrackScored] = []
 
@@ -37,7 +37,7 @@ async def reconcile_tracks(
             log_enabled=False,
         )
 
-        result = track_reconciler.reconcile(
+        result = reconciler.reconcile(
             track_suggested=track_suggested,
             candidates=candidates,
         )
