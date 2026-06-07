@@ -132,10 +132,10 @@ uv run museflow spotify connect --email user@example.com
 uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData
 
 # 4. Build your personal taste profile with AI analysis
-uv run museflow taste build --email user@example.com
+uv run museflow taste build --email user@example.com --name my-profile
 
 # 5. Discover new music and generate a playlist
-uv run museflow discover --email user@example.com
+uv run museflow discover create --email user@example.com
 ```
 
 Step 4 is optional but enriches the recommendations.
@@ -229,30 +229,77 @@ Analyzes your imported library tracks with Gemini AI to generate a master taste 
 **Prerequisite:** You must have imported your streaming history first (via `spotify history`).
 
 ```bash
-uv run museflow taste build --email <email> [OPTIONS]
+uv run museflow taste build --email <email> --name <name> [OPTIONS]
 ```
 
 **Options:**
 
+*   `--name`: Profile name, unique per user (**required**).
 *   `--track-limit`: Maximum number of seed tracks used to build the profile (default: 3000, max: 20000).
-*   `--batch-size`: Number of tracks sent per Gemini batch (default: 400, max: 1000).
+*   `--batch-size`: Number of tracks sent per profiler batch (default: 200, max: 1000).
+*   `--profiler`: The profiler to use (default: `gemini`).
+*   `--resume` / `--no-resume`: Resume from last checkpoint if a previous build was interrupted (default: no resume).
 
 Example: Build a taste profile for a user
 
 ```bash
-uv run museflow taste build --email user@example.com
+uv run museflow taste build --email user@example.com --name my-profile
 ```
 
 On completion, the command prints the number of tracks processed, the profiler model and logic version, the number of musical eras detected, the personality archetype, and any life-phase insights.
 
+#### `taste list`
+
+Lists all taste profiles for a user.
+
+```bash
+uv run museflow taste list --email <email>
+```
+
+#### `taste view`
+
+Displays a taste profile in detail.
+
+```bash
+uv run museflow taste view --email <email> --name <name> [OPTIONS]
+```
+
+*   `--name`: Profile name (**required**).
+*   `--format`: Output format: `json`, `python`, or `html` (opens in browser) (default: `json`).
+
+#### `taste export`
+
+Exports a taste profile to a YAML file (for backup or transfer).
+
+```bash
+uv run museflow taste export --email <email> --name <name> --output <path>
+```
+
+*   `--name`: Profile name (**required**).
+*   `--output`: Path to the output YAML file (**required**).
+
+#### `taste import`
+
+Imports a taste profile from a previously exported YAML file.
+
+```bash
+uv run museflow taste import --email <email> --input <path>
+```
+
+*   `--input`: Path to the input YAML file (**required**).
+
 ### Discover (`discover`)
 
-Discovers new music guided by your AI taste profile and creates a new playlist. Uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
+Commands for discovering new music and managing discovery playlists.
 
 **Prerequisite:** You must have built a taste profile first (via `taste build`).
 
+#### `discover create`
+
+Discovers new music guided by your AI taste profile and creates a new playlist. Uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
+
 ```bash
-uv run museflow discover --email <email> [OPTIONS]
+uv run museflow discover create --email <email> [OPTIONS]
 ```
 
 **Options:**
@@ -264,24 +311,94 @@ uv run museflow discover --email <email> [OPTIONS]
 *   `--genre`: Optional genre hint for the advisor (e.g. `"jazz"`).
 *   `--mood`: Optional mood hint for the advisor (e.g. `"melancholic"`).
 *   `--custom-instructions`: Optional freeform instructions passed to the advisor.
-*   `--similar-limit`: Number of recommended tracks to request from the advisor (default: `5`, max: `20`).
-*   `--candidate-limit`: Maximum search candidates per suggestion (default: `10`, max: `20`).
-*   `--playlist-size`: Target number of tracks in the generated playlist (default: `10`, max: `30`).
-*   `--max-tracks-per-artist`: Maximum tracks per artist in the final playlist (default: `2`, max: `10`).
-*   `--score-band-width`: Width of advisor score bands for tiebreaking by reconciler confidence (default: `0.05`, range: `0.01–0.5`).
+*   `--advisor-limit`: Number of recommended tracks to request from the advisor per attempt (default: `10`, max: `20`).
+*   `--reconciler-limit`: Maximum search candidates per suggestion (default: `10`, max: `20`).
+*   `--playlist-limit`: Target number of tracks in the generated playlist (default: `10`, max: `30`).
+*   `--max-attempts`: Maximum number of advisor calls before stopping (default: `3`, max: `10`).
+*   `--max-tracks-per-artist`: Maximum tracks per artist in the final playlist (default: `3`, max: `10`).
 *   `--dry-run`: Discover tracks without creating a playlist.
 
 Example: Discover new music guided by your taste profile
 
 ```bash
-uv run museflow discover --email user@example.com --focus expansion --playlist-size 15
+uv run museflow discover create --email user@example.com --focus expansion --playlist-limit 15
 ```
 
 Example: Discover jazz tracks with a melancholic mood
 
 ```bash
-uv run museflow discover --email user@example.com --genre jazz --mood melancholic --dry-run
+uv run museflow discover create --email user@example.com --genre jazz --mood melancholic --dry-run
 ```
+
+#### `discover list`
+
+Lists all discovery playlists for a user.
+
+```bash
+uv run museflow discover list --email <email>
+```
+
+#### `discover view`
+
+Displays a discovery playlist with its tracks and their ratings.
+
+```bash
+uv run museflow discover view <playlist_id> --email <email>
+```
+
+### Rate Tracks (`rate`)
+
+Rate discovered tracks by score (0–10). Ratings influence future blacklisting prompts. There are two modes:
+
+**Single-track rating:**
+
+```bash
+uv run museflow rate <track_id> <score> --email <email>
+```
+
+**Interactive playlist rating** (walks through every track in a discovery playlist):
+
+```bash
+uv run museflow rate --playlist-id <playlist_id> --email <email>
+```
+
+In interactive mode, for each low-scored track you are prompted to optionally blacklist the track and/or its artist.
+
+### Blacklist (`blacklist`)
+
+Manage artists and tracks that should be excluded from future discovery playlists.
+
+**Add one or more artists to the blacklist:**
+
+```bash
+uv run museflow blacklist add-artist <artist_name> [<artist_name> ...] --email <email>
+```
+
+**Add a track to the blacklist:**
+
+```bash
+uv run museflow blacklist add-track <track_name> --artist <artist_name> --email <email>
+```
+
+**List your blacklist:**
+
+```bash
+uv run museflow blacklist list --email <email>
+```
+
+**Remove entries by ID (IDs shown in `blacklist list`):**
+
+```bash
+uv run museflow blacklist remove <id> [<id> ...] --email <email>
+```
+
+**Purge your entire blacklist:**
+
+```bash
+uv run museflow blacklist purge --email <email> [--yes]
+```
+
+*   `--yes` / `-y`: Skip the confirmation prompt.
 
 ### Spotify Account Info (`spotify info`)
 
