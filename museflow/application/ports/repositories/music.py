@@ -5,6 +5,7 @@ from abc import abstractmethod
 from museflow.domain.entities.music import Track
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackOrdering
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 
 
@@ -21,6 +22,8 @@ class TrackRepository(ABC):
         offset: int | None = None,
         limit: int | None = None,
         min_score: int | None = None,
+        source: TrackSource | None = None,
+        unrated_only: bool = False,
     ) -> list[Track]:
         """Retrieves a list of tracks for a specific user.
 
@@ -35,6 +38,8 @@ class TrackRepository(ABC):
             limit: The maximum number of tracks to return.
             min_score: When set, only tracks with score >= min_score are returned, ordered by
                        score descending so the highest-rated tracks come first when limit is applied.
+            source: When set, only tracks whose source bit includes this flag are returned.
+            unrated_only: When True, only tracks with no score are returned.
 
         Returns:
             A list of `Track` entities.
@@ -101,6 +106,19 @@ class TrackRepository(ABC):
 
         Raises:
             TrackNotFoundError: If the track is not found for this user.
+        """
+        ...
+
+    @abstractmethod
+    async def reset_score(self, user_id: uuid.UUID, source: TrackSource) -> int:
+        """Reset scores to NULL for all tracks matching the source bit.
+
+        Args:
+            user_id: Scopes the reset to this user.
+            source: Tracks whose source includes this bit will have their score cleared.
+
+        Returns:
+            The number of tracks whose score was reset.
         """
         ...
 

@@ -17,6 +17,7 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackOrdering
+from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.music import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
@@ -34,6 +35,8 @@ class TrackSQLRepository(TrackRepository):
         offset: int | None = None,
         limit: int | None = None,
         min_score: int | None = None,
+        source: TrackSource | None = None,
+        unrated_only: bool = False,
     ) -> list[Track]:
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
@@ -44,6 +47,10 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.provider_id.in_(provider_ids))
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
+        if source is not None:
+            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+        if unrated_only:
+            stmt = stmt.where(TrackModel.score.is_(None))
 
         # Ordering
         if min_score is not None:
@@ -167,6 +174,20 @@ class TrackSQLRepository(TrackRepository):
         if result.scalar_one_or_none() is None:
             raise TrackNotFoundError()
         await self.session.commit()
+
+    async def reset_score(self, user_id: uuid.UUID, source: TrackSource) -> int:
+        stmt = (
+            update(TrackModel)
+            .where(TrackModel.user_id == user_id)
+            .where(TrackModel.source.op("&")(int(source)) != 0)
+            .values(score=None)
+            .returning(TrackModel.id)
+        )
+
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+
+        return len(result.scalars().all())
 
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.provider == provider)

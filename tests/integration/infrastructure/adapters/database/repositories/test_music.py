@@ -18,6 +18,7 @@ from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.music import TrackModelFactory
@@ -418,3 +419,74 @@ class TestTrackSQLRepository:
 
         with pytest.raises(TrackNotFoundError):
             await track_repository.rate(user_id=uuid.uuid4(), track_id=track_db.id, score=5)
+
+    async def test__get_list__filtering__source(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        history_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY))
+        discovery_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.DISCOVERY))
+        both_db = await TrackModelFactory.create_async(
+            user_id=user.id, source=int(TrackSource.HISTORY | TrackSource.DISCOVERY)
+        )
+
+        history_list = await track_repository.get_list(user.id, source=TrackSource.HISTORY)
+        assert {t.id for t in history_list} == {history_db.id, both_db.id}
+
+        discovery_list = await track_repository.get_list(user.id, source=TrackSource.DISCOVERY)
+        assert {t.id for t in discovery_list} == {discovery_db.id, both_db.id}
+
+    async def test__get_list__filtering__unrated_only(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        unrated_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
+        await TrackModelFactory.create_async(user_id=user.id, score=7)
+
+        unrated_list = await track_repository.get_list(user.id, unrated_only=True)
+        assert [t.id for t in unrated_list] == [unrated_db.id]
+
+    async def test__reset_score__resets_matching_source(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        history_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY), score=8)
+        discovery_db = await TrackModelFactory.create_async(
+            user_id=user.id, source=int(TrackSource.DISCOVERY), score=6
+        )
+
+        count = await track_repository.reset_score(user_id=user.id, source=TrackSource.HISTORY)
+        assert count == 1
+
+        stmt = select(TrackModel).where(TrackModel.id == history_db.id)
+        history_updated = (await async_session_db.execute(stmt)).scalar_one()
+        assert history_updated.score is None
+
+        stmt = select(TrackModel).where(TrackModel.id == discovery_db.id)
+        discovery_updated = (await async_session_db.execute(stmt)).scalar_one()
+        assert discovery_updated.score == 6
+
+    async def test__reset_score__scoped_to_user(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        own_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY), score=8)
+        other_user_db = await UserModelFactory.create_async()
+        other_db = await TrackModelFactory.create_async(
+            user_id=other_user_db.id, source=int(TrackSource.HISTORY), score=5
+        )
+
+        count = await track_repository.reset_score(user_id=user.id, source=TrackSource.HISTORY)
+        assert count == 1
+
+        stmt = select(TrackModel).where(TrackModel.id == own_db.id)
+        assert (await async_session_db.execute(stmt)).scalar_one().score is None
+
+        stmt = select(TrackModel).where(TrackModel.id == other_db.id)
+        assert (await async_session_db.execute(stmt)).scalar_one().score == 5
