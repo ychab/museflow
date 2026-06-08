@@ -348,18 +348,18 @@ uv run museflow discover view <playlist_id> --email <email>
 
 ### Rate Tracks (`rate`)
 
-Rate discovered tracks by score (0–10). Ratings influence future blacklisting prompts. There are two modes:
+Rate discovered tracks by score (0–10). Ratings influence future blacklisting prompts.
 
 **Single-track rating:**
 
 ```bash
-uv run museflow rate <track_id> <score> --email <email>
+uv run museflow rate track <track_id> <score> --email <email>
 ```
 
 **Interactive playlist rating** (walks through every track in a discovery playlist):
 
 ```bash
-uv run museflow rate --playlist-id <playlist_id> --email <email>
+uv run museflow rate playlist <playlist_id> --email <email>
 ```
 
 In interactive mode, for each low-scored track you are prompted to optionally blacklist the track and/or its artist.
