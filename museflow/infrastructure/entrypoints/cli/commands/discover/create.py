@@ -112,6 +112,8 @@ def create(
                     advisor_limit=advisor_limit,
                     reconciler_limit=reconciler_limit,
                     score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
+                    liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
+                    liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
                     playlist_limit=playlist_limit,
                     max_attempts=max_attempts,
                     max_tracks_per_artist=max_tracks_per_artist,

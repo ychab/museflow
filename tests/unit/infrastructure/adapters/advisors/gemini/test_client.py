@@ -7,6 +7,7 @@ from httpx import codes
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
@@ -15,6 +16,7 @@ from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.types import DiscoveryFocus
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
+from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 
@@ -433,6 +435,44 @@ class TestGeminiAdvisorAdapter:
 
         body = httpx_mock.get_requests()[0].read().decode()
         assert "comfort zones" in body
+
+    async def test__get_discovery_strategy__with_liked_tracks_builds_liked_block(
+        self,
+        gemini_advisor: GeminiAdvisorAdapter,
+        taste_profile: TasteProfile,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            method="POST",
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": '{"reasoning": "ok", "strategy_label": "X", "recommended_tracks": [], "search_queries": [], "suggested_playlist_name": "Mix"}'
+                                }
+                            ],
+                            "role": "model",
+                        }
+                    }
+                ]
+            },
+        )
+        liked: list[Track] = [TrackFactory.build(name="Hey Jude", artists=["The Beatles"])]
+
+        await gemini_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            focus=DiscoveryFocus.EXPANSION,
+            advisor_limit=5,
+            liked_tracks=liked,
+        )
+
+        body = httpx_mock.get_requests()[0].read().decode()
+        assert "LIKED TRACKS" in body
+        assert "The Beatles" in body
+        assert "Hey Jude" in body
 
     async def test__get_discovery_strategy__adventurous_risk_calibration(
         self,

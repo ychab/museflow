@@ -115,6 +115,12 @@ class DiscoverTasteUseCase:
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
 
+        liked_tracks = await self._track_repository.get_list(
+            user_id=user.id,
+            min_score=config.liked_tracks_score_threshold,
+            limit=config.liked_tracks_limit,
+        )
+
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []
         reports: list[DiscoverTasteAttemptReport] = []
@@ -134,6 +140,7 @@ class DiscoverTasteUseCase:
                 excluded_tracks=list(tracks_suggested) or None,
                 blacklisted_artists=blacklisted_artists,
                 blacklisted_tracks=blacklisted_tracks,
+                liked_tracks=liked_tracks,
             )
             tracks_suggested.extend(strategy.recommended_tracks)
             logger.info(

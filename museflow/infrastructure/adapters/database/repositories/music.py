@@ -33,31 +33,36 @@ class TrackSQLRepository(TrackRepository):
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
+        min_score: int | None = None,
     ) -> list[Track]:
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
         # Filtering
         if provider is not None:
             stmt = stmt.where(TrackModel.provider == provider)
-
         if provider_ids is not None:
             stmt = stmt.where(TrackModel.provider_id.in_(provider_ids))
+        if min_score is not None:
+            stmt = stmt.where(TrackModel.score >= min_score)
 
         # Ordering
-        for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:
-            if order_by == TrackOrderBy.RANDOM:
-                stmt = stmt.order_by(func.random())
-                break  # RANDOM cannot be combined with further columns
+        if min_score is not None:
+            stmt = stmt.order_by(TrackModel.score.desc().nulls_last())
+        else:
+            for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:
+                if order_by == TrackOrderBy.RANDOM:
+                    stmt = stmt.order_by(func.random())
+                    break  # RANDOM cannot be combined with further columns
 
-            column = getattr(TrackModel, order_by.value)
-            if order_by.nullable:
-                stmt = stmt.order_by(
-                    column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
-                )
-            elif sort_order == SortOrder.DESC:
-                stmt = stmt.order_by(column.desc())
-            else:
-                stmt = stmt.order_by(column.asc())
+                column = getattr(TrackModel, order_by.value)
+                if order_by.nullable:
+                    stmt = stmt.order_by(
+                        column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
+                    )
+                elif sort_order == SortOrder.DESC:
+                    stmt = stmt.order_by(column.desc())
+                else:
+                    stmt = stmt.order_by(column.asc())
 
         # Pagination
         if offset is not None:

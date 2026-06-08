@@ -1,6 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
 
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.types import DiscoveryFocus
@@ -28,6 +29,7 @@ class AdvisorPort(ABC):
         excluded_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,
+        liked_tracks: list[Track] | None = None,
     ) -> DiscoveryTasteStrategy: ...
 
     @abstractmethod

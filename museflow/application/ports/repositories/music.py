@@ -20,6 +20,7 @@ class TrackRepository(ABC):
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
+        min_score: int | None = None,
     ) -> list[Track]:
         """Retrieves a list of tracks for a specific user.
 
@@ -32,6 +33,8 @@ class TrackRepository(ABC):
                    always sort NULLs last regardless of direction.
             offset: The number of tracks to skip before starting to collect the result set.
             limit: The maximum number of tracks to return.
+            min_score: When set, only tracks with score >= min_score are returned, ordered by
+                       score descending so the highest-rated tracks come first when limit is applied.
 
         Returns:
             A list of `Track` entities.

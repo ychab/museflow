@@ -16,6 +16,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.advisors.agent import AdvisorPort
+from museflow.domain.entities.music import Track
 from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
@@ -152,6 +153,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
         excluded_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,
+        liked_tracks: list[Track] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -206,6 +208,17 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
             )
         exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
 
+        liked_tracks_block = ""
+        if liked_tracks:
+            formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in liked_tracks)
+            liked_tracks_block = (
+                "### LIKED TRACKS\n"
+                "These are tracks the user has explicitly enjoyed and rated highly. "
+                "Use them as concrete taste anchors when shaping your recommendations — "
+                "they reveal what this user genuinely responds to beyond statistical patterns.\n"
+                f"{formatted}\n\n"
+            )
+
         system_prompt = (
             "### ROLE\n"
             'You are the "MuseFlow Navigator," a world-class musicologist.\n'
@@ -218,6 +231,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
             "### RISK CALIBRATION\n"
             f"{risk_calibration}\n\n"
             f"{exclusion_block}"
+            f"{liked_tracks_block}"
             "### FOCUS STRATEGIES\n"
             f"- expansion: {focus_descriptions[DiscoveryFocus.EXPANSION]}\n"
             f"- roots_revival: {focus_descriptions[DiscoveryFocus.ROOTS_REVIVAL]}\n"
