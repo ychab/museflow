@@ -59,7 +59,7 @@ class TestDiscoverTasteUseCase:
         mock_reconciler: mock.Mock,
         track_roundtrip: None,
     ) -> DiscoverTasteUseCase:
-        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist()
+        mock_blacklist_repository.get_all.return_value = UserBlacklist()
         mock_discovery_playlist_repository.save.side_effect = lambda p: p
 
         return DiscoverTasteUseCase(
@@ -611,7 +611,7 @@ class TestDiscoverTasteUseCase:
         """When blacklist has entries, advisor receives populated artist and track lists."""
         artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift")
         track_entry = BlacklistedTrackFactory.build(name="Shake It Off", artist_name="Taylor Swift")
-        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
+        mock_blacklist_repository.get_all.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
@@ -645,7 +645,7 @@ class TestDiscoverTasteUseCase:
         """Tracks from a blacklisted artist are removed before filtering known tracks."""
         artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift", fingerprint="")
 
-        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(artists=[artist])
+        mock_blacklist_repository.get_all.return_value = UserBlacklist(artists=[artist])
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
         blacklisted_track = TrackFactory.build(artists=["Taylor Swift"])
@@ -683,7 +683,7 @@ class TestDiscoverTasteUseCase:
         """Tracks whose fingerprint matches the blacklist are removed."""
         blacklisted_track = TrackFactory.build(name="Shake It Off", artists=["Taylor Swift"])
         track_entry = BlacklistedTrackFactory.build(fingerprint=blacklisted_track.fingerprint)
-        mock_blacklist_repository.get_all_for_user.return_value = UserBlacklist(tracks=[track_entry])
+        mock_blacklist_repository.get_all.return_value = UserBlacklist(tracks=[track_entry])
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 

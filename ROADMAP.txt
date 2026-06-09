@@ -18,10 +18,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - check if we don't have redondant tests?
 
-## Codebase
-
-- do we have deadcode?
-
 ## advisor
 
 - implements other cheapest and pertinent AI like:

@@ -82,7 +82,7 @@ class BlacklistSQLRepository(BlacklistRepository):
 
         return total
 
-    async def get_all_for_user(self, user_id: uuid.UUID) -> UserBlacklist:
+    async def get_all(self, user_id: uuid.UUID) -> UserBlacklist:
         artists_result = await self.session.execute(
             select(BlacklistedArtistModel).where(BlacklistedArtistModel.user_id == user_id)
         )

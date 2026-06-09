@@ -1,4 +1,3 @@
-import uuid
 from dataclasses import dataclass
 
 from museflow.domain.types import DiscoveryFocus
@@ -44,17 +43,3 @@ class DiscoverTasteConfigInput:
     liked_tracks_limit: int = 200
 
     dry_run: bool = False
-
-
-@dataclass(frozen=True, kw_only=True)
-class DiscoveryPlaylistRatingInput:
-    track_id: uuid.UUID
-    score: int
-
-
-@dataclass(frozen=True, kw_only=True)
-class BlacklistChoiceInput:
-    track_name: str
-    artist_name: str
-    blacklist_track: bool
-    blacklist_artist: bool

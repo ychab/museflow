@@ -200,18 +200,18 @@ class TestBlacklistSQLRepository:
         assert artist_count == 0
         assert track_count == 0
 
-    async def test__get_all_for_user__empty(
+    async def test__get_all__empty(
         self,
         user: User,
         blacklist_repository: BlacklistRepository,
     ) -> None:
-        result = await blacklist_repository.get_all_for_user(user_id=user.id)
+        result = await blacklist_repository.get_all(user_id=user.id)
 
         assert result.is_empty is True
         assert result.artists == []
         assert result.tracks == []
 
-    async def test__get_all_for_user__with_entries(
+    async def test__get_all__with_entries(
         self,
         user: User,
         blacklist_repository: BlacklistRepository,
@@ -220,7 +220,7 @@ class TestBlacklistSQLRepository:
         track_db = await BlacklistedTrackModelFactory.create_async(user_id=user.id)
         await BlacklistedArtistModelFactory.create_async()  # another user
 
-        result = await blacklist_repository.get_all_for_user(user_id=user.id)
+        result = await blacklist_repository.get_all(user_id=user.id)
 
         assert len(result.artists) == 1
         assert result.artists[0].id == artist_db.id

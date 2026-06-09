@@ -111,7 +111,7 @@ class DiscoverTasteUseCase:
         elif profile.status == TasteProfileStatus.BUILDING:
             raise TasteProfileStatusNotReadyException()
 
-        blacklist = await self._blacklist_repository.get_all_for_user(user.id)
+        blacklist = await self._blacklist_repository.get_all(user.id)
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
 
