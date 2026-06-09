@@ -2,6 +2,13 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## museflow
+
+- profile: core identity DNA: a lot of duplicates: rap / french rap / french hip hop / french hip-hop--- hip hop / hip-hop / hip-hop\/rap / rap\/hip-hop--- afrobeat / afrobeats
+
+- personnality inspection through the music history? Who are you based on your streaming history?
+
+- add a quizz on random music to discover the taste of the end-user?
 
 ## claude
 
