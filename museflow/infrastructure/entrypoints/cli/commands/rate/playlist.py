@@ -7,10 +7,14 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.rate import track_rate
+from museflow.domain.entities.music import Track
 from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
+from museflow.domain.types import SortOrder
+from museflow.domain.types import TrackOrderBy
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
@@ -21,13 +25,17 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("playlist", help="Interactively rate all tracks in a discovery playlist.")
+@app.command(
+    "playlist",
+    help="Interactively rate tracks in a discovery playlist, or all unrated discovery tracks if no playlist is specified.",
+)
 def rate_playlist(
-    playlist_id: uuid.UUID = typer.Argument(..., help="Discovery playlist UUID to rate"),
     email: str = typer.Option(..., help="User email address", parser=parse_email),
+    playlist_id: uuid.UUID | None = typer.Argument(None, help="Discovery playlist UUID to rate"),
+    limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)"),
 ) -> None:
     try:
-        asyncio.run(rate_playlist_logic(playlist_id=playlist_id, email=email))
+        asyncio.run(rate_playlist_logic(email=email, playlist_id=playlist_id, limit=limit))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except DiscoveryPlaylistNotFoundError as e:
@@ -38,7 +46,7 @@ def rate_playlist(
         raise typer.Exit(code=1) from e
 
 
-async def rate_playlist_logic(playlist_id: uuid.UUID, email: EmailStr) -> None:
+async def rate_playlist_logic(email: EmailStr, playlist_id: uuid.UUID | None, limit: int = 20) -> None:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
@@ -51,17 +59,31 @@ async def rate_playlist_logic(playlist_id: uuid.UUID, email: EmailStr) -> None:
         if not user:
             raise UserNotFound()
 
-        playlist = await discovery_playlist_repository.get(user.id, playlist_id)
-        if playlist is None:
-            raise DiscoveryPlaylistNotFoundError()
+        tracks: list[Track]
+        if playlist_id is not None:
+            playlist = await discovery_playlist_repository.get(user.id, playlist_id)
+            if playlist is None:
+                raise DiscoveryPlaylistNotFoundError()
+            tracks = playlist.tracks
+        else:
+            tracks = await track_repository.get_list(
+                user_id=user.id,
+                source=TrackSource.DISCOVERY,
+                unrated_only=True,
+                order=[(TrackOrderBy.CREATED_AT, SortOrder.DESC)],
+                limit=limit,
+            )
+            if not tracks:
+                typer.secho("No unrated discovery tracks.", fg=typer.colors.YELLOW)
+                return
 
         threshold = app_settings.DISCOVERY_BLACKLIST_SCORE_THRESHOLD
-        total = len(playlist.tracks)
+        total = len(tracks)
         tracks_rated: list[tuple[uuid.UUID, int]] = []
         blacklist_track_pairs: list[tuple[str, str]] = []
         blacklist_artist_names: list[str] = []
 
-        for i, track in enumerate(playlist.tracks):
+        for i, track in enumerate(tracks):
             artists_display = ", ".join(track.artists)
             score_display = f"{track.score}/10" if track.score is not None else "unrated"
             typer.echo(f"\n[{i + 1}/{total}] {artists_display} — {track.name} [current: {score_display}]")

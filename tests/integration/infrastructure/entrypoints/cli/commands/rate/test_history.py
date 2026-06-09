@@ -1,12 +1,10 @@
-from collections.abc import Iterable
 from unittest import mock
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import pytest
-
 from museflow.domain.entities.user import User
+from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
 
@@ -14,16 +12,6 @@ from tests.integration.factories.models.music import TrackModelFactory
 
 
 class TestRateHistoryLogic:
-    @pytest.fixture
-    def mock_typer_prompt(self) -> Iterable[mock.Mock]:
-        with mock.patch("typer.prompt") as patched:
-            yield patched
-
-    @pytest.fixture
-    def mock_typer_confirm(self) -> Iterable[mock.Mock]:
-        with mock.patch("typer.confirm") as patched:
-            yield patched
-
     async def test__nominal(
         self,
         async_session_db: AsyncSession,
@@ -31,7 +19,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt: mock.Mock,
         mock_typer_confirm: mock.Mock,
     ) -> None:
-        track_db = await TrackModelFactory.create_async(user_id=user.id)
+        track_db = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 

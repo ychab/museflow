@@ -77,16 +77,6 @@ class TestRateHistoryCommand:
 class TestRateHistoryLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"
 
-    @pytest.fixture
-    def mock_typer_prompt(self) -> Iterable[mock.Mock]:
-        with mock.patch("typer.prompt") as patched:
-            yield patched
-
-    @pytest.fixture
-    def mock_typer_confirm(self) -> Iterable[mock.Mock]:
-        with mock.patch("typer.confirm") as patched:
-            yield patched
-
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 

@@ -2,10 +2,6 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## code design
-
-- replace adapter/client.py by <adapter>/adapter.py
-
 
 ## claude
 

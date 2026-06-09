@@ -29,7 +29,7 @@ class TestRatePlaylistParserCommand:
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "not-a-uuid"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
-        assert "Invalid value for 'PLAYLIST_ID'" in output
+        assert "Invalid value for '[PLAYLIST_ID]'" in output
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         playlist_id = uuid.uuid4()
@@ -37,6 +37,11 @@ class TestRatePlaylistParserCommand:
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
         assert "Invalid value for '--email'" in output
+
+    def test__without_playlist_id(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        mock_rate_playlist_logic.assert_awaited_once()
 
 
 class TestRatePlaylistCommand:
@@ -108,7 +113,7 @@ class TestRatePlaylistLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await rate_playlist_logic(playlist_id=uuid.uuid4(), email="test@example.com")
+            await rate_playlist_logic(email="test@example.com", playlist_id=uuid.uuid4())
 
     async def test__playlist_not_found(
         self,
@@ -120,7 +125,7 @@ class TestRatePlaylistLogic:
         mock_discovery_playlist_repository.get.return_value = None
 
         with pytest.raises(DiscoveryPlaylistNotFoundError):
-            await rate_playlist_logic(playlist_id=uuid.uuid4(), email=user.email)
+            await rate_playlist_logic(email=user.email, playlist_id=uuid.uuid4())
 
     async def test__nominal__rates_track(
         self,
@@ -128,15 +133,17 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+        mock_typer_confirm: mock.Mock,
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "7"
+        mock_typer_confirm.return_value = False
 
-        with mock.patch("typer.prompt", return_value="7"):
-            with mock.patch("typer.confirm", return_value=False):
-                await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
 
@@ -146,14 +153,15 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
     ) -> None:
         track = TrackFactory.build()
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "s"
 
-        with mock.patch("typer.prompt", return_value="s"):
-            await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -163,14 +171,15 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
     ) -> None:
         track = TrackFactory.build()
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "abc"
 
-        with mock.patch("typer.prompt", return_value="abc"):
-            await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -180,14 +189,15 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
     ) -> None:
         track = TrackFactory.build()
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "15"
 
-        with mock.patch("typer.prompt", return_value="15"):
-            await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -198,15 +208,17 @@ class TestRatePlaylistLogic:
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+        mock_typer_confirm: mock.Mock,
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "2"
+        mock_typer_confirm.side_effect = [True, True]
 
-        with mock.patch("typer.prompt", return_value="2"):
-            with mock.patch("typer.confirm", side_effect=[True, True]):
-                await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_blacklist_repository.add_track.assert_awaited_once_with(
             user_id=user.id, name=track.name, artist_name="Artist A"
@@ -220,15 +232,48 @@ class TestRatePlaylistLogic:
         mock_discovery_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+        mock_typer_confirm: mock.Mock,
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         playlist = DiscoveryPlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "2"
+        mock_typer_confirm.side_effect = [False, False]
 
-        with mock.patch("typer.prompt", return_value="2"):
-            with mock.patch("typer.confirm", side_effect=[False, False]):
-                await rate_playlist_logic(playlist_id=playlist.id, email=user.email)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_blacklist_repository.add_track.assert_not_awaited()
         mock_blacklist_repository.add_artist.assert_not_awaited()
+
+    async def test__no_playlist_id__no_unrated_tracks(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = []
+
+        await rate_playlist_logic(email=user.email, playlist_id=None)
+
+        mock_track_repository.rate.assert_not_awaited()
+
+    async def test__no_playlist_id__rates_track(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+        mock_typer_confirm: mock.Mock,
+    ) -> None:
+        track = TrackFactory.build(artists=["Artist A"])
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [track]
+        mock_typer_prompt.return_value = "7"
+        mock_typer_confirm.return_value = False
+
+        await rate_playlist_logic(email=user.email, playlist_id=None)
+
+        mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
