@@ -23,6 +23,7 @@ from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.domain.types import TasteProfiler
+from museflow.domain.utils.genre import deduplicate_genre_dict
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
@@ -190,7 +191,10 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         except (ValidationError, ValueError) as e:
             raise TasteProfileBuildException(f"Invalid Gemini taste profile response: {e}") from e
 
-        return cast(TasteProfileData, content.model_dump())
+        data = cast(TasteProfileData, content.model_dump())
+        data["core_identity"] = deduplicate_genre_dict(data["core_identity"])
+        data["current_vibe"] = deduplicate_genre_dict(data["current_vibe"])
+        return data
 
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
         dates = [t.played_at_last for t in tracks if t.played_at_last]

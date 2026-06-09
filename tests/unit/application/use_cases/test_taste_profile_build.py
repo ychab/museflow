@@ -27,7 +27,13 @@ from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactor
 class TestBuildTasteProfileUseCase:
     @pytest.fixture
     def profile_data(self) -> TasteProfileData:
-        return TasteProfileDataFactory.build(personality_archetype=None, life_phase_insights=[])
+        return TasteProfileDataFactory.build(
+            personality_archetype=None,
+            life_phase_insights=[],
+            # Use pre-normalized keys and valid weights so normalization is a no-op
+            core_identity={"indie rock": 0.8, "electronic": 0.4},
+            current_vibe={"hip hop": 0.6},
+        )
 
     @pytest.fixture
     def gemini_response(self, profile_data: TasteProfileData) -> dict[str, Any]:
