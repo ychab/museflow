@@ -147,8 +147,8 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glass-card p-8 rounded-[2rem]">
                     <h2 class="text-pink-500 font-bold uppercase text-[10px] tracking-widest mb-6">Core Identity DNA</h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        {"".join(f'<div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800"><div class="text-slate-500 text-[10px] uppercase">{k}</div><div class="text-lg font-bold text-pink-500">{int(v * 100)}%</div></div>' for k, v in taste_profile.profile['core_identity'].items())}
+                    <div class="space-y-3">
+                        {"".join(f'<div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">{k}</span><span class="text-pink-500 font-bold">{int(v * 100)}%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: {v * 100}%"></div></div></div>' for k, v in sorted(taste_profile.profile['core_identity'].items(), key=lambda x: x[1], reverse=True))}
                     </div>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem]">
