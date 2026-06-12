@@ -148,6 +148,13 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - Never mock the database in integration tests — use the real `async_session_db` fixture.
 - Never use fake (in-memory) repository implementations. Use `AsyncMock` for all repository fixtures in unit tests.
 
+**Logging assertions — use `caplog`, not `mock.patch(logger)`:**
+- `caplog: pytest.LogCaptureFixture` is a built-in pytest fixture — no import needed in the test file.
+- Combine with other context managers on a single `with` line: `with caplog.at_level(logging.ERROR), pytest.raises(SomeError):`.
+- Assert `not caplog.records` (no log emitted) or `caplog.records[0].levelno == logging.ERROR` (log emitted).
+- `configure_loggers(..., propagate=True)` in `tests/conftest.py` ensures records reach `caplog` — no extra setup needed.
+- Never patch the module-level `logger` object via `mock.patch` — that's a banned inline-patch pattern.
+
 ## Coverage rules
 
 Every `if` branch → test truthy AND falsy path.

@@ -249,6 +249,28 @@ class TestUserCreateUseCase:
 ```
 - Use `mock.AsyncMock` for async repositories/ports, `mock.Mock` for sync ports.
 - Use factory-built entities from `tests/unit/factories/`.
+- **Never use `with mock.patch(...)` inside a test method** — wrap it in a `pytest.fixture` placed as close to its usage as possible: class method if used in one class, module-level if used across the module, `conftest.py` if used across multiple modules. Inline patches add unnecessary indentation. The `mock_typer_prompt` and `mock_typer_confirm` fixtures (rate conftest) and `mock_builtin_input` (class fixture on `TestRateHistoryLogic`) are canonical examples.
+
+### Logging assertions
+Use pytest's `caplog` fixture — never `mock.patch` the module-level `logger` object:
+```python
+async def test__something__logs(self, caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.ERROR), pytest.raises(SomethingError):
+        await call_under_test()
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.ERROR
+
+async def test__something__no_log(self, caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.ERROR):
+        await call_under_test()
+
+    assert not caplog.records
+```
+- Combine context managers on a single `with` line (`caplog.at_level(...), pytest.raises(...)`) to avoid extra indentation.
+- `caplog.at_level(logging.ERROR)` filters to ERROR+ only, ignoring DEBUG/WARNING noise from the same code path.
+- Check `caplog.text` when the message content matters; `caplog.records[i].levelno` when the level matters.
+- `configure_loggers(..., propagate=True)` in `tests/conftest.py` ensures records reach `caplog` automatically — no extra setup needed.
 
 ### Integration Tests
 ```python

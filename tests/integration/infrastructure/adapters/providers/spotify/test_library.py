@@ -64,6 +64,9 @@ class TestSpotifyLibrary:
         with pytest.raises(ProviderPageValidationError):
             await spotify_library.search_tracks(track="Mi Pueblo")
 
+    async def test__play_track__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
+        await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
+
     async def test__create_playlist__nominal(
         self,
         playlist_tracks: list[Track],

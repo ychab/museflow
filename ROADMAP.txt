@@ -4,6 +4,8 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
+- review commands to exclude typer echo from command logic callback
+
 - rate history command: it is possible to start the track in the spotify player of the user?
 
 - personnality inspection through the music history? Who are you based on your streaming history?

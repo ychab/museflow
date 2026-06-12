@@ -51,3 +51,13 @@ class ProviderLibraryPort(ABC):
             The entity's playlist created.
         """
         ...
+
+    @abstractmethod
+    async def play_track(self, track_provider_id: str) -> None:
+        """Start playing a track immediately on the user's active provider device.
+
+        Raises:
+            ProviderNoActiveDeviceException: If no device is currently active.
+            ProviderPremiumRequiredException: If the user's account doesn't support playback control.
+        """
+        ...

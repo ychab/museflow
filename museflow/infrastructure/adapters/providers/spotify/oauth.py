@@ -19,6 +19,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import HttpClientMixin
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, (SpotifyTokenExpiredError, ProviderRateLimitExceeded)):
+    if isinstance(exception, (SpotifyTokenExpiredError, ProviderRateLimitExceeded, SpotifyApiError)):
         return False  # Let the Session handler deal with this!
 
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
@@ -160,6 +161,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
         token_payload: OAuthProviderTokenPayload | None = None,
+        ignored_status_codes: frozenset[int] | None = None,
     ) -> dict[str, Any]:
         """Makes an authenticated API call to the Spotify API.
 
@@ -203,6 +205,9 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                     # Because we slept as Spotify asked us, we must raise a
                     # TryAgain to prevent Tenacity to sleep again for nothing.
                     raise TryAgain() from e
+
+            if ignored_status_codes and e.response.status_code in ignored_status_codes:
+                raise SpotifyApiError(status_code=e.response.status_code) from e
 
             logger.exception(
                 "Spotify API Error",

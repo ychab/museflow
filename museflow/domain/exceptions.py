@@ -45,6 +45,12 @@ class ProviderPageValidationError(Exception):
 class ProviderRateLimitExceeded(RateLimitExceeded): ...
 
 
+class ProviderNoActiveDeviceException(Exception): ...
+
+
+class ProviderPremiumRequiredException(Exception): ...
+
+
 # --- Advisor exceptions ---
 
 

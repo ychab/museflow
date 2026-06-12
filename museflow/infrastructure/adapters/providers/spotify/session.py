@@ -48,6 +48,7 @@ class SpotifyOAuthSessionClient:
         endpoint: str,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
+        ignored_status_codes: frozenset[int] | None = None,
     ) -> dict[str, Any]:
         """Executes an authenticated API call, handling token refreshes automatically.
 
@@ -60,6 +61,8 @@ class SpotifyOAuthSessionClient:
             endpoint: The API endpoint to call.
             params: Optional query parameters.
             json_data: Optional JSON body for the request.
+            ignored_status_codes: HTTP status codes that should not be logged as errors.
+                Callers are responsible for handling these codes themselves.
 
         Returns:
             The JSON response from the API.
@@ -80,6 +83,7 @@ class SpotifyOAuthSessionClient:
                 token_payload=auth_token_to_token_payload(self.auth_token),
                 params=params,
                 json_data=json_data,
+                ignored_status_codes=ignored_status_codes,
             )
 
         except SpotifyTokenExpiredError:
@@ -94,6 +98,7 @@ class SpotifyOAuthSessionClient:
                     token_payload=auth_token_to_token_payload(self.auth_token),
                     params=params,
                     json_data=json_data,
+                    ignored_status_codes=ignored_status_codes,
                 )
             except TryAgain as e:
                 raise ProviderRateLimitExceeded("Spotify rate limit exceeded after max retries") from e

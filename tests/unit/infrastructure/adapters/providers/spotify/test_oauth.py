@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 from datetime import datetime
 from datetime import timedelta
@@ -17,6 +18,7 @@ from pytest_httpx import HTTPXMock
 
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 
@@ -45,7 +47,7 @@ class TestSpotifyOAuthAdapter:
         assert query_params["client_id"] == ["dummy-client-id"]
         assert query_params["response_type"] == ["code"]
         assert query_params["redirect_uri"] == ["http://127.0.0.1:8000/api/v1/spotify/callback"]
-        assert query_params["scope"] == ["playlist-modify-public playlist-modify-private"]
+        assert query_params["scope"] == ["playlist-modify-public playlist-modify-private user-modify-playback-state"]
         assert query_params["state"] == [spotify_token_payload]
 
     async def test__exchange_code_for_token__nominal(
@@ -454,3 +456,50 @@ class TestSpotifyOAuthAdapter:
         )
         assert response == {"success": True}
         assert len(httpx_mock.get_requests()) == 2
+
+    async def test__make_api_call__ignored_status_code__no_log(
+        self,
+        spotify_oauth: SpotifyOAuthAdapter,
+        token_payload: OAuthProviderTokenPayload,
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        httpx_mock.add_response(
+            url=f"{spotify_oauth.base_url}/foo/bar",
+            method="PUT",
+            status_code=codes.NOT_FOUND,
+        )
+
+        with caplog.at_level(logging.ERROR), pytest.raises(SpotifyApiError) as exc_info:
+            await spotify_oauth.make_api_call(
+                method="PUT",
+                endpoint="/foo/bar",
+                token_payload=token_payload,
+                ignored_status_codes=frozenset({codes.NOT_FOUND}),
+            )
+
+        assert exc_info.value.status_code == codes.NOT_FOUND
+        assert not caplog.records
+
+    async def test__make_api_call__not_ignored_status_code__logs(
+        self,
+        spotify_oauth: SpotifyOAuthAdapter,
+        token_payload: OAuthProviderTokenPayload,
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        httpx_mock.add_response(
+            url=f"{spotify_oauth.base_url}/foo/bar",
+            method="PUT",
+            status_code=codes.NOT_FOUND,
+        )
+
+        with caplog.at_level(logging.ERROR), pytest.raises(httpx.HTTPStatusError):
+            await spotify_oauth.make_api_call(
+                method="PUT",
+                endpoint="/foo/bar",
+                token_payload=token_payload,
+            )
+
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.ERROR

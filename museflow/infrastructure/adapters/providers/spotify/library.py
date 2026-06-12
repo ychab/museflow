@@ -12,7 +12,10 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.music import Playlist
 from museflow.domain.entities.music import Track
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPageValidationError
+from museflow.domain.exceptions import ProviderPremiumRequiredException
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -135,6 +138,21 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
 
         return to_domain_playlist(spotify_playlist, user_id=self.user.id, tracks=tracks)
 
+    async def play_track(self, track_provider_id: str) -> None:
+        try:
+            await self._execute_request(
+                method="PUT",
+                endpoint="/me/player/play",
+                json_data={"uris": [f"spotify:track:{track_provider_id}"]},
+                ignored_status_codes=frozenset({404, 403}),
+            )
+        except SpotifyApiError as e:
+            if e.status_code == 404:
+                raise ProviderNoActiveDeviceException() from e
+            if e.status_code == 403:
+                raise ProviderPremiumRequiredException() from e
+            raise  # pragma: no cover
+
     # -------------------------------------------------------------------------
     # Core Logic
     # -------------------------------------------------------------------------
@@ -207,12 +225,14 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         endpoint: str,
         params: dict[str, Any] | None = None,
         json_data: dict[str, Any] | None = None,
+        ignored_status_codes: frozenset[int] | None = None,
     ) -> dict[str, Any]:
         return await self.session_client.execute(
             method=method,
             endpoint=endpoint,
             params=params,
             json_data=json_data,
+            ignored_status_codes=ignored_status_codes,
         )
 
     # -------------------------------------------------------------------------
