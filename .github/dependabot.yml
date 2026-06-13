@@ -5,6 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # pydantic-core is version-locked to pydantic internals; bump it via pydantic, not independently
+      - dependency-name: "pydantic-core"
     # Grouping keeps your PR list clean by putting all "chore" updates in one PR
     groups:
       python-dependencies:
