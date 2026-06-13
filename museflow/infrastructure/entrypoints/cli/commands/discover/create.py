@@ -191,11 +191,11 @@ def create(
         if result.discovery_playlist is not None:
             typer.secho(f"Saved playlist ID: {result.discovery_playlist.id}", fg=typer.colors.CYAN)
             typer.secho(
-                f"  View it: muse discover view {result.discovery_playlist.id} --email {email}",
+                f"  View it: museflow discover view {result.discovery_playlist.id} --email {email}",
                 fg=typer.colors.CYAN,
             )
             typer.secho(
-                "  Rate tracks: muse rate <track-id> <score> --email <email>",
+                f"  Rate tracks: museflow rate playlist --email {email} --play",
                 fg=typer.colors.CYAN,
             )
 

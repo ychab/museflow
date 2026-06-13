@@ -66,6 +66,21 @@ def target_path(request: pytest.FixtureRequest) -> str:
     raise ValueError("Test class or module must define 'TARGET_PATH' to use auto-patching fixtures.")
 
 
+# --- Typer mocks ---
+
+
+@pytest.fixture
+def mock_typer_prompt() -> Iterable[mock.Mock]:
+    with mock.patch("typer.prompt") as patched:
+        yield patched
+
+
+@pytest.fixture
+def mock_typer_confirm() -> Iterable[mock.Mock]:
+    with mock.patch("typer.confirm") as patched:
+        yield patched
+
+
 # --- Patcher Factories ---
 
 
@@ -216,6 +231,18 @@ def mock_provider_oauth(
     client = mock.AsyncMock(spec=ProviderOAuthPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_provider_oauth", client) as mock_client:
         yield mock_client
+
+
+@pytest.fixture
+def mock_provider_library_factory(
+    target_path: str,
+    mock_dependency_factory: DependencyPatcherFactory,
+    mock_provider_library: mock.AsyncMock,
+) -> Iterable[mock.Mock]:
+    factory = mock.Mock()
+    factory.create.return_value = mock_provider_library
+    with mock_dependency_factory(f"{target_path}.get_provider_library_factory", factory):
+        yield factory
 
 
 @pytest.fixture

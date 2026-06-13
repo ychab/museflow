@@ -17,7 +17,6 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_h
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.music import TrackFactory
-from tests.unit.infrastructure.entrypoints.cli.conftest import DependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"
@@ -131,6 +130,7 @@ class TestRateHistoryCommand:
     "mock_blacklist_repository",
     "mock_provider_oauth",
     "mock_auth_token_repository",
+    "mock_provider_library_factory",
 )
 class TestRateHistoryLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"
@@ -139,17 +139,6 @@ class TestRateHistoryLogic:
     def mock_builtin_input(self) -> Iterable[mock.Mock]:
         with mock.patch("builtins.input") as patched:
             yield patched
-
-    @pytest.fixture(autouse=True)
-    def mock_provider_library_factory(
-        self,
-        mock_dependency_factory: DependencyPatcherFactory,
-        mock_provider_library: mock.AsyncMock,
-    ) -> Iterable[mock.Mock]:
-        factory = mock.Mock()
-        factory.create.return_value = mock_provider_library
-        with mock_dependency_factory(f"{self.TARGET_PATH}.get_provider_library_factory", factory):
-            yield factory
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

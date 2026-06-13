@@ -2,11 +2,23 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## spotify history
+
+- I have the feeling that we don't have the real history right? Looks like I miss a lot of songs...
+
 ## museflow
 
-- review commands to exclude typer echo from command logic callback
+- the optimal workflow could be slightly different
+    => import history
+    => rate history first (at least 300 tracks)
+    => THEN build the profile AND the profiler should take the rates into account!!
+        => which means timeline + preferences
 
-- rate history command: it is possible to start the track in the spotify player of the user?
+- command to create playlist based on the score? filtered by artist?
+
+- command rate stats => list top artist? list top track? two separate command?
+
+- review commands to exclude typer echo from command logic callback
 
 - personnality inspection through the music history? Who are you based on your streaming history?
 
