@@ -18,8 +18,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - command rate stats => list top artist? list top track? two separate command?
 
-- review commands to exclude typer echo from command logic callback
-
 - personnality inspection through the music history? Who are you based on your streaming history?
 
 - add a quizz on random music to discover the taste of the end-user?

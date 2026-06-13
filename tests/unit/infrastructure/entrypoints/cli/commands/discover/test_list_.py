@@ -20,6 +20,7 @@ class TestListParserCommand:
     @pytest.fixture(autouse=True)
     def mock_list_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
+            patched.return_value = []
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -65,6 +66,20 @@ class TestListCommand:
         output = clean_typer_text(result.stderr)
         assert "Error: Boom" in output
 
+    def test__empty_playlists(self, mock_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_list_logic.return_value = []
+
+        result = runner.invoke(app, ["discover", "list", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        assert "No discovery playlists found" in result.output
+
+    def test__with_playlists(self, mock_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_list_logic.return_value = [DiscoveryPlaylistFactory.build()]
+
+        result = runner.invoke(app, ["discover", "list", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        assert "Discovery Playlists" in result.output
+
 
 @pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_discovery_playlist_repository")
 class TestListLogic:
@@ -85,8 +100,9 @@ class TestListLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.list.return_value = []
 
-        # Should not raise; just print a message
-        await list_logic(email=user.email)
+        result = await list_logic(email=user.email)
+
+        assert result == []
 
     async def test__with_playlists(
         self,
@@ -98,6 +114,7 @@ class TestListLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.list.return_value = playlists
 
-        await list_logic(email=user.email)
+        result = await list_logic(email=user.email)
 
+        assert result == playlists
         mock_discovery_playlist_repository.list.assert_awaited_once_with(user.id)

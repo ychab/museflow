@@ -13,6 +13,7 @@ from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import RatePlaylistResult
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -55,10 +56,23 @@ class TestRatePlaylistCommand:
             yield patched
 
     def test__nominal(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_rate_playlist_logic.return_value = RatePlaylistResult(
+            rated_count=3,
+            blacklist_track_count=1,
+            blacklist_artist_count=0,
+        )
         playlist_id = uuid.uuid4()
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
         assert result.exit_code == 0
+        assert "Saved 3 rating(s)" in result.output
         mock_rate_playlist_logic.assert_awaited_once()
+
+    def test__no_unrated_tracks(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+
+        result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        assert "No unrated discovery tracks" in result.output
 
     def test__user_not_found(
         self,

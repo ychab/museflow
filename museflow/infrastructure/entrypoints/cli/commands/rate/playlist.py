@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from contextlib import AsyncExitStack
+from dataclasses import dataclass
 
 from pydantic import EmailStr
 
@@ -33,6 +34,14 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
+@dataclass(frozen=True, kw_only=True)
+class RatePlaylistResult:
+    no_tracks: bool = False
+    rated_count: int = 0
+    blacklist_track_count: int = 0
+    blacklist_artist_count: int = 0
+
+
 @app.command(
     "playlist",
     help="Interactively rate tracks in a discovery playlist, or all unrated discovery tracks if no playlist is specified.",
@@ -47,7 +56,7 @@ def rate_playlist(
     ),
 ) -> None:
     try:
-        asyncio.run(
+        result = asyncio.run(
             rate_playlist_logic(
                 email=email,
                 playlist_id=playlist_id,
@@ -70,13 +79,23 @@ def rate_playlist(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    if result.no_tracks:
+        typer.secho("No unrated discovery tracks.", fg=typer.colors.YELLOW)
+        return
+
+    typer.secho(
+        f"\nSaved {result.rated_count} rating(s). "
+        f"{result.blacklist_track_count} track(s) and {result.blacklist_artist_count} artist(s) blacklisted.",
+        fg=typer.colors.GREEN,
+    )
+
 
 async def rate_playlist_logic(
     email: EmailStr,
     playlist_id: uuid.UUID | None,
     limit: int = 20,
     provider: MusicProvider | None = None,
-) -> None:
+) -> RatePlaylistResult:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
@@ -120,8 +139,7 @@ async def rate_playlist_logic(
                 limit=limit,
             )
             if not tracks:
-                typer.secho("No unrated discovery tracks.", fg=typer.colors.YELLOW)
-                return
+                return RatePlaylistResult(no_tracks=True)
 
         threshold = app_settings.DISCOVERY_BLACKLIST_SCORE_THRESHOLD
         total = len(tracks)
@@ -190,8 +208,8 @@ async def rate_playlist_logic(
         for artist_name in blacklist_artist_names:
             await blacklist_repository.add_artist(user_id=user.id, artist_name=artist_name)
 
-    typer.secho(
-        f"\nSaved {len(tracks_rated)} rating(s). "
-        f"{len(blacklist_track_pairs)} track(s) and {len(blacklist_artist_names)} artist(s) blacklisted.",
-        fg=typer.colors.GREEN,
+    return RatePlaylistResult(
+        rated_count=len(tracks_rated),
+        blacklist_track_count=len(blacklist_track_pairs),
+        blacklist_artist_count=len(blacklist_artist_names),
     )

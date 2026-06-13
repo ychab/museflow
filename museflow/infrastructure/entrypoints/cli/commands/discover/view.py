@@ -8,6 +8,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from museflow.application.use_cases.discovery_playlist_view import discovery_playlist_view
+from museflow.domain.entities.discovery import DiscoveryPlaylist
 from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.discover import app
@@ -26,7 +27,7 @@ def view(
 ) -> None:
     """View a discovery playlist with its tracks and ratings."""
     try:
-        asyncio.run(view_logic(email=email, playlist_id=playlist_id))
+        playlist = asyncio.run(view_logic(email=email, playlist_id=playlist_id))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except DiscoveryPlaylistNotFoundError as e:
@@ -35,23 +36,6 @@ def view(
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-
-
-async def view_logic(email: str, playlist_id: uuid.UUID) -> None:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-        user_repository = get_user_repository(session)
-        discovery_playlist_repository = get_discovery_playlist_repository(session)
-
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        playlist = await discovery_playlist_view(
-            user=user,
-            playlist_id=playlist_id,
-            discovery_playlist_repository=discovery_playlist_repository,
-        )
 
     console.print(
         Panel(
@@ -76,3 +60,20 @@ async def view_logic(email: str, playlist_id: uuid.UUID) -> None:
             str(track.score) if track.score is not None else "—",
         )
     console.print(track_table)
+
+
+async def view_logic(email: str, playlist_id: uuid.UUID) -> DiscoveryPlaylist:
+    async with AsyncExitStack() as stack:
+        session = await stack.enter_async_context(get_db())
+        user_repository = get_user_repository(session)
+        discovery_playlist_repository = get_discovery_playlist_repository(session)
+
+        user = await user_repository.get_by_email(email)
+        if not user:
+            raise UserNotFound()
+
+        return await discovery_playlist_view(
+            user=user,
+            playlist_id=playlist_id,
+            discovery_playlist_repository=discovery_playlist_repository,
+        )

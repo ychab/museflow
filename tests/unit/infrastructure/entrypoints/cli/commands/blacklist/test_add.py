@@ -10,6 +10,8 @@ from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_a
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_track_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
+from tests.unit.factories.entities.blacklist import BlacklistedTrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blacklist.add"
@@ -19,6 +21,7 @@ class TestAddArtistParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_artists_logic", new_callable=mock.AsyncMock) as patched:
+            patched.return_value = []
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -46,9 +49,12 @@ class TestAddArtistCommand:
         with mock.patch(f"{TARGET_PATH}.add_artists_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__nominal(self, runner: CliRunner) -> None:
+    def test__nominal(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+        entry = BlacklistedArtistFactory.build(artist_name="Taylor Swift")
+        mock_logic.return_value = [entry]
         result = runner.invoke(app, ["blacklist", "add-artist", "--email", "test@example.com", "Taylor Swift"])
         assert result.exit_code == 0
+        assert "Taylor Swift" in result.output
 
     def test__user_not_found(
         self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
@@ -79,6 +85,7 @@ class TestAddTrackParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_track_logic", new_callable=mock.AsyncMock) as patched:
+            patched.return_value = BlacklistedTrackFactory.build()
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -112,12 +119,15 @@ class TestAddTrackCommand:
         with mock.patch(f"{TARGET_PATH}.add_track_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__nominal(self, runner: CliRunner) -> None:
+    def test__nominal(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+        entry = BlacklistedTrackFactory.build(name="Shake It Off", artist_name="Taylor Swift")
+        mock_logic.return_value = entry
         result = runner.invoke(
             app,
             ["blacklist", "add-track", "--email", "test@example.com", "Shake It Off", "--artist", "Taylor Swift"],
         )
         assert result.exit_code == 0
+        assert "Shake It Off" in result.output
 
     def test__user_not_found(
         self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner

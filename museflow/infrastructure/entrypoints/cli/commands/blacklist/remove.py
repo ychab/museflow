@@ -32,6 +32,8 @@ def remove(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    typer.secho(f"Removed {len(item_ids)} blacklist entry(ies).", fg=typer.colors.GREEN)
+
 
 async def remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
     async with AsyncExitStack() as stack:
@@ -42,5 +44,3 @@ async def remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
 
         use_case = RemoveFromBlacklistUseCase(blacklist_repository=get_blacklist_repository(session))
         await use_case.remove(user_id=user.id, item_ids=item_ids)
-
-        typer.secho(f"Removed {len(item_ids)} blacklist entry(ies).", fg=typer.colors.GREEN)

@@ -23,6 +23,7 @@ class TestViewParserCommand:
     @pytest.fixture(autouse=True)
     def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
+            patched.return_value = DiscoveryPlaylistFactory.build(tracks=[])
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -49,6 +50,15 @@ class TestViewCommand:
     def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
+
+    def test__nominal(self, mock_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        track_with_score = TrackFactory.build(score=8, artists=["Artist A"])
+        track_without_score = TrackFactory.build(score=None, artists=["Artist B"])
+        mock_view_logic.return_value = DiscoveryPlaylistFactory.build(tracks=[track_with_score, track_without_score])
+        playlist_id = uuid.uuid4()
+
+        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        assert result.exit_code == 0
 
     def test__user_not_found(
         self,
@@ -129,6 +139,7 @@ class TestViewLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_discovery_playlist_repository.get.return_value = playlist
 
-        await view_logic(email=user.email, playlist_id=playlist.id)
+        result = await view_logic(email=user.email, playlist_id=playlist.id)
 
+        assert result == playlist
         mock_discovery_playlist_repository.get.assert_awaited_once_with(user.id, playlist.id)

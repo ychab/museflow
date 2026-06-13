@@ -150,6 +150,7 @@ class UserSQLRepository(UserRepository):
 ### CLI Entrypoints
 - Each Typer command is a thin sync wrapper that calls `asyncio.run()` on a co-located async function.
 - Name the async helper `<command>_logic` (e.g. `add_artists_logic`, `purge_logic`) — never a `_`-prefixed private name.
+- **Output belongs in the callback, not the logic function.** The `*_logic` function is pure orchestration — it returns data, raises exceptions, and never calls `typer.secho`, `typer.echo`, `console.print`, or similar. The `@app.command` callback owns all user-visible output: success messages, empty-state notices, Rich tables. Exception: interactive prompts (`typer.confirm`, `typer.prompt`) that *drive* the logic flow mid-loop may stay in the logic function.
 
 ## Naming Conventions
 | Suffix | Meaning | Type |
