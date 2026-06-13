@@ -97,6 +97,19 @@ class TestRateHistoryCommand:
         output = clean_typer_text(result.stderr)
         assert "No Spotify auth token found" in output
 
+    def test__premium_required(
+        self,
+        mock_rate_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        mock_rate_history_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
+
+        result = runner.invoke(app, ["rate", "history", "--email", "test@example.com", "--play"])
+        assert result.exit_code != 0
+        output = clean_typer_text(result.stderr)
+        assert "Spotify Premium required" in output
+
     def test__generic_exception(
         self,
         mock_rate_history_logic: mock.AsyncMock,
@@ -320,28 +333,23 @@ class TestRateHistoryLogic:
 
         mock_provider_library.play_track.assert_not_awaited()
 
-    async def test__play__premium_required__stops_loop_saves_partial(
+    async def test__play__premium_required__raises(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-        mock_typer_prompt: mock.Mock,
-        mock_typer_confirm: mock.Mock,
     ) -> None:
-        rated_track = TrackFactory.build(artists=["Artist A"])
-        unrated_track = TrackFactory.build(artists=["Artist B"])
+        track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [rated_track, unrated_track]
-        mock_provider_library.play_track.side_effect = [mock.DEFAULT, ProviderPremiumRequiredException()]
-        mock_typer_prompt.return_value = "7"
-        mock_typer_confirm.return_value = False
+        mock_track_repository.get_list.return_value = [track]
+        mock_provider_library.play_track.side_effect = ProviderPremiumRequiredException()
 
-        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        with pytest.raises(ProviderPremiumRequiredException):
+            await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
-        assert mock_provider_library.play_track.await_count == 2
-        mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=rated_track.id, score=7)
+        mock_track_repository.rate.assert_not_awaited()
 
     async def test__play__no_active_device__retry_succeeds(
         self,

@@ -63,6 +63,9 @@ def rate_history(
     except ProviderAuthTokenNotFoundError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
+    except ProviderPremiumRequiredException as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -136,13 +139,6 @@ async def rate_history_logic(
             if provider_library is not None:
                 try:
                     await provider_library.play_track(track.provider_id)
-                except ProviderPremiumRequiredException:
-                    typer.secho(
-                        f"A {provider} Premium account is required for playback — stopping session.",
-                        fg=typer.colors.RED,
-                        err=True,
-                    )
-                    break
                 except ProviderNoActiveDeviceException:
                     typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
                     input("Start playback on your device and press Enter to retry...")
