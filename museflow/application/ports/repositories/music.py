@@ -22,6 +22,7 @@ class TrackRepository(ABC):
         offset: int | None = None,
         limit: int | None = None,
         min_score: int | None = None,
+        max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
     ) -> list[Track]:
@@ -38,6 +39,7 @@ class TrackRepository(ABC):
             limit: The maximum number of tracks to return.
             min_score: When set, only tracks with score >= min_score are returned, ordered by
                        score descending so the highest-rated tracks come first when limit is applied.
+            max_score: When set, only tracks with score <= max_score are returned.
             source: When set, only tracks whose source bit includes this flag are returned.
             unrated_only: When True, only tracks with no score are returned.
 

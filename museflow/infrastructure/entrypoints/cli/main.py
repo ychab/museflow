@@ -9,6 +9,7 @@ from museflow.infrastructure.entrypoints.cli.commands import blacklist
 from museflow.infrastructure.entrypoints.cli.commands import discover
 from museflow.infrastructure.entrypoints.cli.commands import rate
 from museflow.infrastructure.entrypoints.cli.commands import spotify
+from museflow.infrastructure.entrypoints.cli.commands import stats
 from museflow.infrastructure.entrypoints.cli.commands import taste
 from museflow.infrastructure.entrypoints.cli.commands import users
 from museflow.infrastructure.entrypoints.cli.parsers import parse_log_handlers
@@ -21,12 +22,13 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-app.add_typer(users.app, name="users", help="User management commands")
-app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
-app.add_typer(taste.app, name="taste", help="Taste profile commands")
 app.add_typer(blacklist.app, name="blacklist", help="Manage your music blacklist")
 app.add_typer(discover.app, name="discover", help="Discover new tracks and manage playlists")
 app.add_typer(rate.app, name="rate", help="Rate a track")
+app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
+app.add_typer(stats.app, name="stats", help="Stats commands")
+app.add_typer(taste.app, name="taste", help="Taste profile commands")
+app.add_typer(users.app, name="users", help="User management commands")
 
 
 def version_callback(show_version: bool) -> None:

@@ -48,6 +48,8 @@ class AppSettings(BaseSettings):
     DISCOVERY_LIKED_SCORE_THRESHOLD: int = 7
     DISCOVERY_LIKED_TRACKS_LIMIT: int = 200  # 200 is a quality cap, not a technical constraint (higher is noise)
 
+    STATS_BAYESIAN_CONFIDENCE: int = 5
+
     BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)
     BACKEND_CORS_ALLOW_METHODS: list[str] = Field(default=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
     BACKEND_CORS_ALLOW_HEADERS: list[str] = Field(

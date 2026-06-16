@@ -437,6 +437,17 @@ class TestTrackSQLRepository:
         discovery_list = await track_repository.get_list(user.id, source=TrackSource.DISCOVERY)
         assert {t.id for t in discovery_list} == {discovery_db.id, both_db.id}
 
+    async def test__get_list__filtering__max_score(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        low_db = await TrackModelFactory.create_async(user_id=user.id, score=4)
+        await TrackModelFactory.create_async(user_id=user.id, score=8)
+
+        result = await track_repository.get_list(user.id, max_score=5)
+        assert [t.id for t in result] == [low_db.id]
+
     async def test__get_list__filtering__unrated_only(
         self,
         user: User,

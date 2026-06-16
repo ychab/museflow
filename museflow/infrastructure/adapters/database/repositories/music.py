@@ -35,6 +35,7 @@ class TrackSQLRepository(TrackRepository):
         offset: int | None = None,
         limit: int | None = None,
         min_score: int | None = None,
+        max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
     ) -> list[Track]:
@@ -47,6 +48,8 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.provider_id.in_(provider_ids))
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
+        if max_score is not None:
+            stmt = stmt.where(TrackModel.score <= max_score)
         if source is not None:
             stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
         if unrated_only:
