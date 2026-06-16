@@ -4,15 +4,11 @@ This quick and dirty document just list the roadmap tasks.
 
 ## spotify history
 
-- exclude non music like "la sauce" (music podcast!)
+- exclude non music like "la sauce" (music podcast!): problem => we don't have any metadata to identify it as a podcast... probably badly registered in spotify
 
 - I have the feeling that we don't have the real history right? Looks like I miss a lot of songs...
 
 ## museflow
-
-- remove the rate track command?
-
-- adding a new subcommand "rate artist" to rate all its unrated tracks with a limit? The artist name must be provided and is case insensitive.
 
 - the optimal workflow could be slightly different
     => import history
