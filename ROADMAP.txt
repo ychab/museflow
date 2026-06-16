@@ -10,7 +10,9 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- add a new subcommand rate artist to rate all its tracks with a limit? The artist name must be provided and is case insensitive.
+- remove the rate track command?
+
+- adding a new subcommand "rate artist" to rate all its unrated tracks with a limit? The artist name must be provided and is case insensitive.
 
 - the optimal workflow could be slightly different
     => import history

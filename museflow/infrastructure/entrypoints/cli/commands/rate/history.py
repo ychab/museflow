@@ -48,6 +48,7 @@ def rate_history(
     play_provider: MusicProvider = typer.Option(
         MusicProvider.SPOTIFY, "--play-provider", help="Provider to use for playback. Requires --play."
     ),
+    artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist (case-insensitive)"),
 ) -> None:
     try:
         result = asyncio.run(
@@ -56,6 +57,7 @@ def rate_history(
                 limit=limit,
                 reset=reset,
                 provider=play_provider if play else None,
+                artist=artist,
             )
         )
     except UserNotFound as e:
@@ -86,6 +88,7 @@ async def rate_history_logic(
     limit: int,
     reset: bool,
     provider: MusicProvider | None = None,
+    artist: str | None = None,
 ) -> RateHistoryResult:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -125,6 +128,7 @@ async def rate_history_logic(
             unrated_only=True,
             order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
             limit=limit,
+            artist_name=artist,
         )
         if not tracks:
             return RateHistoryResult(no_tracks=True)

@@ -38,6 +38,7 @@ class TrackSQLRepository(TrackRepository):
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
+        artist_name: str | None = None,
     ) -> list[Track]:
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
@@ -54,6 +55,8 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
         if unrated_only:
             stmt = stmt.where(TrackModel.score.is_(None))
+        if artist_name is not None:
+            stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
 
         # Ordering
         if min_score is not None:

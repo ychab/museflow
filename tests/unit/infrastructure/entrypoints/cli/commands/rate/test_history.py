@@ -363,6 +363,26 @@ class TestRateHistoryLogic:
         assert mock_provider_library.play_track.await_count == 2
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
 
+    async def test__artist_filter__passes_to_repository(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = []
+
+        await rate_history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
+
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            unrated_only=True,
+            order=mock.ANY,
+            limit=10,
+            artist_name="Radiohead",
+        )
+
     async def test__play__no_active_device__retry_fails__stops_loop(
         self,
         user: User,

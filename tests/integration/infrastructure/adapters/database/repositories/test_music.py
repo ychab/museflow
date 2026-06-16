@@ -459,6 +459,20 @@ class TestTrackSQLRepository:
         unrated_list = await track_repository.get_list(user.id, unrated_only=True)
         assert [t.id for t in unrated_list] == [unrated_db.id]
 
+    async def test__get_list__filtering__artist_name(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        target_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Other Artist"])
+
+        result = await track_repository.get_list(user.id, artist_name="Radiohead")
+        assert [t.id for t in result] == [target_db.id]
+
+        result_ci = await track_repository.get_list(user.id, artist_name="radiohead")
+        assert [t.id for t in result_ci] == [target_db.id]
+
     async def test__reset_score__resets_matching_source(
         self,
         async_session_db: AsyncSession,

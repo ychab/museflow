@@ -25,6 +25,7 @@ class TrackRepository(ABC):
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
+        artist_name: str | None = None,
     ) -> list[Track]:
         """Retrieves a list of tracks for a specific user.
 
@@ -42,6 +43,8 @@ class TrackRepository(ABC):
             max_score: When set, only tracks with score <= max_score are returned.
             source: When set, only tracks whose source bit includes this flag are returned.
             unrated_only: When True, only tracks with no score are returned.
+            artist_name: When set, only tracks whose primary artist (first in the artists list)
+                         matches this name (case-insensitive) are returned.
 
         Returns:
             A list of `Track` entities.
