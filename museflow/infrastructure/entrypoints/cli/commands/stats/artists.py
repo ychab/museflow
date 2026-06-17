@@ -1,5 +1,4 @@
 import asyncio
-import enum
 import math
 from collections import defaultdict
 from contextlib import AsyncExitStack
@@ -14,19 +13,14 @@ from rich.table import Table
 from museflow.domain.entities.music import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-
-
-class ArtistSortBy(enum.StrEnum):
-    TRACK_COUNT = "track_count"
-    SCORE_AVG = "score_avg"
-    SCORE_BAYESIAN = "score_bayesian"
+from museflow.infrastructure.entrypoints.cli.types import ArtistSortBy
+from museflow.infrastructure.entrypoints.cli.types import SourceFilter
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -195,6 +195,29 @@ class TrackSQLRepository(TrackRepository):
 
         return len(result.scalars().all())
 
+    async def delete(
+        self,
+        user_id: uuid.UUID,
+        artist_name: str | None = None,
+        track_name: str | None = None,
+        source: TrackSource | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+
+        if artist_name is not None:
+            stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
+        if track_name is not None:
+            stmt = stmt.where(func.lower(TrackModel.name) == track_name.lower())
+        if source is not None:
+            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+        if provider is not None:
+            stmt = stmt.where(TrackModel.provider == provider)
+
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return int(result.rowcount)  # type: ignore
+
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.provider == provider)
         result = await self.session.execute(stmt)

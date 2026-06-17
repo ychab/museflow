@@ -11,6 +11,7 @@ from museflow.infrastructure.entrypoints.cli.commands import rate
 from museflow.infrastructure.entrypoints.cli.commands import spotify
 from museflow.infrastructure.entrypoints.cli.commands import stats
 from museflow.infrastructure.entrypoints.cli.commands import taste
+from museflow.infrastructure.entrypoints.cli.commands import tracks
 from museflow.infrastructure.entrypoints.cli.commands import users
 from museflow.infrastructure.entrypoints.cli.parsers import parse_log_handlers
 from museflow.infrastructure.types import LogHandler
@@ -28,6 +29,7 @@ app.add_typer(rate.app, name="rate", help="Rate a track")
 app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
 app.add_typer(stats.app, name="stats", help="Stats commands")
 app.add_typer(taste.app, name="taste", help="Taste profile commands")
+app.add_typer(tracks.app, name="tracks", help="Manage tracks")
 app.add_typer(users.app, name="users", help="User management commands")
 
 

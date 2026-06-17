@@ -9,11 +9,11 @@ from typer.testing import CliRunner
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import TrackSource
-from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import ArtistRow
-from museflow.infrastructure.entrypoints.cli.commands.stats.artists import ArtistSortBy
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
 from museflow.infrastructure.entrypoints.cli.main import app
+from museflow.infrastructure.entrypoints.cli.types import ArtistSortBy
+from museflow.infrastructure.entrypoints.cli.types import SourceFilter
 
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner

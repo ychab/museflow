@@ -515,3 +515,132 @@ class TestTrackSQLRepository:
 
         stmt = select(TrackModel).where(TrackModel.id == other_db.id)
         assert (await async_session_db.execute(stmt)).scalar_one().score == 5
+
+    async def test__delete__by_artist(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        target = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
+        other = await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"])
+
+        count = await track_repository.delete(user_id=user.id, artist_name="radiohead")
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == target.id))
+        ).scalar_one_or_none() is None
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == other.id))
+        ).scalar_one_or_none() is not None
+
+    async def test__delete__by_track_name(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        target = await TrackModelFactory.create_async(user_id=user.id, name="Creep")
+        other = await TrackModelFactory.create_async(user_id=user.id, name="Karma Police")
+
+        count = await track_repository.delete(user_id=user.id, track_name="creep")
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == target.id))
+        ).scalar_one_or_none() is None
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == other.id))
+        ).scalar_one_or_none() is not None
+
+    async def test__delete__by_source(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        history_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY))
+        discovery_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.DISCOVERY))
+
+        count = await track_repository.delete(user_id=user.id, source=TrackSource.HISTORY)
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == history_db.id))
+        ).scalar_one_or_none() is None
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == discovery_db.id))
+        ).scalar_one_or_none() is not None
+
+    async def test__delete__by_provider(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        spotify_db = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+
+        count = await track_repository.delete(user_id=user.id, provider=MusicProvider.SPOTIFY)
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == spotify_db.id))
+        ).scalar_one_or_none() is None
+
+    async def test__delete__combined_filters(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        target = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
+        same_artist = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
+        same_name = await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"], name="Creep")
+
+        count = await track_repository.delete(user_id=user.id, artist_name="Radiohead", track_name="Creep")
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == target.id))
+        ).scalar_one_or_none() is None
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == same_artist.id))
+        ).scalar_one_or_none() is not None
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == same_name.id))
+        ).scalar_one_or_none() is not None
+
+    async def test__delete__no_filters_deletes_all_for_user(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
+        other_user_db = await UserModelFactory.create_async()
+        other_track = await TrackModelFactory.create_async(user_id=other_user_db.id)
+
+        count = await track_repository.delete(user_id=user.id)
+
+        assert count == 3
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == other_track.id))
+        ).scalar_one_or_none() is not None
+
+    async def test__delete__scoped_to_user(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
+        other_user_db = await UserModelFactory.create_async()
+        other_track = await TrackModelFactory.create_async(user_id=other_user_db.id, artists=["Radiohead"])
+
+        count = await track_repository.delete(user_id=user.id, artist_name="Radiohead")
+
+        assert count == 1
+        assert (
+            await async_session_db.execute(select(TrackModel).where(TrackModel.id == other_track.id))
+        ).scalar_one_or_none() is not None

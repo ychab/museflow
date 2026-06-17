@@ -128,6 +128,32 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
+    async def delete(
+        self,
+        user_id: uuid.UUID,
+        artist_name: str | None = None,
+        track_name: str | None = None,
+        source: TrackSource | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        """Deletes tracks matching the given filters for a user.
+
+        All filter parameters are optional and combined with AND logic.
+        At least one filter should be provided by the caller.
+
+        Args:
+            user_id: The ID of the user whose tracks are to be deleted.
+            artist_name: When set, only tracks whose primary artist matches (case-insensitive) are deleted.
+            track_name: When set, only tracks whose name matches (case-insensitive) are deleted.
+            source: When set, only tracks whose source bit includes this flag are deleted.
+            provider: When set, only tracks from this provider are deleted.
+
+        Returns:
+            The number of deleted tracks.
+        """
+        ...
+
+    @abstractmethod
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
         """Deletes all tracks for a user + provider.
 
