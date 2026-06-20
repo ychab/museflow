@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## spotify history
 
-- move spotify history command into tracks history?
-
 - what happen if I import again new history files? What would be overriden? Would we loose the rates? What about the played counter?
 
 - I have the feeling that we don't have the real history right? Looks like I miss a lot of songs...

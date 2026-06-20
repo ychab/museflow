@@ -7,10 +7,11 @@ import pytest
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
-from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
+from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
 
 
-class TestSpotifyHistoryLogic:
+class TestHistoryLogic:
     """
     The purpose of this test is to check that the user and the auth token are loaded correctly.
     Otherwise, we trust use case integration tests and prevent duplicate.
@@ -18,7 +19,7 @@ class TestSpotifyHistoryLogic:
 
     @pytest.fixture
     def mock_use_case(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.history.ImportStreamingHistoryUseCase"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.ImportStreamingHistoryUseCase"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = mock.AsyncMock()
             yield patched.return_value
@@ -42,6 +43,7 @@ class TestSpotifyHistoryLogic:
         report = await history_logic(
             email=user.email,
             config=StreamingHistoryImportConfigInput(directory=tmp_path),
+            provider=MusicProvider.SPOTIFY,
         )
 
         assert report.items_read == 1000

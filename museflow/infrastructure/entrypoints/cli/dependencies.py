@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
+from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
@@ -28,6 +29,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
@@ -133,7 +135,7 @@ async def get_taste_profiler(profiler: TasteProfiler) -> AsyncGenerator[TastePro
             raise ValueError(f"Unknown profiler: {profiler}")
 
 
-# --- Session manager ---
+# --- Adapter manager ---
 
 
 def get_spotify_library_factory(
@@ -154,6 +156,14 @@ def get_provider_library_factory(
     match provider:
         case MusicProvider.SPOTIFY:
             return get_spotify_library_factory(session=session, spotify_client=oauth_client)
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
+
+
+def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPort:
+    match provider:
+        case MusicProvider.SPOTIFY:
+            return SpotifyStreamingHistoryAdapter()
         case _:
             raise ValueError(f"Unknown provider: {provider}")
 

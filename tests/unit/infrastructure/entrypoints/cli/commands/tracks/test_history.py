@@ -12,16 +12,17 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.spotify.history import history_logic
+from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestSpotifyHistoryParserCommand:
+class TestHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.history.history_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -30,7 +31,7 @@ class TestSpotifyHistoryParserCommand:
         result = runner.invoke(
             app,
             [
-                "spotify", "history",
+                "tracks", "history",
                 "--email", "test@example.com",
                 "--directory", str(tmp_path),
                 "--min-duration-played", "10",
@@ -40,6 +41,34 @@ class TestSpotifyHistoryParserCommand:
         )
         # fmt: on
         assert result.exit_code == 0
+
+    def test__provider__explicit(self, runner: CliRunner, tmp_path: Path) -> None:
+        # fmt: off
+        result = runner.invoke(
+            app,
+            [
+                "tracks", "history",
+                "--email", "test@example.com",
+                "--directory", str(tmp_path),
+                "--provider", "spotify",
+            ],
+        )
+        # fmt: on
+        assert result.exit_code == 0
+
+    def test__provider__invalid(self, runner: CliRunner, tmp_path: Path) -> None:
+        # fmt: off
+        result = runner.invoke(
+            app,
+            [
+                "tracks", "history",
+                "--email", "test@example.com",
+                "--directory", str(tmp_path),
+                "--provider", "deezer",
+            ],
+        )
+        # fmt: on
+        assert result.exit_code != 0
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
@@ -63,7 +92,7 @@ class TestSpotifyHistoryParserCommand:
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["spotify", "history", "--email", email, "--directory", "/tmp"])
+        result = runner.invoke(app, ["tracks", "history", "--email", email, "--directory", "/tmp"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
@@ -89,7 +118,7 @@ class TestSpotifyHistoryParserCommand:
         result = runner.invoke(
             app,
             [
-                "spotify", "history",
+                "tracks", "history",
                 "--email", "test@example.com",
                 "--directory", "/tmp",
                 "--batch-size", batch_size,
@@ -102,10 +131,10 @@ class TestSpotifyHistoryParserCommand:
         assert expected_msg in output
 
 
-class TestSpotifyHistoryCommand:
+class TestHistoryCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.history.history_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -120,7 +149,7 @@ class TestSpotifyHistoryCommand:
 
         result = runner.invoke(
             app,
-            ["spotify", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
         )
         assert result.exit_code != 0
 
@@ -138,7 +167,7 @@ class TestSpotifyHistoryCommand:
 
         result = runner.invoke(
             app,
-            ["spotify", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
         )
         assert result.exit_code != 0
 
@@ -156,7 +185,7 @@ class TestSpotifyHistoryCommand:
 
         result = runner.invoke(
             app,
-            ["spotify", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
         )
         assert result.exit_code != 0
 
@@ -182,7 +211,7 @@ class TestSpotifyHistoryCommand:
 
         result = runner.invoke(
             app,
-            ["spotify", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
         )
         assert result.exit_code == 0
 
@@ -202,8 +231,8 @@ class TestSpotifyHistoryCommand:
     "mock_user_repository",
     "mock_track_repository",
 )
-class TestSpotifyHistoryLogicCommand:
-    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.history"
+class TestHistoryLogicCommand:
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tracks.history"
 
     async def test__nominal(
         self,
@@ -221,6 +250,7 @@ class TestSpotifyHistoryLogicCommand:
             report = await history_logic(
                 email=user.email,
                 config=StreamingHistoryImportConfigInput(directory=tmp_path),
+                provider=MusicProvider.SPOTIFY,
             )
 
         assert report == ImportStreamingHistoryReport()
@@ -233,4 +263,5 @@ class TestSpotifyHistoryLogicCommand:
             await history_logic(
                 email="test@example.com",
                 config=StreamingHistoryImportConfigInput(directory=Path("/tmp")),
+                provider=MusicProvider.SPOTIFY,
             )

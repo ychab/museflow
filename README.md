@@ -129,7 +129,7 @@ uv run museflow users create --email user@example.com
 uv run museflow spotify connect --email user@example.com
 
 # 3. Import your full streaming history from Spotify's data export
-uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData
+uv run museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
 
 # 4. Build your personal taste profile with AI analysis
 uv run museflow taste build --email user@example.com --name my-profile
@@ -192,28 +192,30 @@ uv run museflow spotify connect --email <email>
 *   `--timeout`: Seconds to wait for authentication (default: 60.0).
 *   `--poll-interval`: Seconds between status checks (default: 2.0).
 
+### Manage Tracks (`tracks`)
+
 **Import streaming history:**
 
-Imports a user's extended streaming history from the JSON files exported via Spotify's [privacy data request](https://www.spotify.com/account/privacy/). Parses all JSON files in the given directory, deduplicates track IDs, fetches unknown tracks from Spotify, and upserts them into the database.
+Imports a user's extended streaming history from the JSON files exported via a music provider's data export (Spotify by default). Parses all JSON files in the given directory, deduplicates track IDs, fetches unknown tracks from the provider, and upserts them into the database.
 
 **Prerequisite:** Export your data from Spotify (Account → Privacy Settings → Request your data) and unzip the archive. Only the `Streaming_History_Audio_*.json` files are used.
 
 ```bash
-uv run museflow spotify history --email <email> --directory <path/to/history/folder> [OPTIONS]
+uv run museflow tracks history --email <email> --directory <path/to/history/folder> [OPTIONS]
 ```
 
 **History Options:**
 
-*   `--directory`: Path to the directory containing the Spotify streaming history JSON files (**required**).
+*   `--directory`: Path to the directory containing the streaming history JSON files (**required**).
+*   `--provider`: Music provider to import streaming history from (default: `spotify`).
 *   `--min-duration-played`: Minimum playback duration in seconds to count a track as played (default: 90).
-*   `--batch-size`: Number of tracks to fetch from Spotify and upsert per batch, between 1 and 50 (default: 20).
-*   `--fetch-bulk` / `--no-fetch-bulk`: Use the Spotify bulk tracks endpoint instead of per-track requests. The bulk endpoint is deprecated by Spotify and may be removed in the future (default: no fetch-bulk).
+*   `--batch-size`: Number of tracks to fetch from the provider and upsert per batch, between 1 and 500 (default: 20).
 *   `--purge` / `--no-purge`: Purge all existing history tracks before importing (default: no purge).
 
 Example: Import history, ignoring plays shorter than 30 seconds
 
 ```bash
-uv run museflow spotify history --email user@example.com --directory ~/Downloads/MySpotifyData --min-duration-played 30
+uv run museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData --min-duration-played 30
 ```
 
 On completion, a summary table is printed showing items read, items skipped, unique track IDs found, and tracks created.
@@ -226,7 +228,7 @@ Build and manage your personal taste profile using AI analysis of your library.
 
 Analyzes your imported library tracks with Gemini AI to generate a master taste profile — including era breakdowns, personality archetype, and life-phase insights.
 
-**Prerequisite:** You must have imported your streaming history first (via `spotify history`).
+**Prerequisite:** You must have imported your streaming history first (via `tracks history`).
 
 ```bash
 uv run museflow taste build --email <email> --name <name> [OPTIONS]

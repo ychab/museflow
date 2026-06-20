@@ -13,22 +13,26 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.exceptions import StreamingHistoryException
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
-from museflow.infrastructure.entrypoints.cli.commands.spotify import app
-from museflow.infrastructure.entrypoints.cli.commands.spotify import console
+from museflow.domain.types import MusicProvider
+from museflow.infrastructure.entrypoints.cli.commands.tracks import app
+from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
+from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("history", help="Import Spotify extended streaming history from JSON files.")
+@app.command("history", help="Import extended streaming history from JSON files.")
 def history(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     directory: Path = typer.Option(
         ...,
         "--directory",
-        help="Directory containing Spotify streaming history JSON files",
+        help="Directory containing streaming history JSON files",
+    ),
+    provider: MusicProvider = typer.Option(
+        MusicProvider.SPOTIFY, "--provider", help="Music provider to import streaming history from"
     ),
     min_duration_played: int = typer.Option(
         90, "--min-duration-played", help="Minimum duration played in seconds to include"
@@ -52,7 +56,7 @@ def history(
     )
 
     try:
-        report = asyncio.run(history_logic(email=email, config=config))
+        report = asyncio.run(history_logic(email=email, config=config, provider=provider))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except StreamingHistoryException as e:
@@ -84,7 +88,9 @@ def history(
     console.print(table)
 
 
-async def history_logic(email: EmailStr, config: StreamingHistoryImportConfigInput) -> ImportStreamingHistoryReport:
+async def history_logic(
+    email: EmailStr, config: StreamingHistoryImportConfigInput, provider: MusicProvider
+) -> ImportStreamingHistoryReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
 
@@ -97,6 +103,6 @@ async def history_logic(email: EmailStr, config: StreamingHistoryImportConfigInp
 
         use_case = ImportStreamingHistoryUseCase(
             track_repository=track_repository,
-            streaming_history=SpotifyStreamingHistoryAdapter(),
+            streaming_history=get_streaming_history_adapter(provider),
         )
         return await use_case.import_history(user=user, config=config)
