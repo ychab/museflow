@@ -113,7 +113,7 @@ async def rate_history_logic(
             auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
             if auth_token is None:
                 raise ProviderAuthTokenNotFoundError(
-                    f"No {provider} auth token found — run 'muse {provider} auth' first."
+                    f"No {provider} auth token found — run 'muse {provider} connect' first."
                 )
             provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 

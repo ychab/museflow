@@ -20,6 +20,7 @@ from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_token_payload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken
@@ -30,7 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, (SpotifyTokenExpiredError, ProviderRateLimitExceeded, SpotifyApiError)):
+    if isinstance(
+        exception,
+        (SpotifyTokenExpiredError, SpotifyRefreshTokenInvalidError, ProviderRateLimitExceeded, SpotifyApiError),
+    ):
         return False  # Let the Session handler deal with this!
 
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
@@ -137,6 +141,13 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
             },
         )
         if response.is_error:
+            # Spotify returns 400 + {"error": "invalid_grant"} for revoked/expired refresh tokens.
+            # This is an expected lifecycle event, not an infra failure — the caller handles it
+            # and logs it with user context (see SpotifyOAuthSessionClient._refresh_token_safely),
+            # so we deliberately skip the generic error log below.
+            if response.status_code == codes.BAD_REQUEST and response.json().get("error") == "invalid_grant":
+                raise SpotifyRefreshTokenInvalidError()
+
             logger.error(
                 "Spotify Token Refresh Failed",
                 extra={"status_code": response.status_code},

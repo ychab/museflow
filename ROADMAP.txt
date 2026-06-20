@@ -2,22 +2,11 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## spotify API
-
-- cf mail developer
-
-## github ci
-
-- fix broken tests with up dependencies?
-
 ## spotify history
 
 - move spotify history command into tracks history?
 
 - what happen if I import again new history files? What would be overriden? Would we loose the rates? What about the played counter?
-
-- exclude non music like "la sauce" (music podcast!): problem => we don't have any metadata to identify it as a podcast... probably badly registered in spotify
-    => ✅ `muse tracks delete --artist "La Sauce" --source history`
 
 - I have the feeling that we don't have the real history right? Looks like I miss a lot of songs...
 
@@ -30,8 +19,6 @@ This quick and dirty document just list the roadmap tasks.
         => which means timeline + preferences
 
 - command to create playlist based on the score? filtered by artist?
-
-- command rate stats => list top artist? list top track? two separate command?
 
 - personnality inspection through the music history? Who are you based on your streaming history?
 

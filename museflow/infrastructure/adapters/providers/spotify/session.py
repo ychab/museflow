@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Any
 
 from tenacity import TryAgain
@@ -7,13 +8,17 @@ from museflow.application.mappers.auth import auth_token_update_from_token_paylo
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
 from museflow.domain.types import MusicProvider
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.config.settings.spotify import spotify_settings
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyOAuthSessionClient:
@@ -69,6 +74,9 @@ class SpotifyOAuthSessionClient:
 
         Raises:
             SpotifyTokenExpiredError: If the token is still expired after a refresh attempt.
+            ProviderAuthTokenNotFoundError: If the refresh token has expired or been revoked by
+                Spotify (`invalid_grant`). The stored token is discarded and the user must
+                reconnect via the OAuth sign-in flow.
         """
         # Proactive refresh check: prevents unnecessary 401s if we already know it's expired
         if self.auth_token.is_expired(buffer_seconds=self.token_buffer_seconds):
@@ -118,6 +126,11 @@ class SpotifyOAuthSessionClient:
             stale_access_token: The access token that was found to be expired.
                                 This is used to ensure the token hasn't already
                                 been refreshed by another coroutine.
+
+        Raises:
+            ProviderAuthTokenNotFoundError: If Spotify rejects the refresh token
+                (`invalid_grant`). The stored token is discarded so the user must
+                reconnect via the OAuth sign-in flow.
         """
         # Fast check (outside lock)
         if self._should_skip_refresh(stale_access_token):
@@ -128,7 +141,17 @@ class SpotifyOAuthSessionClient:
             if self._should_skip_refresh(stale_access_token):
                 return
 
-            token_payload = await self.oauth_client.refresh_access_token(self.auth_token.token_refresh)
+            try:
+                token_payload = await self.oauth_client.refresh_access_token(self.auth_token.token_refresh)
+            except SpotifyRefreshTokenInvalidError as e:
+                logger.warning(
+                    "Spotify refresh token invalid — user must reconnect",
+                    extra={"user_id": str(self.user.id), "provider": MusicProvider.SPOTIFY},
+                )
+                await self.auth_token_repository.delete(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
+                raise ProviderAuthTokenNotFoundError(
+                    "Spotify refresh token is no longer valid — run 'muse spotify connect' first."
+                ) from e
 
             # Update in DB
             await self.auth_token_repository.update(

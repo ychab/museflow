@@ -19,6 +19,7 @@ from pytest_httpx import HTTPXMock
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 
@@ -140,11 +141,29 @@ class TestSpotifyOAuthAdapter:
         self,
         spotify_oauth: SpotifyOAuthAdapter,
         httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         httpx_mock.add_response(status_code=400, json={"detail": "Bad Request"})
 
-        with pytest.raises(httpx.HTTPStatusError, match="Bad Request"):
+        with caplog.at_level(logging.ERROR), pytest.raises(httpx.HTTPStatusError, match="Bad Request"):
             await spotify_oauth.refresh_access_token("dummy-refresh-token")
+
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.ERROR
+
+    async def test__refresh_access_token__invalid_grant(
+        self,
+        spotify_oauth: SpotifyOAuthAdapter,
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        httpx_mock.add_response(status_code=400, json={"error": "invalid_grant"})
+
+        with caplog.at_level(logging.ERROR), pytest.raises(SpotifyRefreshTokenInvalidError):
+            await spotify_oauth.refresh_access_token("dummy-refresh-token")
+
+        # No generic error log here — the caller (session client) logs this with user context.
+        assert not caplog.records
 
     @pytest.mark.parametrize("method", ["get", "post", "put", "patch", "delete", "head"])
     async def test__make_api_call__nominal(

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime
 from datetime import timedelta
 from unittest import mock
@@ -8,8 +9,11 @@ from tenacity import TryAgain
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceeded
+from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
@@ -169,3 +173,26 @@ class TestSpotifyOAuthSessionClient:
             await session_client.execute("GET", "/test")
 
         assert mock_provider_oauth.make_api_call.call_count == 2
+
+    async def test__refresh_token_safely__invalid_grant__discards_token(
+        self,
+        session_client: SpotifyOAuthSessionClient,
+        mock_provider_oauth: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
+        user: User,
+        auth_token_expired: OAuthProviderUserToken,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        session_client.auth_token = auth_token_expired
+        mock_provider_oauth.refresh_access_token.side_effect = SpotifyRefreshTokenInvalidError()
+
+        with caplog.at_level(logging.WARNING), pytest.raises(ProviderAuthTokenNotFoundError):
+            await session_client._refresh_token_safely()
+
+        mock_auth_token_repository.delete.assert_called_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        mock_auth_token_repository.update.assert_not_called()
+
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.WARNING
+        assert caplog.records[0].__dict__["user_id"] == str(user.id)
+        assert caplog.records[0].__dict__["provider"] == MusicProvider.SPOTIFY
