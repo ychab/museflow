@@ -22,6 +22,7 @@ from tests import ASSETS_DIR
 from tests.integration.factories.models.music import TrackModelFactory
 
 HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "samples"
+REIMPORT_HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "reimport"
 
 
 class TestImportStreamingHistorySpotifyUseCase:
@@ -159,3 +160,26 @@ class TestImportStreamingHistorySpotifyUseCase:
         tracks_by_id = {t.provider_id: t for t in results.scalars().all()}
         for track_id, expected in expected_played_at.items():
             assert tracks_by_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"
+
+    async def test__played_count__not_doubled_on_reimport(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+    ) -> None:
+        config = StreamingHistoryImportConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
+        stmt = select(TrackModel).where(
+            TrackModel.user_id == user.id,
+            TrackModel.provider_id == "reimport1",
+        )
+
+        first_report = await use_case.import_history(user=user, config=config)
+        assert first_report.tracks_created == 1
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.played_count == 3
+
+        second_report = await use_case.import_history(user=user, config=config)
+        assert second_report.tracks_played_at_updated == 1
+        assert second_report.tracks_created == 0
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.played_count == 3

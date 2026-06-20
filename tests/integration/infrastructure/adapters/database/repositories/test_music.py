@@ -347,7 +347,7 @@ class TestTrackSQLRepository:
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.played_at_first == earlier
 
-    async def test__bulk_upsert__played_count_accumulates(
+    async def test__bulk_upsert__played_count_replaced(
         self,
         user: User,
         track_repository: TrackRepository,
@@ -360,7 +360,7 @@ class TestTrackSQLRepository:
 
         stmt = select(TrackModel).where(TrackModel.id == track.id)
         track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_count == 10
+        assert track_db.played_count == 7
 
     async def test__purge(
         self,

@@ -2,13 +2,11 @@
 
 This quick and dirty document just list the roadmap tasks.
 
-## spotify history
-
-- what happen if I import again new history files? What would be overriden? Would we loose the rates? What about the played counter?
-
-- I have the feeling that we don't have the real history right? Looks like I miss a lot of songs...
-
 ## museflow
+
+- stats tracks: add a --sort to sort by score but also by played_count?
+
+- stats artists: do we take into account the played_count for its tracks??
 
 - the optimal workflow could be slightly different
     => import history

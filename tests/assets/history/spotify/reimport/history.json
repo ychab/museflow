@@ -1,0 +1,26 @@
+[
+  {
+    "ts": "2024-01-01T10:00:00Z",
+    "ms_played": 200000,
+    "master_metadata_track_name": "Reimport Track",
+    "master_metadata_album_artist_name": "Reimport Artist",
+    "master_metadata_album_album_name": "Reimport Album",
+    "spotify_track_uri": "spotify:track:reimport1"
+  },
+  {
+    "ts": "2024-01-02T10:00:00Z",
+    "ms_played": 200000,
+    "master_metadata_track_name": "Reimport Track",
+    "master_metadata_album_artist_name": "Reimport Artist",
+    "master_metadata_album_album_name": "Reimport Album",
+    "spotify_track_uri": "spotify:track:reimport1"
+  },
+  {
+    "ts": "2024-01-03T10:00:00Z",
+    "ms_played": 200000,
+    "master_metadata_track_name": "Reimport Track",
+    "master_metadata_album_artist_name": "Reimport Artist",
+    "master_metadata_album_album_name": "Reimport Album",
+    "spotify_track_uri": "spotify:track:reimport1"
+  }
+]

@@ -143,8 +143,6 @@ class TrackSQLRepository(TrackRepository):
                             func.coalesce(excluded[key], getattr(TrackModel, key)),
                         )
                         if key == "played_at_first"
-                        else getattr(TrackModel, key) + excluded[key]
-                        if key == "played_count"
                         else getattr(TrackModel, key).op("|")(excluded[key])
                         if key == "source"
                         else func.coalesce(getattr(TrackModel, key), excluded[key])

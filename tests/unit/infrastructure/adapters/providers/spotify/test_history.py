@@ -63,12 +63,16 @@ class TestSpotifyStreamingHistoryAdapter:
         assert entries[0].provider_id == "real_track_id"
         assert stats.items_skipped_no_track_id == 2
 
-    async def test__parse_file__duplicate_tracks_keeps_latest(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
+    async def test__parse_file__duplicate_tracks_all_kept(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(path=HISTORY_SCENARIOS / "duplicate_track_ids.json", min_ms_played=0)
 
-        assert len(entries) == 1
-        assert entries[0].provider_id == "dup1"
-        assert entries[0].played_at == datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC)
+        assert len(entries) == 3
+        assert all(entry.provider_id == "dup1" for entry in entries)
+        assert {entry.played_at for entry in entries} == {
+            datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC),
+        }
         assert stats.items_read == 3
 
     async def test__parse_file__invalid_json(self, adapter: SpotifyStreamingHistoryAdapter, tmp_path: Path) -> None:

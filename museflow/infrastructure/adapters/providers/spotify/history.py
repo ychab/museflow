@@ -29,7 +29,7 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
     def _parse_file_sync(
         path: Path, min_ms_played: int
     ) -> tuple[list[StreamingHistoryEntry], StreamingHistoryFileStats]:
-        track_entries: dict[str, StreamingHistoryEntry] = {}
+        track_entries: list[StreamingHistoryEntry] = []
 
         items_read = 0
         items_skipped_no_timestamp = 0
@@ -66,18 +66,19 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
                     artist = item.get("master_metadata_album_artist_name") or ""
                     album_name = item.get("master_metadata_album_album_name") or None
 
-                    if track_id not in track_entries or ts > track_entries[track_id].played_at:
-                        track_entries[track_id] = StreamingHistoryEntry(
+                    track_entries.append(
+                        StreamingHistoryEntry(
                             provider_id=track_id,
                             played_at=ts,
                             name=name,
                             artist=artist,
                             album_name=album_name,
                         )
+                    )
         except Exception as exc:
             raise StreamingHistoryInvalidFormat(f"Failed to parse {path}: {exc}") from exc
 
-        return list(track_entries.values()), StreamingHistoryFileStats(
+        return track_entries, StreamingHistoryFileStats(
             items_read=items_read,
             items_skipped_no_timestamp=items_skipped_no_timestamp,
             items_skipped_short_play=items_skipped_short_play,
