@@ -20,3 +20,8 @@ class ArtistSortBy(enum.StrEnum):
     TRACK_COUNT = "track_count"
     SCORE_AVG = "score_avg"
     SCORE_BAYESIAN = "score_bayesian"
+
+
+class TrackSortBy(enum.StrEnum):
+    SCORE = "score"
+    PLAYED_COUNT = "played_count"

@@ -15,6 +15,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 
 
 @app.command("tracks", help="Show top rated tracks.")
@@ -23,6 +24,7 @@ def stats_tracks(
     limit: int = typer.Option(20, help="Max rows in the table"),
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum score filter (0-10)"),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum score filter (0-10)"),
+    sort: TrackSortBy = typer.Option(TrackSortBy.SCORE, "--sort", help="Ranking strategy"),
 ) -> None:
     try:
         tracks = asyncio.run(
@@ -31,6 +33,7 @@ def stats_tracks(
                 limit=limit,
                 score_min=score_min,
                 score_max=score_max,
+                sort=sort,
             )
         )
     except UserNotFound as e:
@@ -48,8 +51,9 @@ def stats_tracks(
     table.add_column("Artist(s)")
     table.add_column("Track")
     table.add_column("Score", justify="center")
+    table.add_column("Played", justify="center")
     for i, track in enumerate(tracks, start=1):
-        table.add_row(str(i), ", ".join(track.artists), track.name, str(track.score))
+        table.add_row(str(i), ", ".join(track.artists), track.name, str(track.score), str(track.played_count))
     console.print(table)
 
 
@@ -58,6 +62,7 @@ async def tracks_logic(
     limit: int,
     score_min: int | None,
     score_max: int | None,
+    sort: TrackSortBy,
 ) -> list[Track]:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -72,8 +77,11 @@ async def tracks_logic(
             user_id=user.id,
             min_score=score_min if score_min is not None else 0,
             max_score=score_max,
-            limit=limit,
+            limit=None,
         )
-        tracks.sort(key=lambda t: (-cast(int, t.score), t.artists[0] if t.artists else ""))
+        if sort == TrackSortBy.PLAYED_COUNT:
+            tracks.sort(key=lambda t: (-t.played_count, t.artists[0] if t.artists else ""))
+        else:
+            tracks.sort(key=lambda t: (-cast(int, t.score), t.artists[0] if t.artists else ""))
 
-    return tracks
+    return tracks[:limit]

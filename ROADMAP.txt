@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- stats tracks: add a --sort to sort by score but also by played_count?
-
 - stats artists: do we take into account the played_count for its tracks??
 
 - the optimal workflow could be slightly different
