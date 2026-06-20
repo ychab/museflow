@@ -2,6 +2,10 @@
 
 This quick and dirty document just list the roadmap tasks.
 
+## spotify API
+
+- cf mail developer
+
 ## github ci
 
 - fix broken tests with up dependencies?
