@@ -1,6 +1,6 @@
 from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
 from museflow.domain.entities.user import User
-from museflow.infrastructure.entrypoints.cli.commands.discover.list_ import list_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.list_ import list_logic
 
 from tests.integration.factories.models.discovery import DiscoveryPlaylistModelFactory
 

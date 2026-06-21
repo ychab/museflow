@@ -135,7 +135,7 @@ uv run museflow tracks history --email user@example.com --directory ~/Downloads/
 uv run museflow taste build --email user@example.com --name my-profile
 
 # 5. Discover new music and generate a playlist
-uv run museflow discover create --email user@example.com
+uv run museflow playlist discover --email user@example.com
 ```
 
 Step 4 is optional but enriches the recommendations.
@@ -290,18 +290,18 @@ uv run museflow taste import --email <email> --input <path>
 
 *   `--input`: Path to the input YAML file (**required**).
 
-### Discover (`discover`)
+### Playlist (`playlist`)
 
-Commands for discovering new music and managing discovery playlists.
+Commands for generating and managing playlists.
 
 **Prerequisite:** You must have built a taste profile first (via `taste build`).
 
-#### `discover create`
+#### `playlist discover`
 
 Discovers new music guided by your AI taste profile and creates a new playlist. Uses your full taste profile to generate contextually-aware recommendations — factoring in era, mood, genre preferences, and a configurable focus strategy.
 
 ```bash
-uv run museflow discover create --email <email> [OPTIONS]
+uv run museflow playlist discover --email <email> [OPTIONS]
 ```
 
 **Options:**
@@ -323,29 +323,29 @@ uv run museflow discover create --email <email> [OPTIONS]
 Example: Discover new music guided by your taste profile
 
 ```bash
-uv run museflow discover create --email user@example.com --focus expansion --playlist-limit 15
+uv run museflow playlist discover --email user@example.com --focus expansion --playlist-limit 15
 ```
 
 Example: Discover jazz tracks with a melancholic mood
 
 ```bash
-uv run museflow discover create --email user@example.com --genre jazz --mood melancholic --dry-run
+uv run museflow playlist discover --email user@example.com --genre jazz --mood melancholic --dry-run
 ```
 
-#### `discover list`
+#### `playlist list`
 
 Lists all discovery playlists for a user.
 
 ```bash
-uv run museflow discover list --email <email>
+uv run museflow playlist list --email <email>
 ```
 
-#### `discover view`
+#### `playlist view`
 
 Displays a discovery playlist with its tracks and their ratings.
 
 ```bash
-uv run museflow discover view <playlist_id> --email <email>
+uv run museflow playlist view <playlist_id> --email <email>
 ```
 
 ### Rate Tracks (`rate`)

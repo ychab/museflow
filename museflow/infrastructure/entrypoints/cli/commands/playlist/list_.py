@@ -8,7 +8,7 @@ from rich.table import Table
 from museflow.application.use_cases.discovery_playlist_list import discovery_playlist_list
 from museflow.domain.entities.discovery import DiscoveryPlaylist
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.discover import app
+from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
@@ -31,7 +31,7 @@ def list_(
         raise typer.Exit(code=1) from e
 
     if not playlists:
-        typer.secho("No discovery playlists found. Run `muse discover create` first.", fg=typer.colors.YELLOW)
+        typer.secho("No discovery playlists found. Run `muse playlist discover` first.", fg=typer.colors.YELLOW)
         return
 
     table = Table(title="Discovery Playlists")

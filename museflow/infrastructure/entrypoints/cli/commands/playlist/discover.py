@@ -20,7 +20,7 @@ from museflow.domain.types import DiscoveryFocus
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.cli.commands.discover import app
+from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
@@ -38,8 +38,8 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 console = Console()
 
 
-@app.command("create")
-def create(
+@app.command("discover")
+def discover(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     advisor: MusicAdvisor = typer.Option(
         default=MusicAdvisor.GEMINI,
@@ -99,7 +99,7 @@ def create(
     """Discover new tracks guided by your AI taste profile."""
     try:
         result = asyncio.run(
-            create_logic(
+            discover_logic(
                 email=email,
                 advisor=advisor,
                 provider=provider,
@@ -191,7 +191,7 @@ def create(
         if result.discovery_playlist is not None:
             typer.secho(f"Saved playlist ID: {result.discovery_playlist.id}", fg=typer.colors.CYAN)
             typer.secho(
-                f"  View it: museflow discover view {result.discovery_playlist.id} --email {email}",
+                f"  View it: museflow playlist view {result.discovery_playlist.id} --email {email}",
                 fg=typer.colors.CYAN,
             )
             typer.secho(
@@ -200,7 +200,7 @@ def create(
             )
 
 
-async def create_logic(
+async def discover_logic(
     email: EmailStr,
     advisor: MusicAdvisor,
     provider: MusicProvider,

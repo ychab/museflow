@@ -1,5 +1,5 @@
 from museflow.domain.entities.user import User
-from museflow.infrastructure.entrypoints.cli.commands.discover.view import view_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.view import view_logic
 
 from tests.integration.factories.models.discovery import DiscoveryPlaylistModelFactory
 from tests.integration.factories.models.music import TrackModelFactory

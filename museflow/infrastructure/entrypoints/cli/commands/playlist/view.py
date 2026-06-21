@@ -11,7 +11,7 @@ from museflow.application.use_cases.discovery_playlist_view import discovery_pla
 from museflow.domain.entities.discovery import DiscoveryPlaylist
 from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.discover import app
+from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository

@@ -9,14 +9,14 @@ from typer.testing import CliRunner
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.discover.view import view_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.view import view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
 from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
-TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.view"
+TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.view"
 
 
 class TestViewParserCommand:
@@ -28,18 +28,18 @@ class TestViewParserCommand:
 
     def test__nominal(self, runner: CliRunner) -> None:
         playlist_id = uuid.uuid4()
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code == 0
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         playlist_id = uuid.uuid4()
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "notanemail"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "notanemail"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
         assert "Invalid value for '--email'" in output
 
     def test__playlist_id__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
-        result = runner.invoke(app, ["discover", "view", "not-a-uuid", "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", "not-a-uuid", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
         assert "Invalid value for 'PLAYLIST_ID'" in output
@@ -57,7 +57,7 @@ class TestViewCommand:
         mock_view_logic.return_value = DiscoveryPlaylistFactory.build(tracks=[track_with_score, track_without_score])
         playlist_id = uuid.uuid4()
 
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code == 0
 
     def test__user_not_found(
@@ -69,7 +69,7 @@ class TestViewCommand:
         mock_view_logic.side_effect = UserNotFound()
         playlist_id = uuid.uuid4()
 
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
         assert "User not found with email: test@example.com" in output
@@ -83,7 +83,7 @@ class TestViewCommand:
         mock_view_logic.side_effect = DiscoveryPlaylistNotFoundError()
         playlist_id = uuid.uuid4()
 
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
         assert f"Playlist {playlist_id} not found." in output
@@ -97,7 +97,7 @@ class TestViewCommand:
         mock_view_logic.side_effect = Exception("Boom")
         playlist_id = uuid.uuid4()
 
-        result = runner.invoke(app, ["discover", "view", str(playlist_id), "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
         assert "Error: Boom" in output
@@ -105,7 +105,7 @@ class TestViewCommand:
 
 @pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_discovery_playlist_repository")
 class TestViewLogic:
-    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.discover.view"
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.view"
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

@@ -21,10 +21,10 @@ from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 @app.command("tracks", help="Show top rated tracks.")
 def stats_tracks(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    limit: int = typer.Option(20, help="Max rows in the table"),
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum score filter (0-10)"),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum score filter (0-10)"),
     sort: TrackSortBy = typer.Option(TrackSortBy.SCORE, "--sort", help="Ranking strategy"),
+    limit: int = typer.Option(20, help="Max rows in the table"),
 ) -> None:
     try:
         tracks = asyncio.run(

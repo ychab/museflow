@@ -10,12 +10,12 @@ from museflow.domain.entities.user import User
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.entrypoints.cli.commands.discover.create import create_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
 
 from tests.unit.factories.entities.music import PlaylistFactory
 
 
-class TestCreateLogic:
+class TestDiscoverLogic:
     """
     The purpose of this test is to check that the user and the auth token are loaded correctly.
     Otherwise, we trust use case integration tests and avoid duplication.
@@ -23,7 +23,7 @@ class TestCreateLogic:
 
     @pytest.fixture
     def mock_use_case(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.discover.create.DiscoverTasteUseCase"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover.DiscoverTasteUseCase"
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 
@@ -45,7 +45,7 @@ class TestCreateLogic:
         )
         mock_use_case.create_suggestions_playlist.return_value = expected_result
 
-        result = await create_logic(
+        result = await discover_logic(
             email=user.email,
             advisor=advisor,
             provider=MusicProvider.SPOTIFY,
