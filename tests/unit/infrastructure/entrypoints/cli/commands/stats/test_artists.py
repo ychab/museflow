@@ -58,11 +58,12 @@ class TestStatsArtistsCommand:
     def test__with_artists_table(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistRow(
             artist="Artist X",
-            bayesian_score=8.2,
-            composite_score=37.1,
-            avg_score=9.0,
+            quality_score=8.2,
+            overall_score=37.1,
+            rate_avg=9.0,
             rated_count=3,
-            total_count=5,
+            track_count=5,
+            plays_count=12,
         )
         mock_artists_logic.return_value = [row]
 
@@ -71,39 +72,42 @@ class TestStatsArtistsCommand:
         assert result.exit_code == 0
         assert "Top Artists" in result.output
         assert "Artist X" in result.output
-        assert "Bayesian Score" in result.output
-        assert "Avg Score" in result.output
+        assert "Quality" in result.output
+        assert "Rate Avg" in result.output
         assert "Rated" in result.output
         assert "Tracks" in result.output
-        assert "Composite score" in result.output
+        assert "Played" in result.output
+        assert "Overall" in result.output
         assert "37.1" in result.output
 
-    def test__with_artists_table__score_avg_sort(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_artists_table__rate_avg_sort(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistRow(
             artist="Artist X",
-            bayesian_score=8.2,
-            composite_score=37.1,
-            avg_score=9.0,
+            quality_score=8.2,
+            overall_score=37.1,
+            rate_avg=9.0,
             rated_count=3,
-            total_count=5,
+            track_count=5,
+            plays_count=12,
         )
         mock_artists_logic.return_value = [row]
 
-        result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", "--sort", "score_avg"])
+        result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", "--sort", "rate_avg"])
 
         assert result.exit_code == 0
         assert "8.2" in result.output
-        assert "Composite score" not in result.output
+        assert "Overall" not in result.output
         assert "37.1" not in result.output
 
     def test__with_unrated_artist(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistRow(
             artist="Unrated Artist",
-            bayesian_score=None,
-            composite_score=1.8,
-            avg_score=None,
+            quality_score=None,
+            overall_score=1.8,
+            rate_avg=None,
             rated_count=0,
-            total_count=5,
+            track_count=5,
+            plays_count=7,
         )
         mock_artists_logic.return_value = [row]
 
@@ -152,7 +156,7 @@ class TestStatsArtistsLogic:
                 score_min=None,
                 score_max=None,
                 confidence=5,
-                sort=ArtistSortBy.SCORE_BAYESIAN,
+                sort=ArtistSortBy.OVERALL,
             )
 
     async def test__no_tracks(
@@ -171,7 +175,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert result == []
@@ -183,9 +187,10 @@ class TestStatsArtistsLogic:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # Artist A: 5 unrated tracks. Artist B: 1 rated track (score=8).
-        # Volume-first: Artist A (5 total, quality_ratio=1.0) outranks Artist B (1 total).
-        tracks_a = [TrackFactory.build(artists=["Artist A"], score=None) for _ in range(5)]
-        track_b = TrackFactory.build(artists=["Artist B"], score=8)
+        # Volume-first: Artist A (5 tracks, quality_ratio=1.0) outranks Artist B (1 track).
+        # played_count pinned to 1 so the depth term doesn't add randomness to the comparison.
+        tracks_a = [TrackFactory.build(artists=["Artist A"], score=None, played_count=1) for _ in range(5)]
+        track_b = TrackFactory.build(artists=["Artist B"], score=8, played_count=1)
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
@@ -196,18 +201,18 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 2
         artist_a = next(r for r in result if r.artist == "Artist A")
-        assert artist_a.avg_score is None
-        assert artist_a.bayesian_score is None
+        assert artist_a.rate_avg is None
+        assert artist_a.quality_score is None
         assert artist_a.rated_count == 0
-        assert artist_a.total_count == 5
+        assert artist_a.track_count == 5
         assert result[0].artist == "Artist A"
 
-    async def test__bayesian_score_pulls_low_count_toward_mean(
+    async def test__quality_score_pulls_low_count_toward_mean(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
@@ -215,8 +220,9 @@ class TestStatsArtistsLogic:
     ) -> None:
         # Artist A: 10 tracks at 7. Artist B: 1 track at 10.
         # global_mean ≈ (10*7 + 10) / 11 ≈ 7.27
-        # Artist B raw avg = 10, but Bayesian pulls it toward mean → ≈7.73 (< 10)
-        # With composite sort (volume-first), Artist A (10 tracks) outranks Artist B (1 track).
+        # Artist B raw avg = 10, but smoothed quality pulls it toward mean → ≈7.73 (< 10)
+        # quality sort is decoupled from volume: Artist B's smoothed quality is still higher
+        # than Artist A's, so B ranks first here (unlike overall sort, which favors A's volume).
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=7) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
         mock_user_repository.get_by_email.return_value = user
@@ -229,18 +235,48 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.QUALITY,
         )
 
         assert len(result) == 2
         artist_b = next(r for r in result if r.artist == "Artist B")
         global_mean = (10 * 7 + 10) / 11
-        assert artist_b.bayesian_score is not None
-        assert artist_b.avg_score is not None
-        # Artist B's Bayesian score is between the global mean and their raw avg (pulled toward mean)
-        assert global_mean < artist_b.bayesian_score < artist_b.avg_score
-        # With volume boost, Artist A (10 tracks) ranks first
+        assert artist_b.quality_score is not None
+        assert artist_b.rate_avg is not None
+        # Artist B's quality score is between the global mean and their raw avg (pulled toward mean)
+        assert global_mean < artist_b.quality_score < artist_b.rate_avg
+        # Pure quality sort ignores volume entirely
+        assert result[0].artist == "Artist B"
+
+    async def test__sort_by_overall_promotes_volume(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        # Artist A: 20 tracks at 7. Artist B: 1 track at 10.
+        # overall = log(1 + track_count) × log(1 + plays_count) × (quality / global_mean)
+        # played_count pinned to 1 so the depth term scales directly with track_count here.
+        # Artist A: large volume → high overall despite modest quality_ratio.
+        # Artist B: single track → low overall despite quality boost.
+        tracks_a = [TrackFactory.build(artists=["Artist A"], score=7, played_count=1) for _ in range(20)]
+        track_b = TrackFactory.build(artists=["Artist B"], score=10, played_count=1)
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
+
+        result = await artists_logic(
+            email=user.email,
+            limit=20,
+            source=SourceFilter.ALL,
+            score_min=None,
+            score_max=None,
+            confidence=5,
+            sort=ArtistSortBy.OVERALL,
+        )
+
+        assert len(result) == 2
         assert result[0].artist == "Artist A"
+        assert result[0].overall_score > result[1].overall_score
 
     async def test__aggregated_per_primary_artist(
         self,
@@ -261,7 +297,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 2
@@ -270,8 +306,8 @@ class TestStatsArtistsLogic:
         assert "Artist B" in artists
         artist_a_row = next(r for r in result if r.artist == "Artist A")
         assert artist_a_row.rated_count == 2
-        assert artist_a_row.total_count == 2
-        assert artist_a_row.avg_score == 7.0
+        assert artist_a_row.track_count == 2
+        assert artist_a_row.rate_avg == 7.0
 
     async def test__score_min_excludes_low_scored_tracks(
         self,
@@ -291,12 +327,12 @@ class TestStatsArtistsLogic:
             score_min=5,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 1
         assert result[0].rated_count == 1
-        assert result[0].avg_score == 9.0
+        assert result[0].rate_avg == 9.0
 
     async def test__score_max_excludes_high_scored_tracks(
         self,
@@ -316,14 +352,14 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=5,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 1
         assert result[0].rated_count == 1
-        assert result[0].avg_score == 3.0
+        assert result[0].rate_avg == 3.0
 
-    async def test__total_count_includes_unrated_tracks(
+    async def test__track_count_includes_unrated_tracks(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
@@ -341,12 +377,36 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 1
         assert result[0].rated_count == 1
-        assert result[0].total_count == 2
+        assert result[0].track_count == 2
+
+    async def test__plays_count_sums_played_count_across_artist_tracks(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        track_1 = TrackFactory.build(artists=["Artist A"], score=None, played_count=3)
+        track_2 = TrackFactory.build(artists=["Artist A"], score=None, played_count=4)
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [track_1, track_2]
+
+        result = await artists_logic(
+            email=user.email,
+            limit=20,
+            source=SourceFilter.ALL,
+            score_min=None,
+            score_max=None,
+            confidence=5,
+            sort=ArtistSortBy.OVERALL,
+        )
+
+        assert len(result) == 1
+        assert result[0].plays_count == 7
 
     async def test__tiebreaker_by_artist_name(
         self,
@@ -354,8 +414,9 @@ class TestStatsArtistsLogic:
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        track_z = TrackFactory.build(artists=["Zara"], score=8)
-        track_a = TrackFactory.build(artists=["Aaron"], score=8)
+        # played_count pinned equal on both sides so the overall scores genuinely tie.
+        track_z = TrackFactory.build(artists=["Zara"], score=8, played_count=1)
+        track_a = TrackFactory.build(artists=["Aaron"], score=8, played_count=1)
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = [track_z, track_a]
 
@@ -366,7 +427,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert result[0].artist == "Aaron"
@@ -389,7 +450,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 3
@@ -410,7 +471,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         mock_track_repository.get_list.assert_awaited_once_with(
@@ -433,7 +494,7 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         mock_track_repository.get_list.assert_awaited_once_with(
@@ -448,7 +509,7 @@ class TestStatsArtistsLogic:
     ) -> None:
         # All tracks filtered by score_min → global_mean = 0.0 → quality_ratio falls back to 1.0
         # Artist still appears ranked by volume alone.
-        track = TrackFactory.build(artists=["Artist A"], score=3)
+        track = TrackFactory.build(artists=["Artist A"], score=3, played_count=1)
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = [track]
 
@@ -459,14 +520,14 @@ class TestStatsArtistsLogic:
             score_min=5,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.OVERALL,
         )
 
         assert len(result) == 1
         assert result[0].artist == "Artist A"
-        assert result[0].avg_score is None
+        assert result[0].rate_avg is None
         assert result[0].rated_count == 0
-        assert result[0].composite_score == pytest.approx(math.log(2))
+        assert result[0].overall_score == pytest.approx(math.log(2) ** 2)
 
     async def test__sort_by_track_count(
         self,
@@ -495,14 +556,42 @@ class TestStatsArtistsLogic:
         assert result[0].artist == "Artist B"
         assert result[1].artist == "Artist A"
 
-    async def test__sort_by_score_avg(
+    async def test__sort_by_plays_count(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        # Artist A: 1 track played 100 times. Artist B: 5 tracks played once each (5 plays total).
+        # plays_count sort → Artist A ranks first despite having far fewer distinct tracks.
+        track_a = TrackFactory.build(artists=["Artist A"], score=None, played_count=100)
+        tracks_b = [TrackFactory.build(artists=["Artist B"], score=None, played_count=1) for _ in range(5)]
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [track_a] + tracks_b
+
+        result = await artists_logic(
+            email=user.email,
+            limit=20,
+            source=SourceFilter.ALL,
+            score_min=None,
+            score_max=None,
+            confidence=5,
+            sort=ArtistSortBy.PLAYS_COUNT,
+        )
+
+        assert len(result) == 2
+        assert result[0].artist == "Artist A"
+        assert result[0].plays_count == 100
+        assert result[1].plays_count == 5
+
+    async def test__sort_by_rate_avg(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # Artist A: 10 tracks at 6. Artist B: 1 track at 10.
-        # score_avg sort → Artist B (avg=10) ranks first despite fewer tracks.
+        # rate_avg sort → Artist B (avg=10) ranks first despite fewer tracks.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=6) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
         mock_user_repository.get_by_email.return_value = user
@@ -515,20 +604,20 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_AVG,
+            sort=ArtistSortBy.RATE_AVG,
         )
 
         assert len(result) == 2
         assert result[0].artist == "Artist B"
         assert result[1].artist == "Artist A"
 
-    async def test__sort_by_score_avg__unrated_at_bottom(
+    async def test__sort_by_rate_avg__unrated_at_bottom(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        # Unrated artists (avg_score=None) sink to the bottom when sorting by avg score.
+        # Unrated artists (rate_avg=None) sink to the bottom when sorting by rate_avg.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=None) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=5)
         mock_user_repository.get_by_email.return_value = user
@@ -541,26 +630,23 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_AVG,
+            sort=ArtistSortBy.RATE_AVG,
         )
 
         assert len(result) == 2
         assert result[0].artist == "Artist B"
         assert result[1].artist == "Artist A"
-        assert result[1].avg_score is None
+        assert result[1].rate_avg is None
 
-    async def test__sort_by_score_bayesian_promotes_volume(
+    async def test__sort_by_quality__unrated_at_bottom(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        # Artist A: 20 tracks at 7. Artist B: 1 track at 10.
-        # composite = log(1 + total_count) × (bayesian / global_mean)
-        # Artist A: large volume → high composite despite modest quality_ratio.
-        # Artist B: single track → low composite despite quality boost.
-        tracks_a = [TrackFactory.build(artists=["Artist A"], score=7) for _ in range(20)]
-        track_b = TrackFactory.build(artists=["Artist B"], score=10)
+        # Unrated artists (quality_score=None) sink to the bottom when sorting by quality.
+        tracks_a = [TrackFactory.build(artists=["Artist A"], score=None) for _ in range(10)]
+        track_b = TrackFactory.build(artists=["Artist B"], score=5)
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
@@ -571,9 +657,10 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.SCORE_BAYESIAN,
+            sort=ArtistSortBy.QUALITY,
         )
 
         assert len(result) == 2
-        assert result[0].artist == "Artist A"
-        assert result[0].composite_score > result[1].composite_score
+        assert result[0].artist == "Artist B"
+        assert result[1].artist == "Artist A"
+        assert result[1].quality_score is None

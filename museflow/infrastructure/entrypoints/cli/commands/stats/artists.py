@@ -26,17 +26,17 @@ from museflow.infrastructure.entrypoints.cli.types import SourceFilter
 @dataclass(frozen=True, kw_only=True)
 class ArtistRow:
     artist: str
-    bayesian_score: float | None  # None for artists with no rated tracks
-    composite_score: float
-    avg_score: float | None  # None for artists with no rated tracks
+    quality_score: float | None  # None for artists with no rated tracks
+    overall_score: float
+    rate_avg: float | None  # None for artists with no rated tracks
     rated_count: int
-    total_count: int
+    track_count: int
+    plays_count: int
 
 
-@app.command("artists", help="Show top artists ranked by Bayesian average score.")
+@app.command("artists", help="Show top artists ranked by overall score (breadth x depth x quality).")
 def stats_artists(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    limit: int = typer.Option(20, help="Max rows in the table"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum score filter (0-10)"),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum score filter (0-10)"),
@@ -45,7 +45,8 @@ def stats_artists(
         "--confidence",
         help="Bayesian confidence constant: artists with fewer rated tracks than this are pulled toward the mean",
     ),
-    sort: ArtistSortBy = typer.Option(ArtistSortBy.SCORE_BAYESIAN, "--sort", help="Ranking strategy"),
+    sort: ArtistSortBy = typer.Option(ArtistSortBy.OVERALL, "--sort", help="Ranking strategy"),
+    limit: int = typer.Option(20, help="Max rows in the table"),
 ) -> None:
     try:
         rows = asyncio.run(
@@ -72,20 +73,29 @@ def stats_artists(
     table = Table(title="Top Artists")
     table.add_column("#", justify="right", style="dim")
     table.add_column("Artist")
-    table.add_column("Bayesian Score", justify="center")
-    if sort == ArtistSortBy.SCORE_BAYESIAN:
-        table.add_column("Composite score", justify="center")
-    table.add_column("Avg Score", justify="center")
+    table.add_column("Quality", justify="center")
+    table.add_column("Rate Avg", justify="center")
     table.add_column("Rated", justify="right")
     table.add_column("Tracks", justify="right")
+    table.add_column("Played", justify="right")
+    if sort == ArtistSortBy.OVERALL:
+        table.add_column("Overall", justify="center")
+
     for i, row in enumerate(rows, start=1):
-        bayesian_str = f"{row.bayesian_score:.1f}" if row.bayesian_score is not None else "—"
-        avg_str = f"{row.avg_score:.1f}" if row.avg_score is not None else "—"
-        cells = [str(i), row.artist, bayesian_str]
-        if sort == ArtistSortBy.SCORE_BAYESIAN:
-            cells.append(f"{row.composite_score:.1f}")
-        cells += [avg_str, str(row.rated_count), str(row.total_count)]
+        cells = [
+            str(i),
+            row.artist,
+            f"{row.quality_score:.1f}" if row.quality_score is not None else "—",
+            f"{row.rate_avg:.1f}" if row.rate_avg is not None else "—",
+            str(row.rated_count),
+            str(row.track_count),
+            str(row.plays_count),
+        ]
+        if sort == ArtistSortBy.OVERALL:
+            cells.append(f"{row.overall_score:.1f}")
+
         table.add_row(*cells)
+
     console.print(table)
 
 
@@ -134,38 +144,44 @@ async def artists_logic(
     for artist, tracks in artist_tracks.items():
         rated_scores = [cast(int, t.score) for t in tracks if _is_in_score_range(t.score, score_min, score_max)]
         rated_count = len(rated_scores)
-        total_count = len(tracks)
+        track_count = len(tracks)
+        plays_count = sum(t.played_count for t in tracks)
 
-        avg_score: float | None
-        bayesian_score: float | None
+        rate_avg: float | None
+        quality_score: float | None
         if rated_count > 0:
-            avg_score = sum(rated_scores) / rated_count
-            _bayesian = (confidence * global_mean + rated_count * avg_score) / (confidence + rated_count)
-            bayesian_score = _bayesian
+            rate_avg = sum(rated_scores) / rated_count
+            quality = (confidence * global_mean + rated_count * rate_avg) / (confidence + rated_count)
+            quality_score = quality
         else:
-            avg_score = None
-            _bayesian = global_mean
-            bayesian_score = None
+            rate_avg = None
+            quality = global_mean
+            quality_score = None
 
-        quality_ratio = _bayesian / global_mean if global_mean > 0 else 1.0
-        composite_score = math.log(1 + total_count) * quality_ratio
+        quality_ratio = quality / global_mean if global_mean > 0 else 1.0
+        overall_score = math.log(1 + track_count) * math.log(1 + plays_count) * quality_ratio
 
         rows.append(
             ArtistRow(
                 artist=artist,
-                bayesian_score=bayesian_score,
-                composite_score=composite_score,
-                avg_score=avg_score,
+                quality_score=quality_score,
+                overall_score=overall_score,
+                rate_avg=rate_avg,
                 rated_count=rated_count,
-                total_count=total_count,
+                track_count=track_count,
+                plays_count=plays_count,
             )
         )
 
     if sort == ArtistSortBy.TRACK_COUNT:
-        rows.sort(key=lambda r: (-r.total_count, r.artist))
-    elif sort == ArtistSortBy.SCORE_AVG:
-        rows.sort(key=lambda r: (-(r.avg_score or 0.0), r.artist))
+        rows.sort(key=lambda r: (-r.track_count, r.artist))
+    elif sort == ArtistSortBy.PLAYS_COUNT:
+        rows.sort(key=lambda r: (-r.plays_count, r.artist))
+    elif sort == ArtistSortBy.RATE_AVG:
+        rows.sort(key=lambda r: (-(r.rate_avg or 0.0), r.artist))
+    elif sort == ArtistSortBy.QUALITY:
+        rows.sort(key=lambda r: (-(r.quality_score or 0.0), r.artist))
     else:
-        rows.sort(key=lambda r: (-r.composite_score, r.artist))
+        rows.sort(key=lambda r: (-r.overall_score, r.artist))
 
     return rows[:limit]
