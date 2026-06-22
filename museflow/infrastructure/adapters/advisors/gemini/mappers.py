@@ -1,4 +1,4 @@
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiDiscoveryStrategyContent
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiSuggestedTrack

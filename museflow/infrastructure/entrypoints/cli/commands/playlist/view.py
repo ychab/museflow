@@ -7,13 +7,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from museflow.application.use_cases.discovery_playlist_view import discovery_playlist_view
-from museflow.domain.entities.discovery import DiscoveryPlaylist
-from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
+from museflow.application.use_cases.playlist_view import playlist_view
+from museflow.domain.entities.playlist import Playlist
+from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -22,15 +22,15 @@ console = Console()
 
 @app.command("view")
 def view(
-    playlist_id: uuid.UUID = typer.Argument(..., help="Discovery playlist ID"),
+    playlist_id: uuid.UUID = typer.Argument(..., help="Playlist ID"),
     email: str = typer.Option(..., help="User email address", parser=parse_email),
 ) -> None:
-    """View a discovery playlist with its tracks and ratings."""
+    """View a playlist with its tracks and ratings."""
     try:
         playlist = asyncio.run(view_logic(email=email, playlist_id=playlist_id))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except DiscoveryPlaylistNotFoundError as e:
+    except PlaylistNotFoundError as e:
         typer.secho(f"Playlist {playlist_id} not found.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -39,8 +39,8 @@ def view(
 
     console.print(
         Panel(
-            playlist.reasoning,
-            title=playlist.name,
+            playlist.reasoning or "—",
+            title=f"{playlist.name} ({playlist.type.value})",
             border_style="blue",
         )
     )
@@ -62,18 +62,18 @@ def view(
     console.print(track_table)
 
 
-async def view_logic(email: str, playlist_id: uuid.UUID) -> DiscoveryPlaylist:
+async def view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
         user_repository = get_user_repository(session)
-        discovery_playlist_repository = get_discovery_playlist_repository(session)
+        playlist_repository = get_playlist_repository(session)
 
         user = await user_repository.get_by_email(email)
         if not user:
             raise UserNotFound()
 
-        return await discovery_playlist_view(
+        return await playlist_view(
             user=user,
             playlist_id=playlist_id,
-            discovery_playlist_repository=discovery_playlist_repository,
+            playlist_repository=playlist_repository,
         )

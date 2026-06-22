@@ -3,9 +3,9 @@ from collections import Counter
 from dataclasses import dataclass
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.music import TrackRepository
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
+from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import ScoreAdvisor

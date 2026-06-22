@@ -9,12 +9,12 @@ from museflow.application.inputs.history import StreamingHistoryFileStats
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.types import MusicProvider
 
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
 
 

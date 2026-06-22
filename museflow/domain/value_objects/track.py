@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.utils.text import normalize_text
 
 

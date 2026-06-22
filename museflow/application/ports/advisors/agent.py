@@ -1,9 +1,9 @@
 from abc import ABC
 from abc import abstractmethod
 
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.types import DiscoveryFocus
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 

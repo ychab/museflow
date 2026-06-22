@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.track import TrackSuggested
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -1,9 +1,8 @@
 from polyfactory import Use
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
-from museflow.domain.entities.music import Playlist
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.types import TrackSource
 
 
@@ -22,7 +21,3 @@ class TrackSuggestedFactory(DataclassFactory[TrackSuggested]):
     __model__ = TrackSuggested
 
     artists = Use(lambda: [DataclassFactory.__faker__.name()])
-
-
-class PlaylistFactory(DataclassFactory[Playlist]):
-    __model__ = Playlist

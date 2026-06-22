@@ -1,11 +1,12 @@
 import pytest
 
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
 
@@ -72,7 +73,11 @@ class TestSpotifyLibrary:
         playlist_tracks: list[Track],
         spotify_library: SpotifyLibraryAdapter,
     ) -> None:
-        playlist = await spotify_library.create_playlist(name="test", tracks=playlist_tracks)
+        playlist = await spotify_library.create_playlist(
+            name="test",
+            type=PlaylistType.DISCOVERY,
+            tracks=playlist_tracks,
+        )
 
         assert playlist.id is not None
         assert playlist.user_id == spotify_library.user.id
@@ -81,3 +86,4 @@ class TestSpotifyLibrary:
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert playlist.snapshot_id == "AAAAAsNYTkn8k2rpWWck/VOdy+GiqV1c"
         assert playlist.tracks == playlist_tracks
+        assert playlist.type == PlaylistType.DISCOVERY

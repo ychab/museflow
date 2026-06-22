@@ -7,9 +7,10 @@ from museflow import __project_name__
 from museflow.application.mappers.auth import auth_token_create_from_token_payload
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -107,6 +108,7 @@ class TestSpotifyLibraryLive:
     ) -> None:
         playlist = await spotify_library_live.create_playlist(
             name=f"[{__project_name__}] - LIVE INTEGRATION TEST",
+            type=PlaylistType.DISCOVERY,
             tracks=tracks,
         )
         assert playlist.id is not None

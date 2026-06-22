@@ -2,11 +2,11 @@ import uuid
 from abc import ABC
 from abc import abstractmethod
 
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
-from museflow.domain.value_objects.music import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
 
 class TrackRepository(ABC):

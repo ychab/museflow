@@ -6,7 +6,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
@@ -14,7 +14,7 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import Track
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tracks.delete"

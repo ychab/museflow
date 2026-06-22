@@ -1,8 +1,9 @@
 import uuid
 
-from museflow.domain.entities.music import Playlist
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
@@ -46,7 +47,12 @@ def to_domain_track(
     )
 
 
-def to_domain_playlist(spotify_playlist: SpotifyPlaylist, user_id: uuid.UUID, tracks: list[Track]) -> Playlist:
+def to_domain_playlist(
+    spotify_playlist: SpotifyPlaylist,
+    user_id: uuid.UUID,
+    type: PlaylistType,
+    tracks: list[Track],
+) -> Playlist:
     return Playlist(
         user_id=user_id,
         name=spotify_playlist.name,
@@ -54,4 +60,5 @@ def to_domain_playlist(spotify_playlist: SpotifyPlaylist, user_id: uuid.UUID, tr
         provider_id=spotify_playlist.id,
         snapshot_id=spotify_playlist.snapshot_id,
         tracks=tracks,
+        type=type,
     )

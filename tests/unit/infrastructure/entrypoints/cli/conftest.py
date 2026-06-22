@@ -17,9 +17,9 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
-from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.users import UserRepository
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
@@ -191,12 +191,12 @@ def mock_blacklist_repository(
 
 
 @pytest.fixture
-def mock_discovery_playlist_repository(
+def mock_playlist_repository(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=DiscoveryPlaylistRepository)
-    with mock_dependency_factory(f"{target_path}.get_discovery_playlist_repository", repo) as mock_repo:
+    repo = mock.AsyncMock(spec=PlaylistRepository)
+    with mock_dependency_factory(f"{target_path}.get_playlist_repository", repo) as mock_repo:
         yield mock_repo
 
 

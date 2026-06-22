@@ -7,8 +7,8 @@ from typing import cast
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
-from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User

@@ -9,8 +9,8 @@ import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.rate import track_rate
-from museflow.domain.entities.music import Track
-from museflow.domain.exceptions import DiscoveryPlaylistNotFoundError
+from museflow.domain.entities.track import Track
+from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
@@ -26,7 +26,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
@@ -44,11 +44,11 @@ class RatePlaylistResult:
 
 @app.command(
     "playlist",
-    help="Interactively rate tracks in a discovery playlist, or all unrated discovery tracks if no playlist is specified.",
+    help="Interactively rate tracks in a playlist, or all unrated discovery tracks if no playlist is specified.",
 )
 def rate_playlist(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    playlist_id: uuid.UUID | None = typer.Argument(None, help="Discovery playlist UUID to rate"),
+    playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist UUID to rate"),
     limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)"),
     play: bool = typer.Option(False, "--play", help="Play each track before rating"),
     play_provider: MusicProvider = typer.Option(
@@ -66,7 +66,7 @@ def rate_playlist(
         )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except DiscoveryPlaylistNotFoundError as e:
+    except PlaylistNotFoundError as e:
         typer.secho(f"Playlist {playlist_id} not found.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except ProviderAuthTokenNotFoundError as e:
@@ -100,7 +100,7 @@ async def rate_playlist_logic(
         session = await stack.enter_async_context(get_db())
 
         user_repository = get_user_repository(session)
-        discovery_playlist_repository = get_discovery_playlist_repository(session)
+        playlist_repository = get_playlist_repository(session)
         track_repository = get_track_repository(session)
         blacklist_repository = get_blacklist_repository(session)
 
@@ -126,9 +126,9 @@ async def rate_playlist_logic(
 
         tracks: list[Track]
         if playlist_id is not None:
-            playlist = await discovery_playlist_repository.get(user.id, playlist_id)
+            playlist = await playlist_repository.get(user.id, playlist_id)
             if playlist is None:
-                raise DiscoveryPlaylistNotFoundError()
+                raise PlaylistNotFoundError()
             tracks = playlist.tracks
         else:
             tracks = await track_repository.get_list(

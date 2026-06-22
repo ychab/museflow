@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
-from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
@@ -19,7 +19,7 @@ from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 
 from tests import ASSETS_DIR
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "samples"
 REIMPORT_HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "reimport"

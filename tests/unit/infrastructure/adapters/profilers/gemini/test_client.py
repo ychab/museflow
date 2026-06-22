@@ -19,7 +19,7 @@ from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTaste
 from museflow.infrastructure.adapters.profilers.gemini.client import _is_retryable_error
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestGeminiTasteProfileAdapter:

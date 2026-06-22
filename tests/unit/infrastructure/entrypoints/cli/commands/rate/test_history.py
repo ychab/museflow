@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.history import RateHi
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"

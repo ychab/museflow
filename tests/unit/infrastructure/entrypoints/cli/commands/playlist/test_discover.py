@@ -21,9 +21,8 @@ from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
-from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
-from tests.unit.factories.entities.music import PlaylistFactory
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.playlist import PlaylistFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -37,9 +36,7 @@ class TestDiscoverParserCommand:
         target_path = f"{TARGET_PATH}.discover_logic"
         strategy = DiscoveryTasteStrategyFactory.build()
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = DiscoverTasteResult(
-                provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=[], tracks=[]
-            )
+            patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -352,8 +349,7 @@ class TestDiscoverCommand:
         track_with_album = TrackFactory.build()
         track_without_album = TrackFactory.build(album_name=None)
         mock_discover_logic.return_value = DiscoverTasteResult(
-            provider_playlist=playlist,
-            discovery_playlist=None,
+            playlist=playlist,
             strategy=strategy,
             reports=[],
             tracks=[track_with_album, track_without_album],
@@ -364,29 +360,7 @@ class TestDiscoverCommand:
 
         output = clean_typer_text(result.stdout)
         assert "Suggested tracks successfully saved into playlist 'Progressive Horizons'!" in output
-
-    def test__output__playlist_created_with_discovery_playlist(
-        self,
-        mock_discover_logic: mock.AsyncMock,
-        runner: CliRunner,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        strategy = DiscoveryTasteStrategyFactory.build(suggested_playlist_name="Progressive Horizons")
-        playlist = PlaylistFactory.build()
-        discovery_playlist = DiscoveryPlaylistFactory.build()
-        mock_discover_logic.return_value = DiscoverTasteResult(
-            provider_playlist=playlist,
-            discovery_playlist=discovery_playlist,
-            strategy=strategy,
-            reports=[],
-            tracks=[],
-        )
-
-        result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
-        assert result.exit_code == 0
-
-        output = clean_typer_text(result.stdout)
-        assert f"Saved playlist ID: {discovery_playlist.id}" in output
+        assert f"Saved playlist ID: {playlist.id}" in output
         assert "Rate tracks: museflow rate playlist" in output
 
     def test__output__dry_run(
@@ -396,9 +370,7 @@ class TestDiscoverCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         strategy = DiscoveryTasteStrategyFactory.build()
-        mock_discover_logic.return_value = DiscoverTasteResult(
-            provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=[], tracks=[]
-        )
+        mock_discover_logic.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
@@ -414,8 +386,7 @@ class TestDiscoverCommand:
     ) -> None:
         strategy = DiscoveryTasteStrategyFactory.build()
         mock_discover_logic.return_value = DiscoverTasteResult(
-            provider_playlist=None,
-            discovery_playlist=None,
+            playlist=None,
             strategy=strategy,
             reports=[DiscoverTasteAttemptReport(attempt=1, tracks_suggested=5, tracks_survived=3, tracks_new=2)],
             tracks=[],
@@ -435,7 +406,7 @@ class TestDiscoverCommand:
     "mock_track_repository",
     "mock_taste_profile_repository",
     "mock_blacklist_repository",
-    "mock_discovery_playlist_repository",
+    "mock_playlist_repository",
     "mock_provider_oauth",
 )
 class TestDiscoverLogic:

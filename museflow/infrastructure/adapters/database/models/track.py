@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
-from museflow.domain.entities.music import Track as TrackEntity
+from museflow.domain.entities.track import Track as TrackEntity
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models.base import Base

@@ -11,7 +11,7 @@ from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestRateHistoryLogic:

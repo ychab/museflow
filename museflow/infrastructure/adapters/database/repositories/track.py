@@ -10,15 +10,15 @@ from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.ports.repositories.music import TrackRepository
-from museflow.domain.entities.music import Track
+from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
-from museflow.domain.value_objects.music import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 

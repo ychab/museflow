@@ -11,8 +11,8 @@ from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic
 
-from tests.integration.factories.models.discovery import DiscoveryPlaylistModelFactory
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.playlist import PlaylistModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestRatePlaylistLogic:
@@ -24,11 +24,11 @@ class TestRatePlaylistLogic:
         mock_typer_confirm: mock.Mock,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
-        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await rate_playlist_logic(email=user.email, playlist_id=pl_db.id)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id)
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
@@ -60,12 +60,12 @@ class TestRatePlaylistLogic:
         mock_typer_confirm: mock.Mock,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
-        pl_db = await DiscoveryPlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
         with mock.patch.object(SpotifyLibraryAdapter, "play_track", new_callable=mock.AsyncMock) as mock_play:
-            await rate_playlist_logic(email=user.email, playlist_id=pl_db.id, provider=MusicProvider.SPOTIFY)
+            await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id, provider=MusicProvider.SPOTIFY)
 
         mock_play.assert_awaited_once_with(track_db.provider_id)
 

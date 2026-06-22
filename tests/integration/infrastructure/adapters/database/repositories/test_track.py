@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.application.ports.repositories.music import TrackRepository
-from museflow.domain.entities.music import Track
+from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import MusicProvider
@@ -21,9 +21,9 @@ from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestTrackSQLRepository:

@@ -98,6 +98,12 @@ class TrackNotFoundError(Exception): ...
 class RateScoreInvalidException(Exception): ...
 
 
+# --- Playlist exceptions ---
+
+
+class PlaylistNotFoundError(Exception): ...
+
+
 # --- Discovery exceptions ---
 
 
@@ -105,9 +111,6 @@ class DiscoveryTrackNoNew(Exception): ...
 
 
 class DiscoveryTasteStrategyException(Exception): ...
-
-
-class DiscoveryPlaylistNotFoundError(Exception): ...
 
 
 # --- Streaming history exceptions ---

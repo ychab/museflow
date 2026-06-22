@@ -1,23 +1,10 @@
-import uuid
-from abc import ABC
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 
-from museflow.domain.types import MusicProvider
+from museflow.domain.entities.base import BaseProviderEntity
 from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
-
-
-@dataclass(frozen=True, kw_only=True)
-class BaseProviderEntity(ABC):
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-    user_id: uuid.UUID
-
-    name: str
-
-    provider: MusicProvider = MusicProvider.SPOTIFY
-    provider_id: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -76,10 +63,3 @@ class TrackSuggested:
 
     def __str__(self) -> str:
         return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")
-
-
-@dataclass(frozen=True, kw_only=True)
-class Playlist(BaseProviderEntity):
-    snapshot_id: str | None = None
-
-    tracks: list[Track] = field(default_factory=list)

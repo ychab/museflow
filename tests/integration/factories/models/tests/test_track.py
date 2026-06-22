@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 
 

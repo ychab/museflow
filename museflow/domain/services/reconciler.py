@@ -3,10 +3,10 @@ from typing import Final
 
 from rapidfuzz import fuzz
 
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.types import ScoreReconciler
-from museflow.domain.value_objects.music import TrackNormalized
+from museflow.domain.value_objects.track import TrackNormalized
 
 logger = logging.getLogger(__name__)
 

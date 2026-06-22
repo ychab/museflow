@@ -12,7 +12,7 @@ from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
 
-from tests.unit.factories.entities.music import PlaylistFactory
+from tests.unit.factories.entities.playlist import PlaylistFactory
 
 
 class TestDiscoverLogic:
@@ -37,8 +37,7 @@ class TestDiscoverLogic:
         mock_use_case: mock.Mock,
     ) -> None:
         expected_result = DiscoverTasteResult(
-            provider_playlist=PlaylistFactory.build(user_id=user.id),
-            discovery_playlist=None,
+            playlist=PlaylistFactory.build(user_id=user.id),
             strategy=discovery_taste_strategy,
             reports=[],
             tracks=[],

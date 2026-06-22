@@ -9,12 +9,13 @@ from museflow import __project_name__
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.entities.music import Playlist
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.exceptions import ProviderPremiumRequiredException
+from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
@@ -112,7 +113,13 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             response_key="tracks",
         )
 
-    async def create_playlist(self, name: str, tracks: list[Track], is_public: bool = False) -> Playlist:
+    async def create_playlist(
+        self,
+        name: str,
+        type: PlaylistType,
+        tracks: list[Track],
+        is_public: bool = False,
+    ) -> Playlist:
         # First, create the playlist
         data = await self._execute_request(
             method="POST",
@@ -136,7 +143,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         )
         spotify_playlist.snapshot_id = data["snapshot_id"]
 
-        return to_domain_playlist(spotify_playlist, user_id=self.user.id, tracks=tracks)
+        return to_domain_playlist(spotify_playlist, user_id=self.user.id, type=type, tracks=tracks)
 
     async def play_track(self, track_provider_id: str) -> None:
         try:

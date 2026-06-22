@@ -26,7 +26,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_ada
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_discovery_playlist_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
@@ -178,7 +178,7 @@ def discover(
         track_table.add_row(str(i), artists, track.name, album_name)
     console.print(track_table)
 
-    if result.provider_playlist is None:
+    if result.playlist is None:
         typer.secho(
             "\n\nTracks discovered but playlist not created (dry-run mode) ⚠️",
             fg=typer.colors.YELLOW,
@@ -188,16 +188,15 @@ def discover(
             f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
             fg=typer.colors.GREEN,
         )
-        if result.discovery_playlist is not None:
-            typer.secho(f"Saved playlist ID: {result.discovery_playlist.id}", fg=typer.colors.CYAN)
-            typer.secho(
-                f"  View it: museflow playlist view {result.discovery_playlist.id} --email {email}",
-                fg=typer.colors.CYAN,
-            )
-            typer.secho(
-                f"  Rate tracks: museflow rate playlist --email {email} --play",
-                fg=typer.colors.CYAN,
-            )
+        typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
+        typer.secho(
+            f"  View it: museflow playlist view {result.playlist.id} --email {email}",
+            fg=typer.colors.CYAN,
+        )
+        typer.secho(
+            f"  Rate tracks: museflow rate playlist --email {email} --play",
+            fg=typer.colors.CYAN,
+        )
 
 
 async def discover_logic(
@@ -232,7 +231,7 @@ async def discover_logic(
         track_repository = get_track_repository(session)
         taste_profile_repository = get_taste_profile_repository(session)
         blacklist_repository = get_blacklist_repository(session)
-        discovery_playlist_repository = get_discovery_playlist_repository(session)
+        playlist_repository = get_playlist_repository(session)
 
         provider_client = await stack.enter_async_context(get_provider_oauth(provider))
         provider_library_factory = get_provider_library_factory(
@@ -258,7 +257,7 @@ async def discover_logic(
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
             blacklist_repository=blacklist_repository,
-            discovery_playlist_repository=discovery_playlist_repository,
+            playlist_repository=playlist_repository,
             provider_library=provider_library,
             advisor=advisor_adapter,
             reconciler=reconciler,

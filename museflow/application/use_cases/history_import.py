@@ -6,8 +6,8 @@ from datetime import datetime
 from museflow.application.inputs.history import StreamingHistoryEntry
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.ports.providers.history import StreamingHistoryPort
-from museflow.application.ports.repositories.music import TrackRepository
-from museflow.domain.entities.music import Track
+from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.types import MusicProvider

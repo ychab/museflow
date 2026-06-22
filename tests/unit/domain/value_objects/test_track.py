@@ -1,6 +1,6 @@
-from museflow.domain.value_objects.music import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestTrackKnowIdentifiers:

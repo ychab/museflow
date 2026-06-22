@@ -5,8 +5,8 @@ import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileStatus
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
@@ -18,10 +18,10 @@ from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
 from tests.unit.factories.entities.blacklist import BlacklistedTrackFactory
-from tests.unit.factories.entities.music import PlaylistFactory
-from tests.unit.factories.entities.music import TrackFactory
-from tests.unit.factories.entities.music import TrackSuggestedFactory
+from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
+from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.entities.track import TrackSuggestedFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 
 
@@ -53,20 +53,20 @@ class TestDiscoverTasteUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
-        mock_discovery_playlist_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
         mock_reconciler: mock.Mock,
         track_roundtrip: None,
     ) -> DiscoverTasteUseCase:
         mock_blacklist_repository.get_all.return_value = UserBlacklist()
-        mock_discovery_playlist_repository.save.side_effect = lambda p: p
+        mock_playlist_repository.save.side_effect = lambda p: p
 
         return DiscoverTasteUseCase(
             track_repository=mock_track_repository,
             taste_profile_repository=mock_taste_profile_repository,
             blacklist_repository=mock_blacklist_repository,
-            discovery_playlist_repository=mock_discovery_playlist_repository,
+            playlist_repository=mock_playlist_repository,
             provider_library=mock_provider_library,
             advisor=mock_advisor,
             reconciler=mock_reconciler,
@@ -105,7 +105,9 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.provider_playlist is playlist
+        assert result.playlist is not None
+        assert result.playlist.id == playlist.id
+        assert result.playlist.provider_id == playlist.provider_id
         assert result.strategy is discovery_taste_strategy
         assert len(result.tracks) == 1
         assert len(result.reports) == 1
@@ -255,7 +257,7 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.provider_playlist is None
+        assert result.playlist is None
         mock_provider_library.create_playlist.assert_not_called()
 
     async def test__search_queries_contribute_tracks(

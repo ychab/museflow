@@ -1,8 +1,9 @@
 from abc import ABC
 from abc import abstractmethod
 
-from museflow.domain.entities.music import Playlist
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
+from museflow.domain.types import PlaylistType
 
 
 class ProviderLibraryPort(ABC):
@@ -39,11 +40,18 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
-    async def create_playlist(self, name: str, tracks: list[Track], is_public: bool = False) -> Playlist:
+    async def create_playlist(
+        self,
+        name: str,
+        type: PlaylistType,
+        tracks: list[Track],
+        is_public: bool = False,
+    ) -> Playlist:
         """Create a user's playlist with the given tracks.
 
         Args:
             name: The name of the playlist
+            type: The type of playlist being created (e.g. discovery)
             tracks: A list of tracks to add to the playlist
             is_public: Whether the playlist should be public or private
 

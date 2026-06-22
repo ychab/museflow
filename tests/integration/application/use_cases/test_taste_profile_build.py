@@ -5,15 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
-from museflow.application.ports.repositories.music import TrackRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
 
 

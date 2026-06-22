@@ -18,8 +18,8 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.profilers.taste import TasteProfilerPort
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.domain.types import TasteProfiler

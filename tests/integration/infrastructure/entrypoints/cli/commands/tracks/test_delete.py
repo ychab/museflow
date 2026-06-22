@@ -2,7 +2,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestDeleteLogic:

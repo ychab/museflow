@@ -3,7 +3,7 @@ from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import ArtistSortBy
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestStatsArtistsLogic:

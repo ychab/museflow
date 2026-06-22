@@ -32,6 +32,10 @@ class DiscoveryFocus(StrEnum):
     CULTURAL_BRIDGE = "cultural_bridge"
 
 
+class PlaylistType(StrEnum):
+    DISCOVERY = "discovery"  # AI-curated playlist
+
+
 class TrackOrderBy(StrEnum):
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"

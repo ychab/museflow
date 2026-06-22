@@ -2,8 +2,8 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.track import Track
 from museflow.domain.types import TasteProfiler
 
 

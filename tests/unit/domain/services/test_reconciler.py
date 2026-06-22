@@ -2,8 +2,8 @@ import pytest
 
 from museflow.domain.services.reconciler import Reconciler
 
-from tests.unit.factories.entities.music import TrackFactory
-from tests.unit.factories.entities.music import TrackSuggestedFactory
+from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.entities.track import TrackSuggestedFactory
 
 
 @pytest.mark.parametrize("reconciler", [{"match_threshold": 80.0, "score_minimum": 60.0}], indirect=True)

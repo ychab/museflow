@@ -7,7 +7,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.domain.entities.music import Track
+from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console

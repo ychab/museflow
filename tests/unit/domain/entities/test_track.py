@@ -2,8 +2,8 @@ import uuid
 
 import pytest
 
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 
 
 class TestTrack:

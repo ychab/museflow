@@ -11,7 +11,7 @@ from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import tracks
 from museflow.infrastructure.entrypoints.cli.main import app
 from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.tracks"

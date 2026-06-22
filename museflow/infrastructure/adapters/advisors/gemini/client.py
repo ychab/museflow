@@ -16,9 +16,9 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.advisors.agent import AdvisorPort
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.types import DiscoveryFocus

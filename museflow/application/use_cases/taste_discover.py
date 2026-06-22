@@ -1,6 +1,5 @@
 import logging
 import math
-import uuid
 from dataclasses import dataclass
 from dataclasses import replace
 from datetime import UTC
@@ -11,23 +10,23 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
-from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
 from museflow.application.utils.discovery import reconcile_tracks
-from museflow.domain.entities.discovery import DiscoveryPlaylist
-from museflow.domain.entities.music import Playlist
-from museflow.domain.entities.music import Track
-from museflow.domain.entities.music import TrackSuggested
+from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfileStatus
+from museflow.domain.entities.track import Track
+from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.services.reconciler import Reconciler
+from museflow.domain.types import PlaylistType
 from museflow.domain.types import TasteProfiler
 from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import normalize_text
@@ -47,8 +46,7 @@ class DiscoverTasteAttemptReport:
 
 @dataclass(frozen=True, kw_only=True)
 class DiscoverTasteResult:
-    provider_playlist: Playlist | None
-    discovery_playlist: DiscoveryPlaylist | None
+    playlist: Playlist | None
     strategy: DiscoveryTasteStrategy
     reports: list[DiscoverTasteAttemptReport]
     tracks: list[Track]
@@ -62,7 +60,7 @@ class DiscoverTasteUseCase:
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
         blacklist_repository: BlacklistRepository,
-        discovery_playlist_repository: DiscoveryPlaylistRepository,
+        playlist_repository: PlaylistRepository,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
         reconciler: Reconciler,
@@ -71,7 +69,7 @@ class DiscoverTasteUseCase:
         self._track_repository = track_repository
         self._taste_profile_repository = taste_profile_repository
         self._blacklist_repository = blacklist_repository
-        self._discovery_playlist_repository = discovery_playlist_repository
+        self._playlist_repository = playlist_repository
         self._provider_library = provider_library
         self._advisor = advisor
         self._reconciler = reconciler
@@ -234,9 +232,7 @@ class DiscoverTasteUseCase:
 
         if config.dry_run:
             logger.info("Dry-run mode: skipping playlist creation.")
-            return DiscoverTasteResult(
-                provider_playlist=None, discovery_playlist=None, strategy=strategy, reports=reports, tracks=tracks
-            )
+            return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
 
         # Upsert discovery tracks into museflow_track so they're excluded from future sessions
         discovery_tracks = [
@@ -254,31 +250,24 @@ class DiscoverTasteUseCase:
 
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat()}",
+            type=PlaylistType.DISCOVERY,
             tracks=tracks,
         )
 
-        now = datetime.now(UTC)
-        dp = DiscoveryPlaylist(
-            id=uuid.uuid4(),
-            user_id=user.id,
+        playlist = replace(
+            playlist,
             profile_id=profile.id,
-            provider=playlist.provider,
-            provider_id=playlist.provider_id,
-            tracks=tracks_with_ids,
-            name=strategy.suggested_playlist_name,
             reasoning=strategy.reasoning,
             focus=config.focus,
             genre=config.genre,
             mood=config.mood,
             custom_instructions=config.custom_instructions,
-            created_at=now,
-            updated_at=now,
+            tracks=tracks_with_ids,
         )
-        discovery_playlist = await self._discovery_playlist_repository.save(dp)
+        playlist_db = await self._playlist_repository.save(playlist)
 
         return DiscoverTasteResult(
-            provider_playlist=playlist,
-            discovery_playlist=discovery_playlist,
+            playlist=playlist_db,
             strategy=strategy,
             reports=reports,
             tracks=tracks_with_ids,

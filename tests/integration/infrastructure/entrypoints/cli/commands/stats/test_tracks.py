@@ -2,7 +2,7 @@ from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import tracks_logic
 from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 
-from tests.integration.factories.models.music import TrackModelFactory
+from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestStatsTracksLogic:

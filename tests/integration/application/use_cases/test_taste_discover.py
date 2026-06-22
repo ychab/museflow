@@ -3,9 +3,9 @@ import pytest
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.discovery import DiscoveryPlaylistRepository
-from museflow.application.ports.repositories.music import TrackRepository
+from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import Reconciler
@@ -23,7 +23,7 @@ class TestDiscoverTasteUseCase:
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
         blacklist_repository: BlacklistRepository,
-        discovery_playlist_repository: DiscoveryPlaylistRepository,
+        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
         gemini_advisor: GeminiAdvisorAdapter,
         reconciler: Reconciler,
@@ -32,7 +32,7 @@ class TestDiscoverTasteUseCase:
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
             blacklist_repository=blacklist_repository,
-            discovery_playlist_repository=discovery_playlist_repository,
+            playlist_repository=playlist_repository,
             provider_library=spotify_library,
             advisor=gemini_advisor,
             reconciler=reconciler,
@@ -56,11 +56,9 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.provider_playlist is not None
-        assert result.provider_playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
-        assert result.discovery_playlist is not None
-        assert result.discovery_playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
-        assert len(result.discovery_playlist.tracks) == len(result.tracks)
+        assert result.playlist is not None
+        assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert len(result.playlist.tracks) == len(result.tracks)
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
         assert result.strategy.search_queries == ["post-rock instrumental", "math rock progressive"]
@@ -82,7 +80,7 @@ class TestDiscoverTasteUseCase:
             ),
         )
 
-        assert result.provider_playlist is None
+        assert result.playlist is None
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
         assert result.strategy.search_queries == ["post-rock instrumental", "math rock progressive"]

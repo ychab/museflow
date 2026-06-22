@@ -10,7 +10,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist.list_ import list_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
-from tests.unit.factories.entities.discovery import DiscoveryPlaylistFactory
+from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.list_"
@@ -20,7 +20,6 @@ class TestListParserCommand:
     @pytest.fixture(autouse=True)
     def mock_list_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
-            patched.return_value = []
             yield patched
 
     def test__nominal(self, runner: CliRunner) -> None:
@@ -71,17 +70,17 @@ class TestListCommand:
 
         result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
-        assert "No discovery playlists found" in result.output
+        assert "No playlists found" in result.output
 
     def test__with_playlists(self, mock_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_list_logic.return_value = [DiscoveryPlaylistFactory.build()]
+        mock_list_logic.return_value = [PlaylistFactory.build()]
 
         result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
-        assert "Discovery Playlists" in result.output
+        assert "Playlists" in result.output
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_discovery_playlist_repository")
+@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_playlist_repository")
 class TestListLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.list_"
 
@@ -95,10 +94,10 @@ class TestListLogic:
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
-        mock_discovery_playlist_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_discovery_playlist_repository.list.return_value = []
+        mock_playlist_repository.list.return_value = []
 
         result = await list_logic(email=user.email)
 
@@ -108,13 +107,13 @@ class TestListLogic:
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
-        mock_discovery_playlist_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
-        playlists = DiscoveryPlaylistFactory.batch(2)
+        playlists = PlaylistFactory.batch(2)
         mock_user_repository.get_by_email.return_value = user
-        mock_discovery_playlist_repository.list.return_value = playlists
+        mock_playlist_repository.list.return_value = playlists
 
         result = await list_logic(email=user.email)
 
         assert result == playlists
-        mock_discovery_playlist_repository.list.assert_awaited_once_with(user.id)
+        mock_playlist_repository.list.assert_awaited_once_with(user.id)

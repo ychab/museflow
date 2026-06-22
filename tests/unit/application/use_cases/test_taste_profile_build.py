@@ -9,8 +9,8 @@ from pytest_httpx import HTTPXMock
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileBuildPausedException
@@ -19,8 +19,8 @@ from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
-from tests.unit.factories.entities.music import TrackFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
 
 

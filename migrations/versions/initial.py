@@ -144,18 +144,20 @@ def upgrade() -> None:
     op.create_index("ix_museflow_track_user_provider", "museflow_track", ["user_id", "provider"], unique=False)
 
     op.create_table(
-        "museflow_discovery_playlist",
+        "museflow_playlist",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("profile_id", sa.UUID(), nullable=False),
         sa.Column("provider", postgresql.ENUM("SPOTIFY", name="musicprovider", create_type=False), nullable=False),
         sa.Column("provider_id", sa.String(length=512), nullable=False),
+        sa.Column("snapshot_id", sa.String(length=512), nullable=True),
+        sa.Column("type", sa.Enum("DISCOVERY", name="playlisttype"), nullable=False),
         sa.Column("name", sa.String(length=512), nullable=False),
-        sa.Column("reasoning", sa.Text(), nullable=False),
+        sa.Column("profile_id", sa.UUID(), nullable=True),
+        sa.Column("reasoning", sa.Text(), nullable=True),
         sa.Column(
             "focus",
             sa.Enum("EXPANSION", "ROOTS_REVIVAL", "CULTURAL_BRIDGE", name="discoveryfocus"),
-            nullable=False,
+            nullable=True,
         ),
         sa.Column("genre", sa.String(length=255), nullable=True),
         sa.Column("mood", sa.String(length=255), nullable=True),
@@ -166,23 +168,21 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["museflow_user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_museflow_discovery_playlist_user_id"), "museflow_discovery_playlist", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_museflow_playlist_user_id"), "museflow_playlist", ["user_id"], unique=False)
 
     op.create_table(
-        "museflow_discovery_playlist_track",
+        "museflow_playlist_track",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("playlist_id", sa.UUID(), nullable=False),
         sa.Column("track_id", sa.UUID(), nullable=False),
         sa.Column("position", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["playlist_id"], ["museflow_discovery_playlist.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["playlist_id"], ["museflow_playlist.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["track_id"], ["museflow_track.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_museflow_discovery_playlist_track_playlist_id"),
-        "museflow_discovery_playlist_track",
+        op.f("ix_museflow_playlist_track_playlist_id"),
+        "museflow_playlist_track",
         ["playlist_id"],
         unique=False,
     )
@@ -191,12 +191,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_index(
-        op.f("ix_museflow_discovery_playlist_track_playlist_id"),
-        table_name="museflow_discovery_playlist_track",
+        op.f("ix_museflow_playlist_track_playlist_id"),
+        table_name="museflow_playlist_track",
     )
-    op.drop_table("museflow_discovery_playlist_track")
-    op.drop_index(op.f("ix_museflow_discovery_playlist_user_id"), table_name="museflow_discovery_playlist")
-    op.drop_table("museflow_discovery_playlist")
+    op.drop_table("museflow_playlist_track")
+    op.drop_index(op.f("ix_museflow_playlist_user_id"), table_name="museflow_playlist")
+    op.drop_table("museflow_playlist")
     op.drop_index("ix_museflow_track_user_provider", table_name="museflow_track")
     op.drop_index(op.f("ix_museflow_track_user_id"), table_name="museflow_track")
     op.drop_index("ix_museflow_track_user_fingerprint", table_name="museflow_track")
@@ -211,6 +211,7 @@ def downgrade() -> None:
     op.drop_table("museflow_auth_state")
     op.drop_index(op.f("ix_museflow_user_email"), table_name="museflow_user")
     op.drop_table("museflow_user")
+    sa.Enum(name="playlisttype").drop(op.get_bind())
     sa.Enum(name="discoveryfocus").drop(op.get_bind())
     sa.Enum(name="tasteprofilestatus").drop(op.get_bind())
     sa.Enum(name="tasteprofiler").drop(op.get_bind())

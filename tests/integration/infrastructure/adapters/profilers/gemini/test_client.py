@@ -1,11 +1,11 @@
 import pytest
 
-from museflow.domain.entities.music import Track
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.track import Track
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
-from tests.unit.factories.entities.music import TrackFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 @pytest.mark.wiremock("gemini")
