@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.user import User
+from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
 
@@ -155,3 +157,105 @@ class TestPlaylistSQLRepository:
 
         result = await playlist_repository.get(uuid.uuid4(), playlist_db.id)
         assert result is None
+
+    async def test__delete__deletes_playlist_and_returns_true(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
+
+        deleted = await playlist_repository.delete(user.id, playlist_db.id)
+        assert deleted is True
+
+        playlist_count = (
+            await async_session_db.execute(
+                select(func.count()).select_from(PlaylistModel).where(PlaylistModel.id == playlist_db.id)
+            )
+        ).scalar()
+        assert playlist_count == 0
+
+        track_count = (
+            await async_session_db.execute(
+                select(func.count())
+                .select_from(PlaylistTrackModel)
+                .where(PlaylistTrackModel.playlist_id == playlist_db.id)
+            )
+        ).scalar()
+        assert track_count == 0
+
+    async def test__delete__returns_false_when_not_found(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        deleted = await playlist_repository.delete(user.id, uuid.uuid4())
+        assert deleted is False
+
+    async def test__delete__returns_false_for_wrong_user(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
+
+        deleted = await playlist_repository.delete(uuid.uuid4(), playlist_db.id)
+
+        assert deleted is False
+
+    async def test__purge__deletes_all_for_user(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        await PlaylistModelFactory.create_async(user_id=user.id)
+        await PlaylistModelFactory.create_async(user_id=user.id)
+
+        count = await playlist_repository.purge(user.id)
+
+        assert count == 2
+        assert await playlist_repository.list(user.id) == []
+
+    async def test__purge__filters_by_type(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.DISCOVERY)
+
+        count = await playlist_repository.purge(user.id, type=PlaylistType.DISCOVERY)
+
+        assert count == 1
+
+    async def test__purge__filters_by_provider(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        await PlaylistModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+
+        count = await playlist_repository.purge(user.id, provider=MusicProvider.SPOTIFY)
+
+        assert count == 1
+
+    async def test__purge__returns_zero_when_no_match(
+        self,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        count = await playlist_repository.purge(uuid.uuid4())
+        assert count == 0
+
+    async def test__purge__does_not_affect_other_users(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async()
+        await PlaylistModelFactory.create_async(user_id=user.id)
+
+        count = await playlist_repository.purge(user.id)
+
+        assert count == 1
+        result = await playlist_repository.get(playlist_db.user_id, playlist_db.id)
+        assert result is not None

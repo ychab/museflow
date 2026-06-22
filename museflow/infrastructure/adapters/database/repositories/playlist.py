@@ -1,11 +1,14 @@
 import uuid
 from dataclasses import replace
 
+from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistDB
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackDB
 from museflow.infrastructure.adapters.database.models.track import Track as TrackDB
@@ -48,3 +51,31 @@ class PlaylistSQLRepository(PlaylistRepository):
         playlist_db, _ = rows[0]
         tracks = [track_db.to_entity() for _, track_db in rows]
         return replace(playlist_db.to_entity(), tracks=tracks)
+
+    async def delete(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> bool:
+        stmt = (
+            delete(PlaylistDB)
+            .where(PlaylistDB.id == playlist_id, PlaylistDB.user_id == user_id)
+            .returning(PlaylistDB.id)
+        )
+        result = await self.session.execute(stmt)
+        deleted = result.scalar_one_or_none() is not None
+        await self.session.commit()
+        return deleted
+
+    async def purge(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        stmt = delete(PlaylistDB).where(PlaylistDB.user_id == user_id)
+        if type is not None:
+            stmt = stmt.where(PlaylistDB.type == type)
+        if provider is not None:
+            stmt = stmt.where(PlaylistDB.provider == provider)
+
+        result = await self.session.execute(stmt.returning(PlaylistDB.id))
+        deleted_ids = result.scalars().all()
+        await self.session.commit()
+        return len(deleted_ids)

@@ -3,6 +3,8 @@ from abc import ABC
 from abc import abstractmethod
 
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistType
 
 
 class PlaylistRepository(ABC):
@@ -19,4 +21,19 @@ class PlaylistRepository(ABC):
     @abstractmethod
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
         """Return a single playlist with its tracks, or None if not found."""
+        ...
+
+    @abstractmethod
+    async def delete(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> bool:
+        """Delete a single playlist. Returns True if found and deleted, False otherwise."""
+        ...
+
+    @abstractmethod
+    async def purge(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        """Delete playlists matching the given filters. Returns the number of playlists deleted."""
         ...

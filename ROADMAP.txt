@@ -12,6 +12,8 @@ This quick and dirty document just list the roadmap tasks.
 
 - command to create playlist based on the score? filtered by artist?
 
+- command playlist delete should also (optionally) delete the remote playlist (provider)?
+
 - personnality inspection through the music history? Who are you based on your streaming history?
 
 - add a quizz on random music to discover the taste of the end-user?
