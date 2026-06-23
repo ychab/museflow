@@ -18,6 +18,12 @@ class PlaylistModelFactory(BaseModelFactory[PlaylistModel]):
 
     @post_generated
     @classmethod
+    def profile_id(cls) -> uuid.UUID | None:
+        # create_async injects the real FK value explicitly via kwargs when type == DISCOVERY.
+        return None
+
+    @post_generated
+    @classmethod
     def reasoning(cls, type: PlaylistType) -> str | None:
         return cls.__faker__.paragraph() if type == PlaylistType.DISCOVERY else None
 

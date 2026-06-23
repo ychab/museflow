@@ -34,6 +34,7 @@ class DiscoveryFocus(StrEnum):
 
 class PlaylistType(StrEnum):
     DISCOVERY = "discovery"  # AI-curated playlist
+    HISTORY = "history"  # persisted "best of"
 
 
 class TrackOrderBy(StrEnum):

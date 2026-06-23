@@ -52,6 +52,16 @@ class PlaylistSQLRepository(PlaylistRepository):
         tracks = [track_db.to_entity() for _, track_db in rows]
         return replace(playlist_db.to_entity(), tracks=tracks)
 
+    async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
+        stmt = (
+            select(PlaylistTrackDB.track_id)
+            .join(PlaylistDB, PlaylistDB.id == PlaylistTrackDB.playlist_id)
+            .where(PlaylistDB.user_id == user_id, PlaylistDB.type == type)
+            .distinct()
+        )
+        result = await self.session.execute(stmt)
+        return frozenset(result.scalars().all())
+
     async def delete(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> bool:
         stmt = (
             delete(PlaylistDB)

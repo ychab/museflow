@@ -473,6 +473,34 @@ class TestTrackSQLRepository:
         result_ci = await track_repository.get_list(user.id, artist_name="radiohead")
         assert [t.id for t in result_ci] == [target_db.id]
 
+    async def test__get_list__min_score_with_explicit_order__order_wins(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        low_played = await TrackModelFactory.create_async(user_id=user.id, score=8, played_count=1)
+        high_played = await TrackModelFactory.create_async(user_id=user.id, score=5, played_count=10)
+
+        result = await track_repository.get_list(
+            user.id,
+            min_score=5,
+            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
+        )
+
+        assert [t.id for t in result] == [high_played.id, low_played.id]
+
+    async def test__get_list__exclude_ids(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        kept = await TrackModelFactory.create_async(user_id=user.id)
+        excluded = await TrackModelFactory.create_async(user_id=user.id)
+
+        result = await track_repository.get_list(user.id, exclude_ids=[excluded.id])
+
+        assert [t.id for t in result] == [kept.id]
+
     async def test__reset_score__resets_matching_source(
         self,
         async_session_db: AsyncSession,

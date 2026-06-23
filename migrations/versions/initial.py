@@ -150,7 +150,7 @@ def upgrade() -> None:
         sa.Column("provider", postgresql.ENUM("SPOTIFY", name="musicprovider", create_type=False), nullable=False),
         sa.Column("provider_id", sa.String(length=512), nullable=False),
         sa.Column("snapshot_id", sa.String(length=512), nullable=True),
-        sa.Column("type", sa.Enum("DISCOVERY", name="playlisttype"), nullable=False),
+        sa.Column("type", sa.Enum("DISCOVERY", "HISTORY", name="playlisttype"), nullable=False),
         sa.Column("name", sa.String(length=512), nullable=False),
         sa.Column("profile_id", sa.UUID(), nullable=True),
         sa.Column("reasoning", sa.Text(), nullable=True),

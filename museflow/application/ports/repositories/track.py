@@ -18,14 +18,15 @@ class TrackRepository(ABC):
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
         provider_ids: list[str] | None = None,
-        order: TrackOrdering | None = None,
-        offset: int | None = None,
-        limit: int | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
         artist_name: str | None = None,
+        exclude_ids: list[uuid.UUID] | None = None,
+        order: TrackOrdering | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
     ) -> list[Track]:
         """Retrieves a list of tracks for a specific user.
 
@@ -35,16 +36,19 @@ class TrackRepository(ABC):
             provider_ids: Filter to only return tracks whose provider_id is in this list.
             order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
                    Use RANDOM as the sole entry for random ordering. Nullable columns
-                   always sort NULLs last regardless of direction.
+                   always sort NULLs last regardless of direction. Ignored when min_score is set
+                   and order is not explicitly provided (falls back to score descending).
             offset: The number of tracks to skip before starting to collect the result set.
             limit: The maximum number of tracks to return.
-            min_score: When set, only tracks with score >= min_score are returned, ordered by
-                       score descending so the highest-rated tracks come first when limit is applied.
+            min_score: When set, only tracks with score >= min_score are returned. If order is
+                       not explicitly provided, results are ordered by score descending so the
+                       highest-rated tracks come first when limit is applied.
             max_score: When set, only tracks with score <= max_score are returned.
             source: When set, only tracks whose source bit includes this flag are returned.
             unrated_only: When True, only tracks with no score are returned.
             artist_name: When set, only tracks whose primary artist (first in the artists list)
                          matches this name (case-insensitive) are returned.
+            exclude_ids: When set, tracks whose id is in this list are excluded.
 
         Returns:
             A list of `Track` entities.

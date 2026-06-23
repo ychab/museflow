@@ -10,8 +10,6 @@ This quick and dirty document just list the roadmap tasks.
     => THEN build the profile AND the profiler should take the rates into account!!
         => which means timeline + preferences
 
-- command to create playlist based on the score? filtered by artist?
-
 - command playlist delete should also (optionally) delete the remote playlist (provider)?
 
 - personnality inspection through the music history? Who are you based on your streaming history?

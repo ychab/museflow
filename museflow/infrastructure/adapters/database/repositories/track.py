@@ -31,14 +31,15 @@ class TrackSQLRepository(TrackRepository):
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
         provider_ids: list[str] | None = None,
-        order: TrackOrdering | None = None,
-        offset: int | None = None,
-        limit: int | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
         artist_name: str | None = None,
+        exclude_ids: list[uuid.UUID] | None = None,
+        order: TrackOrdering | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
     ) -> list[Track]:
         stmt = select(TrackModel).where(TrackModel.user_id == user_id)
 
@@ -57,9 +58,11 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.score.is_(None))
         if artist_name is not None:
             stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
+        if exclude_ids:
+            stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
 
         # Ordering
-        if min_score is not None:
+        if order is None and min_score is not None:
             stmt = stmt.order_by(TrackModel.score.desc().nulls_last())
         else:
             for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:

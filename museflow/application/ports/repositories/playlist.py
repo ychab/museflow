@@ -24,6 +24,11 @@ class PlaylistRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
+        """Return the distinct track IDs across all of the user's playlists of the given type."""
+        ...
+
+    @abstractmethod
     async def delete(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> bool:
         """Delete a single playlist. Returns True if found and deleted, False otherwise."""
         ...

@@ -104,6 +104,9 @@ class RateScoreInvalidException(Exception): ...
 class PlaylistNotFoundError(Exception): ...
 
 
+class PlaylistNoTracksError(Exception): ...
+
+
 # --- Discovery exceptions ---
 
 

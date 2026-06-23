@@ -158,6 +158,51 @@ class TestPlaylistSQLRepository:
         result = await playlist_repository.get(uuid.uuid4(), playlist_db.id)
         assert result is None
 
+    async def test__get_track_ids__filters_by_type_and_user(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        history_track_db = await TrackModelFactory.create_async(user_id=user.id)
+        discovery_track_db = await TrackModelFactory.create_async(user_id=user.id)
+        other_user_track_db = await TrackModelFactory.create_async()
+
+        await PlaylistModelFactory.create_async(
+            user_id=user.id, type=PlaylistType.HISTORY, track_ids=[history_track_db.id]
+        )
+        await PlaylistModelFactory.create_async(
+            user_id=user.id, type=PlaylistType.DISCOVERY, track_ids=[discovery_track_db.id]
+        )
+        await PlaylistModelFactory.create_async(
+            user_id=other_user_track_db.user_id, type=PlaylistType.HISTORY, track_ids=[other_user_track_db.id]
+        )
+
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+
+        assert track_ids == frozenset({history_track_db.id})
+
+    async def test__get_track_ids__distinct_across_playlists(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
+
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+
+        assert track_ids == frozenset({track_db.id})
+
+    async def test__get_track_ids__empty_when_no_match(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+        assert track_ids == frozenset()
+
     async def test__delete__deletes_playlist_and_returns_true(
         self,
         async_session_db: AsyncSession,

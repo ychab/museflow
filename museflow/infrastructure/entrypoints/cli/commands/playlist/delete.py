@@ -6,6 +6,7 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.application.use_cases.playlist_delete import playlist_delete
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
@@ -80,13 +81,11 @@ async def delete_logic(
 
         playlist_repository = get_playlist_repository(session)
 
-        if purge:
-            return await playlist_repository.purge(user_id=user.id, type=type, provider=provider)
-
-        if playlist_id is None:
-            raise PlaylistNotFoundError()
-
-        deleted = await playlist_repository.delete(user_id=user.id, playlist_id=playlist_id)
-        if not deleted:
-            raise PlaylistNotFoundError()
-        return 1
+        return await playlist_delete(
+            user=user,
+            playlist_repository=playlist_repository,
+            playlist_id=playlist_id,
+            purge=purge,
+            type=type,
+            provider=provider,
+        )
