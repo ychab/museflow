@@ -14,6 +14,7 @@ from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
+from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -39,6 +40,10 @@ def playlist_history(
         "--duplicate",
         help="Allow tracks already used in a previous history playlist",
     ),
+    group_by_artists: bool = typer.Option(False, "--group-by-artists", help="Group tracks by primary artist"),
+    sort: PlaylistHistoryOrderBy = typer.Option(
+        PlaylistHistoryOrderBy.PLAYED_COUNT, "--sort", help="Sort tracks by this field"
+    ),
     limit: int = typer.Option(20, "--limit", help="Maximum number of tracks in the playlist", min=1),
 ) -> None:
     """Create a playlist from your history tracks, filtered and ordered by play count."""
@@ -54,8 +59,10 @@ def playlist_history(
                     score_min=score_min,
                     score_max=score_max,
                     artist_name=artist,
-                    limit=limit,
                     allow_duplicate=duplicate,
+                    group_by_artists=group_by_artists,
+                    sort_by=sort,
+                    limit=limit,
                 ),
             ),
         )
@@ -78,14 +85,19 @@ def playlist_history(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    if group_by_artists:
+        typer.secho("Tracks are grouped by primary artist.", fg=typer.colors.BRIGHT_BLACK)
+
     track_table = Table(title="Tracks added to playlist")
     track_table.add_column("#", justify="right", style="dim")
     track_table.add_column("Artist(s)")
     track_table.add_column("Track")
     track_table.add_column("Played", justify="right")
+    track_table.add_column("Score", justify="right")
     for i, track in enumerate(playlist.tracks, start=1):
         artists = ", ".join(track.artists)
-        track_table.add_row(str(i), artists, track.name, str(track.played_count))
+        score_str = str(track.score) if track.score is not None else "-"
+        track_table.add_row(str(i), artists, track.name, str(track.played_count), score_str)
     console.print(track_table)
 
     typer.secho(f"\n\nSuccessfully saved into playlist '{playlist.name}'! ✅", fg=typer.colors.GREEN)

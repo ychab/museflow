@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import UTC
 from datetime import datetime
 
@@ -7,8 +8,10 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNoTracksError
+from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.domain.types import PlaylistType
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -33,11 +36,25 @@ async def playlist_history(
         max_score=config.score_max,
         artist_name=config.artist_name,
         exclude_ids=exclude_ids,
-        order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
+        order=[(TrackOrderBy(config.sort_by.value), SortOrder.DESC)],
         limit=config.limit,
     )
     if not tracks:
         raise PlaylistNoTracksError()
+
+    if config.group_by_artists:
+        groups: dict[str, list[Track]] = defaultdict(list)
+        for track in tracks:
+            groups[track.primary_artist].append(track)
+
+        def artist_sort_key(group_tracks: list[Track]) -> float:
+            if config.sort_by == PlaylistHistoryOrderBy.SCORE:
+                scores = [t.score for t in group_tracks if t.score is not None]
+                return float(max(scores)) if scores else -1.0
+            return float(max(t.played_count for t in group_tracks))
+
+        sorted_groups = sorted(groups.values(), key=artist_sort_key, reverse=True)
+        tracks = [track for group in sorted_groups for track in group]
 
     playlist = await provider_library.create_playlist(
         name=f"[{__project_name__.capitalize()}] - History - {datetime.now(UTC).isoformat()}",

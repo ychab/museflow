@@ -43,12 +43,18 @@ class TrackOrderBy(StrEnum):
     PLAYED_AT_LAST = "played_at_last"
     PLAYED_AT_FIRST = "played_at_first"
     PLAYED_COUNT = "played_count"
+    SCORE = "score"
     RANDOM = "random"
 
     @property
     def nullable(self) -> bool:
         """True for nullable columns — NULLs are sorted last in both ASC and DESC."""
-        return self in (TrackOrderBy.PLAYED_AT_LAST, TrackOrderBy.PLAYED_AT_FIRST)
+        return self in (TrackOrderBy.PLAYED_AT_LAST, TrackOrderBy.PLAYED_AT_FIRST, TrackOrderBy.SCORE)
+
+
+class PlaylistHistoryOrderBy(StrEnum):
+    PLAYED_COUNT = "played_count"  # Sort by how many times the track was played
+    SCORE = "score"  # Sort by the track's rating score
 
 
 class SortOrder(StrEnum):

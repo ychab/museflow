@@ -6,6 +6,7 @@ from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.playlist_history import playlist_history
 from museflow.domain.entities.user import User
+from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.domain.types import TrackSource
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -98,3 +99,25 @@ class TestPlaylistHistoryUseCase:
         )
 
         assert [t.id for t in second_playlist.tracks] == [second.id]
+
+    async def test__sort_by_score__ordered_correctly(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=3)
+        high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=9)
+        mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=6)
+        unscored = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [high.id, mid.id, low.id, unscored.id]

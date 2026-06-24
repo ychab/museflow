@@ -162,6 +162,38 @@ class TestHistoryCommand:
         assert "Successfully saved into playlist 'History Playlist'!" in output
         assert f"Saved playlist ID: {playlist.id}" in output
 
+    def test__output__score_column_shown(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        track_scored = TrackFactory.build(score=8)
+        track_unscored = TrackFactory.build(score=None)
+        playlist = PlaylistFactory.build(tracks=[track_scored, track_unscored])
+        mock_history_logic.return_value = playlist
+
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert "Score" in output
+        assert "8" in output
+        assert "-" in output
+
+    def test__output__group_by_artists__header_shown(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        playlist = PlaylistFactory.build(tracks=[])
+        mock_history_logic.return_value = playlist
+
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--group-by-artists"])
+        assert result.exit_code == 0
+        assert "Tracks are grouped by primary artist." in clean_typer_text(result.stdout)
+
 
 @pytest.mark.usefixtures(
     "mock_get_db",
