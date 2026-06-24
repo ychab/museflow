@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- playlist history: add a --played-year to filter on the first or last played year the user listened the tracks? To make a compilation like "summer 2026". But what is the best strategy here: first or latest or both?
-
 - the optimal workflow could be slightly different
     => import history
     => rate history first (at least 300 tracks)

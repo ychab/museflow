@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 from typing import get_args
 
@@ -32,6 +33,13 @@ def parse_email(value: str) -> str:
         raise typer.BadParameter(e.errors()[0]["msg"]) from e
 
     return value
+
+
+def parse_date(value: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as e:
+        raise typer.BadParameter(f"Date must be in YYYY-MM-DD format, got '{value}'") from e
 
 
 def parse_log_handlers(values: list[str]) -> list[str]:

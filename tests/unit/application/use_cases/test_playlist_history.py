@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import date
 from unittest import mock
 
 import pytest
@@ -160,6 +161,35 @@ class TestPlaylistHistoryUseCase:
 
         name = mock_provider_library.create_playlist.call_args.kwargs["name"]
         assert re.fullmatch(r"\[Museflow\] - History - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00", name)
+
+    async def test__date_filters__forwarded_to_repository(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        mock_track_repository.get_list.return_value = []
+
+        with pytest.raises(PlaylistNoTracksError):
+            await playlist_history(
+                user=user,
+                config=PlaylistHistoryConfigInput(
+                    played_first_min=date(2025, 1, 1),
+                    played_first_max=date(2025, 12, 31),
+                    played_last_min=date(2026, 1, 1),
+                    played_last_max=date(2026, 12, 31),
+                ),
+                track_repository=mock_track_repository,
+                playlist_repository=mock_playlist_repository,
+                provider_library=mock_provider_library,
+            )
+
+        kwargs = mock_track_repository.get_list.call_args.kwargs
+        assert kwargs["played_first_min"] == date(2025, 1, 1)
+        assert kwargs["played_first_max"] == date(2025, 12, 31)
+        assert kwargs["played_last_min"] == date(2026, 1, 1)
+        assert kwargs["played_last_max"] == date(2026, 12, 31)
 
     async def test__sort_by_score__flat(
         self,

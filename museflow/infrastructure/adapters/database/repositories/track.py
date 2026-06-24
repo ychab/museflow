@@ -1,5 +1,6 @@
 import dataclasses
 import uuid
+from datetime import date
 from typing import Any
 
 from sqlalchemy import delete
@@ -36,6 +37,10 @@ class TrackSQLRepository(TrackRepository):
         source: TrackSource | None = None,
         unrated_only: bool = False,
         artist_name: str | None = None,
+        played_first_min: date | None = None,
+        played_first_max: date | None = None,
+        played_last_min: date | None = None,
+        played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
@@ -58,6 +63,14 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.score.is_(None))
         if artist_name is not None:
             stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
+        if played_first_min is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_first) >= played_first_min)
+        if played_first_max is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_first) <= played_first_max)
+        if played_last_min is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_last) >= played_last_min)
+        if played_last_max is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
         if exclude_ids:
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
 

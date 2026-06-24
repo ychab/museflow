@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import AsyncExitStack
+from datetime import date
 
 from pydantic import EmailStr
 
@@ -23,6 +24,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_li
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 console = Console()
@@ -38,6 +40,30 @@ def playlist_history(
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum track score (0-10)", min=0, max=10),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum track score (0-10)", min=0, max=10),
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
+    played_first_min: date | None = typer.Option(
+        None,
+        "--played-first-min",
+        help="Filter tracks first played on or after this date (YYYY-MM-DD)",
+        parser=parse_date,
+    ),
+    played_first_max: date | None = typer.Option(
+        None,
+        "--played-first-max",
+        help="Filter tracks first played on or before this date (YYYY-MM-DD)",
+        parser=parse_date,
+    ),
+    played_last_min: date | None = typer.Option(
+        None,
+        "--played-last-min",
+        help="Filter tracks last played on or after this date (YYYY-MM-DD)",
+        parser=parse_date,
+    ),
+    played_last_max: date | None = typer.Option(
+        None,
+        "--played-last-max",
+        help="Filter tracks last played on or before this date (YYYY-MM-DD)",
+        parser=parse_date,
+    ),
     duplicate: bool = typer.Option(
         False,
         "--duplicate",
@@ -52,6 +78,10 @@ def playlist_history(
     """Create a playlist from your history tracks, filtered and ordered by play count."""
     if score_min is not None and score_max is not None and score_min > score_max:
         raise typer.BadParameter("--score-min cannot be greater than --score-max")
+    if played_first_min is not None and played_first_max is not None and played_first_min > played_first_max:
+        raise typer.BadParameter("--played-first-min cannot be after --played-first-max")
+    if played_last_min is not None and played_last_max is not None and played_last_min > played_last_max:
+        raise typer.BadParameter("--played-last-min cannot be after --played-last-max")
 
     try:
         playlist = asyncio.run(
@@ -63,6 +93,10 @@ def playlist_history(
                     score_min=score_min,
                     score_max=score_max,
                     artist_name=artist,
+                    played_first_min=played_first_min,
+                    played_first_max=played_first_max,
+                    played_last_min=played_last_min,
+                    played_last_max=played_last_max,
                     allow_duplicate=duplicate,
                     group_by_artists=group_by_artists,
                     sort_by=sort,

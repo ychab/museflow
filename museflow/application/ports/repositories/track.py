@@ -1,6 +1,7 @@
 import uuid
 from abc import ABC
 from abc import abstractmethod
+from datetime import date
 
 from museflow.domain.entities.track import Track
 from museflow.domain.types import MusicProvider
@@ -23,6 +24,10 @@ class TrackRepository(ABC):
         source: TrackSource | None = None,
         unrated_only: bool = False,
         artist_name: str | None = None,
+        played_first_min: date | None = None,
+        played_first_max: date | None = None,
+        played_last_min: date | None = None,
+        played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
@@ -48,6 +53,10 @@ class TrackRepository(ABC):
             unrated_only: When True, only tracks with no score are returned.
             artist_name: When set, only tracks whose primary artist (first in the artists list)
                          matches this name (case-insensitive) are returned.
+            played_first_min: When set, only tracks first played on or after this date are returned.
+            played_first_max: When set, only tracks first played on or before this date are returned.
+            played_last_min: When set, only tracks last played on or after this date are returned.
+            played_last_max: When set, only tracks last played on or before this date are returned.
             exclude_ids: When set, tracks whose id is in this list are excluded.
 
         Returns:

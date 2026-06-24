@@ -105,6 +105,66 @@ class TestHistoryParserCommand:
         assert result.exit_code != 0
         assert "--score-min cannot be greater than --score-max" in clean_typer_text(result.output)
 
+    @pytest.mark.parametrize(
+        ("flag", "value"),
+        [
+            pytest.param("--played-first-min", "notadate", id="played_first_min__bad_format"),
+            pytest.param("--played-last-min", "2026/06/01", id="played_last_min__bad_format"),
+        ],
+    )
+    def test__date_option__invalid_format__fails(
+        self,
+        runner: CliRunner,
+        flag: str,
+        value: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", flag, value])
+        assert result.exit_code != 0
+        assert "Date must be in YYYY-MM-DD format" in clean_typer_text(result.output)
+
+    def test__played_first_min_after_max__fails(
+        self,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "playlist",
+                "history",
+                "--email",
+                "test@example.com",
+                "--played-first-min",
+                "2026-12-01",
+                "--played-first-max",
+                "2026-01-01",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "--played-first-min cannot be after --played-first-max" in clean_typer_text(result.output)
+
+    def test__played_last_min_after_max__fails(
+        self,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "playlist",
+                "history",
+                "--email",
+                "test@example.com",
+                "--played-last-min",
+                "2026-12-01",
+                "--played-last-max",
+                "2026-01-01",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "--played-last-min cannot be after --played-last-max" in clean_typer_text(result.output)
+
 
 class TestHistoryCommand:
     @pytest.fixture(autouse=True)

@@ -1,3 +1,7 @@
+from datetime import UTC
+from datetime import date
+from datetime import datetime
+
 import pytest
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
@@ -121,3 +125,77 @@ class TestPlaylistHistoryUseCase:
         )
 
         assert [t.id for t in playlist.tracks] == [high.id, mid.id, low.id, unscored.id]
+
+    async def test__filters_by_played_first_range(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        inside = await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=datetime(2025, 6, 15, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=datetime(2024, 3, 1, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=None,
+        )
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(
+                played_first_min=date(2025, 1, 1),
+                played_first_max=date(2025, 12, 31),
+                limit=20,
+            ),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [inside.id]
+
+    async def test__filters_by_played_last_range(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        inside = await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=datetime(2026, 7, 20, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=datetime(2025, 11, 5, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=None,
+        )
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(
+                played_last_min=date(2026, 6, 21),
+                played_last_max=date(2026, 9, 22),
+                limit=20,
+            ),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [inside.id]
