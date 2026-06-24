@@ -80,6 +80,19 @@ class TestHistoryParserCommand:
         assert result.exit_code != 0
         assert "Invalid value for '--limit': 0 is not in the range" in clean_typer_text(result.output)
 
+    def test__name_suffix__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["playlist", "history", "--email", "test@example.com", "--name-suffix", "My Mix"],
+        )
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.name_suffix == "My Mix"
+
     def test__score_min_greater_than_score_max__fails(
         self,
         runner: CliRunner,

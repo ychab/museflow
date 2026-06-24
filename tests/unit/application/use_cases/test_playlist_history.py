@@ -1,3 +1,4 @@
+import re
 import uuid
 from unittest import mock
 
@@ -115,6 +116,50 @@ class TestPlaylistHistoryUseCase:
 
         call_tracks = mock_provider_library.create_playlist.call_args.kwargs["tracks"]
         assert call_tracks == [track_b1, track_a1, track_a2, track_c1]
+
+    async def test__playlist_name__custom(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
+        playlist = mock_provider_library.create_playlist.return_value
+        mock_playlist_repository.save.return_value = playlist
+
+        await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(name_suffix="My Mix"),
+            track_repository=mock_track_repository,
+            playlist_repository=mock_playlist_repository,
+            provider_library=mock_provider_library,
+        )
+
+        name = mock_provider_library.create_playlist.call_args.kwargs["name"]
+        assert name == "[Museflow] - History - My Mix"
+
+    async def test__playlist_name__default__seconds_only(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
+        playlist = mock_provider_library.create_playlist.return_value
+        mock_playlist_repository.save.return_value = playlist
+
+        await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(),
+            track_repository=mock_track_repository,
+            playlist_repository=mock_playlist_repository,
+            provider_library=mock_provider_library,
+        )
+
+        name = mock_provider_library.create_playlist.call_args.kwargs["name"]
+        assert re.fullmatch(r"\[Museflow\] - History - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00", name)
 
     async def test__sort_by_score__flat(
         self,

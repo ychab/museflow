@@ -5,6 +5,7 @@ from museflow.domain.types import PlaylistHistoryOrderBy
 
 @dataclass(frozen=True, kw_only=True)
 class PlaylistHistoryConfigInput:
+    name_suffix: str | None = None
     score_min: int | None = None
     score_max: int | None = None
     artist_name: str | None = None

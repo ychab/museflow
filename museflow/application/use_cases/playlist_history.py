@@ -56,9 +56,15 @@ async def playlist_history(
         sorted_groups = sorted(groups.values(), key=artist_sort_key, reverse=True)
         tracks = [track for group in sorted_groups for track in group]
 
+    name_prefix = f"[{__project_name__.capitalize()}] - History"
+    name_suffix = (
+        config.name_suffix if config.name_suffix is not None else datetime.now(UTC).isoformat(timespec="seconds")
+    )
+
     playlist = await provider_library.create_playlist(
-        name=f"[{__project_name__.capitalize()}] - History - {datetime.now(UTC).isoformat()}",
+        name=f"{name_prefix} - {name_suffix}",
         type=PlaylistType.HISTORY,
         tracks=tracks,
     )
+
     return await playlist_repository.save(playlist)

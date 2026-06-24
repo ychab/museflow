@@ -32,6 +32,9 @@ console = Console()
 def playlist_history(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
+    name_suffix: str | None = typer.Option(
+        None, "--name-suffix", help="Custom name suffix for the playlist (replaces the timestamp)"
+    ),
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum track score (0-10)", min=0, max=10),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum track score (0-10)", min=0, max=10),
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
@@ -56,6 +59,7 @@ def playlist_history(
                 email=email,
                 provider=provider,
                 config=PlaylistHistoryConfigInput(
+                    name_suffix=name_suffix,
                     score_min=score_min,
                     score_max=score_max,
                     artist_name=artist,
