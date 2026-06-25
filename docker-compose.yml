@@ -1,5 +1,5 @@
 x-common-env: &common-env
-  DATABASE_URI: postgresql+asyncpg://${DATABASE_USER:-museflow}:${DATABASE_PASSWORD:-museflow}@db:${DATABASE_PORT:-5432}/${DATABASE_PATH:-museflow}
+  DATABASE_URI: postgresql+asyncpg://${DATABASE_USER:-museflow}:${DATABASE_PASSWORD:-museflow}@db:5432/${DATABASE_PATH:-museflow}
 
 services:
   db:
