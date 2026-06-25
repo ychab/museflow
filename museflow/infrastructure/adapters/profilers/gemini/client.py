@@ -22,6 +22,8 @@ from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.domain.types import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.types import TasteProfiler
 from museflow.domain.utils.genre import deduplicate_genre_dict
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
@@ -59,7 +61,10 @@ def _format_tracks(tracks: list[Track]) -> str:
         first = track.played_at_first.date() if track.played_at_first else "?"
         last = track.played_at_last.date() if track.played_at_last else "?"
         artists = " & ".join(track.artists)
-        lines.append(f"first:{first} | last:{last} | plays:{track.played_count} | {artists} - {track.name}")
+        score_part = f" | score:{track.score}" if track.score is not None else ""
+        lines.append(
+            f"first:{first} | last:{last} | plays:{track.played_count}{score_part} | {artists} - {track.name}"
+        )
 
     return "\n".join(lines)
 
@@ -220,6 +225,10 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "- rhythmic_complexity: Jazz/Math-rock/Polyrhythmic → high (~0.8); 4/4 Pop/EDM → low (~0.2-0.4)\n"
             "- atmospheric: Ambient/Shoegaze/Post-rock → high (~0.8-0.9); Punk/Trap → low (~0.1-0.2)\n"
             "- instrumentalness: Instrumental/Classical/Jazz → high (~0.8-0.9); Rap/Pop with lyrics → low (~0.05-0.2)\n"
+            f"\nTrack format: first=first listen date | last=last listen date | plays=total play count "
+            f"| score=explicit user rating ({DISCOVERY_TRACK_SCORE_MIN}=actively disliked, {DISCOVERY_TRACK_SCORE_MAX}=loved, absent=not yet rated). "
+            "Treat high-scored tracks as confirmed taste anchors; treat min-score tracks as anti-preferences; "
+            "infer preference from play count for unrated tracks.\n"
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )

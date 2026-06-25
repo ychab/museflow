@@ -45,6 +45,11 @@ def build(
         help="The profiler to use for building the taste profile",
     ),
     resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
+    rated_only: bool = typer.Option(
+        False,
+        "--rated-only/--no-rated-only",
+        help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
+    ),
 ) -> None:
     try:
         profile = asyncio.run(
@@ -52,9 +57,10 @@ def build(
                 email=email,
                 profiler=profiler,
                 name=name,
+                resume=resume,
+                rated_only=rated_only,
                 track_limit=track_limit,
                 batch_size=batch_size,
-                resume=resume,
             )
         )
     except UserNotFound as e:
@@ -90,6 +96,7 @@ async def build_logic(
     track_limit: int,
     batch_size: int,
     resume: bool,
+    rated_only: bool,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())
@@ -110,10 +117,11 @@ async def build_logic(
         )
         config = BuildTasteProfileConfigInput(
             name=name,
+            resume=resume,
+            rated_only=rated_only,
             track_limit=track_limit,
             batch_size=batch_size,
             throttling_sleep_seconds=app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS,
-            resume=resume,
         )
 
         return await use_case.build_profile(user=user, config=config)

@@ -34,9 +34,10 @@ class TestTasteBuildLogic:
             email=user.email,
             profiler=TasteProfiler.GEMINI,
             name="my-profile",
+            resume=False,
+            rated_only=False,
             track_limit=3000,
             batch_size=200,
-            resume=False,
         )
 
         assert profile == expected_profile

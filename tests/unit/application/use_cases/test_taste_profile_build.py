@@ -232,6 +232,25 @@ class TestBuildTasteProfileUseCase:
         with pytest.raises(TasteProfileNoSeedException):
             await use_case.build_profile(user=user, config=config)
 
+    async def test__rated_only__passes_min_score_to_get_list(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = []
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, rated_only=True)
+
+        with pytest.raises(TasteProfileNoSeedException):
+            await use_case.build_profile(user=user, config=config)
+
+        mock_track_repository.get_list.assert_called_once_with(
+            user_id=user.id,
+            order=mock.ANY,
+            limit=10,
+            min_score=0,
+        )
+
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__resume__checkpoint_found(
         self,

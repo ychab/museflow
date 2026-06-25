@@ -37,6 +37,7 @@ class BuildTasteProfileUseCase:
         # Select the most-listened tracks as seeds (best signal quality)
         tracks = await self._track_repository.get_list(
             user_id=user.id,
+            min_score=0 if config.rated_only else None,
             order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
             limit=config.track_limit,
         )

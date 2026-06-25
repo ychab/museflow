@@ -131,14 +131,18 @@ uv run museflow spotify connect --email user@example.com
 # 3. Import your full streaming history from Spotify's data export
 uv run museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
 
-# 4. Build your personal taste profile with AI analysis
+# 4. (Optional) Rate tracks from your history to enrich the taste profile
+uv run museflow playlist history --email user@example.com
+
+# 5. Build your personal taste profile with AI analysis
+#    If you rated tracks in step 4, add --rated-only to seed the profile exclusively from rated tracks
 uv run museflow taste build --email user@example.com --name my-profile
 
-# 5. Discover new music and generate a playlist
+# 6. Discover new music and generate a playlist
 uv run museflow playlist discover --email user@example.com
 ```
 
-Step 4 is optional but enriches the recommendations.
+Step 5 is optional but enriches the recommendations. Steps 4 and 5 work best together — rating tracks before building gives the AI an explicit preference signal (confirmed likes and dislikes) on top of behavioral play-count data.
 
 ## CLI User Guide
 
@@ -241,6 +245,7 @@ uv run museflow taste build --email <email> --name <name> [OPTIONS]
 *   `--batch-size`: Number of tracks sent per profiler batch (default: 200, max: 1000).
 *   `--profiler`: The profiler to use (default: `gemini`).
 *   `--resume` / `--no-resume`: Resume from last checkpoint if a previous build was interrupted (default: no resume).
+*   `--rated-only` / `--no-rated-only`: Restrict seed tracks to only those you have explicitly rated (score 0–10). Useful once you have rated a significant portion of your library (default: no restriction — all tracks are used, rated ones annotated with their score).
 
 Example: Build a taste profile for a user
 

@@ -8,3 +8,4 @@ class BuildTasteProfileConfigInput:
     batch_size: int = 400
     throttling_sleep_seconds: float = 0.0
     resume: bool = False
+    rated_only: bool = False

@@ -8,3 +8,4 @@ class BuildTasteProfileConfigInputFactory(DataclassFactory[BuildTasteProfileConf
 
     throttling_sleep_seconds = 0.0
     resume = False
+    rated_only = False

@@ -44,6 +44,26 @@ class TestTasteBuildParserCommand:
         # fmt: on
         assert result.exit_code == 0
 
+    def test__rated_only__passed_to_logic(
+        self,
+        mock_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        # fmt: off
+        runner.invoke(
+            app,
+            [
+                "taste",
+                "build",
+                "--email", "test@example.com",
+                "--name", "my-profile",
+                "--rated-only",
+            ],
+        )
+        # fmt: on
+        mock_build_logic.assert_called_once()
+        assert mock_build_logic.call_args.kwargs["rated_only"] is True
+
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
         [
@@ -271,4 +291,5 @@ class TestTasteBuildLogic:
                 track_limit=3000,
                 batch_size=200,
                 resume=False,
+                rated_only=False,
             )

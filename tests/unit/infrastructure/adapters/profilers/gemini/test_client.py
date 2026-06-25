@@ -16,6 +16,7 @@ from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.gemini.client import _format_tracks
 from museflow.infrastructure.adapters.profilers.gemini.client import _is_retryable_error
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
@@ -290,6 +291,20 @@ class TestGeminiTasteProfileAdapter:
         ):
             with pytest.raises(TasteProfilerRateLimitExceeded):
                 await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
+
+
+class TestFormatTracks:
+    def test__unrated_track__no_score_field(self) -> None:
+        track = TrackFactory.build(score=None)
+        assert "score:" not in _format_tracks([track])
+
+    def test__score_zero__shown(self) -> None:
+        track = TrackFactory.build(score=0)
+        assert "score:0" in _format_tracks([track])
+
+    def test__scored_track__shown(self) -> None:
+        track = TrackFactory.build(score=8)
+        assert "score:8" in _format_tracks([track])
 
 
 class TestIsRetryableError:
