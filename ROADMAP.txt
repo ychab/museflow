@@ -4,6 +4,22 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
+- looks like we have some duplicate in the history track no? check fingerprint? e.g:
+    => Ma meilleure amie => Vald (at least, I rate it twice)
+    => Chef - Caballero & JeanJass
+    => Booba - Drapeau noir
+    => PLK - Hier
+    => Booba - Petite fille
+    => Koba LaD - Pas de reine
+    => Vald - Désaccordé
+    => Kekra - Vréalité
+    => Zumbale Orquesta — Barranquillera de Puro Corazón
+    => Kekra - Liste
+
+- sometimes, the music doesn't exists anymore in the provider and we can't rate it with play... so we put 0 as a score
+
+- add command track complete to detect: genres and mood with AI?
+
 - command playlist delete should also (optionally) delete the remote playlist (provider)?
 
 - personnality inspection through the music history? Who are you based on your streaming history?

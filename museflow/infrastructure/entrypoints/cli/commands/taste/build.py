@@ -26,6 +26,16 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 def build(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
+    profiler: TasteProfiler = typer.Option(
+        default=TasteProfiler.GEMINI,
+        help="The profiler to use for building the taste profile",
+    ),
+    resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
+    rated_only: bool = typer.Option(
+        False,
+        "--rated-only/--no-rated-only",
+        help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
+    ),
     track_limit: int = typer.Option(
         3000,
         "--track-limit",
@@ -39,16 +49,6 @@ def build(
         help="Batch sizes for profiles",
         min=1,
         max=1000,
-    ),
-    profiler: TasteProfiler = typer.Option(
-        default=TasteProfiler.GEMINI,
-        help="The profiler to use for building the taste profile",
-    ),
-    resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
-    rated_only: bool = typer.Option(
-        False,
-        "--rated-only/--no-rated-only",
-        help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
     ),
 ) -> None:
     try:

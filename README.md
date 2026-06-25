@@ -132,7 +132,7 @@ uv run museflow spotify connect --email user@example.com
 uv run museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
 
 # 4. (Optional) Rate tracks from your history to enrich the taste profile
-uv run museflow playlist history --email user@example.com
+uv run museflow rate history --email user@example.com --play
 
 # 5. Build your personal taste profile with AI analysis
 #    If you rated tracks in step 4, add --rated-only to seed the profile exclusively from rated tracks
