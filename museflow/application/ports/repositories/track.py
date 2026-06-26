@@ -65,18 +65,12 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_known_identifiers(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider,
-        fingerprints: list[str],
-    ) -> TrackKnowIdentifiers:
+    async def get_known_identifiers(self, user_id: uuid.UUID, fingerprints: list[str]) -> TrackKnowIdentifiers:
         """
         Queries the database to find which of the provided fingerprints are already owned by the user.
 
         Args:
             user_id: The ID of the user whose known tracks are to be retrieved.
-            provider: The music provider to scope the lookup to.
             fingerprints: A list of fingerprints to filter on.
 
         Returns:
@@ -142,22 +136,26 @@ class TrackRepository(ABC):
             artist_name: When set, only tracks whose primary artist matches (case-insensitive) are deleted.
             track_name: When set, only tracks whose name matches (case-insensitive) are deleted.
             source: When set, only tracks whose source bit includes this flag are deleted.
-            provider: When set, only tracks from this provider are deleted.
+            provider: When set, removes the provider link from matching tracks. Tracks with no
+                      remaining provider links are fully deleted; others keep their other links.
 
         Returns:
-            The number of deleted tracks.
+            The number of fully deleted tracks.
         """
         ...
 
     @abstractmethod
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        """Deletes all tracks for a user + provider.
+        """Removes all provider links for the given provider from a user's tracks.
+
+        Tracks whose provider_links becomes empty after removal are fully deleted.
+        Tracks that still have other provider links are kept.
 
         Args:
-            user_id: The ID of the user whose tracks are to be deleted.
-            provider: A provider to filter on.
+            user_id: The ID of the user whose tracks are to be purged.
+            provider: The provider whose links to remove.
 
         Returns:
-            The number of deleted tracks.
+            The number of fully deleted tracks.
         """
         ...

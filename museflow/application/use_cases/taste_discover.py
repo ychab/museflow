@@ -26,6 +26,7 @@ from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.services.reconciler import Reconciler
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import PlaylistType
 from museflow.domain.types import TasteProfiler
 from museflow.domain.types import TrackSource
@@ -240,13 +241,17 @@ class DiscoverTasteUseCase:
             for t in tracks
         ]
         await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
+
         # Fetch back to get the actual DB UUIDs (needed for the join table FK)
+        discovery_spotify_ids = [
+            pid for t in discovery_tracks if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None
+        ]
         tracks_db = await self._track_repository.get_list(
             user_id=user.id,
-            provider_ids=[t.provider_id for t in discovery_tracks],
+            provider_ids=discovery_spotify_ids,
         )
-        provider_id_to_track = {t.provider_id: t for t in tracks_db}
-        tracks_with_ids = [provider_id_to_track[t.provider_id] for t in discovery_tracks]
+        tracks_db_by_pid = {pid: t for t in tracks_db if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None}
+        tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
 
         playlist = await self._provider_library.create_playlist(
             name=f"[{__project_name__.capitalize()}] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat()}",

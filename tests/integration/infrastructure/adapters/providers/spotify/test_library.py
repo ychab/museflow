@@ -15,7 +15,11 @@ class TestSpotifyLibrary:
     @pytest.fixture
     async def playlist_tracks(self) -> list[Track]:
         return [
-            (await TrackModelFactory.create_async(provider_id=track_id)).to_entity()
+            (
+                await TrackModelFactory.create_async(
+                    provider_links=[{"provider": MusicProvider.SPOTIFY.value, "provider_id": track_id}]
+                )
+            ).to_entity()
             for track_id in ["7J5pB49l9ycy9ImB6D9hu0", "1Fp4njyRHJYyMTKP899c0q", "7eOSOc9z6gcsGBznsg5mk3"]
         ]
 
@@ -29,8 +33,8 @@ class TestSpotifyLibrary:
         assert track_first.name == "Mi Pueblo"
         assert len(track_first.artists) == 1
         assert track_first.artists[0] == "Grupo Niche"
-        assert track_first.provider == MusicProvider.SPOTIFY
-        assert track_first.provider_id == "30xocklvViCtxktihAEZM8"
+        assert track_first.provider_links[0].provider == MusicProvider.SPOTIFY
+        assert track_first.get_provider_id(MusicProvider.SPOTIFY) == "30xocklvViCtxktihAEZM8"
         assert track_first.played_at_last is None
 
         track_last = tracks[-1]
@@ -39,8 +43,8 @@ class TestSpotifyLibrary:
         assert track_last.name == "Mi Pueblo"
         assert len(track_last.artists) == 1
         assert track_last.artists[0] == "Grupo Niche"
-        assert track_last.provider == MusicProvider.SPOTIFY
-        assert track_last.provider_id == "0K81HUG9YhPp6khuUEAH9g"
+        assert track_last.provider_links[0].provider == MusicProvider.SPOTIFY
+        assert track_last.get_provider_id(MusicProvider.SPOTIFY) == "0K81HUG9YhPp6khuUEAH9g"
         assert track_last.played_at_last is None
 
     async def test__search__max_pages(

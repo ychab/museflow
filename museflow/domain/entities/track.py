@@ -2,17 +2,26 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 
-from museflow.domain.entities.base import BaseProviderEntity
+from museflow.domain.entities.base import BaseEntity
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
 
 
 @dataclass(frozen=True, kw_only=True)
-class Track(BaseProviderEntity):
+class ProviderLink:
+    provider: MusicProvider
+    provider_id: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class Track(BaseEntity):
     artists: list[str] = field(default_factory=list)
     album_name: str | None = None
 
     fingerprint: str = ""
+
+    provider_links: list[ProviderLink] = field(default_factory=list)
 
     played_at_first: datetime | None = None
     played_at_last: datetime | None = None
@@ -25,14 +34,17 @@ class Track(BaseProviderEntity):
     def primary_artist(self) -> str:
         return self.artists[0]
 
+    def get_provider_id(self, provider: MusicProvider) -> str | None:
+        return next((link.provider_id for link in self.provider_links if link.provider == provider), None)
+
     def __str__(self) -> str:
         return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")
 
     def __post_init__(self) -> None:
         if not self.name:
             raise ValueError("Track.name must not be empty")
-        if not self.provider_id:
-            raise ValueError("Track.provider_id must not be empty")
+        if not self.provider_links:
+            raise ValueError("Track must have at least one provider link")
         if not self.artists:
             raise ValueError("Track must have at least one artist")
 

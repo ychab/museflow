@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import TypedDict
 
 from sqlalchemy import DateTime
-from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
-from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
@@ -12,6 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
+from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track as TrackEntity
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
@@ -20,13 +20,15 @@ from museflow.infrastructure.adapters.database.models.base import DatetimeTrackM
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 
 
+class ProviderLinkDict(TypedDict):
+    provider: str  # MusicProvider str value
+    provider_id: str
+
+
 class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_track"
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "provider", "fingerprint", name="uq_museflow_track_user_provider_fingerprint"),
-        Index("ix_museflow_track_user_provider", "user_id", "provider"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_museflow_track_user_fingerprint"),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("museflow_user.id", ondelete="CASCADE"),
@@ -37,8 +39,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    provider: Mapped[MusicProvider] = mapped_column(Enum(MusicProvider), nullable=False, sort_order=990)
-    provider_id: Mapped[str] = mapped_column(String(512), nullable=False, sort_order=991)
+    provider_links: Mapped[list[ProviderLinkDict]] = mapped_column(JSONB, nullable=False, default_factory=list)
 
     artists: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default_factory=list)
     album_name: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None)
@@ -52,13 +53,34 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     source: Mapped[int] = mapped_column(Integer, nullable=False, default=int(TrackSource.HISTORY))
     score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
+    @classmethod
+    def from_entity(cls, entity: TrackEntity) -> "Track":
+        return cls(
+            id=entity.id,
+            user_id=entity.user_id,
+            name=entity.name,
+            provider_links=[
+                {"provider": link.provider.value, "provider_id": link.provider_id} for link in entity.provider_links
+            ],
+            artists=entity.artists,
+            album_name=entity.album_name,
+            fingerprint=entity.fingerprint,
+            played_at_first=entity.played_at_first,
+            played_at_last=entity.played_at_last,
+            played_count=entity.played_count,
+            source=int(entity.source),
+            score=entity.score,
+        )
+
     def to_entity(self) -> TrackEntity:
         return TrackEntity(
             id=self.id,
-            provider=self.provider,
             user_id=self.user_id,
-            provider_id=self.provider_id,
             name=self.name,
+            provider_links=[
+                ProviderLink(provider=MusicProvider(link["provider"]), provider_id=link["provider_id"])
+                for link in self.provider_links
+            ],
             artists=self.artists,
             album_name=self.album_name,
             fingerprint=self.fingerprint,

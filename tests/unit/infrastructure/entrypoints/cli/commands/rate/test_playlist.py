@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -350,7 +351,7 @@ class TestRatePlaylistLogic:
 
         await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
-        mock_provider_library.play_track.assert_awaited_once_with(track.provider_id)
+        mock_provider_library.play_track.assert_awaited_once_with(track.get_provider_id(MusicProvider.SPOTIFY))
 
     async def test__play__no_auth_token__aborts(
         self,
@@ -434,4 +435,31 @@ class TestRatePlaylistLogic:
         await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         assert mock_provider_library.play_track.await_count == 2
+        mock_track_repository.rate.assert_not_awaited()
+
+    async def test__play__no_provider_id_for_track__skips_play(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+    ) -> None:
+        track = mock.MagicMock(spec=Track)
+        track.get_provider_id.return_value = None
+        track.artists = ["Artist A"]
+        track.name = "Test Song"
+        track.score = None
+        track.id = uuid.uuid4()
+        track.primary_artist = "Artist A"
+        playlist = PlaylistFactory.build(user_id=user.id, tracks=[track])
+        mock_user_repository.get_by_email.return_value = user
+        mock_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.return_value = "s"
+
+        await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+
+        mock_provider_library.play_track.assert_not_awaited()
         mock_track_repository.rate.assert_not_awaited()

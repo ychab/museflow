@@ -7,11 +7,14 @@ from museflow.domain.types import MusicProvider
 
 
 @dataclass(frozen=True, kw_only=True)
-class BaseProviderEntity(ABC):
+class BaseEntity(ABC):
     id: uuid.UUID = field(default_factory=uuid.uuid4)
     user_id: uuid.UUID
 
     name: str
 
+
+@dataclass(frozen=True, kw_only=True)
+class BaseProviderEntity(BaseEntity):
     provider: MusicProvider = MusicProvider.SPOTIFY
     provider_id: str

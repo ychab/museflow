@@ -66,7 +66,6 @@ async def filter_known_tracks(
         return []
     known_identifiers = await track_repository.get_known_identifiers(
         user_id=user.id,
-        provider=tracks_scored[0].track.provider,
         fingerprints=[ts.track.fingerprint for ts in tracks_scored],
     )
 

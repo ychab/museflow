@@ -17,8 +17,9 @@ class TrackModelFactory(BaseModelFactory[Track]):
     __model__ = Track
 
     name = Use(BaseModelFactory.__faker__.name)
-    provider = MusicProvider.SPOTIFY
-    provider_id = Use(BaseModelFactory.__faker__.uuid4)
+    provider_links = Use(
+        lambda: [{"provider": MusicProvider.SPOTIFY.value, "provider_id": str(BaseModelFactory.__faker__.uuid4())}]
+    )
 
     artists = Use(lambda: [BaseModelFactory.__faker__.name()])
     album_name = Use(
@@ -42,17 +43,17 @@ class TrackModelFactory(BaseModelFactory[Track]):
         return cast(list[Track], await super().create_batch_async(size=size, **kwargs))
 
     @classmethod
-    async def get_or_create(cls, user_id: uuid.UUID, provider_id: str, **kwargs: Any) -> tuple[Track, bool]:
-        if not user_id or not provider_id:
-            raise ValueError("You must provide 'user_id' and 'provider_id' for uniqueness.")
+    async def get_or_create(cls, user_id: uuid.UUID, fingerprint: str, **kwargs: Any) -> tuple[Track, bool]:
+        if not user_id or not fingerprint:
+            raise ValueError("You must provide 'user_id' and 'fingerprint' for uniqueness.")
 
         session = cls.__async_session__
-        stmt = select(cls.__model__).filter_by(user_id=user_id, provider_id=provider_id)
+        stmt = select(cls.__model__).filter_by(user_id=user_id, fingerprint=fingerprint)
         result = await session.execute(stmt)  # type: ignore[union-attr]
         instance = result.scalar_one_or_none()
 
         if instance:
             return instance, False
 
-        instance = await cls.create_async(user_id=user_id, provider_id=provider_id, **kwargs)
+        instance = await cls.create_async(user_id=user_id, fingerprint=fingerprint, **kwargs)
         return instance, True

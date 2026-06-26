@@ -16,6 +16,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.exceptions import ProviderPremiumRequiredException
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
@@ -136,7 +137,11 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         spotify_playlist = SpotifyPlaylist.model_validate(data)
 
         # Then, insert the playlist tracks in batches (Spotify caps this endpoint at 100 URIs per call).
-        all_uris = [f"spotify:track:{track.provider_id}" for track in tracks]
+        all_uris = [
+            f"spotify:track:{pid}"
+            for track in tracks
+            if (pid := track.get_provider_id(MusicProvider.SPOTIFY)) is not None
+        ]
         for batch in itertools.batched(all_uris, SPOTIFY_PLAYLIST_ITEMS_LIMIT, strict=False):
             data = await self._execute_request(
                 method="POST",

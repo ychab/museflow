@@ -2,8 +2,10 @@ import uuid
 
 import pytest
 
+from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
+from museflow.domain.types import MusicProvider
 
 
 class TestTrack:
@@ -11,7 +13,7 @@ class TestTrack:
         track = Track(
             user_id=uuid.uuid4(),
             name="foo",
-            provider_id=str(uuid.uuid4()),
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=str(uuid.uuid4()))],
             artists=["bar"],
             fingerprint="baz",
         )
@@ -21,7 +23,7 @@ class TestTrack:
         track = Track(
             user_id=uuid.uuid4(),
             name="foo",
-            provider_id=str(uuid.uuid4()),
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=str(uuid.uuid4()))],
             artists=["foo"],
         )
         assert track.fingerprint != ""
@@ -30,28 +32,38 @@ class TestTrack:
         track_single = Track(
             user_id=uuid.uuid4(),
             name="Song",
-            provider_id="id1",
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="id1")],
             artists=["Main Artist"],
         )
         track_feat = Track(
             user_id=uuid.uuid4(),
             name="Song",
-            provider_id="id2",
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="id2")],
             artists=["Main Artist", "Featured Artist"],
         )
         assert track_single.fingerprint == track_feat.fingerprint
 
     def test__name__none(self) -> None:
         with pytest.raises(ValueError, match="Track.name must not be empty"):
-            Track(user_id=uuid.uuid4(), name="", provider_id="spotify:track:123", artists=["Queen"])
+            Track(
+                user_id=uuid.uuid4(),
+                name="",
+                provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="spotify:track:123")],
+                artists=["Queen"],
+            )
 
-    def test__provider_id__none(self) -> None:
-        with pytest.raises(ValueError, match="Track.provider_id must not be empty"):
-            Track(user_id=uuid.uuid4(), name="Bohemian Rhapsody", provider_id="", artists=["Queen"])
+    def test__provider_links__empty(self) -> None:
+        with pytest.raises(ValueError, match="Track must have at least one provider link"):
+            Track(user_id=uuid.uuid4(), name="Bohemian Rhapsody", provider_links=[], artists=["Queen"])
 
     def test__artists__none(self) -> None:
         with pytest.raises(ValueError, match="Track must have at least one artist"):
-            Track(user_id=uuid.uuid4(), name="Bohemian Rhapsody", provider_id="spotify:track:123", artists=[])
+            Track(
+                user_id=uuid.uuid4(),
+                name="Bohemian Rhapsody",
+                provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="spotify:track:123")],
+                artists=[],
+            )
 
 
 class TestTrackSuggested:

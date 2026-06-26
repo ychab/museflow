@@ -72,7 +72,7 @@ class TestRateHistoryLogic:
         with mock.patch.object(SpotifyLibraryAdapter, "play_track", new_callable=mock.AsyncMock) as mock_play:
             await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
-        mock_play.assert_awaited_once_with(track_db.provider_id)
+        mock_play.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()

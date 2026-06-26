@@ -96,14 +96,14 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
         assert len(upserted) == 2
-        upserted_by_id = {t.provider_id: t for t in upserted}
+        upserted_by_id = {t.get_provider_id(MusicProvider.SPOTIFY): t for t in upserted}
 
         track1 = upserted_by_id["track1"]
         assert track1.name == "Song Name"
         assert track1.artists == ["Artist Name"]
         assert track1.album_name == "Album Name"
         assert track1.user_id == user.id
-        assert track1.provider == MusicProvider.SPOTIFY
+        assert track1.provider_links[0].provider == MusicProvider.SPOTIFY
 
     async def test__filter__already_known(
         self,
@@ -135,7 +135,6 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert report.tracks_played_at_updated == 2
         assert report.tracks_created == 0
         get_known_call = mock_track_repository.get_known_identifiers.call_args
-        assert get_known_call.kwargs["provider"] == MusicProvider.SPOTIFY
         assert set(get_known_call.kwargs["fingerprints"]) == {fp1, fp2}
 
     async def test__purge__calls_repository(
@@ -287,7 +286,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
-        upserted_by_id = {t.provider_id: t for t in upserted}
+        upserted_by_id = {t.get_provider_id(MusicProvider.SPOTIFY): t for t in upserted}
 
         assert upserted_by_id["track_1"].played_at_last == datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC)
         assert upserted_by_id["track_2"].played_at_last == datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC)
@@ -375,6 +374,6 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert report.tracks_created == 0
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
-        upserted_by_id = {t.provider_id: t for t in upserted}
+        upserted_by_id = {t.get_provider_id(MusicProvider.SPOTIFY): t for t in upserted}
         assert upserted_by_id["track1"].played_at_last == datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC)
         assert upserted_by_id["track2"].played_at_last == datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC)

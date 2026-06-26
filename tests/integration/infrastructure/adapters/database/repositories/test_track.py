@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import TrackNotFoundError
@@ -32,18 +33,17 @@ class TestTrackSQLRepository:
         tracks_db = await TrackModelFactory.create_batch_async(
             size=10,
             user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
         )
         return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     async def tracks_other(self) -> list[Track]:
-        tracks_db = await TrackModelFactory.create_batch_async(size=2, provider=MusicProvider.SPOTIFY)
+        tracks_db = await TrackModelFactory.create_batch_async(size=2)
         return [track_db.to_entity() for track_db in tracks_db]
 
     @pytest.fixture
     def tracks_create(self, user: User) -> list[Track]:
-        return TrackFactory.batch(size=10, user_id=user.id, provider=MusicProvider.SPOTIFY)
+        return TrackFactory.batch(size=10, user_id=user.id)
 
     @pytest.fixture
     def tracks_update(self, tracks: list[Track]) -> list[Track]:
@@ -53,7 +53,7 @@ class TestTrackSQLRepository:
     def tracks_mix(self, user: User, tracks: list[Track]) -> list[Track]:
         return [
             # 5 created
-            *TrackFactory.batch(size=5, user_id=user.id, provider=MusicProvider.SPOTIFY),
+            *TrackFactory.batch(size=5, user_id=user.id),
             # 5 updated
             *[dataclasses.replace(track, artists=["SCH"]) for track in tracks[:5]],
         ]
@@ -86,7 +86,7 @@ class TestTrackSQLRepository:
 
         assert len(track_list) == len(tracks)
         assert {t.id for t in track_list} == {t.id for t in tracks}
-        assert set([t.provider for t in track_list]) == {MusicProvider.SPOTIFY}
+        assert all(any(link.provider == MusicProvider.SPOTIFY for link in t.provider_links) for t in track_list)
 
     @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM and not o.nullable])
     @pytest.mark.parametrize("sort_order", list(SortOrder))
@@ -177,27 +177,29 @@ class TestTrackSQLRepository:
         track_list = await track_repository.get_list(user.id, offset=offset, limit=limit)
 
         assert len(track_list) == len(tracks_expected)
-        assert set([t.provider_id for t in track_list]).issubset([t.provider_id for t in tracks])
-        assert sorted([t.provider_id for t in track_list]) == sorted([str(t.provider_id) for t in tracks_expected])
+        assert set([t.provider_links[0].provider_id for t in track_list]).issubset(
+            [t.provider_links[0].provider_id for t in tracks]
+        )
+        assert sorted([t.provider_links[0].provider_id for t in track_list]) == sorted(
+            [t.provider_links[0].provider_id for t in tracks_expected]
+        )
         assert set([t.user_id for t in track_list]) == {user.id}
 
     async def test__get_known_identifiers__none(self, user: User, track_repository: TrackRepository) -> None:
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
             fingerprints=[],
         )
         assert not known_identifiers.fingerprints
 
     async def test__get_known_identifiers__fingerprint(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="foo")
-        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="bar")
-        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="baz")
-        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY, fingerprint="bar")  # Another user
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="foo")
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="bar")
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint="baz")
+        await TrackModelFactory.create_async(fingerprint="bar")  # Another user
 
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
             fingerprints=["foo", "bar"],
         )
 
@@ -223,7 +225,9 @@ class TestTrackSQLRepository:
 
         assert len(tracks_db) == len(track_ids)
         assert set([t.user_id for t in tracks_db]) == {user.id}
-        assert sorted([t.provider_id for t in tracks_db]) == sorted([str(t.provider_id) for t in tracks_create])
+        assert sorted([t.provider_links[0]["provider_id"] for t in tracks_db]) == sorted(
+            [t.provider_links[0].provider_id for t in tracks_create]
+        )
 
     async def test__bulk_upsert__update(
         self,
@@ -270,7 +274,9 @@ class TestTrackSQLRepository:
         assert len(tracks_db) == len(tracks_mix)
         assert set([t.user_id for t in tracks_db]) == {user.id}
 
-        assert sorted([t.provider_id for t in tracks_db[:5]]) == sorted([str(t.provider_id) for t in tracks_mix[:5]])
+        assert sorted([t.provider_links[0]["provider_id"] for t in tracks_db[:5]]) == sorted(
+            [t.provider_links[0].provider_id for t in tracks_mix[:5]]
+        )
         artists = [track_db.artists[0] for track_db in tracks_db[5:]]
         expected_artists = ["SCH" for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
@@ -343,16 +349,16 @@ class TestTrackSQLRepository:
         async_session_db: AsyncSession,
     ) -> None:
         """Importing the same song via two different Spotify IDs (e.g. single vs album) across
-        two separate import runs collapses into one row; provider_id from the higher played_count wins."""
+        two separate import runs collapses into one DB row; provider_links are accumulated (both IDs kept)
+        and played_count is replaced with the latest value."""
         first = TrackFactory.build(
             user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
-            provider_id="single_version",
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="single_version")],
             played_count=1,
         )
         second = dataclasses.replace(
             first,
-            provider_id="album_version",
+            provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="album_version")],
             played_count=5,
         )
 
@@ -368,7 +374,9 @@ class TestTrackSQLRepository:
         )
         rows = (await async_session_db.execute(stmt)).scalars().all()
         assert len(rows) == 1
-        assert rows[0].provider_id == "album_version"
+        provider_ids = {link["provider_id"] for link in rows[0].provider_links}
+        assert "single_version" in provider_ids
+        assert "album_version" in provider_ids
         assert rows[0].played_count == 5
 
     async def test__purge(
@@ -382,14 +390,7 @@ class TestTrackSQLRepository:
         count = await track_repository.purge(user.id, provider=MusicProvider.SPOTIFY)
         assert count == len(tracks)
 
-        stmt = (
-            select(func.count())
-            .select_from(TrackModel)
-            .where(
-                TrackModel.user_id == user.id,
-                TrackModel.provider == MusicProvider.SPOTIFY,
-            )
-        )
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
         results = await async_session_db.execute(stmt)
         assert results.scalar() == 0
 
@@ -616,7 +617,7 @@ class TestTrackSQLRepository:
         user: User,
         track_repository: TrackRepository,
     ) -> None:
-        spotify_db = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        spotify_db = await TrackModelFactory.create_async(user_id=user.id)
 
         count = await track_repository.delete(user_id=user.id, provider=MusicProvider.SPOTIFY)
 

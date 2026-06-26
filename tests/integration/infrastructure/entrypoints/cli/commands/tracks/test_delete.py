@@ -48,7 +48,7 @@ class TestDeleteLogic:
         assert remaining.no_tracks is True
 
     async def test__nominal__by_provider(self, user: User) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], provider=MusicProvider.SPOTIFY)
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
 
         result = await delete_logic(
             email=user.email,

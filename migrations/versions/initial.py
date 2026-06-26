@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 85722916b318
+Revision ID: 5b0bc610b671
 Revises:
-Create Date: 2026-06-25 23:00:27.364864
+Create Date: 2026-06-26 12:05:45.035339
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '85722916b318'
+revision: str = '5b0bc610b671'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -101,6 +101,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('provider_links', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('artists', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('album_name', sa.String(length=512), nullable=True),
     sa.Column('fingerprint', sa.String(length=512), nullable=False),
@@ -109,17 +110,14 @@ def upgrade() -> None:
     sa.Column('played_count', sa.Integer(), nullable=False),
     sa.Column('source', sa.Integer(), nullable=False),
     sa.Column('score', sa.Integer(), nullable=True),
-    sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
-    sa.Column('provider_id', sa.String(length=512), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'provider', 'fingerprint', name='uq_museflow_track_user_provider_fingerprint')
+    sa.UniqueConstraint('user_id', 'fingerprint', name='uq_museflow_track_user_fingerprint')
     )
     op.create_index(op.f('ix_museflow_track_fingerprint'), 'museflow_track', ['fingerprint'], unique=False)
-    op.create_index(op.f('ix_museflow_track_user_id'), 'museflow_track', ['user_id'], unique=False)
-    op.create_index('ix_museflow_track_user_provider', 'museflow_track', ['user_id', 'provider'], unique=False)
+    op.create_index('ix_museflow_track_user_id', 'museflow_track', ['user_id'], unique=False)
     op.create_table('museflow_playlist',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -161,8 +159,7 @@ def downgrade() -> None:
     op.drop_table('museflow_playlist_track')
     op.drop_index(op.f('ix_museflow_playlist_user_id'), table_name='museflow_playlist')
     op.drop_table('museflow_playlist')
-    op.drop_index('ix_museflow_track_user_provider', table_name='museflow_track')
-    op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
+    op.drop_index('ix_museflow_track_user_id', table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_fingerprint'), table_name='museflow_track')
     op.drop_table('museflow_track')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')

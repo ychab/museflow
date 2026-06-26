@@ -94,7 +94,6 @@ class TestImportStreamingHistorySpotifyUseCase:
         tracks = await TrackModelFactory.create_batch_async(
             size=3,
             user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
         )
         track_ids = [track.id for track in tracks]
 
@@ -143,8 +142,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         for provider_id, fingerprint in sample_fingerprints.items():
             await TrackModelFactory.create_async(
                 user_id=user.id,
-                provider=MusicProvider.SPOTIFY,
-                provider_id=provider_id,
+                provider_links=[{"provider": MusicProvider.SPOTIFY.value, "provider_id": provider_id}],
                 fingerprint=fingerprint,
                 played_at_last=old_played_at,
             )
@@ -166,7 +164,7 @@ class TestImportStreamingHistorySpotifyUseCase:
                 TrackModel.fingerprint.in_(list(sample_fingerprints.values())),
             )
         )
-        tracks_by_provider_id = {t.provider_id: t for t in results.scalars().all()}
+        tracks_by_provider_id = {t.provider_links[0]["provider_id"]: t for t in results.scalars().all()}
         for track_id, expected in expected_played_at.items():
             assert tracks_by_provider_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"
 

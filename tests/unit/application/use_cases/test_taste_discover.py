@@ -11,6 +11,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
+from museflow.domain.types import MusicProvider
 from museflow.domain.types import TasteProfiler
 from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -42,7 +43,7 @@ class TestDiscoverTasteUseCase:
         ) -> list[Track]:
             if provider_ids is None:
                 return list(upserted)
-            return [t for t in upserted if t.provider_id in provider_ids]
+            return [t for t in upserted if t.get_provider_id(MusicProvider.SPOTIFY) in provider_ids]
 
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
         mock_track_repository.get_list.side_effect = _get_list

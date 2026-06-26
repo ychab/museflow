@@ -140,17 +140,19 @@ async def rate_history_logic(
         blacklist_artist_names: list[str] = []
 
         for i, track in enumerate(tracks):
-            if provider_library is not None:
-                try:
-                    await provider_library.play_track(track.provider_id)
-                except ProviderNoActiveDeviceException:
-                    typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
-                    input("Start playback on your device and press Enter to retry...")
+            if provider_library is not None and provider is not None:
+                track_provider_id = track.get_provider_id(provider)
+                if track_provider_id is not None:
                     try:
-                        await provider_library.play_track(track.provider_id)
+                        await provider_library.play_track(track_provider_id)
                     except ProviderNoActiveDeviceException:
-                        typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
-                        break
+                        typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
+                        input("Start playback on your device and press Enter to retry...")
+                        try:
+                            await provider_library.play_track(track_provider_id)
+                        except ProviderNoActiveDeviceException:
+                            typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
+                            break
 
             artists_display = ", ".join(track.artists)
             playing_indicator = " ▶ Playing..." if provider is not None else ""

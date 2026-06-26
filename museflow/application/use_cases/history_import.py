@@ -6,6 +6,7 @@ from museflow.application.inputs.history import StreamingHistoryEntry
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
@@ -98,7 +99,6 @@ class ImportStreamingHistoryUseCase:
         if unique_fingerprints:
             known_identifiers = await self._track_repository.get_known_identifiers(
                 user_id=user.id,
-                provider=MusicProvider.SPOTIFY,
                 fingerprints=list(unique_fingerprints),
             )
             known_fingerprints = known_identifiers.fingerprints
@@ -111,8 +111,9 @@ class ImportStreamingHistoryUseCase:
             updated_tracks = [
                 Track(
                     user_id=user.id,
-                    provider=MusicProvider.SPOTIFY,
-                    provider_id=track_metadata[fp].provider_id,
+                    provider_links=[
+                        ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=track_metadata[fp].provider_id)
+                    ],
                     name=track_metadata[fp].name,
                     artists=[track_metadata[fp].artist],
                     album_name=track_metadata[fp].album_name,
@@ -136,8 +137,9 @@ class ImportStreamingHistoryUseCase:
             chunk_tracks = [
                 Track(
                     user_id=user.id,
-                    provider=MusicProvider.SPOTIFY,
-                    provider_id=track_metadata[fp].provider_id,
+                    provider_links=[
+                        ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=track_metadata[fp].provider_id)
+                    ],
                     name=track_metadata[fp].name,
                     artists=[track_metadata[fp].artist],
                     album_name=track_metadata[fp].album_name,

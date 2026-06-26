@@ -3,7 +3,6 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import case
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
@@ -51,9 +50,19 @@ class TrackSQLRepository(TrackRepository):
 
         # Filtering
         if provider is not None:
-            stmt = stmt.where(TrackModel.provider == provider)
+            stmt = stmt.where(
+                text(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+                    "WHERE elem->>'provider' = :provider)"
+                ).bindparams(provider=provider.value)
+            )
         if provider_ids is not None:
-            stmt = stmt.where(TrackModel.provider_id.in_(provider_ids))
+            stmt = stmt.where(
+                text(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+                    "WHERE elem->>'provider_id' = ANY(:provider_ids))"
+                ).bindparams(provider_ids=provider_ids)
+            )
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
         if max_score is not None:
@@ -106,12 +115,10 @@ class TrackSQLRepository(TrackRepository):
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
-        provider: MusicProvider,
         fingerprints: list[str],
     ) -> TrackKnowIdentifiers:
         stmt = select(TrackModel.fingerprint).where(
             TrackModel.user_id == user_id,
-            TrackModel.provider == provider,
             TrackModel.fingerprint.in_(fingerprints),
         )
 
@@ -124,7 +131,7 @@ class TrackSQLRepository(TrackRepository):
         track_ids: list[uuid.UUID] = []
         created_count: int = 0
 
-        index_elements: list[str] = ["user_id", "provider", "fingerprint"]
+        index_elements: list[str] = ["user_id", "fingerprint"]
         index_excluded: list[str] = ["id"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
@@ -151,11 +158,8 @@ class TrackSQLRepository(TrackRepository):
                         if key == "source"
                         else func.coalesce(getattr(TrackModel, key), excluded[key])
                         if key == "score"
-                        else case(
-                            (excluded["played_count"] > TrackModel.played_count, excluded[key]),
-                            else_=getattr(TrackModel, key),
-                        )
-                        if key == "provider_id"
+                        else TrackModel.provider_links.op("||")(excluded[key])
+                        if key == "provider_links"
                         else excluded[key]
                     )
                     for key in tracks_chunk[0]
@@ -210,6 +214,9 @@ class TrackSQLRepository(TrackRepository):
         source: TrackSource | None = None,
         provider: MusicProvider | None = None,
     ) -> int:
+        if provider is not None:
+            return await self._strip_provider_and_delete_empty(user_id=user_id, provider=provider)
+
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
 
         if artist_name is not None:
@@ -218,14 +225,38 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(func.lower(TrackModel.name) == track_name.lower())
         if source is not None:
             stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
-        if provider is not None:
-            stmt = stmt.where(TrackModel.provider == provider)
 
         result = await self.session.execute(stmt)
         await self.session.commit()
         return int(result.rowcount)  # type: ignore
 
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.provider == provider)
-        result = await self.session.execute(stmt)
+        return await self._strip_provider_and_delete_empty(user_id=user_id, provider=provider)
+
+    async def _strip_provider_and_delete_empty(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
+        # Step 1: Remove provider link from all tracks that have it
+        await self.session.execute(
+            text("""
+                UPDATE museflow_track
+                SET provider_links = (
+                    SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+                    FROM jsonb_array_elements(provider_links) AS elem
+                    WHERE elem->>'provider' != :provider
+                )
+                WHERE user_id = :user_id
+                  AND EXISTS (
+                      SELECT 1 FROM jsonb_array_elements(provider_links) AS elem
+                      WHERE elem->>'provider' = :provider
+                  )
+            """).bindparams(user_id=user_id, provider=provider.value)
+        )
+
+        # Step 2: Delete tracks now left with no provider links
+        delete_stmt = delete(TrackModel).where(
+            TrackModel.user_id == user_id,
+            func.jsonb_array_length(TrackModel.provider_links) == 0,
+        )
+        result = await self.session.execute(delete_stmt)
+
+        await self.session.commit()
         return int(result.rowcount)  # type: ignore
