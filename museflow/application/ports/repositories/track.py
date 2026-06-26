@@ -68,6 +68,7 @@ class TrackRepository(ABC):
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider,
         fingerprints: list[str],
     ) -> TrackKnowIdentifiers:
         """
@@ -75,29 +76,11 @@ class TrackRepository(ABC):
 
         Args:
             user_id: The ID of the user whose known tracks are to be retrieved.
-            fingerprints: A list of fingerprints to filter on
+            provider: The music provider to scope the lookup to.
+            fingerprints: A list of fingerprints to filter on.
 
         Returns:
             A value object TrackKnowIdentifiers containing the known fingerprints.
-        """
-        ...
-
-    @abstractmethod
-    async def get_known_provider_ids(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider,
-        provider_ids: list[str],
-    ) -> frozenset[str]:
-        """Returns the subset of provider_ids already in DB for this user+provider.
-
-        Args:
-            user_id: The ID of the user to check.
-            provider: The music provider to filter on.
-            provider_ids: A list of provider-specific track IDs to check.
-
-        Returns:
-            A frozenset of provider_ids already present in the database.
         """
         ...
 

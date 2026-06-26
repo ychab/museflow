@@ -27,14 +27,20 @@ REIMPORT_HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "reimpo
 
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
-    def track_ids(self) -> list[str]:
-        return [
-            # Same ID's as the history JSON files.
-            "6wb6zxkNTBtcYVkXcvNyJp",
-            "76v0OHTbZGeOZYmaLtEDhQ",
-            "5BuWeANxxuVOZdTCgnaOnp",
-            "4BqYFb5LHhRmmTDsPyUmQg",
-        ]
+    def sample_fingerprints(self) -> dict[str, str]:
+        # Fingerprints computed via generate_fingerprint(name, [artist]):
+        # history_2017_2018.json: "No Type"/"Rae Sremmurd", "This Could Be Us"/"Rae Sremmurd"
+        # history_2023_2024.json: "M.I.A"/"Kombo the X Writer", "No le hables de amor"/"BENGOCHEA"
+        return {
+            "6wb6zxkNTBtcYVkXcvNyJp": "no type|rae sremmurd",
+            "76v0OHTbZGeOZYmaLtEDhQ": "this could be us|rae sremmurd",
+            "5BuWeANxxuVOZdTCgnaOnp": "mia|kombo the x writer",
+            "4BqYFb5LHhRmmTDsPyUmQg": "no le hables de amor|bengochea",
+        }
+
+    @pytest.fixture
+    def track_ids(self, sample_fingerprints: dict[str, str]) -> list[str]:
+        return list(sample_fingerprints.keys())
 
     @pytest.fixture
     def use_case(
@@ -121,6 +127,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         async_session_db: AsyncSession,
         user: User,
+        sample_fingerprints: dict[str, str],
         track_ids: list[str],
         use_case: ImportStreamingHistoryUseCase,
     ) -> None:
@@ -132,12 +139,14 @@ class TestImportStreamingHistorySpotifyUseCase:
         }
         old_played_at = datetime(2000, 1, 1, tzinfo=UTC)
 
-        for track_id in track_ids:
+        # Create tracks with fingerprints matching the history files so they are recognised as known.
+        for provider_id, fingerprint in sample_fingerprints.items():
             await TrackModelFactory.create_async(
                 user_id=user.id,
                 provider=MusicProvider.SPOTIFY,
+                provider_id=provider_id,
+                fingerprint=fingerprint,
                 played_at_last=old_played_at,
-                provider_id=track_id,
             )
 
         report = await use_case.import_history(
@@ -154,12 +163,12 @@ class TestImportStreamingHistorySpotifyUseCase:
         results = await async_session_db.execute(
             select(TrackModel).where(
                 TrackModel.user_id == user.id,
-                TrackModel.provider_id.in_(track_ids),
+                TrackModel.fingerprint.in_(list(sample_fingerprints.values())),
             )
         )
-        tracks_by_id = {t.provider_id: t for t in results.scalars().all()}
+        tracks_by_provider_id = {t.provider_id: t for t in results.scalars().all()}
         for track_id, expected in expected_played_at.items():
-            assert tracks_by_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"
+            assert tracks_by_provider_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"
 
     async def test__played_count__not_doubled_on_reimport(
         self,
@@ -168,9 +177,10 @@ class TestImportStreamingHistorySpotifyUseCase:
         use_case: ImportStreamingHistoryUseCase,
     ) -> None:
         config = StreamingHistoryImportConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
+        reimport_fp = "reimport track|reimport artist"
         stmt = select(TrackModel).where(
             TrackModel.user_id == user.id,
-            TrackModel.provider_id == "reimport1",
+            TrackModel.fingerprint == reimport_fp,
         )
 
         first_report = await use_case.import_history(user=user, config=config)
@@ -183,3 +193,60 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert second_report.tracks_created == 0
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.played_count == 3
+
+    async def test__same_fingerprint__different_provider_ids__deduplicates(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+        tmp_path: Path,
+        spotify_streaming_history: SpotifyStreamingHistoryAdapter,
+    ) -> None:
+        """Two Spotify IDs for the same song collapse into one DB row with merged play count."""
+        import json
+
+        history_file = tmp_path / "history.json"
+        history_file.write_text(
+            json.dumps(
+                [
+                    {
+                        "ts": "2024-01-01T10:00:00Z",
+                        "ms_played": 200000,
+                        "master_metadata_track_name": "Duplicate Song",
+                        "master_metadata_album_artist_name": "Duplicate Artist",
+                        "master_metadata_album_album_name": "Album A",
+                        "spotify_track_uri": "spotify:track:single_version",
+                    },
+                    {
+                        "ts": "2024-01-02T10:00:00Z",
+                        "ms_played": 200000,
+                        "master_metadata_track_name": "Duplicate Song",
+                        "master_metadata_album_artist_name": "Duplicate Artist",
+                        "master_metadata_album_album_name": "Album B",
+                        "spotify_track_uri": "spotify:track:album_version",
+                    },
+                ]
+            )
+        )
+
+        dup_use_case = ImportStreamingHistoryUseCase(
+            track_repository=use_case._track_repository,
+            streaming_history=spotify_streaming_history,
+        )
+
+        report = await dup_use_case.import_history(
+            user=user,
+            config=StreamingHistoryImportConfigInput(directory=tmp_path, min_ms_played=0),
+        )
+
+        assert report.unique_track_ids == 1
+        assert report.tracks_created == 1
+        assert report.plays_total == 2
+
+        fp = "duplicate song|duplicate artist"
+        results = await async_session_db.execute(
+            select(TrackModel).where(TrackModel.user_id == user.id, TrackModel.fingerprint == fp)
+        )
+        rows = results.scalars().all()
+        assert len(rows) == 1
+        assert rows[0].played_count == 2

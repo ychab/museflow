@@ -184,50 +184,24 @@ class TestTrackSQLRepository:
     async def test__get_known_identifiers__none(self, user: User, track_repository: TrackRepository) -> None:
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             fingerprints=[],
         )
         assert not known_identifiers.fingerprints
 
     async def test__get_known_identifiers__fingerprint(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, fingerprint="foo")
-        await TrackModelFactory.create_async(user_id=user.id, fingerprint="bar")
-        await TrackModelFactory.create_async(user_id=user.id, fingerprint="baz")
-        await TrackModelFactory.create_async(fingerprint="bar")  # Another user
+        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="foo")
+        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="bar")
+        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY, fingerprint="baz")
+        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY, fingerprint="bar")  # Another user
 
         known_identifiers = await track_repository.get_known_identifiers(
             user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
             fingerprints=["foo", "bar"],
         )
 
         assert known_identifiers.fingerprints == frozenset(["foo", "bar"])
-
-    async def test__get_known_provider_ids__nominal(self, user: User, track_repository: TrackRepository) -> None:
-        known_1 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
-        known_2 = await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
-        await TrackModelFactory.create_async(provider=MusicProvider.SPOTIFY)  # Another user
-
-        result = await track_repository.get_known_provider_ids(
-            user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
-            provider_ids=[
-                known_1.provider_id,
-                known_2.provider_id,
-                "unknown_id",
-            ],
-        )
-
-        assert result == frozenset([known_1.provider_id, known_2.provider_id])
-
-    async def test__get_known_provider_ids__empty_list(self, user: User, track_repository: TrackRepository) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, provider=MusicProvider.SPOTIFY)
-
-        result = await track_repository.get_known_provider_ids(
-            user_id=user.id,
-            provider=MusicProvider.SPOTIFY,
-            provider_ids=[],
-        )
-
-        assert result == frozenset()
 
     async def test__bulk_upsert__create(
         self,
@@ -361,6 +335,41 @@ class TestTrackSQLRepository:
         stmt = select(TrackModel).where(TrackModel.id == track.id)
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.played_count == 7
+
+    async def test__bulk_upsert__same_fingerprint_different_provider_id__deduplicates(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        async_session_db: AsyncSession,
+    ) -> None:
+        """Importing the same song via two different Spotify IDs (e.g. single vs album) across
+        two separate import runs collapses into one row; provider_id from the higher played_count wins."""
+        first = TrackFactory.build(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            provider_id="single_version",
+            played_count=1,
+        )
+        second = dataclasses.replace(
+            first,
+            provider_id="album_version",
+            played_count=5,
+        )
+
+        _, created_first = await track_repository.bulk_upsert([first], batch_size=10)
+        _, created_second = await track_repository.bulk_upsert([second], batch_size=10)
+
+        assert created_first == 1
+        assert created_second == 0
+
+        stmt = select(TrackModel).where(
+            TrackModel.user_id == user.id,
+            TrackModel.fingerprint == first.fingerprint,
+        )
+        rows = (await async_session_db.execute(stmt)).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].provider_id == "album_version"
+        assert rows[0].played_count == 5
 
     async def test__purge(
         self,

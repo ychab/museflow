@@ -6,18 +6,6 @@ This quick and dirty document just list the roadmap tasks.
 
 - store the provider + provider_id into a list on the track: when we rate a track, we don't care about the provider. Anyway, if we decide for example to delete all the tracks for a given provider (and user), we may just need to remove it from the list and keep it if another provider use it, or delete it if it was the only one. If we did this, then the unicity could be just user_id + fingerprint.
 
-- looks like we have some duplicate in the history track no? check fingerprint? e.g:
-    => Ma meilleure amie => Vald (at least, I rate it twice)
-    => Chef - Caballero & JeanJass
-    => Booba - Drapeau noir
-    => PLK - Hier
-    => Booba - Petite fille
-    => Koba LaD - Pas de reine
-    => Vald - Désaccordé
-    => Kekra - Vréalité
-    => Zumbale Orquesta — Barranquillera de Puro Corazón
-    => Kekra - Liste
-
 - sometimes, the music doesn't exists anymore in the provider and we can't rate it with play... so we put 0 as a score
 
 - add command track complete to detect: genres and mood with AI?

@@ -24,9 +24,8 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_track"
 
     __table_args__ = (
-        UniqueConstraint("user_id", "provider_id", name="uq_museflow_track_user_provider_id"),
+        UniqueConstraint("user_id", "provider", "fingerprint", name="uq_museflow_track_user_provider_fingerprint"),
         Index("ix_museflow_track_user_provider", "user_id", "provider"),
-        Index("ix_museflow_track_user_fingerprint", "user_id", "fingerprint"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(

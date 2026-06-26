@@ -3,6 +3,7 @@ import uuid
 from datetime import date
 from typing import Any
 
+from sqlalchemy import case
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
@@ -105,10 +106,12 @@ class TrackSQLRepository(TrackRepository):
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
+        provider: MusicProvider,
         fingerprints: list[str],
     ) -> TrackKnowIdentifiers:
         stmt = select(TrackModel.fingerprint).where(
             TrackModel.user_id == user_id,
+            TrackModel.provider == provider,
             TrackModel.fingerprint.in_(fingerprints),
         )
 
@@ -117,26 +120,11 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnowIdentifiers(fingerprints=known_fingerprints)
 
-    async def get_known_provider_ids(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider,
-        provider_ids: list[str],
-    ) -> frozenset[str]:
-        stmt = select(TrackModel.provider_id).where(
-            TrackModel.user_id == user_id,
-            TrackModel.provider == provider,
-            TrackModel.provider_id.in_(provider_ids),
-        )
-        result = await self.session.execute(stmt)
-
-        return frozenset(row.provider_id for row in result.fetchall())
-
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
         track_ids: list[uuid.UUID] = []
         created_count: int = 0
 
-        index_elements: list[str] = ["user_id", "provider_id"]
+        index_elements: list[str] = ["user_id", "provider", "fingerprint"]
         index_excluded: list[str] = ["id"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
@@ -163,6 +151,11 @@ class TrackSQLRepository(TrackRepository):
                         if key == "source"
                         else func.coalesce(getattr(TrackModel, key), excluded[key])
                         if key == "score"
+                        else case(
+                            (excluded["played_count"] > TrackModel.played_count, excluded[key]),
+                            else_=getattr(TrackModel, key),
+                        )
+                        if key == "provider_id"
                         else excluded[key]
                     )
                     for key in tracks_chunk[0]

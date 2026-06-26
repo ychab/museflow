@@ -173,7 +173,7 @@ env = [
     'MUSEFLOW_LOG_HANDLERS_CLI=["null"]',
     # Database required settings (could be overriden)
     'D:DATABASE_HOST=127.0.0.1',
-    'D:DATABASE_PORT=5432',
+    'D:DATABASE_PORT=5433',
     'D:DATABASE_USER=museflow',
     'D:DATABASE_PASSWORD=museflow',
     'D:DATABASE_PATH=museflow',

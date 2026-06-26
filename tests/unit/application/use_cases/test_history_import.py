@@ -13,8 +13,9 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.types import MusicProvider
+from museflow.domain.utils.text import generate_fingerprint
+from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
-from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
 
 
@@ -48,7 +49,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             entries,
             StreamingHistoryFileStats(items_read=5, items_skipped_short_play=1, items_skipped_no_track_id=2),
         )
-        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 2)
 
         report = await use_case.import_history(
@@ -85,7 +86,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             StreamingHistoryEntryFactory.build(provider_id="track2"),
         ]
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 2)
 
         await use_case.import_history(
@@ -112,16 +113,17 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
     ) -> None:
-        track1 = TrackFactory.build(provider_id="track1", user_id=user.id, provider=MusicProvider.SPOTIFY)
-        track2 = TrackFactory.build(provider_id="track2", user_id=user.id, provider=MusicProvider.SPOTIFY)
-
         entries = [
-            StreamingHistoryEntryFactory.build(provider_id="track1"),
-            StreamingHistoryEntryFactory.build(provider_id="track2"),
+            StreamingHistoryEntryFactory.build(provider_id="track1", name="Song One", artist="Artist One"),
+            StreamingHistoryEntryFactory.build(provider_id="track2", name="Song Two", artist="Artist Two"),
         ]
+        fp1 = generate_fingerprint(name="Song One", artist_names=["Artist One"])
+        fp2 = generate_fingerprint(name="Song Two", artist_names=["Artist Two"])
+
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
-        mock_track_repository.get_list.return_value = [track1, track2]
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            fingerprints=frozenset([fp1, fp2])
+        )
         mock_track_repository.bulk_upsert.return_value = ([], 0)
 
         report = await use_case.import_history(
@@ -132,8 +134,9 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert report.tracks_already_known == 2
         assert report.tracks_played_at_updated == 2
         assert report.tracks_created == 0
-        get_list_call = mock_track_repository.get_list.call_args
-        assert set(get_list_call.kwargs["provider_ids"]) == {"track1", "track2"}
+        get_known_call = mock_track_repository.get_known_identifiers.call_args
+        assert get_known_call.kwargs["provider"] == MusicProvider.SPOTIFY
+        assert set(get_known_call.kwargs["fingerprints"]) == {fp1, fp2}
 
     async def test__purge__calls_repository(
         self,
@@ -143,7 +146,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         mock_track_repository.purge.return_value = 5
-        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
 
         report = await use_case.import_history(
             user=user,
@@ -166,7 +169,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         assert report.unique_track_ids == 0
-        mock_track_repository.get_known_provider_ids.assert_not_called()
+        mock_track_repository.get_known_identifiers.assert_not_called()
 
     async def test__directory__not_found(
         self,
@@ -205,7 +208,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             StreamingHistoryEntryFactory.batch(3),
             StreamingHistoryFileStats(),
         )
-        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.side_effect = [([], 1), ([], 1), ([], 1)]
 
         report = await use_case.import_history(
@@ -231,13 +234,22 @@ class TestImportStreamingHistorySpotifyUseCase:
             (
                 [
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_1", played_at=datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_1",
+                        name="Song 1",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC),
                     ),
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_2", played_at=datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_2",
+                        name="Song 2",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 5, 10, 0, 0, tzinfo=UTC),
                     ),
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_4", played_at=datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_4",
+                        name="Song 4",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC),
                     ),
                 ],
                 StreamingHistoryFileStats(),
@@ -245,19 +257,28 @@ class TestImportStreamingHistorySpotifyUseCase:
             (
                 [
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_1", played_at=datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_1",
+                        name="Song 1",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 3, 10, 0, 0, tzinfo=UTC),
                     ),
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_2", played_at=datetime(2023, 1, 4, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_2",
+                        name="Song 2",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 4, 10, 0, 0, tzinfo=UTC),
                     ),
                     StreamingHistoryEntryFactory.build(
-                        provider_id="track_3", played_at=datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC)
+                        provider_id="track_3",
+                        name="Song 3",
+                        artist="Artist",
+                        played_at=datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC),
                     ),
                 ],
                 StreamingHistoryFileStats(),
             ),
         ]
-        mock_track_repository.get_known_provider_ids.return_value = frozenset()
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 4)
 
         await use_case.import_history(
@@ -273,6 +294,47 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert upserted_by_id["track_3"].played_at_last == datetime(2023, 1, 2, 10, 0, 0, tzinfo=UTC)
         assert upserted_by_id["track_4"].played_at_last == datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
 
+    async def test__same_fingerprint__different_provider_ids__deduplicates(
+        self,
+        user: User,
+        history_dir: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_streaming_history: mock.AsyncMock,
+    ) -> None:
+        """Two entries with different provider_ids but same name+artist collapse into one track."""
+        entries = [
+            StreamingHistoryEntryFactory.build(
+                provider_id="single_version",
+                name="My Song",
+                artist="My Artist",
+                played_at=datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC),
+            ),
+            StreamingHistoryEntryFactory.build(
+                provider_id="album_version",
+                name="My Song",
+                artist="My Artist",
+                played_at=datetime(2023, 2, 1, 10, 0, 0, tzinfo=UTC),
+            ),
+        ]
+        mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.bulk_upsert.return_value = ([], 1)
+
+        report = await use_case.import_history(
+            user=user,
+            config=StreamingHistoryImportConfigInput(directory=history_dir),
+        )
+
+        assert report.unique_track_ids == 1
+        assert report.plays_total == 2
+
+        upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
+        assert len(upserted) == 1
+        assert upserted[0].played_count == 2
+        assert upserted[0].played_at_first == datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+        assert upserted[0].played_at_last == datetime(2023, 2, 1, 10, 0, 0, tzinfo=UTC)
+
     async def test__known_tracks__played_at_refreshed(
         self,
         user: User,
@@ -281,20 +343,27 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
     ) -> None:
-        track1 = TrackFactory.build(provider_id="track1", user_id=user.id, provider=MusicProvider.SPOTIFY)
-        track2 = TrackFactory.build(provider_id="track2", user_id=user.id, provider=MusicProvider.SPOTIFY)
-
         entries = [
             StreamingHistoryEntryFactory.build(
-                provider_id="track1", played_at=datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC)
+                provider_id="track1",
+                name="Song One",
+                artist="Artist One",
+                played_at=datetime(2024, 3, 1, 10, 0, 0, tzinfo=UTC),
             ),
             StreamingHistoryEntryFactory.build(
-                provider_id="track2", played_at=datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC)
+                provider_id="track2",
+                name="Song Two",
+                artist="Artist Two",
+                played_at=datetime(2024, 3, 2, 12, 0, 0, tzinfo=UTC),
             ),
         ]
+        fp1 = generate_fingerprint(name="Song One", artist_names=["Artist One"])
+        fp2 = generate_fingerprint(name="Song Two", artist_names=["Artist Two"])
+
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_provider_ids.return_value = frozenset(["track1", "track2"])
-        mock_track_repository.get_list.return_value = [track1, track2]
+        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+            fingerprints=frozenset([fp1, fp2])
+        )
         mock_track_repository.bulk_upsert.return_value = ([], 0)
 
         report = await use_case.import_history(
