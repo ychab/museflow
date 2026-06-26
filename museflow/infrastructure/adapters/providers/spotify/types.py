@@ -4,6 +4,9 @@ from typing import LiteralString
 
 LocalUnsupported: Final[LiteralString] = "local_unsupported"
 
+# Spotify hard limit for POST /playlists/{id}/items
+SPOTIFY_PLAYLIST_ITEMS_LIMIT: Final[int] = 100
+
 
 class SpotifyScope(StrEnum):
     """Spotify OAuth scopes for user-related operations.

@@ -29,10 +29,6 @@ This quick and dirty document just list the roadmap tasks.
 - implements other cheapest and pertinent AI like:
     => openai?
 
-## direnv
-
-- add support? What about tests with env var?
-
 ## Just
 
 Replace Makefile by Just?

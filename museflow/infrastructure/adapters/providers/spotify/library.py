@@ -1,3 +1,4 @@
+import itertools
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPa
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.adapters.providers.spotify.types import SPOTIFY_PLAYLIST_ITEMS_LIMIT
 from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
 
 logger = logging.getLogger(__name__)
@@ -133,14 +135,14 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         )
         spotify_playlist = SpotifyPlaylist.model_validate(data)
 
-        # Then, insert the playlist tracks.
-        data = await self._execute_request(
-            method="POST",
-            endpoint=f"/playlists/{spotify_playlist.id}/items",
-            json_data={
-                "uris": [f"spotify:track:{track.provider_id}" for track in tracks],
-            },
-        )
+        # Then, insert the playlist tracks in batches (Spotify caps this endpoint at 100 URIs per call).
+        all_uris = [f"spotify:track:{track.provider_id}" for track in tracks]
+        for batch in itertools.batched(all_uris, SPOTIFY_PLAYLIST_ITEMS_LIMIT, strict=False):
+            data = await self._execute_request(
+                method="POST",
+                endpoint=f"/playlists/{spotify_playlist.id}/items",
+                json_data={"uris": list(batch)},
+            )
         spotify_playlist.snapshot_id = data["snapshot_id"]
 
         return to_domain_playlist(spotify_playlist, user_id=self.user.id, type=type, tracks=tracks)
