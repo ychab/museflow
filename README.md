@@ -25,6 +25,7 @@ To work with this project, you will need the following tools installed on your m
 *   **Python**: 3.13
 *   **UV**: 0.10.8
 *   **Docker Compose**: v2
+*   **direnv**: For automatic environment variable loading ([install guide](https://direnv.net/docs/installation.html))
 
 For the Spotify connector:
 
@@ -72,17 +73,23 @@ Before running the application, you need to configure the environment variables 
 
 1.  **Environment Variables:**
 
-    Copy the example environment file and configure it with your settings.
+    Non-secret defaults are in `.envrc` and loaded automatically by `direnv` when you enter the project directory. You only need to supply secrets.
 
     ```bash
-    cp .env.DIST .env
+    # Copy the example secrets file and fill in your values
+    cp .env.example .env
+
+    # Allow direnv to load .envrc (one-time, per clone)
+    direnv allow
     ```
 
-    Open `.env` and fill in the required values:
+    Open `.env` and fill in the required secrets:
     *   `SPOTIFY_CLIENT_ID`: Your Spotify App Client ID.
     *   `SPOTIFY_CLIENT_SECRET`: Your Spotify App Client Secret.
-    *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters).
-    *   Database settings if you want to customize them (defaults are usually fine for local development with Docker).
+    *   `GEMINI_API_KEY`: Your Gemini API key.
+    *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters, generate with `openssl rand -hex 32`).
+
+    Personal overrides (e.g. a non-standard `DATABASE_PORT`) can also be added to `.env` — they take precedence over `.envrc` defaults.
 
 2.  **Spotify App Configuration:**
 
@@ -92,7 +99,7 @@ Before running the application, you need to configure the environment variables 
     *   Click on "Edit Settings".
     *   Under "Redirect URIs", add the callback URL.
     *   By default, the application uses: `http://127.0.0.1:8000/api/v1/spotify/callback`
-    *   Ensure this matches the `SPOTIFY_REDIRECT_URI` in your `.env` configuration (or the default if not set).
+    *   Ensure this matches the `SPOTIFY_CLIENT_REDIRECT_URI` in your `.envrc` (default: `http://127.0.0.1:8000/api/v1/spotify/callback`).
 
 ## Running the Application
 
