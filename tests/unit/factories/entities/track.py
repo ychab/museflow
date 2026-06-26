@@ -26,6 +26,7 @@ class TrackFactory(DataclassFactory[Track]):
 
     source = TrackSource.HISTORY
     score = None
+    score_skipped = False
 
 
 class TrackSuggestedFactory(DataclassFactory[TrackSuggested]):

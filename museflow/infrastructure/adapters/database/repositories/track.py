@@ -36,6 +36,8 @@ class TrackSQLRepository(TrackRepository):
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
+        exclude_skipped: bool = False,
+        score_skipped_only: bool = False,
         artist_name: str | None = None,
         played_first_min: date | None = None,
         played_first_max: date | None = None,
@@ -71,6 +73,10 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
         if unrated_only:
             stmt = stmt.where(TrackModel.score.is_(None))
+        if exclude_skipped:
+            stmt = stmt.where(TrackModel.score_skipped.is_(False))
+        if score_skipped_only:
+            stmt = stmt.where(TrackModel.score_skipped.is_(True))
         if artist_name is not None:
             stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
         if played_first_min is not None:
@@ -132,7 +138,8 @@ class TrackSQLRepository(TrackRepository):
         created_count: int = 0
 
         index_elements: list[str] = ["user_id", "fingerprint"]
-        index_excluded: list[str] = ["id"] + index_elements
+        # score_skipped is excluded so a re-import never resets a user's permanent skip decision
+        index_excluded: list[str] = ["id", "score_skipped"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
 
@@ -185,6 +192,18 @@ class TrackSQLRepository(TrackRepository):
             update(TrackModel)
             .where(TrackModel.id == track_id, TrackModel.user_id == user_id)
             .values(score=score)
+            .returning(TrackModel.id)
+        )
+        result = await self.session.execute(stmt)
+        if result.scalar_one_or_none() is None:
+            raise TrackNotFoundError()
+        await self.session.commit()
+
+    async def skip(self, user_id: uuid.UUID, track_id: uuid.UUID) -> None:
+        stmt = (
+            update(TrackModel)
+            .where(TrackModel.id == track_id, TrackModel.user_id == user_id)
+            .values(score_skipped=True)
             .returning(TrackModel.id)
         )
         result = await self.session.execute(stmt)

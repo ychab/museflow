@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 5b0bc610b671
+Revision ID: 51656d7d295c
 Revises:
-Create Date: 2026-06-26 12:05:45.035339
+Create Date: 2026-06-27 00:21:13.467423
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '5b0bc610b671'
+revision: str = '51656d7d295c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -110,6 +110,7 @@ def upgrade() -> None:
     sa.Column('played_count', sa.Integer(), nullable=False),
     sa.Column('source', sa.Integer(), nullable=False),
     sa.Column('score', sa.Integer(), nullable=True),
+    sa.Column('score_skipped', sa.Boolean(), server_default='false', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
@@ -117,7 +118,7 @@ def upgrade() -> None:
     sa.UniqueConstraint('user_id', 'fingerprint', name='uq_museflow_track_user_fingerprint')
     )
     op.create_index(op.f('ix_museflow_track_fingerprint'), 'museflow_track', ['fingerprint'], unique=False)
-    op.create_index('ix_museflow_track_user_id', 'museflow_track', ['user_id'], unique=False)
+    op.create_index(op.f('ix_museflow_track_user_id'), 'museflow_track', ['user_id'], unique=False)
     op.create_table('museflow_playlist',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -159,7 +160,7 @@ def downgrade() -> None:
     op.drop_table('museflow_playlist_track')
     op.drop_index(op.f('ix_museflow_playlist_user_id'), table_name='museflow_playlist')
     op.drop_table('museflow_playlist')
-    op.drop_index('ix_museflow_track_user_id', table_name='museflow_track')
+    op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_fingerprint'), table_name='museflow_track')
     op.drop_table('museflow_track')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')

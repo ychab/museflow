@@ -4,13 +4,9 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- review the location of the TrackScored?
-
-- sometimes, the music doesn't exists anymore in the provider and we can't rate it with play... so we put 0 as a score
+- command playlist delete should also (optionally) delete the remote playlist (provider)?
 
 - add command track complete to detect: genres and mood with AI?
-
-- command playlist delete should also (optionally) delete the remote playlist (provider)?
 
 - personnality inspection through the music history? Who are you based on your streaming history?
 

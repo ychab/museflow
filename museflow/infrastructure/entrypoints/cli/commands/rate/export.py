@@ -33,7 +33,12 @@ def export(
     with output.open("w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
-    typer.secho(f"Exported {len(data)} rated tracks to {output}", fg=typer.colors.GREEN)
+    rated_count = sum(1 for entry in data if entry.get("score") is not None)
+    skipped_count = sum(1 for entry in data if entry.get("score_skipped"))
+    typer.secho(
+        f"Exported {rated_count} rated track(s) and {skipped_count} permanently skipped track(s) to {output}",
+        fg=typer.colors.GREEN,
+    )
 
 
 async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
@@ -47,5 +52,9 @@ async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
         if user is None:
             raise UserNotFound()
 
-        tracks = await track_repository.get_list(user_id=user.id, min_score=DISCOVERY_TRACK_SCORE_MIN)
-        return [{"fingerprint": t.fingerprint, "score": t.score} for t in tracks]
+        rated = await track_repository.get_list(user_id=user.id, min_score=DISCOVERY_TRACK_SCORE_MIN)
+        skipped = await track_repository.get_list(user_id=user.id, score_skipped_only=True)
+
+        result: list[dict[str, Any]] = [{"fingerprint": t.fingerprint, "score": t.score} for t in rated]
+        result += [{"fingerprint": t.fingerprint, "score_skipped": True} for t in skipped]
+        return result

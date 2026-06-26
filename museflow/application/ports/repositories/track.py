@@ -23,6 +23,8 @@ class TrackRepository(ABC):
         max_score: int | None = None,
         source: TrackSource | None = None,
         unrated_only: bool = False,
+        exclude_skipped: bool = False,
+        score_skipped_only: bool = False,
         artist_name: str | None = None,
         played_first_min: date | None = None,
         played_first_max: date | None = None,
@@ -51,6 +53,8 @@ class TrackRepository(ABC):
             max_score: When set, only tracks with score <= max_score are returned.
             source: When set, only tracks whose source bit includes this flag are returned.
             unrated_only: When True, only tracks with no score are returned.
+            exclude_skipped: When True, tracks whose score_skipped is True are omitted.
+            score_skipped_only: When True, only tracks whose score_skipped is True are returned.
             artist_name: When set, only tracks whose primary artist (first in the artists list)
                          matches this name (case-insensitive) are returned.
             played_first_min: When set, only tracks first played on or after this date are returned.
@@ -98,6 +102,17 @@ class TrackRepository(ABC):
     @abstractmethod
     async def rate(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
         """Persist a user rating on a track.
+
+        Raises:
+            TrackNotFoundError: If the track is not found for this user.
+        """
+        ...
+
+    @abstractmethod
+    async def skip(self, user_id: uuid.UUID, track_id: uuid.UUID) -> None:
+        """Permanently mark a track as unrateable.
+
+        Sets score_skipped = True so the track is excluded from future rating queues.
 
         Raises:
             TrackNotFoundError: If the track is not found for this user.

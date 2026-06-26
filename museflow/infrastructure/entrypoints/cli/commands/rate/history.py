@@ -9,6 +9,7 @@ import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.rate import track_rate
+from museflow.application.use_cases.rate import track_skip
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
@@ -37,6 +38,7 @@ class RateHistoryResult:
     rated_count: int = 0
     blacklist_track_count: int = 0
     blacklist_artist_count: int = 0
+    skipped_count: int = 0
 
 
 @app.command("history", help="Interactively rate unrated history tracks ordered by play count.")
@@ -78,7 +80,8 @@ def rate_history(
 
     typer.secho(
         f"\nSaved {result.rated_count} rating(s). "
-        f"{result.blacklist_track_count} track(s) and {result.blacklist_artist_count} artist(s) blacklisted.",
+        f"{result.blacklist_track_count} track(s) and {result.blacklist_artist_count} artist(s) blacklisted. "
+        f"{result.skipped_count} track(s) permanently skipped.",
         fg=typer.colors.GREEN,
     )
 
@@ -126,6 +129,7 @@ async def rate_history_logic(
             user_id=user.id,
             source=TrackSource.HISTORY,
             unrated_only=True,
+            exclude_skipped=True,
             order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
             limit=limit,
             artist_name=artist,
@@ -136,6 +140,7 @@ async def rate_history_logic(
         threshold = app_settings.DISCOVERY_BLACKLIST_SCORE_THRESHOLD
         total = len(tracks)
         tracks_rated: list[tuple[uuid.UUID, int]] = []
+        tracks_perm_skipped: list[uuid.UUID] = []
         blacklist_track_pairs: list[tuple[str, str]] = []
         blacklist_artist_names: list[str] = []
 
@@ -161,9 +166,13 @@ async def rate_history_logic(
             )
 
             raw = typer.prompt(
-                f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, s=skip)", default="s"
+                f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, s=skip, u=permanently skip)",
+                default="s",
             )
             if raw.strip().lower() == "s":
+                continue
+            if raw.strip().lower() == "u":
+                tracks_perm_skipped.append(track.id)
                 continue
 
             try:
@@ -195,6 +204,13 @@ async def rate_history_logic(
                 track_repository=track_repository,
             )
 
+        for track_id in tracks_perm_skipped:
+            await track_skip(
+                track_id=track_id,
+                user_id=user.id,
+                track_repository=track_repository,
+            )
+
         for track_name, artist_name in blacklist_track_pairs:
             await blacklist_repository.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
 
@@ -205,4 +221,5 @@ async def rate_history_logic(
         rated_count=len(tracks_rated),
         blacklist_track_count=len(blacklist_track_pairs),
         blacklist_artist_count=len(blacklist_artist_names),
+        skipped_count=len(tracks_perm_skipped),
     )

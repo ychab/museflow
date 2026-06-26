@@ -17,3 +17,11 @@ async def track_rate(
             f"Score must be between {DISCOVERY_TRACK_SCORE_MIN} and {DISCOVERY_TRACK_SCORE_MAX}, got {score}"
         )
     await track_repository.rate(user_id=user_id, track_id=track_id, score=score)
+
+
+async def track_skip(
+    track_id: uuid.UUID,
+    user_id: uuid.UUID,
+    track_repository: TrackRepository,
+) -> None:
+    await track_repository.skip(user_id=user_id, track_id=track_id)

@@ -380,6 +380,7 @@ class TestRateHistoryLogic:
             user_id=user.id,
             source=TrackSource.HISTORY,
             unrated_only=True,
+            exclude_skipped=True,
             order=mock.ANY,
             limit=10,
             artist_name="Radiohead",
@@ -431,3 +432,39 @@ class TestRateHistoryLogic:
 
         mock_provider_library.play_track.assert_not_awaited()
         mock_track_repository.rate.assert_not_awaited()
+
+    async def test__u_key__permanently_skips_track(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+    ) -> None:
+        track = TrackFactory.build()
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [track]
+        mock_typer_prompt.return_value = "u"
+
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
+
+        mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=track.id)
+        mock_track_repository.rate.assert_not_awaited()
+        assert result.skipped_count == 1
+
+    async def test__u_key__case_insensitive(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+    ) -> None:
+        track = TrackFactory.build()
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [track]
+        mock_typer_prompt.return_value = "U"
+
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
+
+        mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=track.id)
+        mock_track_repository.rate.assert_not_awaited()
+        assert result.skipped_count == 1

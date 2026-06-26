@@ -682,3 +682,77 @@ class TestTrackSQLRepository:
         assert (
             await async_session_db.execute(select(TrackModel).where(TrackModel.id == other_track.id))
         ).scalar_one_or_none() is not None
+
+    async def test__skip__marks_track_as_skipped(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        track_db = await TrackModelFactory.create_async(user_id=user.id, score_skipped=False)
+
+        await track_repository.skip(user_id=user.id, track_id=track_db.id)
+
+        stmt = select(TrackModel).where(TrackModel.id == track_db.id)
+        updated = (await async_session_db.execute(stmt)).scalar_one()
+        assert updated.score_skipped is True
+
+    async def test__skip__raises_when_track_not_found(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        with pytest.raises(TrackNotFoundError):
+            await track_repository.skip(user_id=user.id, track_id=uuid.uuid4())
+
+    async def test__skip__raises_when_wrong_user(
+        self,
+        track_repository: TrackRepository,
+    ) -> None:
+        other_user_db = await UserModelFactory.create_async()
+        track_db = await TrackModelFactory.create_async(user_id=other_user_db.id)
+
+        with pytest.raises(TrackNotFoundError):
+            await track_repository.skip(user_id=uuid.uuid4(), track_id=track_db.id)
+
+    async def test__get_list__exclude_skipped(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        not_skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
+        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
+
+        result = await track_repository.get_list(user.id, exclude_skipped=True)
+
+        assert [t.id for t in result] == [not_skipped_db.id]
+
+    async def test__get_list__score_skipped_only(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
+        skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
+
+        result = await track_repository.get_list(user.id, score_skipped_only=True)
+
+        assert [t.id for t in result] == [skipped_db.id]
+
+    async def test__bulk_upsert__does_not_overwrite_score_skipped(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        track = TrackFactory.build(user_id=user.id, score_skipped=False)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        await track_repository.skip(user_id=user.id, track_id=track.id)
+
+        track_not_skipped = dataclasses.replace(track, score_skipped=False)
+        await track_repository.bulk_upsert([track_not_skipped], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.score_skipped is True

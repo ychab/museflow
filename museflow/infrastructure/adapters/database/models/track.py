@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TypedDict
 
+from sqlalchemy import Boolean
 from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -52,6 +53,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
     source: Mapped[int] = mapped_column(Integer, nullable=False, default=int(TrackSource.HISTORY))
     score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    score_skipped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     @classmethod
     def from_entity(cls, entity: TrackEntity) -> "Track":
@@ -70,6 +72,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             played_count=entity.played_count,
             source=int(entity.source),
             score=entity.score,
+            score_skipped=entity.score_skipped,
         )
 
     def to_entity(self) -> TrackEntity:
@@ -89,4 +92,5 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             played_count=self.played_count,
             source=TrackSource(self.source),
             score=self.score,
+            score_skipped=self.score_skipped,
         )

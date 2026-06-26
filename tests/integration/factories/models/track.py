@@ -17,6 +17,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
     __model__ = Track
 
     name = Use(BaseModelFactory.__faker__.name)
+    score_skipped = False
     provider_links = Use(
         lambda: [{"provider": MusicProvider.SPOTIFY.value, "provider_id": str(BaseModelFactory.__faker__.uuid4())}]
     )

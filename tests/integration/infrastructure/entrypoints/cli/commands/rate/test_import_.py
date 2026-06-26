@@ -31,3 +31,20 @@ class TestRateImportLogic:
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
         assert updated.score == 5
+
+    async def test__score_skipped_entry__persists_flag(
+        self,
+        user: User,
+        async_session_db: AsyncSession,
+    ) -> None:
+        track_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
+        data = [{"fingerprint": track_db.fingerprint, "score_skipped": True}]
+
+        result = await import_logic(email=user.email, data=data)
+
+        assert result.skipped_count == 1
+        assert result.imported_count == 0
+
+        stmt = select(TrackModel).where(TrackModel.id == track_db.id)
+        updated = (await async_session_db.execute(stmt)).scalar_one()
+        assert updated.score_skipped is True

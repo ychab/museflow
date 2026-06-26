@@ -29,6 +29,7 @@ class Track(BaseEntity):
 
     source: TrackSource = TrackSource.HISTORY
     score: int | None = None
+    score_skipped: bool = False
 
     @property
     def primary_artist(self) -> str:

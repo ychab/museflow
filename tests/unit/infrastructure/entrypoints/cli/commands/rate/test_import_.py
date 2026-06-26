@@ -13,6 +13,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import RateIm
 from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.user import UserFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -22,7 +23,7 @@ class TestRateImportParserCommand:
     def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = RateImportResult(imported_count=0, not_found_count=0)
+            patched.return_value = RateImportResult(imported_count=0, skipped_count=0, not_found_count=0)
             yield patched
 
     @pytest.mark.parametrize(
@@ -143,7 +144,7 @@ class TestRateImportCommand:
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = RateImportResult(imported_count=3, not_found_count=1)
+        mock_import_logic.return_value = RateImportResult(imported_count=3, skipped_count=0, not_found_count=1)
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -199,3 +200,48 @@ class TestRateImportLogic:
 
         with pytest.raises(UserNotFound):
             await import_logic(email="test@example.com", data=[])
+
+    async def test__score_skipped_entry__calls_skip(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        fingerprint = "test-fingerprint-abc"
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [
+            TrackFactory.build(user_id=user.id, fingerprint=fingerprint, score_skipped=False)
+        ]
+
+        result = await import_logic(
+            email="test@example.com",
+            data=[{"fingerprint": fingerprint, "score_skipped": True}],
+        )
+
+        mock_track_repository.skip.assert_awaited_once()
+        mock_track_repository.rate.assert_not_awaited()
+        assert result.skipped_count == 1
+        assert result.imported_count == 0
+
+    async def test__entry_with_no_score_and_not_skipped__is_ignored(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        fingerprint = "test-fingerprint-noop"
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [
+            TrackFactory.build(user_id=user.id, fingerprint=fingerprint, score_skipped=False)
+        ]
+
+        result = await import_logic(
+            email="test@example.com",
+            data=[{"fingerprint": fingerprint}],
+        )
+
+        mock_track_repository.skip.assert_not_awaited()
+        mock_track_repository.rate.assert_not_awaited()
+        assert result.skipped_count == 0
+        assert result.imported_count == 0
+        assert result.not_found_count == 0
