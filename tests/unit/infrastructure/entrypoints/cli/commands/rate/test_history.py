@@ -197,7 +197,7 @@ class TestRateHistoryLogic:
 
         mock_track_repository.rate.assert_not_awaited()
 
-    async def test__skips_track_on_invalid_input(
+    async def test__re_prompts_on_invalid_input(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
@@ -207,13 +207,14 @@ class TestRateHistoryLogic:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = [track]
-        mock_typer_prompt.return_value = "abc"
+        mock_typer_prompt.side_effect = ["abc", "s"]
 
         await rate_history_logic(email=user.email, limit=10, reset=False)
 
+        assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
 
-    async def test__skips_track_on_out_of_range_score(
+    async def test__re_prompts_on_out_of_range_score(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
@@ -223,10 +224,11 @@ class TestRateHistoryLogic:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = [track]
-        mock_typer_prompt.return_value = "15"
+        mock_typer_prompt.side_effect = ["15", "s"]
 
         await rate_history_logic(email=user.email, limit=10, reset=False)
 
+        assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
 
     async def test__blacklists_both_on_low_score(

@@ -169,32 +169,34 @@ async def rate_playlist_logic(
                 f"\n[{i + 1}/{total}] {artists_display} — {track.name} [current: {score_display}]{playing_indicator}"
             )
 
-            raw = typer.prompt(
-                f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, s=skip)", default="s"
-            )
-            if raw.strip().lower() == "s":
-                continue
-
-            try:
-                score_int = int(raw)
-            except ValueError:
-                typer.secho("  Invalid input, skipping.", fg=typer.colors.YELLOW)
-                continue
-
-            if not DISCOVERY_TRACK_SCORE_MIN <= score_int <= DISCOVERY_TRACK_SCORE_MAX:
-                typer.secho(
-                    f"  Score must be between {DISCOVERY_TRACK_SCORE_MIN} and {DISCOVERY_TRACK_SCORE_MAX}, skipping.",
-                    fg=typer.colors.YELLOW,
+            while True:
+                raw = typer.prompt(
+                    f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, s=skip)", default="s"
                 )
-                continue
+                if raw.strip().lower() == "s":
+                    break
 
-            tracks_rated.append((track.id, score_int))
+                try:
+                    score_int = int(raw)
+                except ValueError:
+                    typer.secho("  Invalid input, try again.", fg=typer.colors.YELLOW)
+                    continue
 
-            if score_int <= threshold:
-                if typer.confirm("  ↳ Blacklist this track?", default=False):
-                    blacklist_track_pairs.append((track.name, track.primary_artist))
-                if typer.confirm(f'  ↳ Blacklist artist "{track.primary_artist}"?', default=False):
-                    blacklist_artist_names.append(track.primary_artist)
+                if not DISCOVERY_TRACK_SCORE_MIN <= score_int <= DISCOVERY_TRACK_SCORE_MAX:
+                    typer.secho(
+                        f"  Score must be between {DISCOVERY_TRACK_SCORE_MIN} and {DISCOVERY_TRACK_SCORE_MAX}, try again.",
+                        fg=typer.colors.YELLOW,
+                    )
+                    continue
+
+                tracks_rated.append((track.id, score_int))
+
+                if score_int <= threshold:
+                    if typer.confirm("  ↳ Blacklist this track?", default=False):
+                        blacklist_track_pairs.append((track.name, track.primary_artist))
+                    if typer.confirm(f'  ↳ Blacklist artist "{track.primary_artist}"?', default=False):
+                        blacklist_artist_names.append(track.primary_artist)
+                break
 
         for track_id, track_score in tracks_rated:
             await track_rate(
