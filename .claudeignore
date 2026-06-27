@@ -22,5 +22,4 @@ junit.xml
 tests/assets/wiremock/
 
 # Large generated files
-repomix-output.*
 external_data/

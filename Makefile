@@ -181,6 +181,3 @@ clean: ## Cleanup cache files
 	rm -rf htmlcov coverage.xml junit.xml
 	rm -f .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-
-repomix:
-	npx repomix@latest --no-security-check --compress

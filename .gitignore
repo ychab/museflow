@@ -18,5 +18,4 @@ junit.xml
 **/.claude/*.local.json
 
 external_data
-repomix-output.*
 .aider*

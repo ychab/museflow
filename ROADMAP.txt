@@ -24,7 +24,3 @@ This quick and dirty document just list the roadmap tasks.
 
 - implements other cheapest and pertinent AI like:
     => openai?
-
-## Just
-
-Replace Makefile by Just?
