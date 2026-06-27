@@ -165,6 +165,7 @@ class UserSQLRepository(UserRepository):
 - No `Any` unless justified. Ruff line length: 119.
 - Async everywhere: FastAPI, SQLAlchemy, httpx.
 - **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
+- **In use case functions and class constructors, DI parameters (repositories + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
 
 ## Logging
 ```python
@@ -189,6 +190,7 @@ logger.exception("Spotify API error", extra={"status_code": e.response.status_co
 - Domain exceptions live in `museflow/domain/exceptions.py` — use these across all layers.
 - Infrastructure-specific exceptions (e.g., `SpotifyTokenExpiredError`) live in their adapter package.
 - In tenacity retry adapters, `_is_retryable_error()` must explicitly `return False` for all non-retriable exceptions.
+- **Never use `assert` in production code.** For programmer-contract violations (e.g. a caller passing `None` for a required argument), raise `ValueError` at the top of the function. Where mypy cannot narrow the type after such a guard, use `# type: ignore[union-attr]` at the call site rather than adding an inline `assert`.
 
 ## Documentation
 - No docstrings for obvious functions. Only for: public ports/ABCs, complex algorithms, non-obvious `Raises:`.

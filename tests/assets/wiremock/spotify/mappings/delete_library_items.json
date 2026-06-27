@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "DELETE",
+    "url": "/me/library/items",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$.type", "contains": "playlist" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": "{}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -61,6 +61,11 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
+    async def delete_playlist(self, provider_playlist_id: str) -> None:
+        """Remove a playlist from the user's provider library."""
+        ...
+
+    @abstractmethod
     async def play_track(self, track_provider_id: str) -> None:
         """Start playing a track immediately on the user's active provider device.
 

@@ -192,3 +192,23 @@ class TestSpotifyLibrary:
         assert len(json.loads(items_requests[0].content)["uris"]) == SPOTIFY_PLAYLIST_ITEMS_LIMIT
         assert len(json.loads(items_requests[1].content)["uris"]) == 1
         assert playlist.snapshot_id == "snap-last"
+
+    async def test__delete_playlist__nominal(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_oauth: SpotifyOAuthAdapter,
+        httpx_mock: HTTPXMock,
+        playlist_id: str,
+    ) -> None:
+        httpx_mock.add_response(
+            url=f"{spotify_oauth.base_url}/me/library/items",
+            method="DELETE",
+            json={},
+        )
+
+        await spotify_library.delete_playlist(playlist_id)
+
+        delete_requests = [r for r in httpx_mock.get_requests() if "/me/library/items" in str(r.url)]
+        assert len(delete_requests) == 1
+        body = json.loads(delete_requests[0].content)
+        assert body == {"ids": [playlist_id], "type": "playlist"}

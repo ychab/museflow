@@ -152,6 +152,13 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
 
         return to_domain_playlist(spotify_playlist, user_id=self.user.id, type=type, tracks=tracks)
 
+    async def delete_playlist(self, provider_playlist_id: str) -> None:
+        await self._execute_request(
+            method="DELETE",
+            endpoint="/me/library/items",
+            json_data={"ids": [provider_playlist_id], "type": "playlist"},
+        )
+
     async def play_track(self, track_provider_id: str) -> None:
         try:
             await self._execute_request(

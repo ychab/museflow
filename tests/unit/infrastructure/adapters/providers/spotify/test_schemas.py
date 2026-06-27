@@ -22,6 +22,7 @@ class TestSpotifyScope:
                 "playlist-modify-public",
                 "playlist-modify-private",
                 "user-modify-playback-state",
+                "user-library-modify",
             ]
         )
 

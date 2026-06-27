@@ -52,5 +52,6 @@ class SpotifyScope(StrEnum):
             cls.PLAYLIST_MODIFY_PUBLIC,
             cls.PLAYLIST_MODIFY_PRIVATE,
             cls.USER_MODIFY_PLAYBACK_STATE,
+            cls.USER_LIBRARY_MODIFY,
         ]
         return " ".join(scope.value for scope in scopes)

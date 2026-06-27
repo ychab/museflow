@@ -48,7 +48,9 @@ class TestSpotifyOAuthAdapter:
         assert query_params["client_id"] == ["dummy-client-id"]
         assert query_params["response_type"] == ["code"]
         assert query_params["redirect_uri"] == ["http://127.0.0.1:8000/api/v1/spotify/callback"]
-        assert query_params["scope"] == ["playlist-modify-public playlist-modify-private user-modify-playback-state"]
+        assert query_params["scope"] == [
+            "playlist-modify-public playlist-modify-private user-modify-playback-state user-library-modify"
+        ]
         assert query_params["state"] == [spotify_token_payload]
 
     async def test__exchange_code_for_token__nominal(

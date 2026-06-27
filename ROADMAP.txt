@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- command playlist delete should also (optionally) delete the remote playlist (provider)?
-
 - add command track complete to detect: genres and mood with AI?
 
 - personnality inspection through the music history? Who are you based on your streaming history?

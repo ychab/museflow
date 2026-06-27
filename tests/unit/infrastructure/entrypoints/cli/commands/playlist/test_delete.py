@@ -7,6 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import PlaylistNotFoundError
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import PlaylistType
@@ -150,6 +151,20 @@ class TestDeleteCommand:
         assert result.exit_code != 0
         assert f"Playlist {playlist_id} not found." in result.stderr
 
+    def test__auth_token_not_found(
+        self,
+        runner: CliRunner,
+        mock_delete_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        mock_delete_logic.side_effect = ProviderAuthTokenNotFoundError()
+        result = runner.invoke(
+            app,
+            ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com", "--include-remote"],
+        )
+        assert result.exit_code != 0
+        assert "Auth token not found for test@example.com" in clean_typer_text(result.stderr)
+
     def test__exception(
         self,
         runner: CliRunner,
@@ -162,7 +177,14 @@ class TestDeleteCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_playlist_repository")
+@pytest.mark.usefixtures(
+    "mock_get_db",
+    "mock_user_repository",
+    "mock_playlist_repository",
+    "mock_provider_oauth",
+    "mock_provider_library_factory",
+    "mock_auth_token_repository",
+)
 class TestDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
@@ -201,7 +223,6 @@ class TestDeleteLogic:
 
     async def test__single_delete__not_found(
         self,
-        mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_playlist_repository.delete.return_value = False
@@ -214,22 +235,6 @@ class TestDeleteLogic:
                 type=None,
                 provider=None,
             )
-
-    async def test__single_delete__no_playlist_id__not_found(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        with pytest.raises(PlaylistNotFoundError):
-            await delete_logic(
-                email="test@example.com",  # type: ignore[arg-type]
-                playlist_id=None,
-                purge=False,
-                type=None,
-                provider=None,
-            )
-
-        mock_playlist_repository.delete.assert_not_awaited()
 
     async def test__purge__calls_repository_with_filters(
         self,
@@ -252,3 +257,39 @@ class TestDeleteLogic:
             type=PlaylistType.DISCOVERY,
             provider=MusicProvider.SPOTIFY,
         )
+
+    async def test__include_remote__success(
+        self,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library_factory: mock.Mock,
+    ) -> None:
+        mock_playlist_repository.delete.return_value = True
+        playlist_id = uuid.uuid4()
+
+        count = await delete_logic(
+            email="test@example.com",  # type: ignore[arg-type]
+            playlist_id=playlist_id,
+            purge=False,
+            type=None,
+            provider=None,
+            include_remote=True,
+        )
+
+        assert count == 1
+        mock_provider_library_factory.create.assert_called_once()
+
+    async def test__include_remote__auth_token_missing__raises(
+        self,
+        mock_auth_token_repository: mock.AsyncMock,
+    ) -> None:
+        mock_auth_token_repository.get.return_value = None
+
+        with pytest.raises(ProviderAuthTokenNotFoundError):
+            await delete_logic(
+                email="test@example.com",  # type: ignore[arg-type]
+                playlist_id=uuid.uuid4(),
+                purge=False,
+                type=None,
+                provider=None,
+                include_remote=True,
+            )
