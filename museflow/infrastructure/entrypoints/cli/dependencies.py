@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.advisors.agent import AdvisorPort
+from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -28,6 +29,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
@@ -103,6 +105,17 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
         max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
     ) as client:
         yield client
+
+
+@asynccontextmanager
+async def get_gemini_enricher() -> AsyncGenerator[TrackEnricherPort]:
+    async with GeminiTrackEnricherAdapter(
+        api_key=gemini_settings.API_KEY,
+        model=gemini_settings.ENRICHER_MODEL,
+        base_url=gemini_settings.BASE_URL,
+        timeout=gemini_settings.HTTP_TIMEOUT,
+    ) as enricher:
+        yield enricher
 
 
 @asynccontextmanager

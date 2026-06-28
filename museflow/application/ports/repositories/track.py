@@ -7,6 +7,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
+from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
 
@@ -31,6 +32,7 @@ class TrackRepository(ABC):
         played_last_min: date | None = None,
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
+        unenriched_only: bool = False,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -62,6 +64,7 @@ class TrackRepository(ABC):
             played_last_min: When set, only tracks last played on or after this date are returned.
             played_last_max: When set, only tracks last played on or before this date are returned.
             exclude_ids: When set, tracks whose id is in this list are excluded.
+            unenriched_only: When True, only tracks whose genres list is empty are returned.
 
         Returns:
             A list of `Track` entities.
@@ -96,6 +99,15 @@ class TrackRepository(ABC):
         Returns:
             A tuple containing a list of the UUIDs of the upserted tracks and the
             total number of created rows.
+        """
+        ...
+
+    @abstractmethod
+    async def bulk_update_enrichment(self, enrichments: list[TrackEnrichment]) -> None:
+        """Updates genre and mood metadata for a batch of tracks.
+
+        Args:
+            enrichments: A list of TrackEnrichment value objects containing the new genres and moods.
         """
         ...
 

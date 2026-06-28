@@ -31,6 +31,9 @@ class Track(BaseEntity):
     score: int | None = None
     score_skipped: bool = False
 
+    genres: list[str] = field(default_factory=list)
+    moods: list[str] = field(default_factory=list)
+
     @property
     def primary_artist(self) -> str:
         return self.artists[0]

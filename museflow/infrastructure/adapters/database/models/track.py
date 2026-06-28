@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
@@ -55,6 +56,9 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     score_skipped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
+    genres: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default_factory=list)
+    moods: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default_factory=list)
+
     @classmethod
     def from_entity(cls, entity: TrackEntity) -> "Track":
         return cls(
@@ -73,6 +77,8 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             source=int(entity.source),
             score=entity.score,
             score_skipped=entity.score_skipped,
+            genres=entity.genres,
+            moods=entity.moods,
         )
 
     def to_entity(self) -> TrackEntity:
@@ -93,4 +99,6 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             source=TrackSource(self.source),
             score=self.score,
             score_skipped=self.score_skipped,
+            genres=list(self.genres) if self.genres else [],
+            moods=list(self.moods) if self.moods else [],
         )

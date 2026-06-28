@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from typing import Self
 
@@ -26,3 +27,10 @@ class TrackKnowIdentifiers:
 
     def is_known(self, track: Track) -> bool:
         return track.fingerprint in self.fingerprints
+
+
+@dataclass(frozen=True, kw_only=True)
+class TrackEnrichment:
+    track_id: uuid.UUID
+    genres: list[str]
+    moods: list[str]

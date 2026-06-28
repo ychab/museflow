@@ -7,6 +7,7 @@ import pytest
 
 from museflow.application.inputs.history import StreamingHistoryFileStats
 from museflow.application.ports.advisors.agent import AdvisorPort
+from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -28,6 +29,7 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -177,6 +179,11 @@ def mock_reconciler() -> mock.Mock:
     return mock.Mock(spec=Reconciler)
 
 
+@pytest.fixture
+def mock_enricher() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=TrackEnricherPort)
+
+
 # --- Adapters ---
 
 
@@ -236,6 +243,12 @@ async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
         reflect_model=GeminiModel.FLASH_2_5,
         max_retry_wait=5,
     ) as client:
+        yield client
+
+
+@pytest.fixture
+async def gemini_enricher() -> AsyncGenerator[GeminiTrackEnricherAdapter]:
+    async with GeminiTrackEnricherAdapter(api_key="dummy-api-key", model=GeminiModel.FLASH_LITE_2_5) as client:
         yield client
 
 

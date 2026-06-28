@@ -47,6 +47,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -412,6 +413,22 @@ async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gem
         base_url=HttpUrl(base_url) if base_url else None,
         verify_ssl=False,
         max_retry_wait=5,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+async def gemini_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTrackEnricherAdapter]:
+    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
+
+    retry_method = GeminiTrackEnricherAdapter.make_api_call
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+
+    async with GeminiTrackEnricherAdapter(
+        api_key="dummy-api-key",
+        model=GeminiModel.FLASH_LITE_2_5,
+        base_url=HttpUrl(base_url) if base_url else None,
+        verify_ssl=False,
     ) as client:
         yield client
 

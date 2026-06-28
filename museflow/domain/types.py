@@ -37,6 +37,21 @@ class PlaylistType(StrEnum):
     HISTORY = "history"  # persisted "best of"
 
 
+class MoodTag(StrEnum):
+    ENERGETIC = "energetic"  # high energy, driving tempo
+    CHILL = "chill"  # relaxed, low-key
+    MELANCHOLIC = "melancholic"  # sad, bittersweet, nostalgic
+    UPBEAT = "upbeat"  # positive, feel-good
+    AGGRESSIVE = "aggressive"  # intense, confrontational
+    ROMANTIC = "romantic"  # love, tenderness
+    FOCUS = "focus"  # concentration, minimal distraction
+    PARTY = "party"  # dancefloor, social
+    INTROSPECTIVE = "introspective"  # reflective, inward
+    EUPHORIC = "euphoric"  # elation, peak emotion
+    PEACEFUL = "peaceful"  # calm, serene
+    DARK = "dark"  # moody, ominous, heavy
+
+
 class TrackOrderBy(StrEnum):
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"

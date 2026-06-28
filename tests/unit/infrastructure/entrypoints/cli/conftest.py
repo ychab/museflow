@@ -12,6 +12,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
@@ -253,6 +254,16 @@ def mock_gemini_profiler(
     profiler = mock.AsyncMock(spec=TasteProfilerPort)
     with mock_async_context_dependency_factory(f"{target_path}.get_taste_profiler", profiler) as mock_profiler:
         yield mock_profiler
+
+
+@pytest.fixture
+def mock_gemini_enricher(
+    target_path: str,
+    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
+) -> Iterable[mock.AsyncMock]:
+    enricher = mock.AsyncMock(spec=TrackEnricherPort)
+    with mock_async_context_dependency_factory(f"{target_path}.get_gemini_enricher", enricher) as mock_enricher:
+        yield mock_enricher
 
 
 # --- Helpers ---

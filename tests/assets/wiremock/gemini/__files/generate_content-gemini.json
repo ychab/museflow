@@ -1,0 +1,14 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"indie folk\", \"dream pop\"], \"moods\": [\"chill\"]}]}"
+          }
+        ],
+        "role": "model"
+      }
+    }
+  ]
+}

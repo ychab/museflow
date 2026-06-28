@@ -4,7 +4,7 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- add command track complete to detect: genres and mood with AI?
+- use a progress bar on the CLI commands?
 
 - personnality inspection through the music history? Who are you based on your streaming history?
 

@@ -19,6 +19,7 @@ from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
+from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
@@ -44,6 +45,7 @@ class TrackSQLRepository(TrackRepository):
         played_last_min: date | None = None,
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
+        unenriched_only: bool = False,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -89,6 +91,8 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
         if exclude_ids:
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
+        if unenriched_only:
+            stmt = stmt.where(func.array_length(TrackModel.genres, 1).is_(None))
 
         # Ordering
         if order is None and min_score is not None:
@@ -138,8 +142,8 @@ class TrackSQLRepository(TrackRepository):
         created_count: int = 0
 
         index_elements: list[str] = ["user_id", "fingerprint"]
-        # score_skipped is excluded so a re-import never resets a user's permanent skip decision
-        index_excluded: list[str] = ["id", "score_skipped"] + index_elements
+        # score_skipped, genres, moods excluded so re-imports never overwrite user decisions/enrichment
+        index_excluded: list[str] = ["id", "score_skipped", "genres", "moods"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
 
@@ -186,6 +190,13 @@ class TrackSQLRepository(TrackRepository):
         await self.session.commit()
 
         return track_ids, created_count
+
+    async def bulk_update_enrichment(self, enrichments: list[TrackEnrichment]) -> None:
+        await self.session.execute(
+            update(TrackModel),
+            [{"id": e.track_id, "genres": e.genres, "moods": e.moods} for e in enrichments],
+        )
+        await self.session.commit()
 
     async def rate(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
         stmt = (
