@@ -5,11 +5,11 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.inputs.enricher import EnrichTracksConfigInput
+from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.tracks import app
+from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
@@ -17,7 +17,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("enrich", help="Enrich tracks with AI-inferred genre and mood metadata.")
+@app.command("tracks", help="Enrich tracks with AI-inferred genre and mood metadata.")
 def enrich(
     email: str = typer.Option(..., help="User email address.", parser=parse_email),
     force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have genre/mood data."),

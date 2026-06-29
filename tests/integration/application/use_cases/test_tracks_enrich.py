@@ -1,6 +1,6 @@
 import pytest
 
-from museflow.application.inputs.enricher import EnrichTracksConfigInput
+from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.entities.user import User

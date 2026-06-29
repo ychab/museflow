@@ -6,5 +6,4 @@ app = typer.Typer()
 
 
 import museflow.infrastructure.entrypoints.cli.commands.tracks.delete  # noqa: F401,E402
-import museflow.infrastructure.entrypoints.cli.commands.tracks.enrich  # noqa: F401,E402
 import museflow.infrastructure.entrypoints.cli.commands.tracks.history  # noqa: F401,E402

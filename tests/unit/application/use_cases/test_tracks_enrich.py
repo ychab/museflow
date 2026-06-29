@@ -1,6 +1,6 @@
 from unittest import mock
 
-from museflow.application.inputs.enricher import EnrichTracksConfigInput
+from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
 

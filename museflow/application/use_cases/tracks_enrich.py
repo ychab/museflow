@@ -2,7 +2,7 @@ import dataclasses
 import logging
 from dataclasses import dataclass
 
-from museflow.application.inputs.enricher import EnrichTracksConfigInput
+from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.user import User
