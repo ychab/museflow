@@ -43,8 +43,8 @@ class TestGeminiTasteProfileAdapter:
                     "dominant_moods": ["melancholic"],
                 }
             ],
-            core_identity={"indie rock": 0.8},
-            current_vibe={"indie rock": 0.9},
+            core_identity={"indie-rock": 0.8},
+            current_vibe={"indie-rock": 0.9},
             personality_archetype=None,
             life_phase_insights=[],
             musical_identity_summary=None,
@@ -86,7 +86,7 @@ class TestGeminiTasteProfileAdapter:
                     "dominant_moods": ["euphoric"],
                 },
             ],
-            core_identity={"indie rock": 0.75, "electronic": 0.4},
+            core_identity={"indie-rock": 0.75, "electronic": 0.4},
             current_vibe={"electronic": 0.8},
             personality_archetype=None,
             life_phase_insights=[],
@@ -117,8 +117,8 @@ class TestGeminiTasteProfileAdapter:
                     "dominant_moods": ["melancholic"],
                 }
             ],
-            core_identity={"indie rock": 0.8},
-            current_vibe={"indie rock": 0.9},
+            core_identity={"indie-rock": 0.8},
+            current_vibe={"indie-rock": 0.9},
             personality_archetype="The Introspective Wanderer",
             life_phase_insights=["Transition from high-energy rock to ambient introspection during 2022"],
             musical_identity_summary=(

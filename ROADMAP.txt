@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- GeminiTasteProfileAdapter-> core_identity and current_vibe can also rely on the enum GenreTag and thus, delete the deduplicate_genre_dict function and normalize_genre_key and thus, the entire utl genre.py file?
-
 - create playlist history|discovery based on genres or mood?
 
 - stats per genres / moods?

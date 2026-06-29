@@ -24,8 +24,11 @@ from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.domain.types import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
+from museflow.domain.types import GENRE_MACRO_TAGS
+from museflow.domain.types import GENRE_MESO_TAGS
+from museflow.domain.types import GENRE_MICRO_TAGS
+from museflow.domain.types import MoodTag
 from museflow.domain.types import TasteProfiler
-from museflow.domain.utils.genre import deduplicate_genre_dict
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
@@ -196,10 +199,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         except (ValidationError, ValueError) as e:
             raise TasteProfileBuildException(f"Invalid Gemini taste profile response: {e}") from e
 
-        data = cast(TasteProfileData, content.model_dump())
-        data["core_identity"] = deduplicate_genre_dict(data["core_identity"])
-        data["current_vibe"] = deduplicate_genre_dict(data["current_vibe"])
-        return data
+        return cast(TasteProfileData, content.model_dump())
 
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
         dates = [t.played_at_last for t in tracks if t.played_at_last]
@@ -214,10 +214,16 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             f"Analyze these {len(tracks)} tracks from [{date_range}]. Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
             '- "taste_timeline": one TasteEra for this batch\n'
-            '- "core_identity": [{"key": genre_or_mood, "value": weight 0-1}] long-term affinity signals\n'
-            '- "current_vibe": [{"key": genre_or_mood, "value": weight 0-1}] what this batch reveals right now\n'
+            '- "core_identity": [{"key": tag, "value": weight 0-1}] long-term affinity signals\n'
+            '- "current_vibe": [{"key": tag, "value": weight 0-1}] what this batch reveals right now\n'
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
+            "\nFor core_identity, current_vibe, and dominant_moods, use ONLY values from this exact vocabulary:\n"
+            f"  Genres — macro: {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n"
+            f"         — meso:  {', '.join(t.value for t in GENRE_MESO_TAGS)}\n"
+            f"         — micro: {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n"
+            f"  Moods: {', '.join(m.value for m in MoodTag)}\n"
+            "Do NOT use any genre or mood label outside this vocabulary.\n"
             "\nFor each TasteEra, populate technical_fingerprint by inferring numerical values (0.0 to 1.0) "
             "from the genres present in the batch. Use these genre-to-value guidelines:\n"
             "- energy: Trap/Metal/Punk → high (~0.8-0.9); Pop/Electronic → mid (~0.5-0.6); Ambient/Classical → low (~0.1-0.2)\n"
@@ -261,6 +267,12 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "   - Keep all existing 'technical_fingerprint' values in previous eras UNCHANGED.\n"
             "   - personality_archetype: keep null.\n"
             "   - life_phase_insights: keep empty.\n\n"
+            "For core_identity, current_vibe, and dominant_moods, use ONLY values from this exact vocabulary:\n"
+            f"  Genres — macro: {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n"
+            f"         — meso:  {', '.join(t.value for t in GENRE_MESO_TAGS)}\n"
+            f"         — micro: {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n"
+            f"  Moods: {', '.join(m.value for m in MoodTag)}\n"
+            "Do NOT use any genre or mood label outside this vocabulary.\n"
             "Return the full merged JSON. Be mathematically precise and preserve all keys."
         )
 

@@ -30,9 +30,23 @@ class TestBuildTasteProfileUseCase:
         return TasteProfileDataFactory.build(
             personality_archetype=None,
             life_phase_insights=[],
-            # Use pre-normalized keys and valid weights so normalization is a no-op
-            core_identity={"indie rock": 0.8, "electronic": 0.4},
-            current_vibe={"hip hop": 0.6},
+            # Use valid GenreTag / MoodTag values so the adapter filter is a no-op
+            core_identity={"indie-rock": 0.8, "electronic": 0.4},
+            current_vibe={"hip-hop": 0.6},
+            taste_timeline=[
+                {
+                    "era_label": "Test Era",
+                    "time_range": "2020-2021",
+                    "technical_fingerprint": {
+                        "energy": 0.7,
+                        "acousticness": 0.6,
+                        "rhythmic_complexity": 0.4,
+                        "atmospheric": 0.5,
+                        "instrumentalness": 0.2,
+                    },
+                    "dominant_moods": ["melancholic"],
+                }
+            ],
         )
 
     @pytest.fixture

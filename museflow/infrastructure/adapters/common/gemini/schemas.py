@@ -9,10 +9,15 @@ class GeminiSchemaProperty(BaseModel):
     items: "GeminiSchemaProperty | None" = None
     properties: "dict[str, GeminiSchemaProperty] | None" = None
     required: list[str] | None = None
+    enum: list[str] | None = None
 
     @classmethod
     def string(cls) -> "GeminiSchemaProperty":
         return cls(type="string")
+
+    @classmethod
+    def enum_string(cls, values: list[str]) -> "GeminiSchemaProperty":
+        return cls(type="string", enum=values)
 
     @classmethod
     def number(cls) -> "GeminiSchemaProperty":
