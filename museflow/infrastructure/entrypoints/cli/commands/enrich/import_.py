@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+import logging
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +14,14 @@ import yaml
 
 from museflow.application.inputs.enrich import EnrichEntryInput
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import GenreTag
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -79,7 +83,11 @@ async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
                 not_found_count += 1
                 continue
             track = fingerprint_to_track[entry.fingerprint]
-            updated_tracks.append(dataclasses.replace(track, genres=entry.genres, moods=entry.moods))
+            valid_genres = [GenreTag(g) for g in entry.genres if g in GenreTag._value2member_map_]
+            skipped = [g for g in entry.genres if g not in GenreTag._value2member_map_]
+            if skipped:
+                logger.warning(f"Skipping unknown genres during import: {skipped}", extra={"skipped": skipped})
+            updated_tracks.append(dataclasses.replace(track, genres=valid_genres, moods=entry.moods))
 
         if updated_tracks:
             await track_repository.bulk_update(updated_tracks, fields={"genres", "moods"})

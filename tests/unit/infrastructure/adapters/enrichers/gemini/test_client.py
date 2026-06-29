@@ -1,5 +1,8 @@
+import json
+
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.types import GenreTag
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -35,3 +38,27 @@ class TestGeminiTrackEnricherAdapter:
         result = await gemini_enricher.enrich_tracks(TrackFactory.batch(1))
 
         assert result == []
+
+    async def test__enrich_tracks__unknown_genre__silently_dropped(
+        self,
+        gemini_enricher: GeminiTrackEnricherAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        track = TrackFactory.build()
+        payload = json.dumps(
+            {
+                "enriched_tracks": [
+                    {"track_index": 0, "genres": ["hip-hop", "NOT_A_GENRE", "rap fr"], "moods": ["chill"]}
+                ]
+            }
+        )
+        httpx_mock.add_response(
+            url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+            method="POST",
+            json={"candidates": [{"content": {"parts": [{"text": payload}], "role": "model"}}]},
+        )
+
+        result = await gemini_enricher.enrich_tracks([track])
+
+        assert len(result) == 1
+        assert result[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP_FR]

@@ -6,6 +6,10 @@ from pydantic import ValidationError
 
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.domain.entities.track import Track
+from museflow.domain.types import GENRE_MACRO_TAGS
+from museflow.domain.types import GENRE_MESO_TAGS
+from museflow.domain.types import GENRE_MICRO_TAGS
+from museflow.domain.types import GenreTag
 from museflow.domain.types import MoodTag
 from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
@@ -49,11 +53,12 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                             "### ROLE\n"
                             "You are a music metadata expert. For each provided track, classify its genre(s) and mood(s).\n\n"
                             "### GENRE RULES\n"
-                            "- Return 1 to 3 micro-genre tags per track.\n"
-                            "- Use English, lowercase, hyphenated where needed (e.g. 'rap fr', 'indie folk', 'progressive metal').\n"
-                            "- Be specific: prefer 'rap fr' over 'rap', 'indie folk' over 'folk', 'nu metal' over 'metal'.\n"
-                            "- Include regional or language variants where relevant (e.g. 'rap fr', 'k-pop', 'afrobeats').\n"
-                            "- Do NOT include artist names or track names as genres.\n\n"
+                            "Return 2 to 3 genre tags per track, ordered from broadest to most specific.\n"
+                            "Use ONLY values from the lists below — no synonyms, no paraphrases.\n\n"
+                            f"genres[0] — macro (pick ONE): {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n\n"
+                            f"genres[1] — meso (pick ONE that fits the macro): {', '.join(t.value for t in GENRE_MESO_TAGS)}\n\n"
+                            f"genres[2] — micro (pick ONE or omit if none applies): {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n\n"
+                            "Do NOT include artist names or track names as genres.\n\n"
                             "### MOOD RULES\n"
                             f"- Return 1 to 2 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
                             "- Do NOT use any mood word outside this list.\n\n"
@@ -105,7 +110,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
         return [
             TrackEnrichment(
                 track_id=tracks[item.track_index].id,
-                genres=item.genres,
+                genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
                 moods=[m for m in item.moods if m in MoodTag._value2member_map_],
             )
             for item in content.enriched_tracks

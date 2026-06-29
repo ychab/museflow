@@ -15,6 +15,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track as TrackEntity
+from museflow.domain.types import GenreTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models.base import Base
@@ -77,7 +78,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             source=int(entity.source),
             score=entity.score,
             score_skipped=entity.score_skipped,
-            genres=entity.genres,
+            genres=[g.value for g in entity.genres],
             moods=entity.moods,
         )
 
@@ -99,6 +100,6 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             source=TrackSource(self.source),
             score=self.score,
             score_skipped=self.score_skipped,
-            genres=list(self.genres) if self.genres else [],
+            genres=[GenreTag(g) for g in self.genres],
             moods=list(self.moods) if self.moods else [],
         )

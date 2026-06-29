@@ -4,6 +4,7 @@ from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.entities.user import User
+from museflow.domain.types import GenreTag
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -33,7 +34,7 @@ class TestTracksEnrichUseCase:
         assert len(tracks) == 1
         enriched = tracks[0]
         assert enriched.id == track_db.id
-        assert enriched.genres == ["indie folk", "dream pop"]
+        assert enriched.genres == [GenreTag.FOLK, GenreTag.INDIE_FOLK]
         assert enriched.moods == ["chill"]
 
     async def test__unenriched_only__skips_already_enriched(
@@ -42,7 +43,7 @@ class TestTracksEnrichUseCase:
         track_repository: TrackRepository,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, genres=["hip hop"], moods=["energetic"])
+        await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"])
         await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
 
         result = await tracks_enrich(

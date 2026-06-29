@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Self
 
 from museflow.domain.entities.track import Track
+from museflow.domain.types import GenreTag
 from museflow.domain.utils.text import normalize_text
 
 
@@ -32,5 +33,5 @@ class TrackKnowIdentifiers:
 @dataclass(frozen=True, kw_only=True)
 class TrackEnrichment:
     track_id: uuid.UUID
-    genres: list[str]
+    genres: list[GenreTag]
     moods: list[str]

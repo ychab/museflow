@@ -4,7 +4,7 @@
       "content": {
         "parts": [
           {
-            "text": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"indie folk\", \"dream pop\"], \"moods\": [\"chill\"]}]}"
+            "text": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"folk\", \"indie-folk\"], \"moods\": [\"chill\"]}]}"
           }
         ],
         "role": "model"

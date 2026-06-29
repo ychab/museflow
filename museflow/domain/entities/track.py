@@ -3,6 +3,7 @@ from dataclasses import field
 from datetime import datetime
 
 from museflow.domain.entities.base import BaseEntity
+from museflow.domain.types import GenreTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
@@ -31,7 +32,7 @@ class Track(BaseEntity):
     score: int | None = None
     score_skipped: bool = False
 
-    genres: list[str] = field(default_factory=list)
+    genres: list[GenreTag] = field(default_factory=list)
     moods: list[str] = field(default_factory=list)
 
     @property

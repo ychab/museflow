@@ -3,6 +3,7 @@ from unittest import mock
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.domain.types import GenreTag
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.user import UserFactory
@@ -127,7 +128,7 @@ class TestTracksEnrichUseCase:
         assert result.error_count == 1
         assert result.enriched_count == 2
 
-    async def test__genre_normalization__applied_before_update(
+    async def test__genres__written_directly_to_update(
         self,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
@@ -138,7 +139,7 @@ class TestTracksEnrichUseCase:
         mock_enricher.enrich_tracks.return_value = [
             TrackEnrichmentFactory.build(
                 track_id=track.id,
-                genres=["Hip-Hop/Rap", "hip hop"],  # duplicate after normalization
+                genres=[GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.RAP_FR],
                 moods=["chill"],
             )
         ]
@@ -155,7 +156,4 @@ class TestTracksEnrichUseCase:
         fields_arg = call_args.kwargs["fields"]
         assert fields_arg == {"genres", "moods"}
         assert len(tracks_arg) == 1
-        # "Hip-Hop/Rap" expands to "hip hop" + "rap"; "hip hop" deduplicates
-        assert "hip hop" in tracks_arg[0].genres
-        assert "rap" in tracks_arg[0].genres
-        assert len(tracks_arg[0].genres) == 2  # no duplicate
+        assert tracks_arg[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.RAP_FR]

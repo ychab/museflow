@@ -6,8 +6,6 @@ from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.user import User
-from museflow.domain.utils.genre import deduplicate_genre_dict
-from museflow.domain.utils.genre import normalize_genre_key
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +51,7 @@ async def tracks_enrich(
         for track in batch:
             if track.id in enrichment_by_id:
                 e = enrichment_by_id[track.id]
-                normalized_genres = list(
-                    deduplicate_genre_dict({normalize_genre_key(g): 1.0 for g in e.genres}).keys()
-                )
-                enriched_tracks.append(dataclasses.replace(track, genres=normalized_genres, moods=e.moods))
+                enriched_tracks.append(dataclasses.replace(track, genres=e.genres, moods=e.moods))
 
         await track_repository.bulk_update(enriched_tracks, fields={"genres", "moods"})
         enriched_count += len(batch)
