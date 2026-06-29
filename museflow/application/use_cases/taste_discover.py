@@ -5,7 +5,6 @@ from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
 
-from museflow import __project_name__
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
@@ -254,7 +253,7 @@ class DiscoverTasteUseCase:
         tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
 
         playlist = await self._provider_library.create_playlist(
-            name=f"[{__project_name__.capitalize()}] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat()}",
+            name=f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}",
             type=PlaylistType.DISCOVERY,
             tracks=tracks,
         )

@@ -4,8 +4,6 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- playlist create - name prefix - reduce [MuseFlow] to [MF]
-
 - we need more control on the genres => sanitize them? restrict to a list? influence the AI? if artist do hip-hop, tag hip-hop us or rap us? Always tag various genre?
 
 - command to export enrichment? tracks export (all the tracks data)? tracks enrich export (3 depth beurk)? enrich export (movce also enrich tracks instead of track export

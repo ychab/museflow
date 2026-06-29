@@ -138,7 +138,7 @@ class TestPlaylistHistoryUseCase:
         )
 
         name = mock_provider_library.create_playlist.call_args.kwargs["name"]
-        assert name == "[Museflow] - History - My Mix"
+        assert name == "[MF] - History - My Mix"
 
     async def test__playlist_name__default__seconds_only(
         self,
@@ -160,7 +160,7 @@ class TestPlaylistHistoryUseCase:
         )
 
         name = mock_provider_library.create_playlist.call_args.kwargs["name"]
-        assert re.fullmatch(r"\[Museflow\] - History - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00", name)
+        assert re.fullmatch(r"\[MF\] - History - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00", name)
 
     async def test__date_filters__forwarded_to_repository(
         self,

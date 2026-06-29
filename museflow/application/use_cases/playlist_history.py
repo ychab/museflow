@@ -2,7 +2,6 @@ from collections import defaultdict
 from datetime import UTC
 from datetime import datetime
 
-from museflow import __project_name__
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
@@ -60,7 +59,7 @@ async def playlist_history(
         sorted_groups = sorted(groups.values(), key=artist_sort_key, reverse=True)
         tracks = [track for group in sorted_groups for track in group]
 
-    name_prefix = f"[{__project_name__.capitalize()}] - History"
+    name_prefix = "[MF] - History"
     name_suffix = (
         config.name_suffix if config.name_suffix is not None else datetime.now(UTC).isoformat(timespec="seconds")
     )
