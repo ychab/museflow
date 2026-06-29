@@ -14,6 +14,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.types import DiscoveryFocus
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
@@ -60,8 +62,8 @@ class TestGeminiAdvisorAdapter:
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
             advisor_limit=5,
-            genre="metal",
-            mood="melancholic",
+            genre=GenreTag.METAL,
+            mood=MoodTag.MELANCHOLIC,
             custom_instructions="avoid pop",
         )
 

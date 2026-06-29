@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from museflow.domain.types import DiscoveryFocus
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -10,8 +12,8 @@ class DiscoverTasteConfigInput:
     Attributes:
         focus: The discovery focus strategy.
         profile_name: Optional profile name; if omitted the latest profile is used.
-        genre: Optional genre filter hint passed to the advisor agent.
-        mood: Optional mood hint passed to the advisor agent.
+        genre: Optional genre tag hint passed to the advisor agent.
+        mood: Optional mood tag hint passed to the advisor agent.
         custom_instructions: Optional freeform instructions for the advisor agent.
         advisor_limit: Number of recommended tracks to request from the advisor.
         reconciler_limit: Maximum number of search candidates per suggestion.
@@ -26,8 +28,8 @@ class DiscoverTasteConfigInput:
 
     focus: DiscoveryFocus = DiscoveryFocus.EXPANSION
     profile_name: str | None = None
-    genre: str | None = None
-    mood: str | None = None
+    genre: GenreTag | None = None
+    mood: MoodTag | None = None
     custom_instructions: str | None = None
 
     advisor_limit: int = 10

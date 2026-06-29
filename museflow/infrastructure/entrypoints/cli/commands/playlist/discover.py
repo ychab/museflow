@@ -17,6 +17,8 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import DiscoveryFocus
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicAdvisor
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.config.settings.app import app_settings
@@ -48,8 +50,8 @@ def discover(
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     focus: DiscoveryFocus = typer.Option(default=DiscoveryFocus.EXPANSION, help="The discovery focus strategy"),
     name: str | None = typer.Option(None, "--name", help="Taste profile name (defaults to latest)"),
-    genre: str | None = typer.Option(None, "--genre", help="Optional genre hint for the advisor"),
-    mood: str | None = typer.Option(None, "--mood", help="Optional mood hint for the advisor"),
+    genre: GenreTag | None = typer.Option(None, "--genre", help="Optional genre hint for the advisor"),
+    mood: MoodTag | None = typer.Option(None, "--mood", help="Optional mood hint for the advisor"),
     custom_instructions: str | None = typer.Option(
         None,
         "--custom-instructions",

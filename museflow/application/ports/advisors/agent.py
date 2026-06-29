@@ -5,6 +5,8 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.types import DiscoveryFocus
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 
@@ -23,8 +25,8 @@ class AdvisorPort(ABC):
         profile: TasteProfile,
         focus: DiscoveryFocus,
         advisor_limit: int,
-        genre: str | None = None,
-        mood: str | None = None,
+        genre: GenreTag | None = None,
+        mood: MoodTag | None = None,
         custom_instructions: str | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
