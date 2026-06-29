@@ -19,12 +19,16 @@ from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
-from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 
 class TrackSQLRepository(TrackRepository):
+    FIELDS_UPDATE_WHITELIST: dict[str, str] = {
+        "genres": "genres",
+        "moods": "moods",
+    }
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -191,10 +195,17 @@ class TrackSQLRepository(TrackRepository):
 
         return track_ids, created_count
 
-    async def bulk_update_enrichment(self, enrichments: list[TrackEnrichment]) -> None:
+    async def bulk_update(self, tracks: list[Track], fields: set[str]) -> None:
+        if not tracks:
+            return
+
+        unknown = fields - self.FIELDS_UPDATE_WHITELIST.keys()
+        if unknown:
+            raise ValueError(f"Unknown track fields: {unknown}")
+
         await self.session.execute(
             update(TrackModel),
-            [{"id": e.track_id, "genres": e.genres, "moods": e.moods} for e in enrichments],
+            [{"id": t.id, **{self.FIELDS_UPDATE_WHITELIST[f]: getattr(t, f) for f in fields}} for t in tracks],
         )
         await self.session.commit()
 

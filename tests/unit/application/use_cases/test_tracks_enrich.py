@@ -47,7 +47,7 @@ class TestTracksEnrichUseCase:
         )
 
         assert result == EnrichTracksReport(enriched_count=3, error_count=0)
-        mock_track_repository.bulk_update_enrichment.assert_awaited_once()
+        mock_track_repository.bulk_update.assert_awaited_once()
         mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, unenriched_only=True, limit=None)
 
     async def test__force__disables_unenriched_only_filter(
@@ -150,10 +150,12 @@ class TestTracksEnrichUseCase:
             mock_enricher,
         )
 
-        call_args = mock_track_repository.bulk_update_enrichment.call_args
-        enrichments = call_args[0][0]
-        assert len(enrichments) == 1
+        call_args = mock_track_repository.bulk_update.call_args
+        tracks_arg = call_args[0][0]
+        fields_arg = call_args.kwargs["fields"]
+        assert fields_arg == {"genres", "moods"}
+        assert len(tracks_arg) == 1
         # "Hip-Hop/Rap" expands to "hip hop" + "rap"; "hip hop" deduplicates
-        assert "hip hop" in enrichments[0].genres
-        assert "rap" in enrichments[0].genres
-        assert len(enrichments[0].genres) == 2  # no duplicate
+        assert "hip hop" in tracks_arg[0].genres
+        assert "rap" in tracks_arg[0].genres
+        assert len(tracks_arg[0].genres) == 2  # no duplicate

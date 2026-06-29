@@ -88,6 +88,111 @@ class TestTrackSQLRepository:
         assert {t.id for t in track_list} == {t.id for t in tracks}
         assert all(any(link.provider == MusicProvider.SPOTIFY for link in t.provider_links) for t in track_list)
 
+    async def test__get_list__filtering__source(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        history_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY))
+        discovery_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.DISCOVERY))
+        both_db = await TrackModelFactory.create_async(
+            user_id=user.id, source=int(TrackSource.HISTORY | TrackSource.DISCOVERY)
+        )
+
+        history_list = await track_repository.get_list(user.id, source=TrackSource.HISTORY)
+        assert {t.id for t in history_list} == {history_db.id, both_db.id}
+
+        discovery_list = await track_repository.get_list(user.id, source=TrackSource.DISCOVERY)
+        assert {t.id for t in discovery_list} == {discovery_db.id, both_db.id}
+
+    async def test__get_list__filtering__max_score(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        low_db = await TrackModelFactory.create_async(user_id=user.id, score=4)
+        await TrackModelFactory.create_async(user_id=user.id, score=8)
+
+        result = await track_repository.get_list(user.id, max_score=5)
+        assert [t.id for t in result] == [low_db.id]
+
+    async def test__get_list__filtering__unrated_only(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        unrated_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
+        await TrackModelFactory.create_async(user_id=user.id, score=7)
+
+        unrated_list = await track_repository.get_list(user.id, unrated_only=True)
+        assert [t.id for t in unrated_list] == [unrated_db.id]
+
+    async def test__get_list__filtering__artist_name(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        target_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Other Artist"])
+
+        result = await track_repository.get_list(user.id, artist_name="Radiohead")
+        assert [t.id for t in result] == [target_db.id]
+
+        result_ci = await track_repository.get_list(user.id, artist_name="radiohead")
+        assert [t.id for t in result_ci] == [target_db.id]
+
+    async def test__get_list__min_score_with_explicit_order__order_wins(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        low_played = await TrackModelFactory.create_async(user_id=user.id, score=8, played_count=1)
+        high_played = await TrackModelFactory.create_async(user_id=user.id, score=5, played_count=10)
+
+        result = await track_repository.get_list(
+            user.id,
+            min_score=5,
+            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
+        )
+
+        assert [t.id for t in result] == [high_played.id, low_played.id]
+
+    async def test__get_list__exclude_ids(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        kept = await TrackModelFactory.create_async(user_id=user.id)
+        excluded = await TrackModelFactory.create_async(user_id=user.id)
+
+        result = await track_repository.get_list(user.id, exclude_ids=[excluded.id])
+
+        assert [t.id for t in result] == [kept.id]
+
+    async def test__get_list__exclude_skipped(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        not_skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
+        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
+
+        result = await track_repository.get_list(user.id, exclude_skipped=True)
+
+        assert [t.id for t in result] == [not_skipped_db.id]
+
+    async def test__get_list__score_skipped_only(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
+        skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
+
+        result = await track_repository.get_list(user.id, score_skipped_only=True)
+
+        assert [t.id for t in result] == [skipped_db.id]
+
     @pytest.mark.parametrize("order_by", [o for o in TrackOrderBy if o != TrackOrderBy.RANDOM and not o.nullable])
     @pytest.mark.parametrize("sort_order", list(SortOrder))
     async def test__get_list__ordering(
@@ -379,6 +484,34 @@ class TestTrackSQLRepository:
         assert "album_version" in provider_ids
         assert rows[0].played_count == 5
 
+    async def test__bulk_upsert__does_not_overwrite_score_skipped(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        track = TrackFactory.build(user_id=user.id, score_skipped=False)
+        await track_repository.bulk_upsert([track], batch_size=1)
+
+        await track_repository.skip(user_id=user.id, track_id=track.id)
+
+        track_not_skipped = dataclasses.replace(track, score_skipped=False)
+        await track_repository.bulk_upsert([track_not_skipped], batch_size=1)
+
+        stmt = select(TrackModel).where(TrackModel.id == track.id)
+        track_db = (await async_session_db.execute(stmt)).scalar_one()
+        assert track_db.score_skipped is True
+
+    async def test__bulk_update__empty_list__is_noop(self, track_repository: TrackRepository) -> None:
+        await track_repository.bulk_update([], {"genres"})
+
+    async def test__bulk_update__unknown_field__raises_value_error(
+        self, user: User, track_repository: TrackRepository
+    ) -> None:
+        track = TrackFactory.build(user_id=user.id)
+        with pytest.raises(ValueError, match="unknown"):
+            await track_repository.bulk_update([track], {"unknown"})
+
     async def test__purge(
         self,
         async_session_db: AsyncSession,
@@ -429,87 +562,6 @@ class TestTrackSQLRepository:
 
         with pytest.raises(TrackNotFoundError):
             await track_repository.rate(user_id=uuid.uuid4(), track_id=track_db.id, score=5)
-
-    async def test__get_list__filtering__source(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        history_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.HISTORY))
-        discovery_db = await TrackModelFactory.create_async(user_id=user.id, source=int(TrackSource.DISCOVERY))
-        both_db = await TrackModelFactory.create_async(
-            user_id=user.id, source=int(TrackSource.HISTORY | TrackSource.DISCOVERY)
-        )
-
-        history_list = await track_repository.get_list(user.id, source=TrackSource.HISTORY)
-        assert {t.id for t in history_list} == {history_db.id, both_db.id}
-
-        discovery_list = await track_repository.get_list(user.id, source=TrackSource.DISCOVERY)
-        assert {t.id for t in discovery_list} == {discovery_db.id, both_db.id}
-
-    async def test__get_list__filtering__max_score(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        low_db = await TrackModelFactory.create_async(user_id=user.id, score=4)
-        await TrackModelFactory.create_async(user_id=user.id, score=8)
-
-        result = await track_repository.get_list(user.id, max_score=5)
-        assert [t.id for t in result] == [low_db.id]
-
-    async def test__get_list__filtering__unrated_only(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        unrated_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
-        await TrackModelFactory.create_async(user_id=user.id, score=7)
-
-        unrated_list = await track_repository.get_list(user.id, unrated_only=True)
-        assert [t.id for t in unrated_list] == [unrated_db.id]
-
-    async def test__get_list__filtering__artist_name(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        target_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
-        await TrackModelFactory.create_async(user_id=user.id, artists=["Other Artist"])
-
-        result = await track_repository.get_list(user.id, artist_name="Radiohead")
-        assert [t.id for t in result] == [target_db.id]
-
-        result_ci = await track_repository.get_list(user.id, artist_name="radiohead")
-        assert [t.id for t in result_ci] == [target_db.id]
-
-    async def test__get_list__min_score_with_explicit_order__order_wins(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        low_played = await TrackModelFactory.create_async(user_id=user.id, score=8, played_count=1)
-        high_played = await TrackModelFactory.create_async(user_id=user.id, score=5, played_count=10)
-
-        result = await track_repository.get_list(
-            user.id,
-            min_score=5,
-            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-        )
-
-        assert [t.id for t in result] == [high_played.id, low_played.id]
-
-    async def test__get_list__exclude_ids(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        kept = await TrackModelFactory.create_async(user_id=user.id)
-        excluded = await TrackModelFactory.create_async(user_id=user.id)
-
-        result = await track_repository.get_list(user.id, exclude_ids=[excluded.id])
-
-        assert [t.id for t in result] == [kept.id]
 
     async def test__reset_score__resets_matching_source(
         self,
@@ -714,45 +766,3 @@ class TestTrackSQLRepository:
 
         with pytest.raises(TrackNotFoundError):
             await track_repository.skip(user_id=uuid.uuid4(), track_id=track_db.id)
-
-    async def test__get_list__exclude_skipped(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        not_skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
-        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
-
-        result = await track_repository.get_list(user.id, exclude_skipped=True)
-
-        assert [t.id for t in result] == [not_skipped_db.id]
-
-    async def test__get_list__score_skipped_only(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
-        skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
-
-        result = await track_repository.get_list(user.id, score_skipped_only=True)
-
-        assert [t.id for t in result] == [skipped_db.id]
-
-    async def test__bulk_upsert__does_not_overwrite_score_skipped(
-        self,
-        async_session_db: AsyncSession,
-        user: User,
-        track_repository: TrackRepository,
-    ) -> None:
-        track = TrackFactory.build(user_id=user.id, score_skipped=False)
-        await track_repository.bulk_upsert([track], batch_size=1)
-
-        await track_repository.skip(user_id=user.id, track_id=track.id)
-
-        track_not_skipped = dataclasses.replace(track, score_skipped=False)
-        await track_repository.bulk_upsert([track_not_skipped], batch_size=1)
-
-        stmt = select(TrackModel).where(TrackModel.id == track.id)
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.score_skipped is True

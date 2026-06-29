@@ -7,7 +7,6 @@ from museflow.domain.entities.track import Track
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
-from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
 
@@ -99,15 +98,25 @@ class TrackRepository(ABC):
         Returns:
             A tuple containing a list of the UUIDs of the upserted tracks and the
             total number of created rows.
+
+        Note:
+            Some fields might be intentionally excluded from the ON CONFLICT DO UPDATE clause
+            to protect enrichment data and user decisions from being overwritten by re-imports.
+            Use :meth:`bulk_update` to write those fields explicitly.
         """
         ...
 
     @abstractmethod
-    async def bulk_update_enrichment(self, enrichments: list[TrackEnrichment]) -> None:
-        """Updates genre and mood metadata for a batch of tracks.
+    async def bulk_update(self, tracks: list[Track], fields: set[str]) -> None:
+        """Updates specific fields for a batch of existing tracks.
+
+        Only a limited set of domain fields are supported.
+        Attempting to update an unsupported field raises ``ValueError``.
 
         Args:
-            enrichments: A list of TrackEnrichment value objects containing the new genres and moods.
+            tracks: Track entities carrying the new field values (identified by ``id``).
+            fields: Domain attribute names to write (e.g. ``{"genres", "moods"}``).
+                Only the listed fields are updated; all others are left untouched.
         """
         ...
 

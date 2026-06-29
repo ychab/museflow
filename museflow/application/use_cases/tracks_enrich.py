@@ -48,15 +48,17 @@ async def tracks_enrich(
             error_count += 1
             continue
 
-        normalized = [
-            dataclasses.replace(
-                e,
-                genres=list(deduplicate_genre_dict({normalize_genre_key(g): 1.0 for g in e.genres}).keys()),
-            )
-            for e in enrichments
-        ]
+        enrichment_by_id = {e.track_id: e for e in enrichments}
+        enriched_tracks = []
+        for track in batch:
+            if track.id in enrichment_by_id:
+                e = enrichment_by_id[track.id]
+                normalized_genres = list(
+                    deduplicate_genre_dict({normalize_genre_key(g): 1.0 for g in e.genres}).keys()
+                )
+                enriched_tracks.append(dataclasses.replace(track, genres=normalized_genres, moods=e.moods))
 
-        await track_repository.bulk_update_enrichment(normalized)
+        await track_repository.bulk_update(enriched_tracks, fields={"genres", "moods"})
         enriched_count += len(batch)
         logger.info(
             f"Enriched batch {i}/{total_batches} ({len(batch)} tracks)",
