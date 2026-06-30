@@ -11,6 +11,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -92,6 +94,49 @@ class TestHistoryParserCommand:
         assert result.exit_code == 0
         config = mock_history_logic.call_args.kwargs["config"]
         assert config.name_suffix == "My Mix"
+
+    def test__genre__invalid__fails(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--genre", "foobar"])
+        assert result.exit_code != 0
+        assert "Invalid value for '--genre'" in clean_typer_text(result.output)
+
+    def test__mood__invalid__fails(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--mood", "foobar"])
+        assert result.exit_code != 0
+        assert "Invalid value for '--mood'" in clean_typer_text(result.output)
+
+    def test__genre__valid__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--genre", "hip-hop"])
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.genres == [GenreTag.HIP_HOP]
+
+    def test__mood__valid__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--mood", "chill"])
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.moods == [MoodTag.CHILL]
+
+    def test__multiple_genres__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["playlist", "history", "--email", "test@example.com", "--genre", "hip-hop", "--genre", "rock"],
+        )
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.genres == [GenreTag.HIP_HOP, GenreTag.ROCK]
 
     def test__score_min_greater_than_score_max__fails(
         self,

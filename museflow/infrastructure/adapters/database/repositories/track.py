@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import TrackNotFoundError
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import SortOrder
 from museflow.domain.types import TrackOrderBy
@@ -50,6 +52,8 @@ class TrackSQLRepository(TrackRepository):
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
         unenriched_only: bool = False,
+        genres: list[GenreTag] | None = None,
+        moods: list[MoodTag] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -97,6 +101,10 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
         if unenriched_only:
             stmt = stmt.where(func.array_length(TrackModel.genres, 1).is_(None))
+        if genres is not None:
+            stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
+        if moods is not None:
+            stmt = stmt.where(TrackModel.moods.overlap([m.value for m in moods]))
 
         # Ordering
         if order is None and min_score is not None:

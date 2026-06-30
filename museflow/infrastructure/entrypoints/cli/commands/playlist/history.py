@@ -14,6 +14,8 @@ from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
@@ -40,6 +42,8 @@ def playlist_history(
     score_min: int | None = typer.Option(None, "--score-min", help="Minimum track score (0-10)", min=0, max=10),
     score_max: int | None = typer.Option(None, "--score-max", help="Maximum track score (0-10)", min=0, max=10),
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
+    genre: list[GenreTag] = typer.Option([], "--genre", help="Filter by genre tag (repeatable, OR logic)"),
+    mood: list[MoodTag] = typer.Option([], "--mood", help="Filter by mood tag (repeatable, OR logic)"),
     played_first_min: date | None = typer.Option(
         None,
         "--played-first-min",
@@ -93,6 +97,8 @@ def playlist_history(
                     score_min=score_min,
                     score_max=score_max,
                     artist_name=artist,
+                    genres=genre,
+                    moods=mood,
                     played_first_min=played_first_min,
                     played_first_max=played_first_max,
                     played_last_min=played_last_min,

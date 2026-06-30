@@ -4,6 +4,8 @@ from abc import abstractmethod
 from datetime import date
 
 from museflow.domain.entities.track import Track
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackOrdering
 from museflow.domain.types import TrackSource
@@ -32,6 +34,8 @@ class TrackRepository(ABC):
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
         unenriched_only: bool = False,
+        genres: list[GenreTag] | None = None,
+        moods: list[MoodTag] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -64,6 +68,8 @@ class TrackRepository(ABC):
             played_last_max: When set, only tracks last played on or before this date are returned.
             exclude_ids: When set, tracks whose id is in this list are excluded.
             unenriched_only: When True, only tracks whose genres list is empty are returned.
+            genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
+            moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
 
         Returns:
             A list of `Track` entities.

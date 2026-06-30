@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import date
 
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import PlaylistHistoryOrderBy
 
 
@@ -10,6 +13,8 @@ class PlaylistHistoryConfigInput:
     score_min: int | None = None
     score_max: int | None = None
     artist_name: str | None = None
+    genres: list[GenreTag] = field(default_factory=list)
+    moods: list[MoodTag] = field(default_factory=list)
     played_first_min: date | None = None
     played_first_max: date | None = None
     played_last_min: date | None = None

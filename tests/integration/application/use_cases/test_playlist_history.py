@@ -10,6 +10,8 @@ from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.playlist_history import playlist_history
 from museflow.domain.entities.user import User
+from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.domain.types import TrackSource
 
@@ -199,3 +201,74 @@ class TestPlaylistHistoryUseCase:
         )
 
         assert [t.id for t in playlist.tracks] == [inside.id]
+
+    async def test__filters_by_genre(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.HIP_HOP.value]
+        )
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value])
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [matching.id]
+
+    async def test__filters_by_mood(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.CHILL.value]
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.ENERGETIC.value]
+        )
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(moods=[MoodTag.CHILL], limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [matching.id]
+
+    async def test__filters_by_multiple_genres__or_logic(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        hip_hop = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.HIP_HOP.value]
+        )
+        rock = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value]
+        )
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.JAZZ.value])
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert {t.id for t in playlist.tracks} == {hip_hop.id, rock.id}
