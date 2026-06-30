@@ -111,7 +111,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
             TrackEnrichment(
                 track_id=tracks[item.track_index].id,
                 genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
-                moods=[m for m in item.moods if m in MoodTag._value2member_map_],
+                moods=[MoodTag(m) for m in item.moods if m in MoodTag._value2member_map_],
             )
             for item in content.enriched_tracks
             if 0 <= item.track_index < len(tracks)

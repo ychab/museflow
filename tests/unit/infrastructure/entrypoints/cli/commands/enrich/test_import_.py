@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Final
@@ -9,6 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import GenreTag
+from museflow.domain.types import MoodTag
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import EnrichImportResult
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -171,11 +171,10 @@ class TestEnrichImportLogic:
         with pytest.raises(UserNotFound):
             await import_logic(email="test@example.com", data=[])
 
-    async def test__unknown_genres__skipped_with_warning(
+    async def test__unknown_genres__silently_dropped(
         self,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
         user = UserFactory.build()
         fingerprint = "test-fingerprint-xyz"
@@ -184,17 +183,37 @@ class TestEnrichImportLogic:
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
-        with caplog.at_level(logging.WARNING):
-            result = await import_logic(
-                email="test@example.com",
-                data=[{"fingerprint": fingerprint, "genres": ["rock", "INVALID_GENRE"], "moods": []}],
-            )
+        result = await import_logic(
+            email="test@example.com",
+            data=[{"fingerprint": fingerprint, "genres": ["rock", "INVALID_GENRE"], "moods": ["INVALID_MOOD"]}],
+        )
 
         assert result.imported_count == 1
         updated_track = mock_track_repository.bulk_update.call_args.args[0][0]
         assert updated_track.genres == [GenreTag.ROCK]
-        assert len(caplog.records) == 1
-        assert caplog.records[0].levelno == logging.WARNING
+        assert updated_track.moods == []
+
+    async def test__non_list_genres_and_moods__silently_dropped(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        fingerprint = "test-fingerprint-xyz"
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [
+            TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
+        ]
+
+        result = await import_logic(
+            email="test@example.com",
+            data=[{"fingerprint": fingerprint, "genres": "not-a-list", "moods": "not-a-list"}],
+        )
+
+        assert result.imported_count == 1
+        updated_track = mock_track_repository.bulk_update.call_args.args[0][0]
+        assert updated_track.genres == []
+        assert updated_track.moods == []
 
     async def test__fingerprint_not_found(
         self,
@@ -238,4 +257,4 @@ class TestEnrichImportLogic:
         assert call_args.kwargs["fields"] == {"genres", "moods"}
         updated_track = call_args.args[0][0]
         assert updated_track.genres == [GenreTag.ROCK, GenreTag.INDIE_ROCK]
-        assert updated_track.moods == ["energetic"]
+        assert updated_track.moods == [MoodTag.ENERGETIC]
