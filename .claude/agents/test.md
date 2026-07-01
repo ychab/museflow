@@ -134,11 +134,14 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 
 - `__set_relationships__ = False` on all SQLAlchemy factories.
 - `__allow_none_optionals__ = False` on Pydantic input factories.
-- `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base model factory.
+- `__use_defaults__ = True` on `DataclassFactory` subclasses — entity defaults (`fingerprint = ""`) are then respected automatically.
+- `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base SQLAlchemy model factory.
+- `__set_as_default_factory_for_type__ = True` on `TypedDictFactory` subclasses so nested TypedDicts resolve automatically.
 - Chain nested TypedDict factories with `Use(ChildFactory.build)` (e.g. `TasteEra` → `TechnicalFingerprint`).
+- **Don't override what polyfactory handles automatically:** `uuid.UUID` fields are auto-generated; fields with `default` / `default_factory` are respected when `__use_defaults__ = True`. Only add explicit overrides for realistic faker values (names, emails) or test-specific fixed values.
 - **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
   - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
-  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.
+  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`.
   - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
 
 ## Mocking
@@ -147,6 +150,7 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - `mock.Mock` for sync ports.
 - Never mock the database in integration tests — use the real `async_session_db` fixture.
 - Never use fake (in-memory) repository implementations. Use `AsyncMock` for all repository fixtures in unit tests.
+- **Never `with mock.patch(...)` inside a test method** — always wrap in a `pytest.fixture` placed as close to its usage as possible (class-level → module-level → conftest.py). Inline patches add indentation and can't be reused.
 
 **Logging assertions — use `caplog`, not `mock.patch(logger)`:**
 - `caplog: pytest.LogCaptureFixture` is a built-in pytest fixture — no import needed in the test file.
@@ -154,6 +158,17 @@ tests/unit/conftest.py               # function: mocks, entity fixtures
 - Assert `not caplog.records` (no log emitted) or `caplog.records[0].levelno == logging.ERROR` (log emitted).
 - `configure_loggers(..., propagate=True)` in `tests/conftest.py` ensures records reach `caplog` — no extra setup needed.
 - Never patch the module-level `logger` object via `mock.patch` — that's a banned inline-patch pattern.
+
+## Assertion style
+
+```python
+# Prefer direct comparison — concise and clear
+assert items == expected_items
+
+# If you must loop, include an identifier for debuggability
+for i, item in enumerate(items):
+    assert item.active, f"Item {i} (id={item.id}) failed"
+```
 
 ## Coverage rules
 
@@ -165,6 +180,19 @@ Every `for` loop → test with items AND with empty collection (if reachable).
 ## Typing
 
 All test functions, fixtures, factories, and helpers must have full strict type annotations. Return type of test functions is `None`.
+
+## WireMock (External APIs)
+
+- Spotify/Gemini API responses are mocked via WireMock in integration tests.
+- Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/gemini/`.
+- Use the `spotify_wiremock` / `gemini_wiremock` fixture to configure stubs per-test.
+- Any integration test class using WireMock **must** be decorated with `@pytest.mark.wiremock` (prevents xdist stub-collision flakiness).
+
+## Special markers
+
+- `@pytest.mark.slow` — skipped by default, run with `--slow`
+- `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify API
+- `@pytest.mark.wiremock` — required on any integration class using WireMock
 
 ## When you are done
 

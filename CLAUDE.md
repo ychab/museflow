@@ -202,241 +202,44 @@ logger.exception("Spotify API error", extra={"status_code": e.response.status_co
 ## Testing
 
 ### Philosophy
-Tests are the **contract with our users**. They must be clean, clear, and easy to maintain — not just achieve 100% coverage. Poorly written tests are worse than no tests: they create a false sense of security and make refactoring painful.
+Tests are the **contract with our users** — clean, clear, easy to maintain, not just 100% coverage.
 
-- **100% branch coverage** is mandatory (`pytest-cov --cov-branch --cov-fail-under=100`).
-- **Integration tests** are the primary focus — test full flows with a real DB and WireMock for external APIs.
-- **Unit tests** fill gaps — complex domain logic and edge cases hard to reach via integration.
-- **Do not mirror happy paths**: if a happy path is already covered by an integration test, do not add a unit test for the same flow — it creates maintenance duplication with no extra confidence.
-- **Error paths belong in unit tests, not integration tests**: if a branch raises a domain exception or handles an error condition, cover it with a unit test using `AsyncMock` — not an integration test. Integration tests prove the happy path works with real infrastructure; unit tests prove the logic branches fire correctly.
-- **Use `AsyncMock` for repositories**: do not implement fake (in-memory) repositories. `AsyncMock` is appropriate here: complex repository methods (filtering, bulk upsert) are hard to fake correctly, and integration tests already validate the port contract.
-- **All test code is typed** — fixtures, test functions, factories, helpers all have strict type annotations.
-- **No inner imports in test functions** — all imports at module level. If an inner import feels necessary to avoid a circular import, fix the source module design instead.
+- **100% branch coverage** is mandatory.
+- **Integration tests** are the primary focus — full flows with a real DB and WireMock.
+- **Unit tests** fill gaps — error branches and edge cases hard to reach via integration.
+- **Do not mirror happy paths** — if integration covers the nominal flow, no unit test for the same.
+- **Error paths belong in unit tests** — use `AsyncMock` repositories, not an integration test.
+- **No fake (in-memory) repositories** — use `AsyncMock`.
+- **All test code is typed** — fixtures, functions, factories, helpers.
+- **No inner imports in test functions** — all imports at module level.
 
 ### Test File Mirror
+One test file per source file — never consolidate:
 ```
 museflow/application/use_cases/user_create.py
 → tests/unit/application/use_cases/test_user_create.py
 → tests/integration/application/use_cases/test_user_create.py
 ```
 
-**One test file per source file.** Never consolidate multiple source modules into a single test file.
-
-### Fixture Scoping Strategy
-Fixtures are organized in `conftest.py` files at each directory level. Scope is chosen carefully:
-
-```
-tests/conftest.py          # scope="session": anyio_backend, configure_logging, frozen_time
-tests/integration/conftest.py
-    scope="session":  test_db_name, create_test_database, async_engine  (DB lifecycle — run once)
-    scope="function": async_session_db (autouse=True, auto-rollback), async_session_trans
-tests/unit/conftest.py     # scope="function" (default): all mocks, entity fixtures
-tests/.../conftest.py      # Nested conftest for area-specific shared fixtures
-```
-
-Rules:
-- Use `scope="session"` for expensive, shared setup (DB engine, test DB creation, logging).
-- Use `scope="function"` (default) for everything that touches state.
-- Use `autouse=True` sparingly — only for fixtures that EVERY test in that scope needs (e.g., DB rollback).
-- Use `request.param` on fixtures for parametrization via `@pytest.mark.parametrize` on the fixture itself.
-
-### Unit Tests
-```python
-class TestUserCreateUseCase:
-    async def test__nominal(
-        self,
-        user_create_data: UserCreateInput,      # factory-built Pydantic input
-        mock_user_repository: mock.AsyncMock,   # from conftest
-        mock_password_hasher: mock.Mock,        # from conftest
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = None
-        user = await user_create(user_create_data, mock_user_repository, mock_password_hasher)
-        assert user.email == user_create_data.email
-```
-- Use `mock.AsyncMock` for async repositories/ports, `mock.Mock` for sync ports.
-- Use factory-built entities from `tests/unit/factories/`.
-- **Never use `with mock.patch(...)` inside a test method** — wrap it in a `pytest.fixture` placed as close to its usage as possible: class method if used in one class, module-level if used across the module, `conftest.py` if used across multiple modules. Inline patches add unnecessary indentation. The `mock_typer_prompt` and `mock_typer_confirm` fixtures (rate conftest) and `mock_builtin_input` (class fixture on `TestRateHistoryLogic`) are canonical examples.
-
-### Logging assertions
-Use pytest's `caplog` fixture — never `mock.patch` the module-level `logger` object:
-```python
-async def test__something__logs(self, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.ERROR), pytest.raises(SomethingError):
-        await call_under_test()
-
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelno == logging.ERROR
-
-async def test__something__no_log(self, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.ERROR):
-        await call_under_test()
-
-    assert not caplog.records
-```
-- Combine context managers on a single `with` line (`caplog.at_level(...), pytest.raises(...)`) to avoid extra indentation.
-- `caplog.at_level(logging.ERROR)` filters to ERROR+ only, ignoring DEBUG/WARNING noise from the same code path.
-- Check `caplog.text` when the message content matters; `caplog.records[i].levelno` when the level matters.
-- `configure_loggers(..., propagate=True)` in `tests/conftest.py` ensures records reach `caplog` automatically — no extra setup needed.
-
-### Integration Tests
-```python
-class TestUserCreateUseCase:
-    async def test__nominal(
-        self,
-        async_session_db: AsyncSession,        # real DB, auto-rollback
-        user_repository: UserRepository,       # real SQLRepository
-        password_hasher: PasswordHasherPort,   # real Argon2
-    ) -> None:
-        user = await user_create(user_create_data, user_repository, password_hasher)
-        stmt = select(UserModel).where(UserModel.id == user.id)
-        user_db = (await async_session_db.execute(stmt)).scalar_one_or_none()
-        assert user_db is not None
-```
-- Use `async_session_db` (auto-rollback, autouse) by default — fast and isolated.
-- Use `async_session_trans` ONLY when testing code that explicitly commits — slower, uses TRUNCATE.
+### Fixture Rules
+- `scope="session"` for expensive shared setup (DB engine, test DB, logging).
+- `scope="function"` (default) for everything that touches state.
+- `autouse=True` only for fixtures every test in scope needs.
+- `request.param` for parametrized fixtures — never module-level `_make_*` helpers.
+- `async_session_db` (auto-rollback) by default; `async_session_trans` only for explicit commit testing.
+- **Never `with mock.patch(...)` inside a test method** — always a `pytest.fixture` instead.
 
 ### CLI Command Tests
-
-Each CLI command gets **3 unit test classes** and **1 integration test class**. Canonical example: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
-
-**Unit test classes (per command):**
-- `TestXParserCommand` — autouse-mock the `*_logic` function; test only Typer argument/option parsing (invalid email format, invalid UUID, etc.)
-- `TestXCommand` — autouse-mock the `*_logic` function; test the command function's own behavior: success output messages, try/except branches
-- `TestXLogic` — set `TARGET_PATH` as a class attribute pointing to the command's module; use `@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", ...)` to patch CLI dependencies; test the logic function's own branches (user not found, etc.)
-
-**Integration test class (per command):**
-- `TestXLogic` — real DB; **happy-path only**. Error-path tests (user not found, item not found) belong in the unit `TestXLogic`.
-
-**Key rules:**
-- Never mix parsing validation into `TestXCommand`, and never mix command body behavior into `TestXParserCommand`
-- The `target_path` fixture resolves from `TARGET_PATH` on the class first, then the module — always set it on `TestXLogic` classes since each logic function lives in its own module
-- No inner imports anywhere in test files — all imports at module level
+Each command: 3 unit classes (`TestXParserCommand`, `TestXCommand`, `TestXLogic`) + 1 integration `TestXLogic` (happy-path only). Canonical: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
 
 ### Factories
-```python
-# Domain entities — DataclassFactory
-class UserFactory(DataclassFactory[User]):
-    __model__ = User
-
-# TypedDicts — TypedDictFactory (use for TypedDict types like TechnicalFingerprint, TasteEra)
-class TechnicalFingerprintFactory(TypedDictFactory[TechnicalFingerprint]):
-    __model__ = TechnicalFingerprint
-    __set_as_default_factory_for_type__ = True
-
-class TasteEraFactory(TypedDictFactory[TasteEra]):
-    __model__ = TasteEra
-    __set_as_default_factory_for_type__ = True
-    technical_fingerprint = Use(TechnicalFingerprintFactory.build)  # chain nested TypedDicts with Use(ChildFactory.build)
-
-# Pydantic inputs — ModelFactory
-class UserCreateInputFactory(ModelFactory[UserCreateInput]):
-    __model__ = UserCreateInput
-    __allow_none_optionals__ = False   # Don't generate None for optional fields
-
-# SQLAlchemy models — SQLAlchemyFactory (integration tests only)
-class UserModelFactory(BaseModelFactory[User]):
-    __model__ = User
-    email = Use(BaseModelFactory.__faker__.email)
-
-    @post_generated
-    @classmethod
-    def hashed_password(cls) -> str:
-        return get_password_hasher().hash("testtest")
-```
 - `DataclassFactory` → domain entities | `TypedDictFactory` → TypedDicts | `ModelFactory` → Pydantic | `SQLAlchemyFactory` → DB models.
-- `__set_relationships__ = False` on all SQLAlchemy factories (conflicts with `MappedAsDataclass`).
-- `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base model factory.
-- `__allow_none_optionals__ = False` on input factories when you always want values.
-- Use `@post_generated` for fields that depend on other generated fields.
-- Use `Use(faker.email)` for realistic field values.
-- **Don't override what polyfactory handles automatically:** `uuid.UUID` fields are auto-generated. Fields with `default` or `default_factory` on the entity are respected when `__use_defaults__ = True` is set on the factory — use this on `DataclassFactory` subclasses instead of re-declaring the default (e.g. `fingerprint = ""`). Only add explicit overrides for realistic faker values (names, sentences, emails) or test-specific fixed values.
-- **Never create module-level helper functions or class-level helper methods** (including `_make_*`, `_build_*`, or any `_`-prefixed function/method) to build or parametrize test data:
-  - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
-  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`. Never replace a `_make_*` function with another module-level helper that calls a factory — promote it to a fixture instead.
-  - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
-
-### Assertion Style
-```python
-# Prefer direct comparison — concise and clear
-assert items == expected_items
-
-# If you must loop, include an identifier for debuggability
-for i, item in enumerate(items):
-    assert item.active, f"Item {i} (id={item.id}) failed"
-```
-
-### WireMock (External APIs)
-- Spotify/Gemini API responses are mocked via WireMock in integration tests.
-- Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/gemini/`.
-- Use the `spotify_wiremock` fixture to configure stubs per-test.
+- Never create module-level helper functions (`_make_*`, `_build_*`) — call factory directly or use a fixture.
 
 ### Dead End Protocol
-
-When fixing a failing test or external-tool issue, Claude applies a **3-attempt cap**. If the problem is not resolved after 3 attempts, Claude **stops** iterating and outputs a structured summary instead.
-
-**What counts as one attempt:**
-- Run the test(s), observe the failure.
-- Form a hypothesis, apply a targeted fix (edit a file, update a stub, change a fixture).
-- Re-run to verify.
-
-**When the cap is reached, output:**
-
-```
-## Dead End — <test or file name>
-
-### Attempts (3/3)
-1. **Attempt 1:** <what was changed> → <error / result>
-2. **Attempt 2:** <what was changed> → <error / result>
-3. **Attempt 3:** <what was changed> → <error / result>
-
-### Root Cause
-<Clear, honest assessment of what the problem appears to be and why it is hard to fix automatically.>
-
-### Options
-**A — <most likely fix>**
-<Concrete steps. Who needs to do what.>
-
-**B — <alternative approach>**
-<Concrete steps.>
-
-**C — Skip temporarily**
-Mark with `@pytest.mark.skip(reason="<issue>: <short description>")` until the root cause is resolved.
-```
-
-**Failure-mode option menus (use as starting point):**
-
-| Failure mode | Typical options |
-|---|---|
-| Test assertion keeps failing | A) Fix source bug · B) Update test expectation · C) Skip |
-| WireMock stub mismatch | A) Update stub JSON · B) Add `@pytest.mark.wiremock` · C) Regenerate stub from real API (`--spotify-live`) |
-| DB / fixture error | A) Run `make db-upgrade` · B) Fix conftest fixture chain · C) Restart Docker (`make down && make up`) |
-| External library break | A) Pin previous version in `pyproject.toml` · B) Adapt code to new API · C) Skip + open issue |
+After 3 failed fix attempts on the same problem, stop and report structured options A/B/C. Full template in the `test` agent.
 
 ### Special Markers
 - `@pytest.mark.slow` — skipped by default, run with `--slow`
-- `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify API
-
-## Claude
-
-### Slash Commands (`.claude/commands/`)
-Reusable prompts invoked with `/command-name`:
-
-| Command | Purpose |
-|---|---|
-| `/new-feature` | Scaffold a full feature across all layers |
-| `/new-provider` | Scaffold a new music provider integration |
-| `/new-migration` | Generate and review an Alembic migration |
-| `/add-tests` | Add tests for a source file to 100% branch coverage |
-| `/arch-review` | Review changed files for Clean Architecture violations |
-| `/security-review` | Review changed files for security vulnerabilities |
-
-### Agents (`.claude/agents/`)
-Autonomous subagents invoked with `/agent:name` or auto-routed by Claude:
-
-| Agent | Purpose |
-|---|---|
-| `python` | Fix lint errors autonomously — runs `make lint`, fixes ruff/mypy/deptry issues, iterates until clean |
-| `test` | Fix failing tests and fill coverage gaps — runs `make test`, traces failures, writes missing branches |
-| `arch` | Architecture compliance review — checks all changed files against hexagonal architecture rules |
-| `security` | Security review — checks changed files for vulnerabilities, runs `uv audit` for CVEs |
-| `engineer` | Read-only codebase explorer — explains feature flows, locates code, guides implementation approach |
+- `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify
+- `@pytest.mark.wiremock` — required on any integration class using WireMock (prevents xdist flakiness)
