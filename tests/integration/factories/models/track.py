@@ -21,6 +21,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
     score_skipped = False
     genres = Use(lambda: cast(list[str], []))
     moods = Use(lambda: cast(list[str], []))
+    locale = None
 
     provider_links = Use(
         lambda: [{"provider": MusicProvider.SPOTIFY.value, "provider_id": str(BaseModelFactory.__faker__.uuid4())}]

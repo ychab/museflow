@@ -51,9 +51,9 @@ async def tracks_enrich(
         for track in batch:
             if track.id in enrichment_by_id:
                 e = enrichment_by_id[track.id]
-                enriched_tracks.append(dataclasses.replace(track, genres=e.genres, moods=e.moods))
+                enriched_tracks.append(dataclasses.replace(track, genres=e.genres, moods=e.moods, locale=e.locale))
 
-        await track_repository.bulk_update(enriched_tracks, fields={"genres", "moods"})
+        await track_repository.bulk_update(enriched_tracks, fields={"genres", "moods", "locale"})
         enriched_count += len(batch)
         logger.info(
             f"Enriched batch {i}/{total_batches} ({len(batch)} tracks)",

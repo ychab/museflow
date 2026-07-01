@@ -1,10 +1,14 @@
 from dataclasses import dataclass
+from typing import Annotated
 
 from pydantic import BaseModel
 from pydantic import field_validator
+from pydantic.functional_validators import BeforeValidator
 
 from museflow.domain.types import GenreTag
+from museflow.domain.types import LocaleCode
 from museflow.domain.types import MoodTag
+from museflow.domain.types import validate_locale
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -16,8 +20,10 @@ class EnrichTracksConfigInput:
 
 class EnrichEntryInput(BaseModel):
     fingerprint: str
+
     genres: list[GenreTag] = []
     moods: list[MoodTag] = []
+    locale: Annotated[LocaleCode | None, BeforeValidator(validate_locale)] = None
 
     @field_validator("genres", mode="before")
     @classmethod

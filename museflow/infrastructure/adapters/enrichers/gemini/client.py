@@ -62,6 +62,12 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                             "### MOOD RULES\n"
                             f"- Return 1 to 2 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
                             "- Do NOT use any mood word outside this list.\n\n"
+                            "### LOCALE RULE\n"
+                            "- `locale`: Return the 2-letter ISO 639-1 code for the spoken language of the primary artist "
+                            '(e.g. "fr", "en", "es", "pt", "ar", "ko").\n'
+                            "- Infer from the primary artist's nationality/cultural context.\n"
+                            "- If the track is instrumental or the language is genuinely ambiguous, omit the field.\n"
+                            "- Do NOT guess. Only return a code you are confident about.\n\n"
                             "### OUTPUT\n"
                             "Return only the JSON object (schema enforced). "
                             "Use the track_index field to match each result back to the input track."
@@ -112,6 +118,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                 track_id=tracks[item.track_index].id,
                 genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
                 moods=[MoodTag(m) for m in item.moods if m in MoodTag._value2member_map_],
+                locale=item.locale,
             )
             for item in content.enriched_tracks
             if 0 <= item.track_index < len(tracks)

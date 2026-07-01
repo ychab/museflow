@@ -11,3 +11,4 @@ class TrackEnrichmentFactory(DataclassFactory[TrackEnrichment]):
 
     genres = Use(lambda: [GenreTag.FOLK, GenreTag.INDIE_FOLK])
     moods = Use(lambda: ["chill"])
+    locale = None

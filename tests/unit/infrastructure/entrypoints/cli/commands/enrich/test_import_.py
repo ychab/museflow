@@ -254,7 +254,7 @@ class TestEnrichImportLogic:
 
         mock_track_repository.bulk_update.assert_awaited_once()
         call_args = mock_track_repository.bulk_update.call_args
-        assert call_args.kwargs["fields"] == {"genres", "moods"}
+        assert call_args.kwargs["fields"] == {"genres", "moods", "locale"}
         updated_track = call_args.args[0][0]
         assert updated_track.genres == [GenreTag.ROCK, GenreTag.INDIE_ROCK]
         assert updated_track.moods == [MoodTag.ENERGETIC]

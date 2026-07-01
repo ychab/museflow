@@ -29,6 +29,7 @@ class TrackSQLRepository(TrackRepository):
     FIELDS_UPDATE_WHITELIST: dict[str, str] = {
         "genres": "genres",
         "moods": "moods",
+        "locale": "locale",
     }
 
     def __init__(self, session: AsyncSession) -> None:
@@ -154,8 +155,8 @@ class TrackSQLRepository(TrackRepository):
         created_count: int = 0
 
         index_elements: list[str] = ["user_id", "fingerprint"]
-        # score_skipped, genres, moods excluded so re-imports never overwrite user decisions/enrichment
-        index_excluded: list[str] = ["id", "score_skipped", "genres", "moods"] + index_elements
+        # score_skipped, genres, moods, locale excluded so re-imports never overwrite user decisions/enrichment
+        index_excluded: list[str] = ["id", "score_skipped", "genres", "moods", "locale"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
 

@@ -139,8 +139,9 @@ class TestTracksEnrichUseCase:
         mock_enricher.enrich_tracks.return_value = [
             TrackEnrichmentFactory.build(
                 track_id=track.id,
-                genres=[GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.RAP_FR],
+                genres=[GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.AFRO_RAP],
                 moods=["chill"],
+                locale="fr",
             )
         ]
 
@@ -154,6 +155,7 @@ class TestTracksEnrichUseCase:
         call_args = mock_track_repository.bulk_update.call_args
         tracks_arg = call_args[0][0]
         fields_arg = call_args.kwargs["fields"]
-        assert fields_arg == {"genres", "moods"}
+        assert fields_arg == {"genres", "moods", "locale"}
         assert len(tracks_arg) == 1
-        assert tracks_arg[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.RAP_FR]
+        assert tracks_arg[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.AFRO_RAP]
+        assert tracks_arg[0].locale == "fr"

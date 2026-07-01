@@ -4,6 +4,15 @@ from enum import StrEnum
 type TrackOrdering = list[tuple[TrackOrderBy, SortOrder]]
 type ScoreAdvisor = float
 type ScoreReconciler = float
+type LocaleCode = str  # ISO 639-1 two-letter lowercase language code, e.g. "fr", "en"
+
+
+def validate_locale(v: object) -> "LocaleCode | None":
+    if not isinstance(v, str):
+        return None
+    v = v.strip().lower()
+    return v if len(v) == 2 and v.isalpha() else None
+
 
 DISCOVERY_TRACK_SCORE_MIN: int = 0
 DISCOVERY_TRACK_SCORE_MAX: int = 10
@@ -167,11 +176,11 @@ class GenreTag(StrEnum):
     ARABIC = "arabic"
     BALKAN = "balkan"
     CELTIC = "celtic"
-    # ── L3 Micro (specific variant / regional) ───────────────────────────────
+    # ── L3 Micro (specific variant / style) ──────────────────────────────────
     # rap
-    RAP_FR = "rap fr"
-    RAP_US = "rap us"
-    RAP_UK = "rap uk"
+    AFRO_RAP = "afro rap"  # rap from African diaspora (Hamza, Freeze Corleone, Gazo)
+    CLOUD_RAP = "cloud rap"  # ethereal, hazy production (A$AP Rocky, SpaceGhostPurrp)
+    MELODIC_RAP = "melodic rap"  # singing + rapping hybrid (Juice WRLD, Rod Wave)
     CONSCIOUS_RAP = "conscious rap"
     GANGSTA_RAP = "gangsta rap"
     MUMBLE_RAP = "mumble rap"
@@ -389,9 +398,9 @@ GENRE_MESO_TAGS: tuple[GenreTag, ...] = (
 
 GENRE_MICRO_TAGS: tuple[GenreTag, ...] = (
     # rap
-    GenreTag.RAP_FR,
-    GenreTag.RAP_US,
-    GenreTag.RAP_UK,
+    GenreTag.AFRO_RAP,
+    GenreTag.CLOUD_RAP,
+    GenreTag.MELODIC_RAP,
     GenreTag.CONSCIOUS_RAP,
     GenreTag.GANGSTA_RAP,
     GenreTag.MUMBLE_RAP,

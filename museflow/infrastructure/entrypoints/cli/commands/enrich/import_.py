@@ -79,9 +79,11 @@ async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
                 not_found_count += 1
                 continue
             track = fingerprint_to_track[entry.fingerprint]
-            updated_tracks.append(dataclasses.replace(track, genres=entry.genres, moods=entry.moods))
+            updated_tracks.append(
+                dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locale=entry.locale)
+            )
 
         if updated_tracks:
-            await track_repository.bulk_update(updated_tracks, fields={"genres", "moods"})
+            await track_repository.bulk_update(updated_tracks, fields={"genres", "moods", "locale"})
 
         return EnrichImportResult(imported_count=len(updated_tracks), not_found_count=not_found_count)

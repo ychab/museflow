@@ -52,6 +52,11 @@ async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
         tracks = await track_repository.get_list(user_id=user.id)
         enriched = [t for t in tracks if t.genres]
         return [
-            {"fingerprint": t.fingerprint, "genres": [g.value for g in t.genres], "moods": [m.value for m in t.moods]}
+            {
+                "fingerprint": t.fingerprint,
+                "genres": [g.value for g in t.genres],
+                "moods": [m.value for m in t.moods],
+                "locale": t.locale,
+            }
             for t in enriched
         ]

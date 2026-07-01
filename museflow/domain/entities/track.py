@@ -4,6 +4,7 @@ from datetime import datetime
 
 from museflow.domain.entities.base import BaseEntity
 from museflow.domain.types import GenreTag
+from museflow.domain.types import LocaleCode
 from museflow.domain.types import MoodTag
 from museflow.domain.types import MusicProvider
 from museflow.domain.types import TrackSource
@@ -35,6 +36,7 @@ class Track(BaseEntity):
 
     genres: list[GenreTag] = field(default_factory=list)
     moods: list[MoodTag] = field(default_factory=list)
+    locale: LocaleCode | None = None
 
     @property
     def primary_artist(self) -> str:
