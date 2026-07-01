@@ -8,12 +8,12 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TasteProfiler
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TasteProfiler
-from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 

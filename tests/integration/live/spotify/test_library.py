@@ -9,8 +9,8 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter

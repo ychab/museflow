@@ -4,11 +4,11 @@ from abc import abstractmethod
 from datetime import date
 
 from museflow.domain.entities.track import Track
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.types import TrackOrdering
-from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
 

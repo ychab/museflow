@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from typing import Self
 
 from museflow.domain.entities.track import Track
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
-from museflow.domain.types import MoodTag
 from museflow.domain.utils.text import normalize_text
 
 

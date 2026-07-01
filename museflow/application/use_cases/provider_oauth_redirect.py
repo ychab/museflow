@@ -2,7 +2,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 
 
 async def oauth_redirect(

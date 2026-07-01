@@ -4,7 +4,7 @@ from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.entities.user import User
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory

@@ -5,10 +5,10 @@ from pydantic import BaseModel
 from pydantic import field_validator
 from pydantic.functional_validators import BeforeValidator
 
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
-from museflow.domain.types import MoodTag
-from museflow.domain.types import validate_locale
+from museflow.domain.utils.text import validate_locale
 
 
 @dataclass(frozen=True, kw_only=True)

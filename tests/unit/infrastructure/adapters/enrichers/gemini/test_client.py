@@ -2,7 +2,7 @@ import json
 
 from pytest_httpx import HTTPXMock
 
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 
 from tests.unit.factories.entities.track import TrackFactory

@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from polyfactory import Use
 
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track
 
 from tests.integration.factories.models.base import BaseModelFactory

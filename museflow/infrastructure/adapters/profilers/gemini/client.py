@@ -18,17 +18,17 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.profilers.taste import TasteProfilerPort
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
+from museflow.domain.const import GENRE_MACRO_TAGS
+from museflow.domain.const import GENRE_MESO_TAGS
+from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
-from museflow.domain.types import DISCOVERY_TRACK_SCORE_MAX
-from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
-from museflow.domain.types import GENRE_MACRO_TAGS
-from museflow.domain.types import GENRE_MESO_TAGS
-from museflow.domain.types import GENRE_MICRO_TAGS
-from museflow.domain.types import MoodTag
-from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart

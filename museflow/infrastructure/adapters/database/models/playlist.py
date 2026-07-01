@@ -9,9 +9,9 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.playlist import Playlist as PlaylistEntity
-from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin

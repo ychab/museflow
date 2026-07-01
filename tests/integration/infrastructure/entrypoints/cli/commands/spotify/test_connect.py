@@ -12,7 +12,7 @@ import pytest
 
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic

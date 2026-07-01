@@ -5,7 +5,7 @@ from polyfactory.decorators import post_generated
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
 from museflow.domain.entities.playlist import Playlist
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import PlaylistType
 
 from tests.unit.factories.entities.track import TrackFactory
 

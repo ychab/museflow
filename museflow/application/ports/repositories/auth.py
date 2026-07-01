@@ -6,7 +6,7 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 
 
 class OAuthProviderStateRepository(ABC):

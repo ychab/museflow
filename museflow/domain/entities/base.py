@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass
 from dataclasses import field
 
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 
 
 @dataclass(frozen=True, kw_only=True)

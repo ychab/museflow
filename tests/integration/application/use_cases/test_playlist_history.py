@@ -10,10 +10,10 @@ from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.playlist_history import playlist_history
 from museflow.domain.entities.user import User
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import PlaylistHistoryOrderBy
-from museflow.domain.types import TrackSource
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import PlaylistHistoryOrderBy
+from museflow.domain.enums import TrackSource
 
 from tests.integration.factories.models.track import TrackModelFactory
 

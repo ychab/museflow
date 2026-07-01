@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.user import User
-from museflow.domain.types import TasteProfiler
+from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
 
 from tests.unit.factories.entities.taste import TasteProfileFactory

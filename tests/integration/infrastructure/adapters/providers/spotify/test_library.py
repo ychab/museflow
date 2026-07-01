@@ -1,9 +1,9 @@
 import pytest
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderPageValidationError
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory

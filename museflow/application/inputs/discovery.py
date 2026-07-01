@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
+from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -4,7 +4,7 @@ import pytest
 
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.types import DiscoveryFocus
+from museflow.domain.enums import DiscoveryFocus
 from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_taste_advisor
 
 

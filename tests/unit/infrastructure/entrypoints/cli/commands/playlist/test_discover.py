@@ -10,14 +10,14 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptReport
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.user import User
+from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import MusicAdvisor
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import MusicAdvisor
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

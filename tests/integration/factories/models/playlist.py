@@ -3,7 +3,7 @@ from typing import Any
 
 from polyfactory.decorators import post_generated
 
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
 

@@ -6,11 +6,11 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

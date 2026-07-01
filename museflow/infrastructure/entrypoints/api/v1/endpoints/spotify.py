@@ -13,8 +13,8 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user

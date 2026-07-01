@@ -7,9 +7,9 @@ import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import TracksDeleteResult
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app

@@ -7,8 +7,8 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicAdvisor
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicAdvisor
+from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
 

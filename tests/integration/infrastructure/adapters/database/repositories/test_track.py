@@ -15,11 +15,11 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory

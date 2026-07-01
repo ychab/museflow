@@ -4,9 +4,9 @@ import uuid
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 
 logger = logging.getLogger(__name__)
 

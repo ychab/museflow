@@ -5,12 +5,12 @@ from pydantic import HttpUrl
 from pydantic import ValidationError
 
 from museflow.application.ports.enrichers.track import TrackEnricherPort
+from museflow.domain.const import GENRE_MACRO_TAGS
+from museflow.domain.const import GENRE_MESO_TAGS
+from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.entities.track import Track
-from museflow.domain.types import GENRE_MACRO_TAGS
-from museflow.domain.types import GENRE_MESO_TAGS
-from museflow.domain.types import GENRE_MICRO_TAGS
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent

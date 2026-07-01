@@ -14,7 +14,7 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 

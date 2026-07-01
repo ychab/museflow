@@ -13,14 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
 from museflow.domain.types import TrackOrdering
-from museflow.domain.types import TrackSource
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 

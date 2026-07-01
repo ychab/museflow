@@ -11,8 +11,8 @@ import typer
 
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_state_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

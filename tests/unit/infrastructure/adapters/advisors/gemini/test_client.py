@@ -11,11 +11,11 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
+from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
-from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory

@@ -9,12 +9,12 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import PlaylistHistoryOrderBy
+from museflow.domain.enums import PlaylistType
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import PlaylistNoTracksError
-from museflow.domain.types import PlaylistHistoryOrderBy
-from museflow.domain.types import PlaylistType
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
-from museflow.domain.types import TrackSource
 
 
 async def playlist_history(

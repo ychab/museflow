@@ -8,8 +8,8 @@ from pydantic import EmailStr
 import typer
 import yaml
 
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository

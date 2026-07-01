@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from pydantic import Field
 
-from museflow.domain.types import DISCOVERY_TRACK_SCORE_MAX
-from museflow.domain.types import DISCOVERY_TRACK_SCORE_MIN
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 
 
 class RateEntryInput(BaseModel):

@@ -5,7 +5,7 @@ from museflow.application.ports.repositories.auth import OAuthProviderStateRepos
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 

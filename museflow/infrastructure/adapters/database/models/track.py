@@ -15,11 +15,11 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track as TrackEntity
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin

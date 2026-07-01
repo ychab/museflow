@@ -3,7 +3,7 @@ from unittest import mock
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.user import UserFactory

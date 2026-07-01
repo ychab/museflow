@@ -8,11 +8,11 @@ from museflow.application.mappers.auth import auth_token_update_from_token_paylo
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter

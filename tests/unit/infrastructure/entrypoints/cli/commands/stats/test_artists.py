@@ -7,8 +7,8 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.user import User
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import ArtistRow
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
 from museflow.infrastructure.entrypoints.cli.main import app

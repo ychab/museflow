@@ -1,7 +1,7 @@
 from polyfactory import Use
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
 from museflow.domain.value_objects.track import TrackEnrichment
 
 

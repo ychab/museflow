@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
 
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import PlaylistHistoryOrderBy
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import PlaylistHistoryOrderBy
 
 
 @dataclass(frozen=True, kw_only=True)

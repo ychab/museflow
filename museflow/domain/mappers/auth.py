@@ -1,7 +1,7 @@
 import uuid
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 

@@ -1,7 +1,7 @@
 import pytest
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.types import DiscoveryFocus
+from museflow.domain.enums import DiscoveryFocus
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 

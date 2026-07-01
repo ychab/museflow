@@ -7,8 +7,8 @@ import typer
 from rich.pretty import Pretty
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.commands.spotify import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository

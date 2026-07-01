@@ -11,9 +11,9 @@ from rich.table import Table
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

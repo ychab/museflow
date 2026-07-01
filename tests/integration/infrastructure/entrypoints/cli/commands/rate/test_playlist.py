@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic

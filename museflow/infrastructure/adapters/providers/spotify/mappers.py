@@ -3,9 +3,9 @@ import uuid
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
-from museflow.domain.types import TrackSource
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
+from museflow.domain.enums import TrackSource
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyToken

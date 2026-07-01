@@ -11,7 +11,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import NumericIdMixin

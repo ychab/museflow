@@ -7,11 +7,11 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.playlist_delete import PlaylistDeleteUseCase
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

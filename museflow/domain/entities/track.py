@@ -3,11 +3,11 @@ from dataclasses import field
 from datetime import datetime
 
 from museflow.domain.entities.base import BaseEntity
-from museflow.domain.types import GenreTag
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.domain.utils.text import generate_fingerprint
 
 

@@ -8,10 +8,10 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

@@ -3,7 +3,7 @@ from abc import abstractmethod
 
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import PlaylistType
 
 
 class ProviderLibraryPort(ABC):

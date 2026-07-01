@@ -12,12 +12,12 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
 
 logger = logging.getLogger(__name__)
 

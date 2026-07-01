@@ -10,7 +10,7 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.taste import TasteProfileStatus
-from museflow.domain.types import TasteProfiler
+from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 

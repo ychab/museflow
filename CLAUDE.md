@@ -25,9 +25,11 @@ museflow/
 │   ├── entities/    # frozen dataclasses
 │   ├── value_objects/
 │   ├── services/    # domain services (e.g., Reconciler)
-│   ├── utils/       # pure functions (text normalization, fingerprinting)
+│   ├── utils/       # pure functions (text normalization, fingerprinting, locale validation)
 │   ├── exceptions.py
-│   └── types.py     # enums and type aliases
+│   ├── enums.py     # all StrEnum / IntFlag definitions
+│   ├── const.py     # all domain constants (score bounds, GENRE_*_TAGS tuples)
+│   └── types.py     # type aliases only (TrackOrdering, ScoreAdvisor, LocaleCode, …)
 ├── application/     # Orchestration — depends ONLY on domain
 │   ├── use_cases/
 │   ├── inputs/      # Pydantic command/input schemas

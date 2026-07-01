@@ -5,7 +5,7 @@ from pydantic import Field
 from pydantic.functional_validators import BeforeValidator
 
 from museflow.domain.types import LocaleCode
-from museflow.domain.types import validate_locale
+from museflow.domain.utils.text import validate_locale
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerationConfig
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiSchemaProperty
 

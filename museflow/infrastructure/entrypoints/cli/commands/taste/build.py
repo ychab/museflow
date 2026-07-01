@@ -8,10 +8,10 @@ import typer
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
+from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

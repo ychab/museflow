@@ -8,12 +8,12 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.domain.entities.user import User
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

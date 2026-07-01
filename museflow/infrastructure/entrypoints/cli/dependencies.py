@@ -16,10 +16,10 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.domain.enums import MusicAdvisor
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
-from museflow.domain.types import MusicAdvisor
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository

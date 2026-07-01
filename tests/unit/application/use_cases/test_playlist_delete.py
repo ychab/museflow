@@ -4,9 +4,9 @@ from unittest import mock
 import pytest
 
 from museflow.application.use_cases.playlist_delete import PlaylistDeleteUseCase
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.user import UserFactory

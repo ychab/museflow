@@ -6,9 +6,9 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository

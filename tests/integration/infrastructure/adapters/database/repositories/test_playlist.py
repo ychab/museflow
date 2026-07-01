@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
 

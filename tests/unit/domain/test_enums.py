@@ -1,4 +1,4 @@
-from museflow.domain.types import TrackOrderBy
+from museflow.domain.enums import TrackOrderBy
 
 
 class TestTrackOrderBy:

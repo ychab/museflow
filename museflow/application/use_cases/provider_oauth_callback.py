@@ -3,8 +3,8 @@ from museflow.application.mappers.auth import auth_token_update_from_token_paylo
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
-from museflow.domain.types import MusicProvider
 
 
 async def oauth_callback(

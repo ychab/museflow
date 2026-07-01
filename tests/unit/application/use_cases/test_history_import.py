@@ -11,8 +11,8 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
-from museflow.domain.types import MusicProvider
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 

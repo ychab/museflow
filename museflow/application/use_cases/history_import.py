@@ -9,8 +9,8 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
-from museflow.domain.types import MusicProvider
 from museflow.domain.utils.text import generate_fingerprint
 
 logger = logging.getLogger(__name__)

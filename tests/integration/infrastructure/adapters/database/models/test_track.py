@@ -1,4 +1,4 @@
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory

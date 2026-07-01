@@ -4,7 +4,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 
 
 @dataclass(frozen=True, kw_only=True)

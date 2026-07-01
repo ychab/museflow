@@ -4,8 +4,8 @@ import pytest
 
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
-from museflow.domain.types import MusicProvider
 
 
 class TestOauthCallbackUseCase:

@@ -1,6 +1,6 @@
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.domain.entities.user import User
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import delete_logic
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory

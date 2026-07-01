@@ -2,6 +2,15 @@ import re
 
 from unidecode import unidecode
 
+from museflow.domain.types import LocaleCode
+
+
+def validate_locale(v: object) -> "LocaleCode | None":
+    if not isinstance(v, str):
+        return None
+    v = v.strip().lower()
+    return v if len(v) == 2 and v.isalpha() else None
+
 
 def unidecode_lower_text(text: str) -> str:
     """Remove accents and convert to lowercase"""

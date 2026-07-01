@@ -6,9 +6,9 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import EnrichImportResult
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import import_logic
 from museflow.infrastructure.entrypoints.cli.main import app

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter

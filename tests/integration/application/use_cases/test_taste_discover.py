@@ -8,8 +8,8 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
+from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
-from museflow.domain.types import TasteProfiler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory

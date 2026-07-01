@@ -7,11 +7,11 @@ import pytest
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.use_cases.playlist_history import playlist_history
+from museflow.domain.enums import PlaylistHistoryOrderBy
+from museflow.domain.enums import PlaylistType
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import PlaylistNoTracksError
-from museflow.domain.types import PlaylistHistoryOrderBy
-from museflow.domain.types import PlaylistType
-from museflow.domain.types import SortOrder
-from museflow.domain.types import TrackOrderBy
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.user import UserFactory

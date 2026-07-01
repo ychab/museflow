@@ -10,9 +10,9 @@ from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
-from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter

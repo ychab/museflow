@@ -4,7 +4,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.use_cases.playlist_delete import PlaylistDeleteUseCase
 from museflow.domain.entities.user import User
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import PlaylistType
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 

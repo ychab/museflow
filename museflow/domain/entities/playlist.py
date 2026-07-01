@@ -6,8 +6,8 @@ from datetime import datetime
 
 from museflow.domain.entities.base import BaseProviderEntity
 from museflow.domain.entities.track import Track
-from museflow.domain.types import DiscoveryFocus
-from museflow.domain.types import PlaylistType
+from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import PlaylistType
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -1,6 +1,6 @@
 import enum
 
-from museflow.domain.types import TrackSource
+from museflow.domain.enums import TrackSource
 
 
 class SourceFilter(enum.StrEnum):

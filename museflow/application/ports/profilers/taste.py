@@ -4,7 +4,7 @@ from typing import Any
 
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
-from museflow.domain.types import TasteProfiler
+from museflow.domain.enums import TasteProfiler
 
 
 class TasteProfilerPort(ABC):

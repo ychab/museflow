@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from pydantic import field_validator
 
-from museflow.domain.types import GENRE_MACRO_TAGS
-from museflow.domain.types import GENRE_MESO_TAGS
-from museflow.domain.types import GENRE_MICRO_TAGS
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
+from museflow.domain.const import GENRE_MACRO_TAGS
+from museflow.domain.const import GENRE_MESO_TAGS
+from museflow.domain.const import GENRE_MICRO_TAGS
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerationConfig
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiSchemaProperty
 

@@ -6,7 +6,7 @@ import pytest
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
 
 from tests.unit.factories.entities.playlist import PlaylistFactory

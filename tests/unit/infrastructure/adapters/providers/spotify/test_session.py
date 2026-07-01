@@ -9,9 +9,9 @@ from tenacity import TryAgain
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceeded
-from museflow.domain.types import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError

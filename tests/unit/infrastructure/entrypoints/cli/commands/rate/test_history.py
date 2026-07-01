@@ -8,12 +8,12 @@ from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import TrackSource
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import RateHistoryResult
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app

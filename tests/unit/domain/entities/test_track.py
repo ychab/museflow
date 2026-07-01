@@ -5,7 +5,7 @@ import pytest
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 
 
 class TestTrack:

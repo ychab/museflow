@@ -11,13 +11,13 @@ from rich.table import Table
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.use_cases.playlist_history import playlist_history as playlist_history_use_case
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistHistoryOrderBy
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.domain.types import GenreTag
-from museflow.domain.types import MoodTag
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistHistoryOrderBy
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db

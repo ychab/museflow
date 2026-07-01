@@ -13,11 +13,11 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.exceptions import ProviderPremiumRequiredException
-from museflow.domain.types import MusicProvider
-from museflow.domain.types import PlaylistType
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track

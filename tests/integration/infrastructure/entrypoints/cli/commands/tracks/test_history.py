@@ -7,7 +7,7 @@ import pytest
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
-from museflow.domain.types import MusicProvider
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
 
 
