@@ -8,6 +8,7 @@ import typer
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -17,15 +18,28 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("tracks", help="Enrich tracks with AI-inferred genre and mood metadata.")
+@app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locale metadata.")
 def enrich(
     email: str = typer.Option(..., help="User email address.", parser=parse_email),
-    force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have genre/mood data."),
+    only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
+    only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
+    only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locale only."),
+    force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have the requested fields."),
     batch_size: int = typer.Option(200, "--batch-size", help="Number of tracks per Gemini request."),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
     try:
-        result = asyncio.run(enrich_logic(email=email, force=force, batch_size=batch_size, limit=limit))
+        result = asyncio.run(
+            enrich_logic(
+                email=email,
+                only_genre=only_genre,
+                only_mood=only_mood,
+                only_locale=only_locale,
+                force=force,
+                batch_size=batch_size,
+                limit=limit,
+            )
+        )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -43,11 +57,25 @@ def enrich(
 
 async def enrich_logic(
     email: EmailStr,
+    only_genre: bool = False,
+    only_mood: bool = False,
+    only_locale: bool = False,
     force: bool = False,
     batch_size: int = 200,
     limit: int | None = None,
 ) -> EnrichTracksReport:
-    config = EnrichTracksConfigInput(force=force, batch_size=batch_size, limit=limit)
+    selected = {
+        f
+        for f, flag in [
+            (EnrichField.GENRE, only_genre),
+            (EnrichField.MOOD, only_mood),
+            (EnrichField.LOCALE, only_locale),
+        ]
+        if flag
+    }
+    fields = frozenset(selected) if selected else frozenset(EnrichField)
+
+    config = EnrichTracksConfigInput(fields=fields, force=force, batch_size=batch_size, limit=limit)
 
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())

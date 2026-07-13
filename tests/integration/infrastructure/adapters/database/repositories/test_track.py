@@ -15,6 +15,7 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
@@ -503,14 +504,7 @@ class TestTrackSQLRepository:
         assert track_db.score_skipped is True
 
     async def test__bulk_update__empty_list__is_noop(self, track_repository: TrackRepository) -> None:
-        await track_repository.bulk_update([], {"genres"})
-
-    async def test__bulk_update__unknown_field__raises_value_error(
-        self, user: User, track_repository: TrackRepository
-    ) -> None:
-        track = TrackFactory.build(user_id=user.id)
-        with pytest.raises(ValueError, match="unknown"):
-            await track_repository.bulk_update([track], {"unknown"})
+        await track_repository.bulk_update([], frozenset({EnrichField.GENRE}))
 
     async def test__purge(
         self,

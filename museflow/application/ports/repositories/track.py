@@ -4,6 +4,7 @@ from abc import abstractmethod
 from datetime import date
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
@@ -33,7 +34,7 @@ class TrackRepository(ABC):
         played_last_min: date | None = None,
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
-        unenriched_only: bool = False,
+        missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
         order: TrackOrdering | None = None,
@@ -67,7 +68,7 @@ class TrackRepository(ABC):
             played_last_min: When set, only tracks last played on or after this date are returned.
             played_last_max: When set, only tracks last played on or before this date are returned.
             exclude_ids: When set, tracks whose id is in this list are excluded.
-            unenriched_only: When True, only tracks whose genres list is empty are returned.
+            missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
             genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
             moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
 
@@ -113,16 +114,12 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def bulk_update(self, tracks: list[Track], fields: set[str]) -> None:
-        """Updates specific fields for a batch of existing tracks.
-
-        Only a limited set of domain fields are supported.
-        Attempting to update an unsupported field raises ``ValueError``.
+    async def bulk_update(self, tracks: list[Track], fields: frozenset[EnrichField]) -> None:
+        """Updates specific enrichment fields for a batch of existing tracks.
 
         Args:
             tracks: Track entities carrying the new field values (identified by ``id``).
-            fields: Domain attribute names to write (e.g. ``{"genres", "moods"}``).
-                Only the listed fields are updated; all others are left untouched.
+            fields: Enrichment fields to write. Only these fields are updated; all others are left untouched.
         """
         ...
 

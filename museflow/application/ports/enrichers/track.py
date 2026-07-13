@@ -2,6 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import EnrichField
 from museflow.domain.value_objects.track import TrackEnrichment
 
 
@@ -9,7 +10,7 @@ class TrackEnricherPort(ABC):
     """Abstract port for a service that infers genre and mood metadata for tracks."""
 
     @abstractmethod
-    async def enrich_tracks(self, tracks: list[Track]) -> list[TrackEnrichment]: ...
+    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]: ...
 
     @abstractmethod
     async def close(self) -> None:

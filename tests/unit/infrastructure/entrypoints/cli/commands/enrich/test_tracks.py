@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import EnrichTracksReport
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
@@ -41,6 +42,20 @@ class TestEnrichTracksParserCommand:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         call_kwargs = mock_enrich_logic.call_args.kwargs
         assert call_kwargs["force"] is False
+
+    def test__only_genre__parsed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--only-genre"])
+        call_kwargs = mock_enrich_logic.call_args.kwargs
+        assert call_kwargs["only_genre"] is True
+        assert call_kwargs["only_mood"] is False
+        assert call_kwargs["only_locale"] is False
+
+    def test__only_flags__all_default_to_false(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        call_kwargs = mock_enrich_logic.call_args.kwargs
+        assert call_kwargs["only_genre"] is False
+        assert call_kwargs["only_mood"] is False
+        assert call_kwargs["only_locale"] is False
 
 
 class TestEnrichTracksCommand:
@@ -109,6 +124,39 @@ class TestEnrichTracksLogic:
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
-            unenriched_only=False,
+            missing_fields=None,
             limit=100,
+        )
+
+    async def test__only_locale__missing_fields_scoped_to_locale(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = []
+
+        await enrich_logic(
+            email="test@example.com",  # type: ignore[arg-type]
+            only_locale=True,
+        )
+
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=mock_user_repository.get_by_email.return_value.id,
+            missing_fields=frozenset({EnrichField.LOCALE}),
+            limit=None,
+        )
+
+    async def test__no_flags__defaults_to_all_fields(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = []
+
+        await enrich_logic(email="test@example.com")  # type: ignore[arg-type]
+
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=mock_user_repository.get_by_email.return_value.id,
+            missing_fields=frozenset(EnrichField),
+            limit=None,
         )

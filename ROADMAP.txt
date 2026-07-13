@@ -6,6 +6,8 @@ This quick and dirty document just list the roadmap tasks.
 
 - create playlist history => filter flag on locale
 
+- create playlist history => --dry-run options to display list of tracks that will be added to the playlist
+
 - stats per genres / moods?
 
 - use a progress bar on the CLI commands?

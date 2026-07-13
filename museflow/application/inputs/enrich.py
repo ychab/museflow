@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from pydantic import field_validator
 from pydantic.functional_validators import BeforeValidator
 
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
@@ -13,6 +14,7 @@ from museflow.domain.utils.text import validate_locale
 
 @dataclass(frozen=True, kw_only=True)
 class EnrichTracksConfigInput:
+    fields: frozenset[EnrichField] = frozenset(EnrichField)
     force: bool = False
     batch_size: int = 200
     limit: int | None = None

@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import delete
 from sqlalchemy import func
+from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
 from sqlalchemy import update
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
@@ -26,10 +28,10 @@ from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 
 class TrackSQLRepository(TrackRepository):
-    FIELDS_UPDATE_WHITELIST: dict[str, str] = {
-        "genres": "genres",
-        "moods": "moods",
-        "locale": "locale",
+    _ENRICH_FIELD_TO_COLUMN: dict[EnrichField, str] = {
+        EnrichField.GENRE: "genres",
+        EnrichField.MOOD: "moods",
+        EnrichField.LOCALE: "locale",
     }
 
     def __init__(self, session: AsyncSession) -> None:
@@ -52,7 +54,7 @@ class TrackSQLRepository(TrackRepository):
         played_last_min: date | None = None,
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
-        unenriched_only: bool = False,
+        missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
         order: TrackOrdering | None = None,
@@ -100,8 +102,15 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
         if exclude_ids:
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
-        if unenriched_only:
-            stmt = stmt.where(func.array_length(TrackModel.genres, 1).is_(None))
+        if missing_fields:
+            conditions = []
+            if EnrichField.GENRE in missing_fields:
+                conditions.append(func.array_length(TrackModel.genres, 1).is_(None))
+            if EnrichField.MOOD in missing_fields:
+                conditions.append(func.array_length(TrackModel.moods, 1).is_(None))
+            if EnrichField.LOCALE in missing_fields:
+                conditions.append(TrackModel.locale.is_(None))
+            stmt = stmt.where(or_(*conditions))
         if genres is not None:
             stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
         if moods is not None:
@@ -204,17 +213,14 @@ class TrackSQLRepository(TrackRepository):
 
         return track_ids, created_count
 
-    async def bulk_update(self, tracks: list[Track], fields: set[str]) -> None:
+    async def bulk_update(self, tracks: list[Track], fields: frozenset[EnrichField]) -> None:
         if not tracks:
             return
-
-        unknown = fields - self.FIELDS_UPDATE_WHITELIST.keys()
-        if unknown:
-            raise ValueError(f"Unknown track fields: {unknown}")
+        columns = {self._ENRICH_FIELD_TO_COLUMN[f] for f in fields}
 
         await self.session.execute(
             update(TrackModel),
-            [{"id": t.id, **{self.FIELDS_UPDATE_WHITELIST[f]: getattr(t, f) for f in fields}} for t in tracks],
+            [{"id": t.id, **{col: getattr(t, col) for col in columns}} for t in tracks],
         )
         await self.session.commit()
 

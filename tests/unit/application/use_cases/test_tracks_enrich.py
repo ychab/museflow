@@ -3,6 +3,7 @@ from unittest import mock
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -49,7 +50,9 @@ class TestTracksEnrichUseCase:
 
         assert result == EnrichTracksReport(enriched_count=3, error_count=0)
         mock_track_repository.bulk_update.assert_awaited_once()
-        mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, unenriched_only=True, limit=None)
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, missing_fields=frozenset(EnrichField), limit=None
+        )
 
     async def test__force__disables_unenriched_only_filter(
         self,
@@ -66,7 +69,7 @@ class TestTracksEnrichUseCase:
             mock_enricher,
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, unenriched_only=False, limit=None)
+        mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, missing_fields=None, limit=None)
 
     async def test__limit__forwarded_to_repository(
         self,
@@ -83,7 +86,9 @@ class TestTracksEnrichUseCase:
             mock_enricher,
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, unenriched_only=True, limit=50)
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, missing_fields=frozenset(EnrichField), limit=50
+        )
 
     async def test__batch_splitting__calls_enricher_once_per_batch(
         self,
@@ -155,7 +160,76 @@ class TestTracksEnrichUseCase:
         call_args = mock_track_repository.bulk_update.call_args
         tracks_arg = call_args[0][0]
         fields_arg = call_args.kwargs["fields"]
-        assert fields_arg == {"genres", "moods", "locale"}
+        assert fields_arg == frozenset(EnrichField)
         assert len(tracks_arg) == 1
         assert tracks_arg[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.AFRO_RAP]
         assert tracks_arg[0].locale == "fr"
+
+    async def test__locale_only__only_locale_written_and_existing_genres_preserved(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        track = TrackFactory.build(genres=[GenreTag.HIP_HOP], moods=["chill"])
+        mock_track_repository.get_list.return_value = [track]
+        mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locale="fr")]
+
+        await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        call_args = mock_track_repository.bulk_update.call_args
+        tracks_arg = call_args[0][0]
+        fields_arg = call_args.kwargs["fields"]
+        assert fields_arg == frozenset({EnrichField.LOCALE})
+        assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
+        assert tracks_arg[0].locale == "fr"
+
+    async def test__locale_only__missing_fields_filter_uses_only_locale(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        mock_track_repository.get_list.return_value = []
+
+        await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, missing_fields=frozenset({EnrichField.LOCALE}), limit=None
+        )
+
+    async def test__genre_only__locale_field_not_written(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        track = TrackFactory.build(locale="en")
+        mock_track_repository.get_list.return_value = [track]
+        mock_enricher.enrich_tracks.return_value = [
+            TrackEnrichmentFactory.build(track_id=track.id, genres=[GenreTag.HIP_HOP])
+        ]
+
+        await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(fields=frozenset({EnrichField.GENRE})),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        call_args = mock_track_repository.bulk_update.call_args
+        tracks_arg = call_args[0][0]
+        fields_arg = call_args.kwargs["fields"]
+        assert fields_arg == frozenset({EnrichField.GENRE})
+        assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
+        assert tracks_arg[0].locale == "en"  # unchanged

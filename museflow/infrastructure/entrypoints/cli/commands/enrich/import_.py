@@ -12,6 +12,7 @@ import typer
 import yaml
 
 from museflow.application.inputs.enrich import EnrichEntryInput
+from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -84,6 +85,6 @@ async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
             )
 
         if updated_tracks:
-            await track_repository.bulk_update(updated_tracks, fields={"genres", "moods", "locale"})
+            await track_repository.bulk_update(updated_tracks, fields=frozenset(EnrichField))
 
         return EnrichImportResult(imported_count=len(updated_tracks), not_found_count=not_found_count)

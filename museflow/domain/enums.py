@@ -30,6 +30,12 @@ class PlaylistType(StrEnum):
     HISTORY = "history"  # persisted "best of"
 
 
+class EnrichField(StrEnum):
+    GENRE = "genre"
+    MOOD = "mood"
+    LOCALE = "locale"  # (ISO 639-1)
+
+
 class MoodTag(StrEnum):
     ENERGETIC = "energetic"  # high energy, driving tempo
     CHILL = "chill"  # relaxed, low-key

@@ -9,6 +9,7 @@ from museflow.domain.const import GENRE_MACRO_TAGS
 from museflow.domain.const import GENRE_MESO_TAGS
 from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.track import TrackEnrichment
@@ -17,8 +18,8 @@ from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.enrichers.gemini.schemas import GEMINI_ENRICHMENT_CONFIG
 from museflow.infrastructure.adapters.enrichers.gemini.schemas import GeminiEnrichmentResponse
+from museflow.infrastructure.adapters.enrichers.gemini.schemas import build_enrichment_config
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.config.settings.gemini import gemini_settings
 
@@ -44,44 +45,60 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
         self._api_key = api_key
         self._model = model
 
-    async def enrich_tracks(self, tracks: list[Track]) -> list[TrackEnrichment]:
+    @staticmethod
+    def _build_system_prompt(fields: frozenset[EnrichField]) -> str:
+        parts = [
+            "### ROLE\nYou are a music metadata expert. For each provided track, classify its requested fields.\n"
+        ]
+
+        if EnrichField.GENRE in fields:
+            parts.append(
+                "### GENRE RULES\n"
+                "Return 2 to 3 genre tags per track, ordered from broadest to most specific.\n"
+                "Use ONLY values from the lists below — no synonyms, no paraphrases.\n\n"
+                f"genres[0] — macro (pick ONE): {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n\n"
+                f"genres[1] — meso (pick ONE that fits the macro): {', '.join(t.value for t in GENRE_MESO_TAGS)}\n\n"
+                f"genres[2] — micro (pick ONE or omit if none applies): {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n\n"
+                "Do NOT include artist names or track names as genres.\n"
+            )
+
+        if EnrichField.MOOD in fields:
+            parts.append(
+                "### MOOD RULES\n"
+                f"- Return 1 to 2 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
+                "- Do NOT use any mood word outside this list.\n"
+            )
+
+        if EnrichField.LOCALE in fields:
+            parts.append(
+                "### LOCALE RULE\n"
+                "- `locale`: 2-letter ISO 639-1 code for the **language the track is sung in** "
+                "(lyrics language, not artist nationality).\n"
+                "- Use signals in priority order:\n"
+                "  1. Title script: non-Latin characters are strong evidence "
+                "(Hangul → ko, Cyrillic → ru/uk/bg, Arabic script → ar/fa, "
+                "CJK → zh/ja, Hebrew → he, Thai → th, Devanagari → hi).\n"
+                "  2. Title vocabulary: recognisable non-English words in the title "
+                "(French articles/prepositions, Spanish, Portuguese, Italian, German, Arabic words, etc.).\n"
+                "  3. Artist cultural context: use as fallback when the title gives no language signal.\n"
+                "- Omit ONLY when: (a) the track appears instrumental (no lyrics), "
+                "or (b) none of the above signals give you reasonable confidence.\n"
+                "- Do NOT conflate artist nationality with lyrics language "
+                "(e.g. a French artist singing in English → en).\n"
+            )
+
+        parts.append(
+            "\n### OUTPUT\n"
+            "Return only the JSON object (schema enforced). "
+            "Use the track_index field to match each result back to the input track."
+        )
+
+        return "\n".join(parts)
+
+    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
         request = GeminiGenerateContentRequest(
             system_instruction=GeminiRequestContent(
-                parts=[
-                    GeminiRequestPart(
-                        text=(
-                            "### ROLE\n"
-                            "You are a music metadata expert. For each provided track, classify its genre(s) and mood(s).\n\n"
-                            "### GENRE RULES\n"
-                            "Return 2 to 3 genre tags per track, ordered from broadest to most specific.\n"
-                            "Use ONLY values from the lists below — no synonyms, no paraphrases.\n\n"
-                            f"genres[0] — macro (pick ONE): {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n\n"
-                            f"genres[1] — meso (pick ONE that fits the macro): {', '.join(t.value for t in GENRE_MESO_TAGS)}\n\n"
-                            f"genres[2] — micro (pick ONE or omit if none applies): {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n\n"
-                            "Do NOT include artist names or track names as genres.\n\n"
-                            "### MOOD RULES\n"
-                            f"- Return 1 to 2 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
-                            "- Do NOT use any mood word outside this list.\n\n"
-                            "### LOCALE RULE\n"
-                            "- `locale`: 2-letter ISO 639-1 code for the **language the track is sung in** "
-                            "(lyrics language, not artist nationality).\n"
-                            "- Use signals in priority order:\n"
-                            "  1. Title script: non-Latin characters are strong evidence "
-                            "(Hangul → ko, Cyrillic → ru/uk/bg, Arabic script → ar/fa, "
-                            "CJK → zh/ja, Hebrew → he, Thai → th, Devanagari → hi).\n"
-                            "  2. Title vocabulary: recognisable non-English words in the title "
-                            "(French articles/prepositions, Spanish, Portuguese, Italian, German, Arabic words, etc.).\n"
-                            "  3. Artist cultural context: use as fallback when the title gives no language signal.\n"
-                            "- Omit ONLY when: (a) the track appears instrumental (no lyrics), "
-                            "or (b) none of the above signals give you reasonable confidence.\n"
-                            "- Do NOT conflate artist nationality with lyrics language "
-                            "(e.g. a French artist singing in English → en).\n\n"
-                            "### OUTPUT\n"
-                            "Return only the JSON object (schema enforced). "
-                            "Use the track_index field to match each result back to the input track."
-                        ),
-                    ),
-                ],
+                parts=[GeminiRequestPart(text=self._build_system_prompt(fields))],
             ),
             contents=[
                 GeminiRequestContent(
@@ -98,7 +115,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                     ],
                 ),
             ],
-            generationConfig=GEMINI_ENRICHMENT_CONFIG,
+            generationConfig=build_enrichment_config(fields),
         )
 
         response_data = await self.make_api_call(

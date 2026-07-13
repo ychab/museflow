@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import UserNotFound
@@ -254,7 +255,7 @@ class TestEnrichImportLogic:
 
         mock_track_repository.bulk_update.assert_awaited_once()
         call_args = mock_track_repository.bulk_update.call_args
-        assert call_args.kwargs["fields"] == {"genres", "moods", "locale"}
+        assert call_args.kwargs["fields"] == frozenset(EnrichField)
         updated_track = call_args.args[0][0]
         assert updated_track.genres == [GenreTag.ROCK, GenreTag.INDIE_ROCK]
         assert updated_track.moods == [MoodTag.ENERGETIC]
