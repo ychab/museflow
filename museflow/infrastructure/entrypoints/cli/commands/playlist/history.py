@@ -18,6 +18,7 @@ from museflow.domain.enums import PlaylistHistoryOrderBy
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
@@ -28,6 +29,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repos
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 
 console = Console()
 
@@ -44,6 +46,12 @@ def playlist_history(
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
     genre: list[GenreTag] = typer.Option([], "--genre", help="Filter by genre tag (repeatable, OR logic)"),
     mood: list[MoodTag] = typer.Option([], "--mood", help="Filter by mood tag (repeatable, OR logic)"),
+    locale: list[LocaleCode] = typer.Option(
+        [],
+        "--locale",
+        help="Filter by locale/language code, ISO 639-1 (repeatable, OR logic)",
+        parser=parse_locale,
+    ),
     played_first_min: date | None = typer.Option(
         None,
         "--played-first-min",
@@ -99,6 +107,7 @@ def playlist_history(
                     artist_name=artist,
                     genres=genre,
                     moods=mood,
+                    locales=locale,
                     played_first_min=played_first_min,
                     played_first_max=played_first_max,
                     played_last_min=played_last_min,

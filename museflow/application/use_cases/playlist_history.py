@@ -36,6 +36,7 @@ async def playlist_history(
         artist_name=config.artist_name,
         genres=config.genres or None,
         moods=config.moods or None,
+        locales=config.locales or None,
         played_first_min=config.played_first_min,
         played_first_max=config.played_first_max,
         played_last_min=config.played_last_min,

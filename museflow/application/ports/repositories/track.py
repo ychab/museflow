@@ -9,6 +9,7 @@ from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
+from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 
@@ -37,6 +38,7 @@ class TrackRepository(ABC):
         missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
+        locales: list[LocaleCode] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -71,6 +73,7 @@ class TrackRepository(ABC):
             missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
             genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
             moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
+            locales: When set, only tracks whose locale is in this list (OR) are returned.
 
         Returns:
             A list of `Track` entities.

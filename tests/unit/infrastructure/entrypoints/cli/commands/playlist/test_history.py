@@ -105,6 +105,11 @@ class TestHistoryParserCommand:
         assert result.exit_code != 0
         assert "Invalid value for '--mood'" in clean_typer_text(result.output)
 
+    def test__locale__invalid__fails(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--locale", "french"])
+        assert result.exit_code != 0
+        assert "Locale must be a 2-letter ISO 639-1 code, got 'french'" in clean_typer_text(result.output)
+
     def test__genre__valid__passed_to_config(
         self,
         mock_history_logic: mock.AsyncMock,
@@ -137,6 +142,39 @@ class TestHistoryParserCommand:
         assert result.exit_code == 0
         config = mock_history_logic.call_args.kwargs["config"]
         assert config.genres == [GenreTag.HIP_HOP, GenreTag.ROCK]
+
+    def test__locale__valid__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--locale", "fr"])
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.locales == ["fr"]
+
+    def test__locale__uppercase__normalized_lowercase(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--locale", "FR"])
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.locales == ["fr"]
+
+    def test__multiple_locales__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["playlist", "history", "--email", "test@example.com", "--locale", "fr", "--locale", "en"],
+        )
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.locales == ["fr", "en"]
 
     def test__score_min_greater_than_score_max__fails(
         self,

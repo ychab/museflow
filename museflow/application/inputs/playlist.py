@@ -5,6 +5,7 @@ from datetime import date
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import PlaylistHistoryOrderBy
+from museflow.domain.types import LocaleCode
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -15,6 +16,7 @@ class PlaylistHistoryConfigInput:
     artist_name: str | None = None
     genres: list[GenreTag] = field(default_factory=list)
     moods: list[MoodTag] = field(default_factory=list)
+    locales: list[LocaleCode] = field(default_factory=list)
     played_first_min: date | None = None
     played_first_max: date | None = None
     played_last_min: date | None = None

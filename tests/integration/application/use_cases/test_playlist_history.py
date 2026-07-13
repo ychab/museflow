@@ -248,6 +248,47 @@ class TestPlaylistHistoryUseCase:
 
         assert [t.id for t in playlist.tracks] == [matching.id]
 
+    async def test__filters_by_locale(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="fr")
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(locales=["fr"], limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert [t.id for t in playlist.tracks] == [matching.id]
+
+    async def test__filters_by_multiple_locales__or_logic(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        fr = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="fr")
+        en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="de")
+
+        playlist = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(locales=["fr", "en"], limit=20),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert {t.id for t in playlist.tracks} == {fr.id, en.id}
+
     async def test__filters_by_multiple_genres__or_logic(
         self,
         user: User,

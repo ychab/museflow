@@ -22,6 +22,7 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
+from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.track import TrackKnowIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
@@ -57,6 +58,7 @@ class TrackSQLRepository(TrackRepository):
         missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
+        locales: list[LocaleCode] | None = None,
         order: TrackOrdering | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -115,6 +117,8 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
         if moods is not None:
             stmt = stmt.where(TrackModel.moods.overlap([m.value for m in moods]))
+        if locales is not None:
+            stmt = stmt.where(TrackModel.locale.in_(locales))
 
         # Ordering
         if order is None and min_score is not None:
