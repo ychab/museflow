@@ -4,6 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -31,12 +32,13 @@ class TestHistoryLogic:
         mock_playlist_history: mock.AsyncMock,
     ) -> None:
         expected_playlist = PlaylistFactory.build(user_id=user.id)
-        mock_playlist_history.return_value = expected_playlist
+        expected_result = PlaylistHistoryResult(playlist=expected_playlist, tracks=expected_playlist.tracks)
+        mock_playlist_history.return_value = expected_result
         config = PlaylistHistoryConfigInput(limit=5)
 
         result = await playlist_history_logic(email=user.email, provider=MusicProvider.SPOTIFY, config=config)
 
-        assert result == expected_playlist
+        assert result == expected_result
         mock_playlist_history.assert_awaited_once()
         call_kwargs = mock_playlist_history.call_args.kwargs
         assert call_kwargs["user"].id == user.id

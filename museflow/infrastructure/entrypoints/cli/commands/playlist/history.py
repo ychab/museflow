@@ -9,8 +9,8 @@ from rich.console import Console
 from rich.table import Table
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
 from museflow.application.use_cases.playlist_history import playlist_history as playlist_history_use_case
-from museflow.domain.entities.playlist import Playlist
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
@@ -82,6 +82,11 @@ def playlist_history(
         help="Allow tracks already used in a previous history playlist",
     ),
     group_by_artists: bool = typer.Option(False, "--group-by-artists", help="Group tracks by primary artist"),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview matched tracks without creating a playlist",
+    ),
     sort: PlaylistHistoryOrderBy = typer.Option(
         PlaylistHistoryOrderBy.PLAYED_COUNT, "--sort", help="Sort tracks by this field"
     ),
@@ -96,7 +101,7 @@ def playlist_history(
         raise typer.BadParameter("--played-last-min cannot be after --played-last-max")
 
     try:
-        playlist = asyncio.run(
+        result = asyncio.run(
             playlist_history_logic(
                 email=email,
                 provider=provider,
@@ -114,6 +119,7 @@ def playlist_history(
                     played_last_max=played_last_max,
                     allow_duplicate=duplicate,
                     group_by_artists=group_by_artists,
+                    dry_run=dry_run,
                     sort_by=sort,
                     limit=limit,
                 ),
@@ -141,28 +147,35 @@ def playlist_history(
     if group_by_artists:
         typer.secho("Tracks are grouped by primary artist.", fg=typer.colors.BRIGHT_BLACK)
 
-    track_table = Table(title="Tracks added to playlist")
+    title = f"Tracks {'matched' if dry_run else 'added to playlist'}{' (dry mode)' if dry_run else ''}"
+    track_table = Table(title=title)
     track_table.add_column("#", justify="right", style="dim")
     track_table.add_column("Artist(s)")
     track_table.add_column("Track")
     track_table.add_column("Played", justify="right")
     track_table.add_column("Score", justify="right")
-    for i, track in enumerate(playlist.tracks, start=1):
+    for i, track in enumerate(result.tracks, start=1):
         artists = ", ".join(track.artists)
         score_str = str(track.score) if track.score is not None else "-"
         track_table.add_row(str(i), artists, track.name, str(track.played_count), score_str)
     console.print(track_table)
 
-    typer.secho(f"\n\nSuccessfully saved into playlist '{playlist.name}'! ✅", fg=typer.colors.GREEN)
-    typer.secho(f"Saved playlist ID: {playlist.id}", fg=typer.colors.CYAN)
-    typer.secho(f"  View it: museflow playlist view {playlist.id} --email {email}", fg=typer.colors.CYAN)
+    if result.playlist is None:
+        typer.secho(
+            "\n\nTracks matched but playlist not created (dry-run mode) ⚠️",
+            fg=typer.colors.YELLOW,
+        )
+    else:
+        typer.secho(f"\n\nSuccessfully saved into playlist '{result.playlist.name}'! ✅", fg=typer.colors.GREEN)
+        typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
+        typer.secho(f"  View it: museflow playlist view {result.playlist.id} --email {email}", fg=typer.colors.CYAN)
 
 
 async def playlist_history_logic(
     email: EmailStr,
     provider: MusicProvider,
     config: PlaylistHistoryConfigInput,
-) -> Playlist:
+) -> PlaylistHistoryResult:
     """Creates a playlist from the user's history tracks.
 
     Args:
@@ -171,7 +184,7 @@ async def playlist_history_logic(
         config: The filters/limit/dedup configuration for the playlist.
 
     Returns:
-        The created Playlist.
+        A PlaylistHistoryResult with the created Playlist (or None if dry-run) and the tracks.
 
     Raises:
         UserNotFound: If the user with the given email is not found.

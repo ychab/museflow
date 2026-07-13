@@ -23,5 +23,6 @@ class PlaylistHistoryConfigInput:
     played_last_max: date | None = None
     allow_duplicate: bool = False
     group_by_artists: bool = False
+    dry_run: bool = False
     sort_by: PlaylistHistoryOrderBy = PlaylistHistoryOrderBy.PLAYED_COUNT
     limit: int = 20

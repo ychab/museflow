@@ -63,6 +63,29 @@ class TestPlaylistHistoryUseCase:
         mock_playlist_repository.get_track_ids.assert_not_awaited()
         assert mock_track_repository.get_list.call_args.kwargs["exclude_ids"] is None
 
+    async def test__dry_run__skips_playlist_creation(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        track = TrackFactory.build()
+        mock_track_repository.get_list.return_value = [track]
+
+        result = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(dry_run=True),
+            track_repository=mock_track_repository,
+            playlist_repository=mock_playlist_repository,
+            provider_library=mock_provider_library,
+        )
+
+        assert result.playlist is None
+        assert result.tracks == [track]
+        mock_provider_library.create_playlist.assert_not_awaited()
+        mock_playlist_repository.save.assert_not_awaited()
+
     async def test__group_by_artists__played_count(
         self,
         mock_track_repository: mock.AsyncMock,

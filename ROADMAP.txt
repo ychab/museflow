@@ -4,13 +4,11 @@ This quick and dirty document just list the roadmap tasks.
 
 ## museflow
 
-- create playlist history => --dry-run options to display list of tracks that will be added to the playlist
-
 - stats tracks per genres / moods / locale ?
 
 - use a progress bar on the CLI commands?
 
-- renamethe command spotify to provider (with still the sub command like connect or info? Huuum, not sure so simple for the connect workflow which could be totally different from one to another provider)
+- rename the command spotify to provider (with still the sub command like connect or info? Huuum, not sure so simple for the connect workflow which could be totally different from one to another provider)
 
 - personnality inspection through the music history? Who are you based on your streaming history?
 

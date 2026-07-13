@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
 
@@ -17,13 +18,19 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import PlaylistNoTracksError
 
 
+@dataclass(frozen=True, kw_only=True)
+class PlaylistHistoryResult:
+    playlist: Playlist | None
+    tracks: list[Track]
+
+
 async def playlist_history(
     user: User,
     config: PlaylistHistoryConfigInput,
     track_repository: TrackRepository,
     playlist_repository: PlaylistRepository,
     provider_library: ProviderLibraryPort,
-) -> Playlist:
+) -> PlaylistHistoryResult:
     exclude_ids = None
     if not config.allow_duplicate:
         exclude_ids = list(await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY))
@@ -62,6 +69,9 @@ async def playlist_history(
         sorted_groups = sorted(groups.values(), key=artist_sort_key, reverse=True)
         tracks = [track for group in sorted_groups for track in group]
 
+    if config.dry_run:
+        return PlaylistHistoryResult(playlist=None, tracks=tracks)
+
     name_prefix = "[MF] - History"
     name_suffix = (
         config.name_suffix if config.name_suffix is not None else datetime.now(UTC).isoformat(timespec="seconds")
@@ -72,5 +82,6 @@ async def playlist_history(
         type=PlaylistType.HISTORY,
         tracks=tracks,
     )
+    playlist = await playlist_repository.save(playlist)
 
-    return await playlist_repository.save(playlist)
+    return PlaylistHistoryResult(playlist=playlist, tracks=tracks)

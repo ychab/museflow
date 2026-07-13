@@ -7,6 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
@@ -28,7 +29,7 @@ class TestHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
-            patched.return_value = PlaylistFactory.build(tracks=[])
+            patched.return_value = PlaylistHistoryResult(playlist=PlaylistFactory.build(tracks=[]), tracks=[])
             yield patched
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -227,6 +228,16 @@ class TestHistoryParserCommand:
         assert result.exit_code != 0
         assert "--played-first-min cannot be after --played-first-max" in clean_typer_text(result.output)
 
+    def test__dry_run__passed_to_config(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--dry-run"])
+        assert result.exit_code == 0
+        config = mock_history_logic.call_args.kwargs["config"]
+        assert config.dry_run is True
+
     def test__played_last_min_after_max__fails(
         self,
         runner: CliRunner,
@@ -309,7 +320,7 @@ class TestHistoryCommand:
     ) -> None:
         track = TrackFactory.build(played_count=7)
         playlist = PlaylistFactory.build(name="History Playlist", tracks=[track])
-        mock_history_logic.return_value = playlist
+        mock_history_logic.return_value = PlaylistHistoryResult(playlist=playlist, tracks=[track])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -327,7 +338,9 @@ class TestHistoryCommand:
         track_scored = TrackFactory.build(score=8)
         track_unscored = TrackFactory.build(score=None)
         playlist = PlaylistFactory.build(tracks=[track_scored, track_unscored])
-        mock_history_logic.return_value = playlist
+        mock_history_logic.return_value = PlaylistHistoryResult(
+            playlist=playlist, tracks=[track_scored, track_unscored]
+        )
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -344,11 +357,28 @@ class TestHistoryCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         playlist = PlaylistFactory.build(tracks=[])
-        mock_history_logic.return_value = playlist
+        mock_history_logic.return_value = PlaylistHistoryResult(playlist=playlist, tracks=[])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--group-by-artists"])
         assert result.exit_code == 0
         assert "Tracks are grouped by primary artist." in clean_typer_text(result.stdout)
+
+    def test__output__dry_run__no_playlist_created(
+        self,
+        mock_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        track = TrackFactory.build(played_count=7)
+        mock_history_logic.return_value = PlaylistHistoryResult(playlist=None, tracks=[track])
+
+        result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--dry-run"])
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert "Tracks matched (dry mode)" in output
+        assert "Tracks matched but playlist not created (dry-run mode)" in output
+        assert "Saved playlist ID" not in output
 
 
 @pytest.mark.usefixtures(

@@ -31,7 +31,7 @@ class TestPlaylistHistoryUseCase:
         high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
         mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=20),
             track_repository=track_repository,
@@ -39,7 +39,30 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [high.id, mid.id, low.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [high.id, mid.id, low.id]
+
+    async def test__dry_run__no_playlist_persisted(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
+        low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=1)
+
+        result = await playlist_history(
+            user=user,
+            config=PlaylistHistoryConfigInput(limit=20, dry_run=True),
+            track_repository=track_repository,
+            playlist_repository=playlist_repository,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is None
+        assert [t.id for t in result.tracks] == [high.id, low.id]
+        assert await playlist_repository.list(user.id) == []
 
     async def test__filters_by_score_and_artist(
         self,
@@ -67,7 +90,7 @@ class TestPlaylistHistoryUseCase:
             artists=["Other Artist"],
         )
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(score_min=5, artist_name="Matching Artist", limit=20),
             track_repository=track_repository,
@@ -75,7 +98,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [matching.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
 
     async def test__dedup_excludes_tracks_from_previous_history_playlist(
         self,
@@ -87,16 +111,17 @@ class TestPlaylistHistoryUseCase:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
         second = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
 
-        first_playlist = await playlist_history(
+        first_result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=1),
             track_repository=track_repository,
             playlist_repository=playlist_repository,
             provider_library=spotify_library,
         )
-        assert len(first_playlist.tracks) == 1
+        assert first_result.playlist is not None
+        assert len(first_result.playlist.tracks) == 1
 
-        second_playlist = await playlist_history(
+        second_result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=20),
             track_repository=track_repository,
@@ -104,7 +129,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in second_playlist.tracks] == [second.id]
+        assert second_result.playlist is not None
+        assert [t.id for t in second_result.playlist.tracks] == [second.id]
 
     async def test__sort_by_score__ordered_correctly(
         self,
@@ -118,7 +144,7 @@ class TestPlaylistHistoryUseCase:
         mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=6)
         unscored = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
             track_repository=track_repository,
@@ -126,7 +152,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [high.id, mid.id, low.id, unscored.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [high.id, mid.id, low.id, unscored.id]
 
     async def test__filters_by_played_first_range(
         self,
@@ -151,7 +178,7 @@ class TestPlaylistHistoryUseCase:
             played_at_first=None,
         )
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(
                 played_first_min=date(2025, 1, 1),
@@ -163,7 +190,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [inside.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [inside.id]
 
     async def test__filters_by_played_last_range(
         self,
@@ -188,7 +216,7 @@ class TestPlaylistHistoryUseCase:
             played_at_last=None,
         )
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(
                 played_last_min=date(2026, 6, 21),
@@ -200,7 +228,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [inside.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [inside.id]
 
     async def test__filters_by_genre(
         self,
@@ -214,7 +243,7 @@ class TestPlaylistHistoryUseCase:
         )
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value])
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
             track_repository=track_repository,
@@ -222,7 +251,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [matching.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
 
     async def test__filters_by_mood(
         self,
@@ -238,7 +268,7 @@ class TestPlaylistHistoryUseCase:
             user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.ENERGETIC.value]
         )
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(moods=[MoodTag.CHILL], limit=20),
             track_repository=track_repository,
@@ -246,7 +276,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [matching.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
 
     async def test__filters_by_locale(
         self,
@@ -258,7 +289,7 @@ class TestPlaylistHistoryUseCase:
         matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="fr")
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(locales=["fr"], limit=20),
             track_repository=track_repository,
@@ -266,7 +297,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert [t.id for t in playlist.tracks] == [matching.id]
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
 
     async def test__filters_by_multiple_locales__or_logic(
         self,
@@ -279,7 +311,7 @@ class TestPlaylistHistoryUseCase:
         en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="de")
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(locales=["fr", "en"], limit=20),
             track_repository=track_repository,
@@ -287,7 +319,8 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert {t.id for t in playlist.tracks} == {fr.id, en.id}
+        assert result.playlist is not None
+        assert {t.id for t in result.playlist.tracks} == {fr.id, en.id}
 
     async def test__filters_by_multiple_genres__or_logic(
         self,
@@ -304,7 +337,7 @@ class TestPlaylistHistoryUseCase:
         )
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.JAZZ.value])
 
-        playlist = await playlist_history(
+        result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
             track_repository=track_repository,
@@ -312,4 +345,5 @@ class TestPlaylistHistoryUseCase:
             provider_library=spotify_library,
         )
 
-        assert {t.id for t in playlist.tracks} == {hip_hop.id, rock.id}
+        assert result.playlist is not None
+        assert {t.id for t in result.playlist.tracks} == {hip_hop.id, rock.id}
