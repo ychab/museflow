@@ -16,7 +16,7 @@ from museflow.infrastructure.types import LogHandler
 password_field_info = UserCreateInput.model_fields["password"]
 
 EmailAdapter = TypeAdapter(EmailStr)
-PasswordAdapter: TypeAdapter[str] = TypeAdapter(Annotated[password_field_info.annotation, password_field_info])  # type: ignore[arg-type]
+PasswordAdapter: TypeAdapter[str] = TypeAdapter(Annotated[str, password_field_info])
 
 
 def parse_password(value: str) -> str:

@@ -41,23 +41,22 @@ class DatabaseSettings(BaseSettings):
         if self.URI is not None:
             return self
 
-        required_fields = {
-            "HOST": self.HOST,
-            "PORT": self.PORT,
-            "USER": self.USER,
-            "PASSWORD": self.PASSWORD,
-            "PATH": self.PATH,
-        }
-
-        missing = [field_name for field_name, field_value in required_fields.items() if field_value is None]
-        if missing:
+        if self.HOST is None or self.PORT is None or self.USER is None or self.PASSWORD is None or self.PATH is None:
+            required_fields = {
+                "HOST": self.HOST,
+                "PORT": self.PORT,
+                "USER": self.USER,
+                "PASSWORD": self.PASSWORD,
+                "PATH": self.PATH,
+            }
+            missing = [field_name for field_name, field_value in required_fields.items() if field_value is None]
             raise ValueError(
                 f"DATABASE_URI not provided. The following component fields are required: {', '.join(missing)}"
             )
 
-        self.URI = PostgresDsn.build(  # type: ignore[misc]
+        self.URI = PostgresDsn.build(
             scheme="postgresql+asyncpg",
-            host=self.HOST,  # type: ignore[arg-type]
+            host=self.HOST,
             port=self.PORT,
             username=self.USER,
             password=self.PASSWORD,

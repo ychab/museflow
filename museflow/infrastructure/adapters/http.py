@@ -15,14 +15,6 @@ from tenacity import wait_exponential
 from museflow.infrastructure.config.settings.app import app_settings
 
 
-class RateLimitRetry(Exception):
-    """Signal to retry after honouring a provider's rate-limit delay.
-
-    Deliberately not a `tenacity.TryAgain`: since tenacity 9.2, `reraise=True` unwraps an exhausted `TryAgain` into its
-    cause (the raw HTTP 429), which would bypass the `*RateLimitExceeded` conversion done by the callers.
-    """
-
-
 def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
         return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
@@ -31,6 +23,14 @@ def _is_retryable_error(exception: BaseException) -> bool:
         return True
 
     return False
+
+
+class RateLimitRetry(Exception):
+    """Signal to retry after honouring a provider's rate-limit delay.
+
+    Deliberately not a `tenacity.TryAgain`: since tenacity 9.2, `reraise=True` unwraps an exhausted `TryAgain` into its
+    cause (the raw HTTP 429), which would bypass the `*RateLimitExceeded` conversion done by the callers.
+    """
 
 
 class HttpClientMixin:
