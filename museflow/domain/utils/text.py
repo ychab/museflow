@@ -5,7 +5,7 @@ from unidecode import unidecode
 from museflow.domain.types import LocaleCode
 
 
-def validate_locale(v: object) -> "LocaleCode | None":
+def validate_locale(v: object) -> LocaleCode | None:
     if not isinstance(v, str):
         return None
     v = v.strip().lower()

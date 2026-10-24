@@ -7,7 +7,7 @@ name = "museflow"
 version = "2.0.0.dev0"
 description = "MuseFlow helps you discover new music by offering recommendations based on your listening history."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [
   { name = "Yannick Chabbert", email = "yannick.chabbert.it@gmail.com" }
@@ -78,7 +78,7 @@ replace = 'version = "{new_version}"'
 
 [tool.ruff]
 src = ["museflow", "tests"]
-target-version = "py313"
+target-version = "py314"
 line-length = 119
 fix = true
 
@@ -132,7 +132,7 @@ sections.sqlalchemy = [
 ]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 files = ["museflow", "tests"]
 plugins = "pydantic.mypy"
 

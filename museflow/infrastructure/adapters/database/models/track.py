@@ -64,7 +64,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     locale: Mapped[LocaleCode | None] = mapped_column(String(10), nullable=True, default=None)
 
     @classmethod
-    def from_entity(cls, entity: TrackEntity) -> "Track":
+    def from_entity(cls, entity: TrackEntity) -> Track:
         return cls(
             id=entity.id,
             user_id=entity.user_id,

@@ -62,7 +62,7 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - **Logic**: Complex transformation rules (like slug generation from title) belong here.
 
 ## 3. General Python Standards
-- **Python Version**: Target **Python 3.13**.
+- **Python Version**: Target **Python 3.14**.
 - **Formatting**: Ruff (Line length 119).
 - **Typing**:
   - **Strict Type Hints** for ALL arguments and return values.

@@ -1,7 +1,7 @@
 # MuseFlow Project Guidelines
 
 ## Stack & Tools
-- **Python:** 3.13 managed by `uv`
+- **Python:** 3.14 managed by `uv`
 - **Frameworks:** FastAPI (API), Typer (CLI), SQLAlchemy 2.0 async, Pydantic v2
 - **HTTP:** httpx (async), tenacity (retry logic)
 - **Formatter/Linter:** Ruff (line length 119), mypy (strict), deptry

@@ -134,7 +134,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
         raw_text = envelope.candidates[0].content.parts[0].text
         try:
             content = GeminiEnrichmentResponse.model_validate(json.loads(raw_text))
-        except (ValidationError, ValueError):
+        except ValidationError, ValueError:
             logger.exception("Invalid Gemini enrichment response", extra={"raw": raw_text[:200]})
             return []
 

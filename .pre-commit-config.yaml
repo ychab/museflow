@@ -1,6 +1,6 @@
 minimum_pre_commit_version: 4.5.1
 default_language_version:
-    python: python3.13
+    python: python3.14
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

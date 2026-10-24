@@ -1,6 +1,6 @@
 # MuseFlow
 
-![Python](https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/python-3.14-blue?logo=python&logoColor=white)
 [![CI](https://github.com/ychab/museflow/actions/workflows/ci.yml/badge.svg)](https://github.com/ychab/museflow/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ychab/museflow/graph/badge.svg)](https://codecov.io/gh/ychab/museflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -22,7 +22,7 @@ For now, **only [Spotify](https://open.spotify.com/) is supported**.
 
 To work with this project, you will need the following tools installed on your machine:
 
-*   **Python**: 3.13
+*   **Python**: 3.14
 *   **UV**: 0.13.5
 *   **Docker Compose**: v2
 *   **direnv**: For automatic environment variable loading ([install guide](https://direnv.net/docs/installation.html))

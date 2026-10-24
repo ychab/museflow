@@ -50,7 +50,7 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     @classmethod
-    def from_entity(cls, entity: PlaylistEntity) -> "Playlist":
+    def from_entity(cls, entity: PlaylistEntity) -> Playlist:
         return cls(
             id=entity.id,
             user_id=entity.user_id,

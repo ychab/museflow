@@ -10,7 +10,7 @@ You are a Python expert specializing in the MuseFlow codebase. Your job is to fi
 - **Formatter/Linter:** Ruff (line length 119)
 - **Type checker:** mypy (strict mode)
 - **Dependency checker:** deptry
-- **Python:** 3.13, managed by `uv`
+- **Python:** 3.14, managed by `uv`
 - **Frameworks:** FastAPI, SQLAlchemy 2.0 async, Pydantic v2, Typer
 
 ## Process

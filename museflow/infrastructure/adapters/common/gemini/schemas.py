@@ -6,33 +6,33 @@ from pydantic import Field
 
 class GeminiSchemaProperty(BaseModel):
     type: str
-    items: "GeminiSchemaProperty | None" = None
-    properties: "dict[str, GeminiSchemaProperty] | None" = None
+    items: GeminiSchemaProperty | None = None
+    properties: dict[str, GeminiSchemaProperty] | None = None
     required: list[str] | None = None
     enum: list[str] | None = None
 
     @classmethod
-    def string(cls) -> "GeminiSchemaProperty":
+    def string(cls) -> GeminiSchemaProperty:
         return cls(type="string")
 
     @classmethod
-    def enum_string(cls, values: list[str]) -> "GeminiSchemaProperty":
+    def enum_string(cls, values: list[str]) -> GeminiSchemaProperty:
         return cls(type="string", enum=values)
 
     @classmethod
-    def number(cls) -> "GeminiSchemaProperty":
+    def number(cls) -> GeminiSchemaProperty:
         return cls(type="number")
 
     @classmethod
-    def array(cls, items: "GeminiSchemaProperty") -> "GeminiSchemaProperty":
+    def array(cls, items: GeminiSchemaProperty) -> GeminiSchemaProperty:
         return cls(type="array", items=items)
 
     @classmethod
     def object(
         cls,
-        properties: "dict[str, GeminiSchemaProperty]",
+        properties: dict[str, GeminiSchemaProperty],
         required: list[str] | None = None,
-    ) -> "GeminiSchemaProperty":
+    ) -> GeminiSchemaProperty:
         return cls(type="object", properties=properties, required=required)
 
 
