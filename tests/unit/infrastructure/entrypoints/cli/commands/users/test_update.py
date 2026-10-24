@@ -42,7 +42,7 @@ class TestUserUpdateParserCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
-        assert f"Invalid value for 'USER_ID': '{user_id}' is not a valid UUID." in output
+        assert f"Invalid value for 'user_id': '{user_id}' is not a valid UUID." in output
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),

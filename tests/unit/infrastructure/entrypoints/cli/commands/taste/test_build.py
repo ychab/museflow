@@ -97,7 +97,7 @@ class TestTasteBuildParserCommand:
         [
             pytest.param(0, "0 is not in the range", id="zero"),
             pytest.param(1001, "1001 is not in the range", id="max_exceed"),
-            pytest.param("foo", "'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "'foo' is not a valid int range", id="string"),
         ],
     )
     def test__batch_size__invalid(
@@ -121,7 +121,7 @@ class TestTasteBuildParserCommand:
         [
             pytest.param(0, "0 is not in the range", id="zero"),
             pytest.param(50000, "50000 is not in the range", id="max_exceed"),
-            pytest.param("foo", "'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "'foo' is not a valid int range", id="string"),
         ],
     )
     def test__track_limit__invalid(

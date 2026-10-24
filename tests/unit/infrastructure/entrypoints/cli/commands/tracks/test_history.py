@@ -104,7 +104,7 @@ class TestHistoryParserCommand:
             pytest.param(0, "Invalid value for '--batch-size': 0 is not in the range", id="zero"),
             pytest.param(-15, "Invalid value for '--batch-size': -15 is not in the range", id="min_exceed"),
             pytest.param(1000, "Invalid value for '--batch-size': 1000 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--batch-size': 'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "Invalid value for '--batch-size': 'foo' is not a valid int range", id="string"),
         ],
     )
     def test__batch_size__invalid(

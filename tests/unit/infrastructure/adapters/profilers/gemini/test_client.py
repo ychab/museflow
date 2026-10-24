@@ -10,11 +10,11 @@ from httpx import codes
 
 import pytest
 from pytest_httpx import HTTPXMock
-from tenacity import TryAgain
 
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import _format_tracks
 from museflow.infrastructure.adapters.profilers.gemini.client import _is_retryable_error
@@ -279,15 +279,15 @@ class TestGeminiTasteProfileAdapter:
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
     ) -> None:
-        """When make_api_call raises TryAgain after max retries, _call_gemini converts it."""
-        # Force TryAgain to propagate: 429 without retryDelay in body means TryAgain is raised
-        # but tenacity will eventually exhaust retries and re-raise TryAgain
-        # We mock make_api_call directly to return TryAgain after exhaustion
+        """When make_api_call raises RateLimitRetry after max retries, _call_gemini converts it."""
+        # Force RateLimitRetry to propagate: 429 without retryDelay in body means RateLimitRetry is raised
+        # but tenacity will eventually exhaust retries and re-raise RateLimitRetry
+        # We mock make_api_call directly to return RateLimitRetry after exhaustion
         with mock.patch.object(
             gemini_profiler,
             "make_api_call",
             new_callable=mock.AsyncMock,
-            side_effect=TryAgain(),
+            side_effect=RateLimitRetry(),
         ):
             with pytest.raises(TasteProfilerRateLimitExceeded):
                 await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
@@ -320,7 +320,7 @@ class TestIsRetryableError:
         assert _is_retryable_error(exc) is True
 
     def test__try_again__returns_true(self) -> None:
-        assert _is_retryable_error(TryAgain()) is True
+        assert _is_retryable_error(RateLimitRetry()) is True
 
     def test__other_exception__returns_false(self) -> None:
         assert _is_retryable_error(ValueError("something")) is False

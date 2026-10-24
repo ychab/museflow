@@ -124,7 +124,7 @@ class TestDiscoverParserCommand:
             pytest.param(0, "Invalid value for '--advisor-limit': 0 is not in the range", id="zero"),
             pytest.param(-15, "Invalid value for '--advisor-limit': -15 is not in the range", id="min_exceed"),
             pytest.param(25, "Invalid value for '--advisor-limit': 25 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--advisor-limit': 'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "Invalid value for '--advisor-limit': 'foo' is not a valid int range", id="string"),
         ],
     )
     def test__advisor_limit__invalid(
@@ -149,7 +149,7 @@ class TestDiscoverParserCommand:
             pytest.param(0, "Invalid value for '--reconciler-limit': 0 is not in the range", id="zero"),
             pytest.param(-15, "Invalid value for '--reconciler-limit': -15 is not in the range", id="min_exceed"),
             pytest.param(25, "Invalid value for '--reconciler-limit': 25 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--reconciler-limit': 'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "Invalid value for '--reconciler-limit': 'foo' is not a valid int range", id="string"),
         ],
     )
     def test__reconciler_limit__invalid(
@@ -174,7 +174,7 @@ class TestDiscoverParserCommand:
             pytest.param(0, "Invalid value for '--playlist-limit': 0 is not in the range", id="zero"),
             pytest.param(-5, "Invalid value for '--playlist-limit': -5 is not in the range", id="min_exceed"),
             pytest.param(31, "Invalid value for '--playlist-limit': 31 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--playlist-limit': 'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "Invalid value for '--playlist-limit': 'foo' is not a valid int range", id="string"),
         ],
     )
     def test__playlist_limit__invalid(
@@ -199,7 +199,7 @@ class TestDiscoverParserCommand:
             pytest.param(0, "Invalid value for '--max-attempts': 0 is not in the range", id="zero"),
             pytest.param(-1, "Invalid value for '--max-attempts': -1 is not in the range", id="min_exceed"),
             pytest.param(11, "Invalid value for '--max-attempts': 11 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--max-attempts': 'foo' is not a valid integer", id="string"),
+            pytest.param("foo", "Invalid value for '--max-attempts': 'foo' is not a valid int range", id="string"),
         ],
     )
     def test__max_attempts__invalid(
@@ -225,7 +225,7 @@ class TestDiscoverParserCommand:
             pytest.param(-1, "Invalid value for '--max-tracks-per-artist': -1 is not in the range", id="min_exceed"),
             pytest.param(11, "Invalid value for '--max-tracks-per-artist': 11 is not in the range", id="max_exceed"),
             pytest.param(
-                "foo", "Invalid value for '--max-tracks-per-artist': 'foo' is not a valid integer", id="string"
+                "foo", "Invalid value for '--max-tracks-per-artist': 'foo' is not a valid int range", id="string"
             ),
         ],
     )
