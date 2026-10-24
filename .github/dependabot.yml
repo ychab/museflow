@@ -26,3 +26,19 @@ updates:
       interval: "weekly"
     labels:
       - "chore"
+
+  # Maintain Dockerfile base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "chore"
+
+  # Maintain docker-compose service images
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "chore"
