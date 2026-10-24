@@ -17,6 +17,8 @@ class TrackModelFactory(BaseModelFactory[Track]):
     __model__ = Track
 
     name = Use(BaseModelFactory.__faker__.name)
+    # Never empty: the Track entity recomputes an empty fingerprint in __post_init__, breaking lookups by fingerprint.
+    fingerprint = Use(BaseModelFactory.__faker__.sha256)
 
     score_skipped = False
     genres = Use(lambda: cast(list[str], []))
