@@ -23,7 +23,7 @@ For now, **only [Spotify](https://open.spotify.com/) is supported**.
 To work with this project, you will need the following tools installed on your machine:
 
 *   **Python**: 3.13
-*   **UV**: 0.10.8
+*   **UV**: 0.13.5
 *   **Docker Compose**: v2
 *   **direnv**: For automatic environment variable loading ([install guide](https://direnv.net/docs/installation.html))
 

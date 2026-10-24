@@ -1,5 +1,5 @@
 ARG PYTHON_VERSION=3.13
-ARG UV_VERSION=0.10.8
+ARG UV_VERSION=0.13.5
 
 # ---------------------------
 # UV Image Alias Stage
