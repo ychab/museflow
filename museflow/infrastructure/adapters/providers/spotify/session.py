@@ -2,8 +2,6 @@ import asyncio
 import logging
 from typing import Any
 
-from tenacity import TryAgain
-
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -13,6 +11,7 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
+from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -108,10 +107,10 @@ class SpotifyOAuthSessionClient:
                     json_data=json_data,
                     ignored_status_codes=ignored_status_codes,
                 )
-            except TryAgain as e:
+            except RateLimitRetry as e:
                 raise ProviderRateLimitExceeded("Spotify rate limit exceeded after max retries") from e
 
-        except TryAgain as e:
+        except RateLimitRetry as e:
             raise ProviderRateLimitExceeded("Spotify rate limit exceeded after max retries") from e
 
         return response

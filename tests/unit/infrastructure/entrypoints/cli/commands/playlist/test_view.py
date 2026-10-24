@@ -42,7 +42,7 @@ class TestViewParserCommand:
         result = runner.invoke(app, ["playlist", "view", "not-a-uuid", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
-        assert "Invalid value for 'PLAYLIST_ID'" in output
+        assert "Invalid value for 'playlist_id'" in output
 
 
 class TestViewCommand:

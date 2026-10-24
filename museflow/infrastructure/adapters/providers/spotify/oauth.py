@@ -9,7 +9,6 @@ from httpx import codes
 
 from pydantic import HttpUrl
 
-from tenacity import TryAgain
 from tenacity import retry
 from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
@@ -19,6 +18,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import HttpClientMixin
+from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
@@ -41,8 +41,8 @@ def _is_retryable_error(exception: BaseException) -> bool:
         return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
 
     # Retry network error OR manual retry signal (used for 429 with header)
-    if isinstance(exception, (httpx.RequestError, TryAgain)):
-        return True  # Tenacity may handle the TryAgain internally, but we keep it here for safety
+    if isinstance(exception, (httpx.RequestError, RateLimitRetry)):
+        return True  # Raised once we already slept as asked by the provider
 
     return False
 
@@ -214,8 +214,8 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                     logger.debug(f"Spotify rate limit exceeded, retrying in {retry_after} seconds")
                     await asyncio.sleep(wait_seconds)
                     # Because we slept as Spotify asked us, we must raise a
-                    # TryAgain to prevent Tenacity to sleep again for nothing.
-                    raise TryAgain() from e
+                    # RateLimitRetry to signal the retry without relying on Tenacity's wait.
+                    raise RateLimitRetry() from e
 
             if ignored_status_codes and e.response.status_code in ignored_status_codes:
                 raise SpotifyApiError(status_code=e.response.status_code) from e

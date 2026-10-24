@@ -55,9 +55,9 @@ class DatabaseSettings(BaseSettings):
                 f"DATABASE_URI not provided. The following component fields are required: {', '.join(missing)}"
             )
 
-        self.URI = PostgresDsn.build(
+        self.URI = PostgresDsn.build(  # type: ignore[misc]
             scheme="postgresql+asyncpg",
-            host=self.HOST,
+            host=self.HOST,  # type: ignore[arg-type]
             port=self.PORT,
             username=self.USER,
             password=self.PASSWORD,

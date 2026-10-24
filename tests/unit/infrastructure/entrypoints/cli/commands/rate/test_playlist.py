@@ -35,7 +35,7 @@ class TestRatePlaylistParserCommand:
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "not-a-uuid"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
-        assert "Invalid value for '[PLAYLIST_ID]'" in output
+        assert "Invalid value for 'playlist_id'" in output
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         playlist_id = uuid.uuid4()

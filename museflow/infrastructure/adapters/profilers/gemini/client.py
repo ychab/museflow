@@ -10,7 +10,6 @@ from httpx import codes
 from pydantic import HttpUrl
 from pydantic import ValidationError
 
-from tenacity import TryAgain
 from tenacity import before_sleep_log
 from tenacity import retry
 from tenacity import retry_if_exception
@@ -36,6 +35,7 @@ from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRespons
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
 from museflow.infrastructure.adapters.http import HttpClientMixin
+from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.profilers.gemini.schemas import GEMINI_TASTE_PROFILE_CONFIG
 from museflow.infrastructure.adapters.profilers.gemini.schemas import GeminiTasteProfileContent
 from museflow.infrastructure.config.settings.gemini import gemini_settings
@@ -51,7 +51,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
         return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
 
     # Retry network error OR manual retry signal (used for 429 with retryDelay)
-    if isinstance(exception, (httpx.RequestError, TryAgain)):
+    if isinstance(exception, (httpx.RequestError, RateLimitRetry)):
         return True
 
     return False
@@ -158,7 +158,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
 
                     logger.debug(f"Gemini profiler rate limit exceeded, retrying in {retry_delay} seconds")
                     await asyncio.sleep(retry_delay + 1)
-                    raise TryAgain() from e
+                    raise RateLimitRetry() from e
 
             raise
 
@@ -180,7 +180,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
                 headers={"x-goog-api-key": self._api_key},
                 json_data=request.model_dump(exclude_none=True),
             )
-        except TryAgain as e:
+        except RateLimitRetry as e:
             raise TasteProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
         except httpx.HTTPStatusError as e:
             try:
