@@ -32,7 +32,7 @@ class Argon2PasswordHasher(PasswordHasherPort):
     def verify(self, plain_password: str, hashed_password: str) -> bool:
         try:
             return self._ph.verify(hashed_password, plain_password)
-        except (Argon2Error, InvalidHashError):
+        except Argon2Error, InvalidHashError:
             return False
 
 

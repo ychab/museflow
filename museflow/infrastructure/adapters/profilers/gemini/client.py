@@ -185,7 +185,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         except httpx.HTTPStatusError as e:
             try:
                 error_detail = e.response.json()["error"]["message"]
-            except (KeyError, ValueError):
+            except KeyError, ValueError:
                 error_detail = e.response.text
             raise TasteProfileBuildException(
                 f"Gemini API error after max retries: {e.response.status_code} — {error_detail}"

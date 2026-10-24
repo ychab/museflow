@@ -12,7 +12,7 @@ def parse_retry_delay(content: bytes) -> int | None:
         for detail in body.get("error", {}).get("details", []):
             if detail.get("@type", "").endswith("RetryInfo") and "retryDelay" in detail:
                 return int(float(detail["retryDelay"].rstrip("s")))
-    except (ValueError, KeyError, AttributeError, TypeError):
+    except ValueError, KeyError, AttributeError, TypeError:
         pass
 
     return None
