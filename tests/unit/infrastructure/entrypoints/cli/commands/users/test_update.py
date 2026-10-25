@@ -175,7 +175,7 @@ class TestUserUpdateLogic:
     async def test__user_not_found(
         self,
         mock_user_repository: mock.AsyncMock,
-        capsys: pytest.CaptureFixture,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         mock_user_repository.get_by_id.return_value = None
 

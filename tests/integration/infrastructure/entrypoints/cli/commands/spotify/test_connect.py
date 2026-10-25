@@ -31,14 +31,14 @@ class TestSpotifyConnectLogic:
         user: User,
         auth_token_create: OAuthProviderUserTokenCreateInput,
         async_session_db: AsyncSession,
-    ) -> Callable[[float], asyncio.Task]:
+    ) -> Callable[[float], asyncio.Task[None]]:
         """
         Helper to simulate the external OAuth callback in the background.
         Yeah, I had to confess for this one: thank Gemini pro!
         """
 
-        def _trigger(delay: float = 0.2) -> asyncio.Task:
-            async def _background_update():
+        def _trigger(delay: float = 0.2) -> asyncio.Task[None]:
+            async def _background_update() -> None:
                 # Wait for the CLI to start polling
                 await asyncio.sleep(delay)
 
@@ -71,9 +71,9 @@ class TestSpotifyConnectLogic:
         self,
         user: User,
         auth_token_create: OAuthProviderUserTokenCreateInput,
-        simulate_oauth_callback: Callable[[float], asyncio.Task],
+        simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
         async_session_db: AsyncSession,
-        capsys: pytest.CaptureFixture,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         # Start the "callback" simulator in the background
         task = simulate_oauth_callback(0.2)

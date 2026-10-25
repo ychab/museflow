@@ -2,7 +2,6 @@ import asyncio
 from collections import defaultdict
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from typing import cast
 
 from pydantic import EmailStr
 
@@ -105,7 +104,7 @@ async def candidates_logic(
         if total_count > max_tracks:
             continue
 
-        rated_scores = [cast(int, t.score) for t in tracks if t.score is not None]
+        rated_scores = [t.score for t in tracks if t.score is not None]
         rated_count = len(rated_scores)
         if rated_count == 0:
             continue

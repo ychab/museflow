@@ -40,7 +40,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
 
-        return cast(Track, await super().create_async(**kwargs))
+        return await super().create_async(**kwargs)
 
     @classmethod
     async def create_batch_async(cls, size: int, **kwargs: Any) -> list[Track]:
@@ -48,7 +48,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
 
-        return cast(list[Track], await super().create_batch_async(size=size, **kwargs))
+        return await super().create_batch_async(size=size, **kwargs)
 
     @classmethod
     async def get_or_create(cls, user_id: uuid.UUID, fingerprint: str, **kwargs: Any) -> tuple[Track, bool]:

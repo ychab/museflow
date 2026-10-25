@@ -5,9 +5,9 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import EnrichTracksReport
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -106,7 +106,7 @@ class TestEnrichTracksLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await enrich_logic(email="unknown@example.com")  # type: ignore[arg-type]
+            await enrich_logic(email="unknown@example.com")
 
     async def test__passes_config_to_use_case(
         self,
@@ -116,7 +116,7 @@ class TestEnrichTracksLogic:
         mock_track_repository.get_list.return_value = []
 
         await enrich_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             force=True,
             batch_size=10,
             limit=100,
@@ -136,7 +136,7 @@ class TestEnrichTracksLogic:
         mock_track_repository.get_list.return_value = []
 
         await enrich_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             only_locale=True,
         )
 
@@ -153,7 +153,7 @@ class TestEnrichTracksLogic:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await enrich_logic(email="test@example.com")  # type: ignore[arg-type]
+        await enrich_logic(email="test@example.com")
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,

@@ -20,7 +20,7 @@ class TestEnrichTracksLogic:
             yield patched
 
     async def test__nominal(self, user: User, mock_use_case: mock.AsyncMock) -> None:
-        result = await enrich_logic(email=user.email)  # type: ignore[arg-type]
+        result = await enrich_logic(email=user.email)
 
         assert result.enriched_count == 1
         called_user = mock_use_case.call_args.args[0]
@@ -28,4 +28,4 @@ class TestEnrichTracksLogic:
 
     async def test__user_not_found(self, mock_use_case: mock.AsyncMock) -> None:
         with pytest.raises(UserNotFound):
-            await enrich_logic(email="nobody@example.com")  # type: ignore[arg-type]
+            await enrich_logic(email="nobody@example.com")

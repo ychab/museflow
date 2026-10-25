@@ -1,7 +1,7 @@
 from museflow.domain.entities.user import User
 from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
-from museflow.infrastructure.entrypoints.cli.commands.stats.artists import ArtistSortBy
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
+from museflow.infrastructure.entrypoints.cli.types import ArtistSortBy
 
 from tests.integration.factories.models.track import TrackModelFactory
 

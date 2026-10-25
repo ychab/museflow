@@ -85,4 +85,4 @@ class TestPurgeLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await purge_logic(email="unknown@example.com")  # type: ignore[arg-type]
+            await purge_logic(email="unknown@example.com")

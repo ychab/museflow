@@ -122,5 +122,5 @@ The rules are written down in [`CONVENTIONS.md`](https://github.com/ychab/musefl
 | `HttpClientMixin` first, port second in the base class list (`class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort)`) | The mixin supplies concrete methods (`close`, the async context manager) that the port declares abstract. With the port first, Python's MRO would find the abstract version first and the class could not be instantiated. |
 | Repeated closures are centralised as decorators (`@self_heal`, `@validate_response`, tenacity's `@retry`) | Three Gemini adapters share the same failure handling; copy-paste would drift |
 
-!!! note "Known deviations from the stated rules"
-    Most of the rules above are enforced by review (human and agent), not by tooling. The ban on `assert` in production code is the exception: it is enforced by Ruff (rule `S101`, ignored under `tests/`), and no `assert` remains in `museflow/`. `CLAUDE.md` also describes mypy as strict, while `pyproject.toml` configures mypy with the Pydantic plugin but without `strict = true` (see [Quality & testing](quality.md)).
+!!! note "What is enforced by tooling"
+    Most of the rules above are enforced by review (human and agent), not by tooling. Two exceptions: the ban on `assert` in production code is enforced by Ruff (rule `S101`, ignored under `tests/`), and full type annotation is enforced by mypy in strict mode (see [Quality & testing](quality.md)).

@@ -65,7 +65,7 @@ def main(
         callback=version_callback,
         is_eager=True,
     ),
-):
+) -> None:
     """Main entry point for the Museflow CLI application.
 
     This function initializes the logging configuration.

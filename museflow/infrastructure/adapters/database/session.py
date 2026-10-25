@@ -12,7 +12,7 @@ if database_settings.URI is None:
     raise RuntimeError("Did you forget to export DATABASE_ env vars?")
 
 async_engine: AsyncEngine = create_async_engine(url=str(database_settings.URI))
-async_session_factory: async_sessionmaker = async_sessionmaker(
+async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
     bind=async_engine,
     # Prevent attributes from being expired after commit/transaction for async DB.
     # @see https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.params.expire_on_commit

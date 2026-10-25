@@ -74,4 +74,4 @@ class TestRemoveLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await remove_logic(email="unknown@example.com", item_ids=[uuid.uuid4()])  # type: ignore[arg-type]
+            await remove_logic(email="unknown@example.com", item_ids=[uuid.uuid4()])

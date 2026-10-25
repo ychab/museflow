@@ -38,7 +38,7 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.database.models import Base
+from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
@@ -189,7 +189,7 @@ async def async_session_db(
             # it only sends the SQL (flush) but DOES NOT close the transaction.
             # The data is visible to subsequent selects in the test, but
             # allows the rollback below to still work.
-            async_session.commit = async_session.flush
+            async_session.commit = async_session.flush  # type: ignore[method-assign]
 
             yield async_session
 
@@ -330,7 +330,7 @@ async def spotify_oauth(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Spoti
     base_url: str | None = os.getenv("WIREMOCK_SPOTIFY_BASE_URL")
 
     retry_method = SpotifyOAuthAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
 
     async with SpotifyOAuthAdapter(
         client_id="dummy-client-id",
@@ -386,7 +386,7 @@ async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gemi
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
     retry_method = GeminiAdvisorAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
 
     async with GeminiAdvisorAdapter(
         api_key="dummy-api-key",
@@ -403,7 +403,7 @@ async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gem
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
     retry_method = GeminiTasteProfileAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
 
     async with GeminiTasteProfileAdapter(
         api_key="dummy-api-key",
@@ -422,7 +422,7 @@ async def gemini_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gem
     base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
 
     retry_method = GeminiTrackEnricherAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))  # type: ignore[attr-defined]
+    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
 
     async with GeminiTrackEnricherAdapter(
         api_key="dummy-api-key",

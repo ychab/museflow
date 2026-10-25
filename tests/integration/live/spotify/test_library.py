@@ -51,7 +51,7 @@ class TestSpotifyLibraryLive:
         token = request.config.getoption("--spotify-refresh-token")
         if not token:
             pytest.skip("Skipping live Spotify tests (missing token)")
-        return token
+        return str(token)
 
     @pytest.fixture
     async def spotify_oauth_live(self) -> AsyncGenerator[ProviderOAuthPort]:

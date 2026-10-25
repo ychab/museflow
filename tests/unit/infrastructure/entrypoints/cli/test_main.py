@@ -24,7 +24,7 @@ class TestBaseCommand:
     @pytest.mark.parametrize("log_level", get_args(LogLevel))
     def test__log_level(self, runner: CliRunner, block_cli_configure_loggers: mock.Mock, log_level: str) -> None:
         @app.command("noop")
-        def noop():
+        def noop() -> None:
             pass
 
         result = runner.invoke(app, ["--log-level", "DEBUG", "noop"])
@@ -37,7 +37,7 @@ class TestBaseCommand:
 
     def test__log_handler__nominal(self, runner: CliRunner, block_cli_configure_loggers: mock.Mock) -> None:
         @app.command("noop")
-        def noop():
+        def noop() -> None:
             pass
 
         result = runner.invoke(app, ["--log-handlers", "console", "--log-handlers", "null", "noop"])
@@ -55,7 +55,7 @@ class TestBaseCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         @app.command("noop")
-        def noop():
+        def noop() -> None:
             pass
 
         result = runner.invoke(app, ["--log-handlers", "foo", "--log-handlers", "bar", "noop"])
