@@ -48,8 +48,8 @@ Looking at the history over time:
 These are not discoveries. They are tracks I loved, that aged well, and that no recommendation engine ever brought
 back — nothing in the platform's incentives rewards resurfacing a five-year-old track I already "consumed".
 
-Rating them was a genuinely moving experience: I realised how much music I had forgotten, and how good much of it
-still sounds.
+Rating them stirred up real emotions: tracks I still love and had completely forgotten. I realised how much music I
+had left behind, and how good much of it still sounds.
 
 → This became a feature I had not planned: **rediscovery playlists**. Filter your own history by rating, genre, mood,
 language, or by when you first or last played a track ("what did I love in 2019 and never play again?"), and push it
