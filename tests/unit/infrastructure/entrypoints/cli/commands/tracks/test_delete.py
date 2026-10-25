@@ -99,7 +99,7 @@ class TestDeleteLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await delete_logic(email="unknown@example.com", artist="X", name=None, source=None, provider=None)  # type: ignore[arg-type]
+            await delete_logic(email="unknown@example.com", artist="X", name=None, source=None, provider=None)
 
     async def test__no_tracks_found(
         self,
@@ -109,7 +109,7 @@ class TestDeleteLogic:
         mock_track_repository.get_list.return_value = []
 
         result = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist="X",
             name=None,
             source=None,
@@ -131,7 +131,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 1
 
         result = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist=None,
             name="creep",
             source=None,
@@ -152,7 +152,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 3
 
         await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist="Radiohead",
             name=None,
             source=None,
@@ -175,7 +175,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 3
 
         await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist="Radiohead",
             name="Creep",
             source=None,
@@ -198,7 +198,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 3
 
         await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist=None,
             name=None,
             source=None,
@@ -222,7 +222,7 @@ class TestDeleteLogic:
         mock_typer_confirm.return_value = True
 
         result = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist="X",
             name=None,
             source=None,
@@ -243,7 +243,7 @@ class TestDeleteLogic:
 
         with pytest.raises(typer.Abort):
             await delete_logic(
-                email="test@example.com",  # type: ignore[arg-type]
+                email="test@example.com",
                 artist="X",
                 name=None,
                 source=None,
@@ -261,7 +261,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 1
 
         await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist="Radiohead",
             name="Creep",
             source=TrackSource.HISTORY,
@@ -292,7 +292,7 @@ class TestDeleteLogic:
         mock_track_repository.delete.return_value = 1
 
         await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             artist=None,
             name=None,
             source=None,

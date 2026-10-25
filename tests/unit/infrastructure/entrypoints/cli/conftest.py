@@ -59,10 +59,10 @@ def runner(block_cli_configure_loggers: mock.Mock) -> CliRunner:
 @pytest.fixture
 def target_path(request: pytest.FixtureRequest) -> str:
     if request.cls and hasattr(request.cls, "TARGET_PATH"):
-        return request.cls.TARGET_PATH
+        return str(request.cls.TARGET_PATH)
 
     if hasattr(request.module, "TARGET_PATH"):
-        return request.module.TARGET_PATH
+        return str(request.module.TARGET_PATH)
 
     raise ValueError("Test class or module must define 'TARGET_PATH' to use auto-patching fixtures.")
 

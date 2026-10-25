@@ -78,7 +78,7 @@ class TestAddArtistLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await add_artists_logic(email="unknown@example.com", artist_names=["Taylor Swift"])  # type: ignore[arg-type]
+            await add_artists_logic(email="unknown@example.com", artist_names=["Taylor Swift"])
 
 
 class TestAddTrackParserCommand:
@@ -157,4 +157,4 @@ class TestAddTrackLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await add_track_logic(email="unknown@example.com", name="Shake It Off", artist_name="Taylor Swift")  # type: ignore[arg-type]
+            await add_track_logic(email="unknown@example.com", name="Shake It Off", artist_name="Taylor Swift")

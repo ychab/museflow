@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 from collections.abc import Iterator
 from unittest import mock
 from unittest.mock import AsyncMock
@@ -67,13 +68,13 @@ async def async_client(
     if "mock_db_session" in request.fixturenames:
         mock_db_session = request.getfixturevalue("mock_db_session")
 
-        async def override_get_db():
+        async def override_get_db() -> AsyncIterator[AsyncSession]:
             yield mock_db_session
 
         app.dependency_overrides[get_db] = override_get_db
     else:
 
-        async def override_get_db():
+        async def override_get_db() -> AsyncIterator[AsyncSession]:
             yield async_session_db
 
         app.dependency_overrides[get_db] = override_get_db

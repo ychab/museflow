@@ -41,7 +41,7 @@ def self_heal[T, S, **P](
         func: Callable[Concatenate[S, list[GeminiRequestContent], P], Awaitable[T]],
     ) -> Callable[Concatenate[S, list[GeminiRequestContent], P], Awaitable[T]]:
         @functools.wraps(func)
-        async def wrapper(self: S, contents: list[GeminiRequestContent], *args: P.args, **kwargs: P.kwargs) -> T:
+        async def wrapper(self: S, contents: list[GeminiRequestContent], /, *args: P.args, **kwargs: P.kwargs) -> T:
             conversation = list(contents)
             max_attempts = max_retries + 1
             attempt = 0

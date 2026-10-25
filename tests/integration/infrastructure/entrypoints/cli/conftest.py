@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import asynccontextmanager
@@ -14,7 +15,7 @@ def patch_session_scope(async_session_db: AsyncSession) -> Iterator[None]:
     """Patches 'session_scope' in the CLI module to yield the test's transactional session."""
 
     @asynccontextmanager
-    async def mock_scope():
+    async def mock_scope() -> AsyncIterator[AsyncSession]:
         yield async_session_db
 
     target_path = "museflow.infrastructure.entrypoints.cli.dependencies.session_scope"

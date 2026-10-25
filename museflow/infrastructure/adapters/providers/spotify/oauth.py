@@ -233,4 +233,5 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        return response.json()
+        data: dict[str, Any] = response.json()
+        return data

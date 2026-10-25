@@ -397,7 +397,7 @@ class TestHistoryLogic:
 
         with pytest.raises(UserNotFound):
             await playlist_history_logic(
-                email="unknown@example.com",  # type: ignore[arg-type]
+                email="unknown@example.com",
                 provider=MusicProvider.SPOTIFY,
                 config=PlaylistHistoryConfigInput(),
             )
@@ -413,7 +413,7 @@ class TestHistoryLogic:
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
             await playlist_history_logic(
-                email=user.email,  # type: ignore[arg-type]
+                email=user.email,
                 provider=MusicProvider.SPOTIFY,
                 config=PlaylistHistoryConfigInput(),
             )

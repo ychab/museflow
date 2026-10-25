@@ -84,7 +84,8 @@ class HttpClientMixin:
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        return response.json()
+        data: dict[str, Any] = response.json()
+        return data
 
     async def close(self) -> None:
         await self._client.aclose()

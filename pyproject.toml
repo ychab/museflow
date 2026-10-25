@@ -142,6 +142,7 @@ sections.sqlalchemy = [
 python_version = "3.14"
 files = ["museflow", "tests"]
 plugins = "pydantic.mypy"
+strict = true
 
 [[tool.mypy.overrides]]
 module = "ijson.*"

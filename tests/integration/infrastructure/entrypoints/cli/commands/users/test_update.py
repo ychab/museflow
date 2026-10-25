@@ -16,7 +16,7 @@ class TestUserUpdateLogic:
         async_session_db: AsyncSession,
         user: User,
         password_hasher: PasswordHasherPort,
-        capsys: pytest.CaptureFixture,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         email = "new@museflow.com"
         password = "new-password"

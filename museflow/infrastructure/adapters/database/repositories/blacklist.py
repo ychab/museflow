@@ -77,7 +77,7 @@ class BlacklistSQLRepository(BlacklistRepository):
             delete(BlacklistedTrackModel).where(BlacklistedTrackModel.user_id == user_id)
         )
 
-        total = int(deleted_artists.rowcount) + int(deleted_tracks.rowcount)  # type: ignore[union-attr, attr-defined]
+        total = int(deleted_artists.rowcount) + int(deleted_tracks.rowcount)  # type: ignore[attr-defined]
         await self.session.commit()
 
         return total

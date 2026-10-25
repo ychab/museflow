@@ -192,7 +192,7 @@ class TestDeleteLogic:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
             await delete_logic(
-                email="unknown@example.com",  # type: ignore[arg-type]
+                email="unknown@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
                 type=None,
@@ -208,7 +208,7 @@ class TestDeleteLogic:
         playlist_id = uuid.uuid4()
 
         count = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             playlist_id=playlist_id,
             purge=False,
             type=None,
@@ -229,7 +229,7 @@ class TestDeleteLogic:
 
         with pytest.raises(PlaylistNotFoundError):
             await delete_logic(
-                email="test@example.com",  # type: ignore[arg-type]
+                email="test@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
                 type=None,
@@ -244,7 +244,7 @@ class TestDeleteLogic:
         mock_playlist_repository.purge.return_value = 5
 
         count = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             playlist_id=None,
             purge=True,
             type=PlaylistType.DISCOVERY,
@@ -267,7 +267,7 @@ class TestDeleteLogic:
         playlist_id = uuid.uuid4()
 
         count = await delete_logic(
-            email="test@example.com",  # type: ignore[arg-type]
+            email="test@example.com",
             playlist_id=playlist_id,
             purge=False,
             type=None,
@@ -286,7 +286,7 @@ class TestDeleteLogic:
 
         with pytest.raises(ProviderAuthTokenNotFoundError):
             await delete_logic(
-                email="test@example.com",  # type: ignore[arg-type]
+                email="test@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
                 type=None,

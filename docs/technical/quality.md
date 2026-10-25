@@ -58,13 +58,10 @@ The live tests are a deliberate manual step, never part of `make test` or CI.
 
 | Tool | Role | Configuration |
 |---|---|---|
-| Ruff | Lint and format, line length 119 | Rule sets `E F I UP B PERF FURB`; isort with one import per line and custom sections (FastAPI, Pydantic, SQLAlchemy grouped separately) |
-| mypy | Static typing over `museflow` and `tests` | Pydantic plugin on, Python 3.14 target |
+| Ruff | Lint and format, line length 119 | Rule sets `E F I UP B PERF FURB` plus `S101` (no `assert` outside tests); isort with one import per line and custom sections (FastAPI, Pydantic, SQLAlchemy grouped separately) |
+| mypy | Static typing over `museflow` and `tests` | `strict = true`, Pydantic plugin on, Python 3.14 target |
 | deptry | Unused, missing and transitive dependency detection | `asyncpg` allow-listed as a driver loaded by SQLAlchemy |
 | pre-commit | Runs the above plus hygiene hooks (merge-conflict markers, YAML / TOML / JSON validity, trailing whitespace, debug statements) | `.pre-commit-config.yaml` |
-
-!!! note "mypy strictness"
-    `CLAUDE.md` calls mypy "strict" and the code is annotated throughout, but `pyproject.toml` does not set `strict = true`; mypy runs with its default checks plus the Pydantic plugin. Full annotation is enforced as a convention and by review rather than by `disallow_untyped_defs`. Turning on `strict` and fixing what surfaces would close that gap.
 
 `make lint` formats and checks locally; `make lint-check` is the non-mutating variant used in CI.
 

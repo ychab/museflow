@@ -85,7 +85,7 @@ class TestListLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await list_logic(email="unknown@example.com")  # type: ignore[arg-type]
+            await list_logic(email="unknown@example.com")
 
     async def test__nominal(
         self,
@@ -97,7 +97,7 @@ class TestListLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_taste_profile_repository.list.return_value = profiles
 
-        result = await list_logic(email=user.email)  # type: ignore[arg-type]
+        result = await list_logic(email=user.email)
 
         assert result == profiles
         mock_taste_profile_repository.list.assert_called_once_with(user_id=user.id)

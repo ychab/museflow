@@ -91,7 +91,7 @@ class TestSpotifyOAuthSessionClient:
     ) -> None:
         session_client.auth_token = auth_token_expired
 
-        async def slow_refresh(*args, **kwargs):
+        async def slow_refresh(*args: object, **kwargs: object) -> OAuthProviderTokenPayload:
             await asyncio.sleep(0.05)
             return token_payload
 
@@ -125,13 +125,13 @@ class TestSpotifyOAuthSessionClient:
             expires_at=auth_token.token_expires_at + timedelta(seconds=3600)
         )
 
-        async def slow_refresh(*args):
+        async def slow_refresh(*args: object) -> OAuthProviderTokenPayload:
             await asyncio.sleep(0.05)
             return new_token_payload
 
         mock_provider_oauth.refresh_access_token.side_effect = slow_refresh
 
-        async def mock_api_call(token_payload, **kwargs):
+        async def mock_api_call(token_payload: OAuthProviderTokenPayload, **kwargs: object) -> dict[str, object]:
             # If using the NEW token -> Success
             if token_payload.access_token == new_token_payload.access_token:
                 return {}

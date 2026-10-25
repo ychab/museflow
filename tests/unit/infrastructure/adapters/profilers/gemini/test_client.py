@@ -26,7 +26,7 @@ from tests.unit.factories.entities.track import TrackFactory
 class TestGeminiTasteProfileAdapter:
     @pytest.fixture
     def mock_tenacity_sleep(self) -> Iterable[None]:
-        retry_controller = GeminiTasteProfileAdapter.make_api_call.retry  # type: ignore[attr-defined]
+        retry_controller = GeminiTasteProfileAdapter.make_api_call.retry
         original_sleep = retry_controller.sleep
 
         retry_controller.sleep = mock.AsyncMock(return_value=None)

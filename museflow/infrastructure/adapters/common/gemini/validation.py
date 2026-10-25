@@ -106,7 +106,7 @@ def validate_response[T: BaseModel, S, **P](
         func: Callable[Concatenate[S, list[GeminiRequestContent], P], Awaitable[dict[str, Any]]],
     ) -> Callable[Concatenate[S, list[GeminiRequestContent], P], Awaitable[T]]:
         @functools.wraps(func)
-        async def wrapper(self: S, contents: list[GeminiRequestContent], *args: P.args, **kwargs: P.kwargs) -> T:
+        async def wrapper(self: S, contents: list[GeminiRequestContent], /, *args: P.args, **kwargs: P.kwargs) -> T:
             response_data = await func(self, contents, *args, **kwargs)
             try:
                 return _parse(response_data, response_model, adapter)

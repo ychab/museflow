@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.user import User as UserEntity
-from museflow.infrastructure.adapters.database.models import Base
+from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 

@@ -24,7 +24,7 @@ class TestHttpClientMixin:
 
     @pytest.fixture
     def mock_tenacity(self) -> Iterable[None]:
-        retry_controller = HttpClientMixin.make_api_call.retry  # type: ignore[attr-defined]
+        retry_controller = HttpClientMixin.make_api_call.retry
         original_sleep = retry_controller.sleep
         original_stop = retry_controller.stop
 
