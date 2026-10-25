@@ -1,0 +1,117 @@
+id: 96f97bbc-76d2-5a17-b438-446b6b586379
+name: example-rap
+user_id: 381ee90b-b25b-5e6e-b891-98e0ca20c22a
+profiler: gemini
+profile:
+  current_vibe:
+    jazz hop: 0.58
+    uk drill: 0.74
+    boom-bap: 0.51
+    dark: 0.63
+    aggressive: 0.49
+  core_identity:
+    hip-hop: 0.95
+    rap: 0.88
+    boom-bap: 0.71
+    trap: 0.67
+    east coast rap: 0.52
+    uk drill: 0.44
+    conscious rap: 0.41
+    jazz hop: 0.36
+    energetic: 0.58
+    introspective: 0.47
+    dark: 0.45
+    golden age hip-hop: 0.34
+    melodic rap: 0.29
+  taste_timeline:
+  - era_label: The Golden Age Education
+    time_range: 2015-03-02 to 2017-05-31
+    dominant_moods:
+    - introspective
+    - energetic
+    - aggressive
+    - melancholic
+    technical_fingerprint:
+      energy: 0.7
+      acousticness: 0.16
+      rhythmic_complexity: 0.62
+      atmospheric: 0.26
+      instrumentalness: 0.08
+  - era_label: The Trap Takeover
+    time_range: 2017-06-01 to 2019-09-30
+    dominant_moods:
+    - energetic
+    - aggressive
+    - party
+    - dark
+    technical_fingerprint:
+      energy: 0.86
+      acousticness: 0.04
+      rhythmic_complexity: 0.48
+      atmospheric: 0.32
+      instrumentalness: 0.05
+  - era_label: The Melodic Rap Haze
+    time_range: 2019-10-01 to 2021-12-31
+    dominant_moods:
+    - melancholic
+    - chill
+    - introspective
+    - romantic
+    technical_fingerprint:
+      energy: 0.62
+      acousticness: 0.1
+      rhythmic_complexity: 0.42
+      atmospheric: 0.66
+      instrumentalness: 0.06
+  - era_label: The Producer Crate-Digging
+    time_range: 2022-01-01 to 2024-06-30
+    dominant_moods:
+    - chill
+    - focus
+    - introspective
+    - peaceful
+    technical_fingerprint:
+      energy: 0.58
+      acousticness: 0.28
+      rhythmic_complexity: 0.74
+      atmospheric: 0.54
+      instrumentalness: 0.46
+  - era_label: The London Drill Pivot
+    time_range: 2024-07-01 to 2026-10-20
+    dominant_moods:
+    - aggressive
+    - dark
+    - energetic
+    - introspective
+    technical_fingerprint:
+      energy: 0.82
+      acousticness: 0.06
+      rhythmic_complexity: 0.68
+      atmospheric: 0.38
+      instrumentalness: 0.12
+  discovery_style: The Producer Follower
+  behavioral_traits:
+    openness: 0.72
+    adventurousness: 0.63
+    nostalgia_bias: 0.58
+    rhythmic_dependency: 0.93
+  life_phase_insights:
+  - Early listening is lyric-centred and rooted in 1990s New York, typical of a student treating albums as curriculum.
+  - Mid-2017 brings a sharp energy spike as trap production takes over, with party and aggressive moods dominating.
+  - After 2019, melodic and hazy rap suggests a more reflective phase and more late-night listening.
+  - 'From 2022, discovery follows beatmakers rather than rappers: jazz samples, loops and instrumentals gain ground.'
+  - Since mid-2024, UK drill brings back intensity while keeping the sample-hunting habit alive.
+  personality_archetype: The Sample Archaeologist
+  musical_identity_summary: A listener who learned rap through the canon, got swept up by trap, floated through melodic haze,
+    then started listening to the people behind the beats. The arc now lands on UK drill, where the drums are colder but
+    the crate-digging instinct is intact.
+profiler_metadata:
+  models:
+    segment: gemini-2.5-flash-lite
+    merge: gemini-3.5-flash
+    reflect: gemini-3.1-pro-preview
+tracks_count: 6410
+logic_version: v1.0
+status: finished
+created_at: '2026-10-22T21:05:31Z'
+updated_at: '2026-10-22T21:05:31Z'

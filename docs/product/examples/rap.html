@@ -1,0 +1,209 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>MuseFlow | example-rap</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700;800&display=swap');
+            body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f1f5f9; }
+            .glass-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(51, 65, 85, 0.5); backdrop-filter: blur(8px); }
+            .timeline-dot { position: relative; }
+            .timeline-dot::before { content: ''; position: absolute; left: -25px; top: 8px; width: 10px; height: 10px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 10px #38bdf8; }
+        </style>
+    </head>
+    <body class="p-6 md:p-12 leading-relaxed">
+        <div class="max-w-5xl mx-auto space-y-10">
+
+            <header class="flex flex-col md:flex-row justify-between items-start border-b border-slate-800 pb-8 gap-6">
+                <div>
+                    <span class="text-sky-400 font-bold tracking-widest text-xs uppercase">Personality Archetype</span>
+                    <h1 class="text-5xl font-extrabold tracking-tight mt-1">The Sample Archaeologist</h1>
+                    <div class="flex gap-4 mt-4 text-slate-500 text-xs font-mono">
+                        <span>ID: 96f97bbc-76d2-5a17-b438-446b6b586379</span>
+                        <span>USER: 381ee90b-b25b-5e6e-b891-98e0ca20c22a</span>
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-center min-w-[160px]">
+                    <div class="text-4xl font-black text-white">6,410</div>
+                    <div class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Total Tracks</div>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <section class="lg:col-span-2 space-y-6">
+                    <div class="glass-card p-8 rounded-[2rem]">
+                        <h2 class="text-sky-400 font-bold uppercase text-[10px] tracking-widest mb-4">The Narrative</h2>
+                        <p class="text-xl font-light text-slate-200 italic leading-relaxed">"A listener who learned rap through the canon, got swept up by trap, floated through melodic haze, then started listening to the people behind the beats. The arc now lands on UK drill, where the drums are colder but the crate-digging instinct is intact."</p>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-[2rem] space-y-4">
+                        <h2 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest mb-2">Life Phase Insights</h2>
+                        <div class="flex gap-4 text-sm"><span class="text-slate-500">•</span><span class="text-slate-300">Early listening is lyric-centred and rooted in 1990s New York, typical of a student treating albums as curriculum.</span></div><div class="flex gap-4 text-sm"><span class="text-slate-500">•</span><span class="text-slate-300">Mid-2017 brings a sharp energy spike as trap production takes over, with party and aggressive moods dominating.</span></div><div class="flex gap-4 text-sm"><span class="text-slate-500">•</span><span class="text-slate-300">After 2019, melodic and hazy rap suggests a more reflective phase and more late-night listening.</span></div><div class="flex gap-4 text-sm"><span class="text-slate-500">•</span><span class="text-slate-300">From 2022, discovery follows beatmakers rather than rappers: jazz samples, loops and instrumentals gain ground.</span></div><div class="flex gap-4 text-sm"><span class="text-slate-500">•</span><span class="text-slate-300">Since mid-2024, UK drill brings back intensity while keeping the sample-hunting habit alive.</span></div>
+                    </div>
+                </section>
+
+                <aside class="space-y-6">
+                    <div class="glass-card p-6 rounded-[2rem]">
+                        <h2 class="text-emerald-400 font-bold uppercase text-[10px] tracking-widest mb-4">Behavioral Traits</h2>
+
+                            <div class="mb-4">
+                                <div class="flex justify-between text-xs mb-1"><span>Openness</span><span>72%</span></div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-emerald-500 h-1.5 rounded-full" style="width: 72.0%"></div></div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="flex justify-between text-xs mb-1"><span>Adventurousness</span><span>63%</span></div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-emerald-500 h-1.5 rounded-full" style="width: 63.0%"></div></div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="flex justify-between text-xs mb-1"><span>Nostalgia Bias</span><span>57%</span></div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-emerald-500 h-1.5 rounded-full" style="width: 57.99999999999999%"></div></div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="flex justify-between text-xs mb-1"><span>Rhythmic Dependency</span><span>93%</span></div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-emerald-500 h-1.5 rounded-full" style="width: 93.0%"></div></div>
+                            </div>
+
+                    </div>
+
+                    <div class="glass-card p-6 rounded-[2rem] border-t-2 border-sky-500">
+                        <h2 class="text-sky-400 font-bold uppercase text-[10px] tracking-widest mb-2">Discovery Style</h2>
+                        <div class="text-lg font-bold">The Producer Follower</div>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-8 rounded-[2rem]">
+                    <h2 class="text-pink-500 font-bold uppercase text-[10px] tracking-widest mb-6">Core Identity DNA</h2>
+                    <div class="space-y-3">
+                        <div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">hip-hop</span><span class="text-pink-500 font-bold">95%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 95.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">rap</span><span class="text-pink-500 font-bold">88%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 88.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">boom-bap</span><span class="text-pink-500 font-bold">71%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 71.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">trap</span><span class="text-pink-500 font-bold">67%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 67.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">energetic</span><span class="text-pink-500 font-bold">57%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 57.99999999999999%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">east coast rap</span><span class="text-pink-500 font-bold">52%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 52.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">introspective</span><span class="text-pink-500 font-bold">47%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 47.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">dark</span><span class="text-pink-500 font-bold">45%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 45.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">uk drill</span><span class="text-pink-500 font-bold">44%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 44.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">conscious rap</span><span class="text-pink-500 font-bold">41%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 41.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">jazz hop</span><span class="text-pink-500 font-bold">36%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 36.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">golden age hip-hop</span><span class="text-pink-500 font-bold">34%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 34.0%"></div></div></div><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">melodic rap</span><span class="text-pink-500 font-bold">28%</span></div><div class="w-full bg-slate-800 h-1.5 rounded-full"><div class="bg-pink-500 h-1.5 rounded-full" style="width: 28.999999999999996%"></div></div></div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem]">
+                    <h2 class="text-amber-500 font-bold uppercase text-[10px] tracking-widest mb-6">Current Vibe Intensity</h2>
+                    <div class="space-y-4">
+
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm font-medium w-32">jazz hop</div>
+                                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 57.99999999999999%"></div></div>
+                                <div class="text-xs font-mono text-slate-500">0.58</div>
+                            </div>
+
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm font-medium w-32">uk drill</div>
+                                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 74.0%"></div></div>
+                                <div class="text-xs font-mono text-slate-500">0.74</div>
+                            </div>
+
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm font-medium w-32">boom-bap</div>
+                                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 51.0%"></div></div>
+                                <div class="text-xs font-mono text-slate-500">0.51</div>
+                            </div>
+
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm font-medium w-32">dark</div>
+                                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 63.0%"></div></div>
+                                <div class="text-xs font-mono text-slate-500">0.63</div>
+                            </div>
+
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm font-medium w-32">aggressive</div>
+                                <div class="flex-1 bg-slate-800 h-2 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 49.0%"></div></div>
+                                <div class="text-xs font-mono text-slate-500">0.49</div>
+                            </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <section class="glass-card p-10 rounded-[2rem]">
+                <h2 class="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-10">Taste Evolution (5 Eras)</h2>
+                <div class="ml-6 border-l border-slate-800 pl-10 space-y-12">
+
+                        <div class="timeline-dot">
+                            <div class="flex flex-col md:flex-row md:justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white">The Golden Age Education</h3>
+                                <span class="text-xs font-mono text-slate-500">2015-03-02 to 2017-05-31</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">introspective</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">energetic</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">aggressive</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">melancholic</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">energy</div><div class="text-xs font-bold text-sky-400">0.7</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">acousticness</div><div class="text-xs font-bold text-sky-400">0.16</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">rhythmic_complexity</div><div class="text-xs font-bold text-sky-400">0.62</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">atmospheric</div><div class="text-xs font-bold text-sky-400">0.26</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">instrumentalness</div><div class="text-xs font-bold text-sky-400">0.08</div></div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-dot">
+                            <div class="flex flex-col md:flex-row md:justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white">The Trap Takeover</h3>
+                                <span class="text-xs font-mono text-slate-500">2017-06-01 to 2019-09-30</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">energetic</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">aggressive</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">party</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">dark</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">energy</div><div class="text-xs font-bold text-sky-400">0.86</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">acousticness</div><div class="text-xs font-bold text-sky-400">0.04</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">rhythmic_complexity</div><div class="text-xs font-bold text-sky-400">0.48</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">atmospheric</div><div class="text-xs font-bold text-sky-400">0.32</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">instrumentalness</div><div class="text-xs font-bold text-sky-400">0.05</div></div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-dot">
+                            <div class="flex flex-col md:flex-row md:justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white">The Melodic Rap Haze</h3>
+                                <span class="text-xs font-mono text-slate-500">2019-10-01 to 2021-12-31</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">melancholic</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">chill</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">introspective</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">romantic</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">energy</div><div class="text-xs font-bold text-sky-400">0.62</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">acousticness</div><div class="text-xs font-bold text-sky-400">0.1</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">rhythmic_complexity</div><div class="text-xs font-bold text-sky-400">0.42</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">atmospheric</div><div class="text-xs font-bold text-sky-400">0.66</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">instrumentalness</div><div class="text-xs font-bold text-sky-400">0.06</div></div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-dot">
+                            <div class="flex flex-col md:flex-row md:justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white">The Producer Crate-Digging</h3>
+                                <span class="text-xs font-mono text-slate-500">2022-01-01 to 2024-06-30</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">chill</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">focus</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">introspective</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">peaceful</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">energy</div><div class="text-xs font-bold text-sky-400">0.58</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">acousticness</div><div class="text-xs font-bold text-sky-400">0.28</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">rhythmic_complexity</div><div class="text-xs font-bold text-sky-400">0.74</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">atmospheric</div><div class="text-xs font-bold text-sky-400">0.54</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">instrumentalness</div><div class="text-xs font-bold text-sky-400">0.46</div></div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-dot">
+                            <div class="flex flex-col md:flex-row md:justify-between mb-2">
+                                <h3 class="text-lg font-bold text-white">The London Drill Pivot</h3>
+                                <span class="text-xs font-mono text-slate-500">2024-07-01 to 2026-10-20</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">aggressive</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">dark</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">energetic</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">introspective</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">energy</div><div class="text-xs font-bold text-sky-400">0.82</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">acousticness</div><div class="text-xs font-bold text-sky-400">0.06</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">rhythmic_complexity</div><div class="text-xs font-bold text-sky-400">0.68</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">atmospheric</div><div class="text-xs font-bold text-sky-400">0.38</div></div><div class="text-center bg-slate-900/30 p-2 rounded-lg"><div class="text-[9px] uppercase text-slate-600 tracking-tighter">instrumentalness</div><div class="text-xs font-bold text-sky-400">0.12</div></div>
+                            </div>
+                        </div>
+
+                </div>
+            </section>
+
+            <footer class="flex flex-col md:flex-row justify-between text-[9px] uppercase tracking-[0.3em] text-slate-600 border-t border-slate-900 pt-8 px-4">
+                <div class="flex gap-6">
+                    <span>Logic: v1.0</span>
+                    <span>Profiler: gemini</span>
+                </div>
+                <div class="flex gap-6 mt-4 md:mt-0">
+                    <span>Reflect Model: gemini-3.1-pro-preview</span>
+                    <span>Updated: 2026-10-22 21:05:31+00:00</span>
+                </div>
+            </footer>
+        </div>
+    </body>
+    </html>

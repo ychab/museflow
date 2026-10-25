@@ -1,0 +1,116 @@
+id: ddf03edf-0055-57d0-b642-2f4e04fac4d6
+name: example-rock
+user_id: 6978e4b7-3295-5ac1-a9de-e3142df287fd
+profiler: gemini
+profile:
+  current_vibe:
+    post-rock: 0.79
+    stoner metal: 0.55
+    dark: 0.66
+    introspective: 0.61
+    psychedelic-rock: 0.47
+  core_identity:
+    rock: 0.96
+    alternative-rock: 0.81
+    hard-rock: 0.72
+    indie-rock: 0.69
+    post-rock: 0.58
+    grunge: 0.54
+    psychedelic-rock: 0.46
+    energetic: 0.62
+    dark: 0.51
+    introspective: 0.49
+    stoner metal: 0.37
+    shoegaze: 0.28
+    progressive-rock: 0.26
+  taste_timeline:
+  - era_label: The Classic Rock Foundations
+    time_range: 2014-02-03 to 2016-08-31
+    dominant_moods:
+    - energetic
+    - aggressive
+    - party
+    - upbeat
+    technical_fingerprint:
+      energy: 0.78
+      acousticness: 0.35
+      rhythmic_complexity: 0.44
+      atmospheric: 0.24
+      instrumentalness: 0.12
+  - era_label: The Grunge Awakening
+    time_range: 2016-09-01 to 2018-11-30
+    dominant_moods:
+    - aggressive
+    - dark
+    - melancholic
+    - energetic
+    technical_fingerprint:
+      energy: 0.84
+      acousticness: 0.2
+      rhythmic_complexity: 0.38
+      atmospheric: 0.3
+      instrumentalness: 0.06
+  - era_label: The Indie Guitar Decade
+    time_range: 2018-12-01 to 2021-06-30
+    dominant_moods:
+    - introspective
+    - upbeat
+    - melancholic
+    - energetic
+    technical_fingerprint:
+      energy: 0.66
+      acousticness: 0.38
+      rhythmic_complexity: 0.42
+      atmospheric: 0.4
+      instrumentalness: 0.1
+  - era_label: The Instrumental Escape
+    time_range: 2021-07-01 to 2024-02-29
+    dominant_moods:
+    - introspective
+    - peaceful
+    - dark
+    - focus
+    technical_fingerprint:
+      energy: 0.52
+      acousticness: 0.3
+      rhythmic_complexity: 0.58
+      atmospheric: 0.82
+      instrumentalness: 0.88
+  - era_label: The Heavy Fuzz Turn
+    time_range: 2024-03-01 to 2026-10-20
+    dominant_moods:
+    - dark
+    - aggressive
+    - introspective
+    - energetic
+    technical_fingerprint:
+      energy: 0.8
+      acousticness: 0.14
+      rhythmic_complexity: 0.5
+      atmospheric: 0.58
+      instrumentalness: 0.46
+  discovery_style: The Deep Diver
+  behavioral_traits:
+    openness: 0.64
+    adventurousness: 0.47
+    nostalgia_bias: 0.71
+    rhythmic_dependency: 0.52
+  life_phase_insights:
+  - Late-2016 pivot from stadium-era classics to 1990s Seattle sounds, typical of a deliberate dig into rock history.
+  - From 2018, a steady move toward jangly, introspective guitar music with lower aggression.
+  - A long instrumental phase from mid-2021, suggesting music used as a background for focus and decompression.
+  - Since early 2024, a return of weight and distortion, now filtered through slow, hypnotic stoner structures.
+  personality_archetype: The Amp Whisperer
+  musical_identity_summary: 'A guitar loyalist who treated rock history as a dig site: classic riffs first, then grunge grit,
+    a long indie interlude, and an instrumental retreat into walls of reverb. The latest chapter brings the fuzz back, proving
+    the volume knob never really went down, only sideways.'
+profiler_metadata:
+  models:
+    segment: gemini-2.5-flash-lite
+    merge: gemini-3.5-flash
+    reflect: gemini-3.1-pro-preview
+tracks_count: 7260
+logic_version: v1.0
+status: finished
+created_at: '2026-10-21T18:40:05Z'
+updated_at: '2026-10-21T18:40:05Z'
