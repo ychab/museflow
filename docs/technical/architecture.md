@@ -59,6 +59,8 @@ Two points are easy to miss:
 
 Where the vendor is already an enum (`MusicProvider`, `MusicAdvisor`, `TasteProfiler`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package. A `/new-provider` command in `.claude/commands/` encodes that checklist.
 
+MuseFlow is deliberately a single application. If it grew, the ports above are where it would split into services (import, profiling, recommendations and playlists, enrichment); the trade-off is discussed in [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app).
+
 ## One flow end to end: `playlist discover`
 
 The most connected command. It touches every port.

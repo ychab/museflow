@@ -8,12 +8,17 @@ It is a personal project and a showcase, built to explore a product idea end to 
 flowchart LR
     A[Streaming history export] --> B[Import]
     B --> C[Taste profile<br/>LLM]
-    C --> D[Discover / Rediscover]
+    C --> D[Discover<br/>new music]
+    B --> R[Rediscover<br/>forgotten favourites]
     D --> E[Playlist on your provider]
+    R --> E
     E --> F[Rate & Enrich<br/>genres, moods, language]
     F --> C
     F --> D
+    F --> R
 ```
+
+Discovery asks an LLM for new tracks based on your taste profile. Rediscovery uses no LLM at generation time: it filters your own history by rating, genre, mood, language and listening dates.
 
 <div class="grid cards" markdown>
 
