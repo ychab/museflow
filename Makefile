@@ -174,10 +174,23 @@ lint-check: ## Lint and check code
 precommit: ## Run pre-commit hooks
 	uv run pre-commit run --all-files
 
+########
+# Docs
+########
+
+.PHONY: docs-serve docs-build
+
+docs-serve:  ## Serve the documentation locally with live reload
+	uv run zensical serve
+
+docs-build:  ## Build the documentation site (strict mode)
+	uv run zensical build --clean --strict
+
+
 clean: ## Cleanup cache files
 	rm -rf .pytest_cache
 	rm -rf .mypy_cache
 	rm -rf .ruff_cache
-	rm -rf htmlcov coverage.xml junit.xml
+	rm -rf htmlcov coverage.xml junit.xml site
 	rm -f .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} +

@@ -19,3 +19,6 @@ junit.xml
 
 external_data
 .aider*
+
+# Docs build output
+/site
