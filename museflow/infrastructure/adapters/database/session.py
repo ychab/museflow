@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from museflow.infrastructure.config.settings.database import database_settings
 
-assert database_settings.URI is not None, "Did you forgot to export DATABASE_ env vars?"
+if database_settings.URI is None:
+    raise RuntimeError("Did you forget to export DATABASE_ env vars?")
 
 async_engine: AsyncEngine = create_async_engine(url=str(database_settings.URI))
 async_session_factory: async_sessionmaker = async_sessionmaker(

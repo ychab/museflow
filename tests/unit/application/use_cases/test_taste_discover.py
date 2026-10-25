@@ -230,6 +230,23 @@ class TestDiscoverTasteUseCase:
                 config=DiscoverTasteConfigInput(max_attempts=1),
             )
 
+    async def test__no_attempt(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        with pytest.raises(DiscoveryTrackNoNew):
+            await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(max_attempts=0),
+            )
+
+        mock_advisor.get_discovery_strategy.assert_not_awaited()
+
     async def test__dry_run(
         self,
         user: User,
