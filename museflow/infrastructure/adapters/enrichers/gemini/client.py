@@ -1,8 +1,8 @@
 import json
 import logging
+from typing import Any
 
 from pydantic import HttpUrl
-from pydantic import ValidationError
 
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.domain.const import GENRE_MACRO_TAGS
@@ -13,11 +13,13 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.track import TrackEnrichment
+from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
+from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.common.gemini.validation import validate_response
 from museflow.infrastructure.adapters.enrichers.gemini.schemas import GeminiEnrichmentResponse
 from museflow.infrastructure.adapters.enrichers.gemini.schemas import build_enrichment_config
 from museflow.infrastructure.adapters.http import HttpClientMixin
@@ -95,47 +97,47 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
 
         return "\n".join(parts)
 
-    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
+    @self_heal()
+    @validate_response(GeminiEnrichmentResponse, adapter="enricher")
+    async def _request_enrichment(
+        self,
+        contents: list[GeminiRequestContent],
+        fields: frozenset[EnrichField],
+    ) -> dict[str, Any]:
         request = GeminiGenerateContentRequest(
-            system_instruction=GeminiRequestContent(
-                parts=[GeminiRequestPart(text=self._build_system_prompt(fields))],
-            ),
-            contents=[
-                GeminiRequestContent(
-                    parts=[
-                        GeminiRequestPart(
-                            text=json.dumps(
-                                [
-                                    {"index": i, "title": track.name, "primary_artist": track.primary_artist}
-                                    for i, track in enumerate(tracks)
-                                ],
-                                ensure_ascii=False,
-                            ),
-                        ),
-                    ],
-                ),
-            ],
+            system_instruction=GeminiRequestContent(parts=[GeminiRequestPart(text=self._build_system_prompt(fields))]),
+            contents=contents,
             generationConfig=build_enrichment_config(fields),
         )
-
-        response_data = await self.make_api_call(
+        return await self.make_api_call(
             method="POST",
             endpoint=f"/models/{self._model}:generateContent",
             headers={"x-goog-api-key": self._api_key},
             json_data=request.model_dump(exclude_none=True),
         )
 
-        envelope = GeminiResponse.model_validate(response_data)
-
-        if not envelope.candidates:
-            logger.warning("Gemini enricher returned no candidates")
-            return []
-
-        raw_text = envelope.candidates[0].content.parts[0].text
+    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
         try:
-            content = GeminiEnrichmentResponse.model_validate(json.loads(raw_text))
-        except ValidationError, ValueError:
-            logger.exception("Invalid Gemini enrichment response", extra={"raw": raw_text[:200]})
+            content = await self._request_enrichment(
+                [
+                    GeminiRequestContent(
+                        parts=[
+                            GeminiRequestPart(
+                                text=json.dumps(
+                                    [
+                                        {"index": i, "title": track.name, "primary_artist": track.primary_artist}
+                                        for i, track in enumerate(tracks)
+                                    ],
+                                    ensure_ascii=False,
+                                ),
+                            ),
+                        ],
+                    ),
+                ],
+                fields,
+            )
+        except GeminiResponseError as e:
+            logger.exception("Invalid Gemini enrichment response", extra={"failure_kind": e.failure_kind.value})
             return []
 
         return [

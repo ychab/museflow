@@ -146,6 +146,7 @@ class TestGeminiAdvisorAdapter:
                     }
                 ]
             },
+            is_reusable=True,
         )
 
         with pytest.raises(DiscoveryTasteStrategyException):
@@ -154,6 +155,8 @@ class TestGeminiAdvisorAdapter:
                 focus=DiscoveryFocus.EXPANSION,
                 advisor_limit=5,
             )
+
+        assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries
 
     async def test__get_discovery_strategy__rate_limit_exhausted_raises(
         self,

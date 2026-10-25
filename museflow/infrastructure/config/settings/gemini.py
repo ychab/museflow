@@ -32,5 +32,7 @@ class GeminiSettings(BaseSettings):
     HTTP_MAX_RETRIES: int = 10
     HTTP_MAX_RETRY_WAIT: int = 120
 
+    VALIDATION_MAX_RETRIES: int = Field(default=2, ge=0)
+
 
 gemini_settings = GeminiSettings()

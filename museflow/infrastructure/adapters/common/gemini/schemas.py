@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -50,6 +52,7 @@ class GeminiRequestPart(BaseModel):
 
 class GeminiRequestContent(BaseModel):
     parts: list[GeminiRequestPart]
+    role: Literal["user", "model"] | None = None
 
 
 class GeminiGenerateContentRequest(BaseModel):
@@ -66,12 +69,13 @@ class GeminiResponsePart(BaseModel):
 
 
 class GeminiResponseContent(BaseModel):
-    parts: list[GeminiResponsePart]
-    role: str
+    parts: list[GeminiResponsePart] = Field(default_factory=list)
+    role: str | None = None
 
 
 class GeminiCandidate(BaseModel):
-    content: GeminiResponseContent
+    content: GeminiResponseContent | None = None
+    finishReason: str | None = None
 
 
 class GeminiResponse(BaseModel):

@@ -80,8 +80,10 @@ class TestGeminiResponse:
         }
         response = GeminiResponse.model_validate(data)
         assert len(response.candidates) == 1
-        assert response.candidates[0].content.role == "model"
-        assert response.candidates[0].content.parts[0].text == '{"tracks": []}'
+        content = response.candidates[0].content
+        assert content is not None
+        assert content.role == "model"
+        assert content.parts[0].text == '{"tracks": []}'
 
     def test__parse__empty_candidates_default(self) -> None:
         response = GeminiResponse.model_validate({})
@@ -98,4 +100,32 @@ class TestGeminiResponse:
                 role="model",
             )
         )
+        assert candidate.content is not None
         assert candidate.content.parts[0].text == "hello"
+
+    def test__parse__finish_reason(self) -> None:
+        response = GeminiResponse.model_validate(
+            {"candidates": [{"content": {"parts": [{"text": "{}"}], "role": "model"}, "finishReason": "MAX_TOKENS"}]}
+        )
+        assert response.candidates[0].finishReason == "MAX_TOKENS"
+
+    def test__parse__candidate_without_content(self) -> None:
+        response = GeminiResponse.model_validate({"candidates": [{"finishReason": "SAFETY"}]})
+        assert response.candidates[0].content is None
+
+    def test__parse__content_without_parts_nor_role(self) -> None:
+        response = GeminiResponse.model_validate({"candidates": [{"content": {}}]})
+        content = response.candidates[0].content
+        assert content is not None
+        assert content.parts == []
+        assert content.role is None
+
+
+class TestGeminiRequestContent:
+    def test__dump__excludes_unset_role(self) -> None:
+        content = GeminiRequestContent(parts=[GeminiRequestPart(text="hi")])
+        assert content.model_dump(exclude_none=True) == {"parts": [{"text": "hi"}]}
+
+    def test__dump__includes_role(self) -> None:
+        content = GeminiRequestContent(role="model", parts=[GeminiRequestPart(text="hi")])
+        assert content.model_dump(exclude_none=True) == {"role": "model", "parts": [{"text": "hi"}]}

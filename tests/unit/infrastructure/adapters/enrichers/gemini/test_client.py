@@ -34,11 +34,13 @@ class TestGeminiTrackEnricherAdapter:
             url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
             method="POST",
             json={"candidates": [{"content": {"parts": [{"text": "not valid json {{{"}], "role": "model"}}]},
+            is_reusable=True,
         )
 
         result = await gemini_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
         assert result == []
+        assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries
 
     async def test__enrich_tracks__unknown_genre__silently_dropped(
         self,

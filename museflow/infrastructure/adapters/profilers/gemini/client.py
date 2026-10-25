@@ -8,7 +8,6 @@ import httpx
 from httpx import codes
 
 from pydantic import HttpUrl
-from pydantic import ValidationError
 
 from tenacity import before_sleep_log
 from tenacity import retry
@@ -28,12 +27,14 @@ from museflow.domain.enums import MoodTag
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
+from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
+from museflow.infrastructure.adapters.common.gemini.validation import validate_response
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.profilers.gemini.schemas import GEMINI_TASTE_PROFILE_CONFIG
@@ -167,18 +168,25 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
 
         return response.json()
 
-    async def _prompt_request(self, prompt: str, model: GeminiModel) -> TasteProfileData:
+    @self_heal()
+    @validate_response(GeminiTasteProfileContent, adapter="profiler")
+    async def _request_taste_profile(self, contents: list[GeminiRequestContent], model: GeminiModel) -> dict[str, Any]:
         request = GeminiGenerateContentRequest(
-            contents=[GeminiRequestContent(parts=[GeminiRequestPart(text=prompt)])],
+            contents=contents,
             generationConfig=GEMINI_TASTE_PROFILE_CONFIG,
         )
+        return await self.make_api_call(
+            method="POST",
+            endpoint=f"/models/{model}:generateContent",
+            headers={"x-goog-api-key": self._api_key},
+            json_data=request.model_dump(exclude_none=True),
+        )
 
+    async def _prompt_request(self, prompt: str, model: GeminiModel) -> TasteProfileData:
         try:
-            response_data = await self.make_api_call(
-                method="POST",
-                endpoint=f"/models/{model}:generateContent",
-                headers={"x-goog-api-key": self._api_key},
-                json_data=request.model_dump(exclude_none=True),
+            content = await self._request_taste_profile(
+                [GeminiRequestContent(parts=[GeminiRequestPart(text=prompt)])],
+                model,
             )
         except RateLimitRetry as e:
             raise TasteProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
@@ -190,13 +198,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             raise TasteProfileBuildException(
                 f"Gemini API error after max retries: {e.response.status_code} — {error_detail}"
             ) from e
-
-        envelope = GeminiResponse.model_validate(response_data)
-        raw_text = envelope.candidates[0].content.parts[0].text
-
-        try:
-            content = GeminiTasteProfileContent.model_validate(json.loads(raw_text))
-        except (ValidationError, ValueError) as e:
+        except GeminiResponseError as e:
             raise TasteProfileBuildException(f"Invalid Gemini taste profile response: {e}") from e
 
         return cast(TasteProfileData, content.model_dump())

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from typing import Any
 
@@ -7,7 +6,6 @@ import httpx
 from httpx import codes
 
 from pydantic import HttpUrl
-from pydantic import ValidationError
 
 from tenacity import retry
 from tenacity import retry_if_exception
@@ -28,12 +26,14 @@ from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.mappers import to_discovery_strategy
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GEMINI_DISCOVERY_STRATEGY_CONFIG
 from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiDiscoveryStrategyContent
+from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
 from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiResponse
+from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
+from museflow.infrastructure.adapters.common.gemini.validation import validate_response
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.config.settings.gemini import gemini_settings
@@ -260,32 +260,35 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
             user_parts.append(f"Additional instructions: {custom_instructions}")
         user_message = " ".join(user_parts)
 
-        request = GeminiGenerateContentRequest(
-            system_instruction=GeminiRequestContent(parts=[GeminiRequestPart(text=system_prompt)]),
-            contents=[GeminiRequestContent(parts=[GeminiRequestPart(text=user_message)])],
-            generationConfig=GEMINI_DISCOVERY_STRATEGY_CONFIG,
-        )
         try:
-            response_data = await self.make_api_call(
-                method="POST",
-                endpoint=f"/models/{self._model}:generateContent",
-                headers={"x-goog-api-key": self._api_key},
-                json_data=request.model_dump(exclude_none=True),
+            inner = await self._request_discovery_strategy(
+                [GeminiRequestContent(parts=[GeminiRequestPart(text=user_message)])],
+                system_prompt,
             )
         except RateLimitRetry as e:
             raise AdvisorRateLimitExceeded(
                 "Gemini rate limit exceeded after max retries for discovery strategy"
             ) from e
-
-        envelope = GeminiResponse.model_validate(response_data)
-
-        if not envelope.candidates:
-            raise DiscoveryTasteStrategyException("Gemini returned no candidates for discovery strategy")
-
-        raw_text = envelope.candidates[0].content.parts[0].text
-        try:
-            inner = GeminiDiscoveryStrategyContent.model_validate(json.loads(raw_text))
-        except (ValidationError, ValueError) as e:
-            raise DiscoveryTasteStrategyException("Invalid Gemini response for discovery strategy") from e
+        except GeminiResponseError as e:
+            raise DiscoveryTasteStrategyException(f"Invalid Gemini response for discovery strategy: {e}") from e
 
         return to_discovery_strategy(inner)
+
+    @self_heal()
+    @validate_response(GeminiDiscoveryStrategyContent, adapter="advisor")
+    async def _request_discovery_strategy(
+        self,
+        contents: list[GeminiRequestContent],
+        system_prompt: str,
+    ) -> dict[str, Any]:
+        request = GeminiGenerateContentRequest(
+            system_instruction=GeminiRequestContent(parts=[GeminiRequestPart(text=system_prompt)]),
+            contents=contents,
+            generationConfig=GEMINI_DISCOVERY_STRATEGY_CONFIG,
+        )
+        return await self.make_api_call(
+            method="POST",
+            endpoint=f"/models/{self._model}:generateContent",
+            headers={"x-goog-api-key": self._api_key},
+            json_data=request.model_dump(exclude_none=True),
+        )

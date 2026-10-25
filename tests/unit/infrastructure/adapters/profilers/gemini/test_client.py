@@ -149,10 +149,13 @@ class TestGeminiTasteProfileAdapter:
                     }
                 ]
             },
+            is_reusable=True,
         )
 
         with pytest.raises(TasteProfileBuildException):
             await gemini_profiler.build_profile_segment(TrackFactory.batch(2))
+
+        assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries
 
     async def test__build_profile_segment__no_dates(
         self,

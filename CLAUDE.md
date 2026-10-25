@@ -170,6 +170,7 @@ class UserSQLRepository(UserRepository):
 - **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
 - **In use case functions and class constructors, DI parameters (repositories + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
 - **Group members of the same kind together in a module** (private helper functions, then classes). Never interleave them (no class → function → class).
+- **No duplicated inner functions.** If the same inner function (closure) shape appears in more than one place, centralize it as a decorator or shared helper (e.g. `@self_heal`, tenacity's `@retry`) instead of repeating it. An inner function is acceptable only when it is genuinely specific to a single use case.
 
 ## Language
 - **Everything written for the repo is in English**, regardless of the language used in the conversation: code, comments, docstrings, log messages, CLI help text, tests, commit messages, PR descriptions, plans, and docs. Only the chat replies follow the user's language.
