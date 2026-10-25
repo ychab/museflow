@@ -60,6 +60,9 @@ dev = [
     # but kept here to match your original request.
     # "pydantic[dotenv]>=2.14.0",
 ]
+docs = [
+    "zensical>=0.0.72",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["museflow"]
