@@ -2,9 +2,9 @@
 site_url = "https://ychab.github.io/museflow/"
 site_name = "MuseFlow"
 site_description = "Rediscover and discover music from your own listening history — a product-minded backend showcase."
-# site_author = "Your name"
+site_author = "Yannick Chabbert"
 
-# copyright = "Copyright &copy; 2026 Your name"
+copyright = "Copyright &copy; 2026 Yannick Chabbert"
 
 repo_url = "https://github.com/ychab/museflow"
 repo_name = "ychab/museflow"
