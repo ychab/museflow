@@ -95,7 +95,7 @@ flowchart LR
 | Group same-kind module members; everything written for the repo is English | `7d1746b` | 2026-10-24 |
 | No duplicated inner functions (centralise as a decorator) | `a8ad2dc` | 2026-10-25 |
 
-The rules are advisory to the agent and enforced by review, not by tooling, so they do drift: the `assert` ban dates from June, yet two `assert` statements remain in production modules (see [Architecture](architecture.md#conventions-and-why-they-exist)). Moving a rule from prose into a lint rule is the more durable fix when one is available.
+Most rules are advisory to the agent and enforced by review, not by tooling, so they can drift: the `assert` ban dates from June, yet two `assert` statements had crept into production modules. It is now enforced by Ruff (`S101`) and none remain. Moving a rule from prose into a lint rule is the more durable fix when one is available.
 
 ## Commands and agents
 
@@ -141,4 +141,4 @@ Agents are subagents with their own instructions, routed to automatically or inv
 - **Local-model tooling.** A Continue plugin with a local Ollama `qwen2.5-coder` model was added in `fca41e1` and removed 24 minutes later in `6057540` (2026-03-29); aider left only a `.gitignore` entry (`19682fe`). Neither fit the workflow.
 - **repomix.** Useful while pasting code into a chat window, redundant once an agent could read the repository itself; removed in `107aa9d`, almost four months after it was added.
 - **Oversized always-loaded instructions.** `CLAUDE.md` grew to 442 lines and was loaded into every session. Cutting it to 245 kept the rules that change behaviour and moved detail to `CONVENTIONS.md` and per-directory files.
-- **Rules without enforcement.** Prose rules drift (see the `assert` example above).
+- **Rules without enforcement.** Prose rules drift (see the `assert` example above, now enforced by Ruff `S101`).

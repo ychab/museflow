@@ -200,10 +200,9 @@ class DiscoverTasteUseCase:
             if len(tracks_scores) >= config.playlist_limit:
                 break
 
-        if not tracks_scores:
+        # No strategy means no attempt ran at all (max_attempts < 1)
+        if strategy is None or not tracks_scores:
             raise DiscoveryTrackNoNew()
-
-        assert strategy is not None
 
         # Sort: band by advisor score DESC, then by reconciler confidence DESC within band
         tracks_scores.sort(

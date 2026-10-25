@@ -98,11 +98,15 @@ select = [
     "B",    # flake8-bugbear
     "PERF", # Perflint
     "FURB", # refurb
+    "S101", # flake8-bandit: no assert in production code
 ]
 ignore = [
     "B008",  # Allow function calls in argument defaults (required for FastAPI Depends)
     "E501",  # Line too long will be formatted by Ruff format
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
