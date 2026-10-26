@@ -57,3 +57,8 @@ def parse_log_handlers(values: list[str]) -> list[str]:
             raise typer.BadParameter(f"Invalid handler: '{values}'. Allowed: {', '.join(get_args(LogHandler))}")
 
     return values
+
+
+def validate_score_range(score_min: int | None, score_max: int | None) -> None:
+    if score_min is not None and score_max is not None and score_min > score_max:
+        raise typer.BadParameter("--score-min cannot be greater than --score-max")
