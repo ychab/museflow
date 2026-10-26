@@ -216,7 +216,4 @@ def get_playlist_repository(session: AsyncSession) -> PlaylistRepository:
 
 
 def get_reconciler() -> Reconciler:
-    return Reconciler(
-        match_threshold=app_settings.RECONCILER_MATCH_THRESHOLD,
-        score_minimum=app_settings.RECONCILER_SCORE_MINIMUM,
-    )
+    return Reconciler(match_threshold=app_settings.RECONCILER_MATCH_THRESHOLD)

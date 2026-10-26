@@ -88,7 +88,7 @@ An LLM suggests *names*; the provider needs *ids*. For each suggestion the use c
 1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes).
 2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz).
 3. If either component is below `RECONCILER_MATCH_THRESHOLD` (80), the candidate scores 0.
-4. Otherwise the composite is `0.6 * track + 0.4 * artist`. The best candidate is accepted if it reaches `RECONCILER_SCORE_MINIMUM` (60) and its score divided by 100 becomes the **match confidence**.
+4. Otherwise the composite is `0.6 * track + 0.4 * artist`. A candidate scoring 0 is never accepted, so scores are either 0 or between the threshold and 100. The best non-zero candidate is accepted and its score divided by 100 becomes the **match confidence**.
 
 Two scores therefore travel with each track: the advisor's confidence ("is this a good pick for the listener?") and the reconciler's confidence ("is this the track the advisor meant?"). The final order uses both: advisor score rounded down to a band of 0.05, then match confidence inside the band, so a marginally higher advisor score cannot outrank a clearly more certain catalogue match. A per-artist cap (`--max-tracks-per-artist`, default 3) is applied after sorting so one artist cannot dominate a playlist.
 

@@ -6,7 +6,7 @@ from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.track import TrackSuggestedFactory
 
 
-@pytest.mark.parametrize("reconciler", [{"match_threshold": 80.0, "score_minimum": 60.0}], indirect=True)
+@pytest.mark.parametrize("reconciler", [{"match_threshold": 80.0}], indirect=True)
 class TestReconciler:
     def test__reconcile__no_candidate(self, reconciler: Reconciler) -> None:
         result = reconciler.reconcile(track_suggested=TrackSuggestedFactory.build(), candidates=[])

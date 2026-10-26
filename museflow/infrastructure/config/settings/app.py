@@ -39,7 +39,6 @@ class AppSettings(BaseSettings):
     HTTP_MAX_RETRIES: int = 5
 
     RECONCILER_MATCH_THRESHOLD: float = 80.0
-    RECONCILER_SCORE_MINIMUM: float = 60.0
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
