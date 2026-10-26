@@ -31,16 +31,6 @@ class TestEnrichImportLogic:
         assert updated.moods == ["melancholic"]
         assert updated.locales == ["fr", "en"]
 
-    async def test__legacy_locale_key(self, user: User, async_session_db: AsyncSession) -> None:
-        track_db = await TrackModelFactory.create_async(user_id=user.id, locales=None)
-        data = [{"fingerprint": track_db.fingerprint, "genres": ["folk"], "moods": ["chill"], "locale": "fr"}]
-
-        await import_logic(email=user.email, data=data)
-
-        stmt = select(TrackModel).where(TrackModel.id == track_db.id)
-        updated = (await async_session_db.execute(stmt)).scalar_one()
-        assert updated.locales == ["fr"]
-
     async def test__reimport_overrides(self, user: User, async_session_db: AsyncSession) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id, genres=["rock"], moods=["energetic"])
 

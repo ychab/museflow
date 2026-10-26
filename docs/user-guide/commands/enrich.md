@@ -58,7 +58,7 @@ museflow enrich export --email <email> --output <path>
 
 ## `enrich import`
 
-Restores genres, moods and locales from a YAML file produced by `enrich export`, without calling the LLM. Files from older versions, with a single `locale` key, are still accepted.
+Restores genres, moods and locales from a YAML file produced by `enrich export`, without calling the LLM.
 
 ```bash
 museflow enrich import --email <email> --input <path>
