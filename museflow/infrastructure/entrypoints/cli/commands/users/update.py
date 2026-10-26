@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 
-@app.command("update")
+@app.command("update", help="Update the email and/or password of a user.")
 def update(
     user_id: uuid.UUID = typer.Argument(..., help="User ID to update"),
     email: str | None = typer.Option(None, help="User email address to change", parser=parse_email),

@@ -24,6 +24,23 @@ class TestUserCreateParserCommand:
         )
         assert result.exit_code == 0
 
+    def test__password__prompted_when_omitted(self, runner: CliRunner, mock_create_user_logic: mock.AsyncMock) -> None:
+        result = runner.invoke(
+            app,
+            ["users", "create", "--email", "test@example.com"],
+            input="testtest\ntesttest\n",
+        )
+        assert result.exit_code == 0
+        assert mock_create_user_logic.await_args_list[0].args[1] == "testtest"
+
+    def test__help__password_not_required(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["users", "create", "--help"])
+        assert result.exit_code == 0
+        output = clean_typer_text(result.output)
+        password_section = output.split("--password", 1)[1]
+        assert "prompted if omitted" in password_section
+        assert "[required]" not in password_section
+
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
         [

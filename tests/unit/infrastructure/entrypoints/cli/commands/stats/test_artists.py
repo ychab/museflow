@@ -42,6 +42,38 @@ class TestStatsArtistsParserCommand:
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", "--sort", "bad_value"])
         assert result.exit_code != 0
 
+    @pytest.mark.parametrize(
+        ("option", "value"),
+        [
+            pytest.param("--score-min", "-1", id="score_min_below_range"),
+            pytest.param("--score-min", "11", id="score_min_above_range"),
+            pytest.param("--score-max", "-1", id="score_max_below_range"),
+            pytest.param("--score-max", "11", id="score_max_above_range"),
+        ],
+    )
+    def test__score__out_of_range(
+        self, runner: CliRunner, option: str, value: str, clean_typer_text: TextCleaner
+    ) -> None:
+        result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", option, value])
+        assert result.exit_code != 0
+        output = clean_typer_text(result.output)
+        assert f"Invalid value for '{option}'" in output
+
+    def test__score_min__greater_than_score_max(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(
+            app,
+            ["stats", "artists", "--email", "test@example.com", "--score-min", "8", "--score-max", "3"],
+        )
+        assert result.exit_code != 0
+        output = clean_typer_text(result.output)
+        assert "--score-min cannot be greater than --score-max" in output
+
+    def test__limit__zero(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", "--limit", "0"])
+        assert result.exit_code != 0
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--limit'" in output
+
 
 class TestStatsArtistsCommand:
     @pytest.fixture(autouse=True)

@@ -44,21 +44,24 @@ class RateHistoryResult:
 @app.command("history", help="Interactively rate unrated history tracks ordered by play count.")
 def rate_history(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    limit: int = typer.Option(10, help="Maximum number of tracks to rate"),
+    limit: int = typer.Option(10, help="Maximum number of tracks to rate", min=1),
     reset: bool = typer.Option(False, "--reset", help="Clear all existing history track scores before rating"),
     play: bool = typer.Option(False, "--play", help="Play each track before rating"),
-    play_provider: MusicProvider = typer.Option(
-        MusicProvider.SPOTIFY, "--play-provider", help="Provider to use for playback. Requires --play."
+    play_provider: MusicProvider | None = typer.Option(
+        None, "--play-provider", help="Provider to use for playback (default: spotify). Requires --play."
     ),
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist (case-insensitive)"),
 ) -> None:
+    if play_provider is not None and not play:
+        raise typer.BadParameter("--play-provider requires --play")
+
     try:
         result = asyncio.run(
             rate_history_logic(
                 email=email,
                 limit=limit,
                 reset=reset,
-                provider=play_provider if play else None,
+                provider=(play_provider or MusicProvider.SPOTIFY) if play else None,
                 artist=artist,
             )
         )

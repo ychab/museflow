@@ -17,7 +17,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command()
+@app.command("info", help="Show the stored Spotify auth token of a user.")
 def info(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
 ) -> None:

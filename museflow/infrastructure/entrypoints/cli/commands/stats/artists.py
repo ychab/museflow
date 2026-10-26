@@ -10,6 +10,8 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
@@ -38,16 +40,31 @@ class ArtistRow:
 def stats_artists(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
-    score_min: int | None = typer.Option(None, "--score-min", help="Minimum score filter (0-10)"),
-    score_max: int | None = typer.Option(None, "--score-max", help="Maximum score filter (0-10)"),
+    score_min: int | None = typer.Option(
+        None,
+        "--score-min",
+        help="Minimum score filter (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
+    score_max: int | None = typer.Option(
+        None,
+        "--score-max",
+        help="Maximum score filter (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
     confidence: int = typer.Option(
         app_settings.STATS_BAYESIAN_CONFIDENCE,
         "--confidence",
         help="Bayesian confidence constant: artists with fewer rated tracks than this are pulled toward the mean",
     ),
     sort: ArtistSortBy = typer.Option(ArtistSortBy.OVERALL, "--sort", help="Ranking strategy"),
-    limit: int = typer.Option(20, help="Max rows in the table"),
+    limit: int = typer.Option(20, help="Max rows in the table", min=1),
 ) -> None:
+    if score_min is not None and score_max is not None and score_min > score_max:
+        raise typer.BadParameter("--score-min cannot be greater than --score-max")
+
     try:
         rows = asyncio.run(
             artists_logic(

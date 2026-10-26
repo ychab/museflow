@@ -49,6 +49,43 @@ class TestRatePlaylistParserCommand:
         assert result.exit_code == 0
         mock_rate_playlist_logic.assert_awaited_once()
 
+    def test__play_provider__without_play(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(
+            app,
+            ["rate", "playlist", "--email", "test@example.com", "--play-provider", "spotify"],
+        )
+        assert result.exit_code != 0
+        output = clean_typer_text(result.output)
+        assert "--play-provider requires --play" in output
+
+    def test__limit__zero(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "--limit", "0"])
+        assert result.exit_code != 0
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--limit'" in output
+
+    @pytest.mark.parametrize(
+        ("extra_args", "expected_provider"),
+        [
+            pytest.param([], None, id="no_play"),
+            pytest.param(["--play"], MusicProvider.SPOTIFY, id="play_defaults_to_spotify"),
+            pytest.param(["--play", "--play-provider", "spotify"], MusicProvider.SPOTIFY, id="play_with_provider"),
+        ],
+    )
+    def test__play_provider__resolved(
+        self,
+        mock_rate_playlist_logic: mock.AsyncMock,
+        runner: CliRunner,
+        extra_args: list[str],
+        expected_provider: MusicProvider | None,
+    ) -> None:
+        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+
+        result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", *extra_args])
+
+        assert result.exit_code == 0
+        assert mock_rate_playlist_logic.await_args_list[0].kwargs["provider"] == expected_provider
+
 
 class TestRatePlaylistCommand:
     @pytest.fixture(autouse=True)

@@ -16,10 +16,17 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 
-@app.command("create")
+@app.command("create", help="Create a new user account.")
 def create(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    password: str = typer.Option(..., prompt=True, hide_input=True, confirmation_prompt=True, parser=parse_password),
+    password: str = typer.Option(
+        None,
+        prompt=True,
+        hide_input=True,
+        confirmation_prompt=True,
+        help="User password (prompted if omitted)",
+        parser=parse_password,
+    ),
 ) -> None:
     try:
         asyncio.run(user_create_logic(email, password))

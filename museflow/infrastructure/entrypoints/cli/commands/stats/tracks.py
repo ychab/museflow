@@ -7,6 +7,8 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
@@ -21,11 +23,26 @@ from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 @app.command("tracks", help="Show top rated tracks.")
 def stats_tracks(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    score_min: int | None = typer.Option(None, "--score-min", help="Minimum score filter (0-10)"),
-    score_max: int | None = typer.Option(None, "--score-max", help="Maximum score filter (0-10)"),
+    score_min: int | None = typer.Option(
+        None,
+        "--score-min",
+        help="Minimum score filter (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
+    score_max: int | None = typer.Option(
+        None,
+        "--score-max",
+        help="Maximum score filter (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
     sort: TrackSortBy = typer.Option(TrackSortBy.SCORE, "--sort", help="Ranking strategy"),
-    limit: int = typer.Option(20, help="Max rows in the table"),
+    limit: int = typer.Option(20, help="Max rows in the table", min=1),
 ) -> None:
+    if score_min is not None and score_max is not None and score_min > score_max:
+        raise typer.BadParameter("--score-min cannot be greater than --score-max")
+
     try:
         tracks = asyncio.run(
             tracks_logic(
