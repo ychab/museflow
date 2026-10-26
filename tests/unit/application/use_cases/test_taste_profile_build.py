@@ -416,7 +416,9 @@ class TestBuildTasteProfileUseCase:
 
     @pytest.fixture
     def mock_reflect(
-        self, request: pytest.FixtureRequest, gemini_profiler: GeminiTasteProfileAdapter
+        self,
+        request: pytest.FixtureRequest,
+        gemini_profiler: GeminiTasteProfileAdapter,
     ) -> Iterator[mock.AsyncMock]:
         with mock.patch.object(
             gemini_profiler,
