@@ -18,7 +18,9 @@ if config.config_file_name is not None:
 
 # ----------CUSTOM-----------------
 
-config.set_main_option("sqlalchemy.url", str(database_settings.URI))
+# Programmatic callers (e.g. the migration test) may target another database.
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", str(database_settings.URI))
 
 from museflow.infrastructure.adapters.database.models import Base
 
