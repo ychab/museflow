@@ -54,23 +54,23 @@ async def tracks_enrich(
         for track in batch:
             if track.id not in enrichment_by_id:
                 continue
-            e = enrichment_by_id[track.id]
+            enrichment = enrichment_by_id[track.id]
             enriched = track
 
             # Genres and moods are mandatory: an empty answer is a failure, so the track stays eligible.
             if EnrichField.GENRE in config.fields:
-                if e.genres:
-                    enriched = dataclasses.replace(enriched, genres=e.genres)
+                if enrichment.genres:
+                    enriched = dataclasses.replace(enriched, genres=enrichment.genres)
                 else:
                     logger.warning("Enrichment returned no genres", extra={"track_id": str(track.id)})
             if EnrichField.MOOD in config.fields:
-                if e.moods:
-                    enriched = dataclasses.replace(enriched, moods=e.moods)
+                if enrichment.moods:
+                    enriched = dataclasses.replace(enriched, moods=enrichment.moods)
                 else:
                     logger.warning("Enrichment returned no moods", extra={"track_id": str(track.id)})
             # An empty locales list is an answer (no sung language); None means no usable answer.
-            if EnrichField.LOCALE in config.fields and e.locales is not None:
-                enriched = dataclasses.replace(enriched, locales=e.locales)
+            if EnrichField.LOCALE in config.fields and enrichment.locales is not None:
+                enriched = dataclasses.replace(enriched, locales=enrichment.locales)
 
             if enriched is not track:
                 enriched_tracks.append(enriched)

@@ -170,6 +170,7 @@ class UserSQLRepository(UserRepository):
 - **A signature either fits on one line (≤ 119 chars) or puts one parameter per line with a trailing comma** — never all parameters together on a single indented line. The trailing comma keeps `ruff format` from collapsing them back.
 - **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
 - **In use case functions and class constructors, DI parameters (repositories + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
+- **No single-letter variable names** (`e = enrichment_by_id[...]`): use a descriptive name. Allowed only where the scope is a single expression or idiom: comprehension/generator variables, lambda parameters, loop indexes (`for i, batch in enumerate(...)`) and `except ... as e`.
 - **Group members of the same kind together in a module** (private helper functions, then classes). Never interleave them (no class → function → class).
 - **No duplicated inner functions.** If the same inner function (closure) shape appears in more than one place, centralize it as a decorator or shared helper (e.g. `@self_heal`, tenacity's `@retry`) instead of repeating it. An inner function is acceptable only when it is genuinely specific to a single use case.
 
