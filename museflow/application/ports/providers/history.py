@@ -7,6 +7,11 @@ from museflow.application.inputs.history import StreamingHistoryFileStats
 
 
 class StreamingHistoryPort(ABC):
+    @property
+    @abstractmethod
+    def file_glob(self) -> str:
+        """Glob matching the provider's streaming history files in an export directory."""
+
     @abstractmethod
     async def parse_file(
         self,

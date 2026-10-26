@@ -18,6 +18,9 @@ class TestSpotifyStreamingHistoryAdapter:
     def adapter(self) -> SpotifyStreamingHistoryAdapter:
         return SpotifyStreamingHistoryAdapter()
 
+    def test__file_glob__audio_history_only(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
+        assert adapter.file_glob == "Streaming_History_Audio_*.json"
+
     async def test__parse_file__nominal(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
             path=HISTORY_SCENARIOS / "Streaming_History_Audio_valid_single_track.json", min_ms_played=30_000
