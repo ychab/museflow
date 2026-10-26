@@ -29,8 +29,8 @@ class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def sample_fingerprints(self) -> dict[str, str]:
         # Fingerprints computed via generate_fingerprint(name, [artist]):
-        # history_2017_2018.json: "No Type"/"Rae Sremmurd", "This Could Be Us"/"Rae Sremmurd"
-        # history_2023_2024.json: "M.I.A"/"Kombo the X Writer", "No le hables de amor"/"BENGOCHEA"
+        # Streaming_History_Audio_2017_2018.json: "No Type"/"Rae Sremmurd", "This Could Be Us"/"Rae Sremmurd"
+        # Streaming_History_Audio_2023_2024.json: "M.I.A"/"Kombo the X Writer", "No le hables de amor"/"BENGOCHEA"
         return {
             "6wb6zxkNTBtcYVkXcvNyJp": "no type|rae sremmurd",
             "76v0OHTbZGeOZYmaLtEDhQ": "this could be us|rae sremmurd",
@@ -203,7 +203,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         """Two Spotify IDs for the same song collapse into one DB row with merged play count."""
         import json
 
-        history_file = tmp_path / "history.json"
+        history_file = tmp_path / "Streaming_History_Audio_dup.json"
         history_file.write_text(
             json.dumps(
                 [

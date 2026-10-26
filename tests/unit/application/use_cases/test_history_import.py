@@ -22,7 +22,7 @@ from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
 class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def history_dir(self, tmp_path: Path) -> Path:
-        (tmp_path / "history.json").write_text("[]")
+        (tmp_path / "Streaming_History_Audio_0.json").write_text("[]")
         return tmp_path
 
     @pytest.fixture
@@ -195,6 +195,23 @@ class TestImportStreamingHistorySpotifyUseCase:
                 config=StreamingHistoryImportConfigInput(directory=tmp_path),
             )
 
+    async def test__directory__ignores_non_audio_json_files(
+        self,
+        user: User,
+        history_dir: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_streaming_history: mock.AsyncMock,
+    ) -> None:
+        (history_dir / "Streaming_History_Video_2020_2024.json").write_text("[]")
+        (history_dir / "Userdata.json").write_text("{}")
+        mock_streaming_history.parse_file.return_value = ([], StreamingHistoryFileStats())
+
+        await use_case.import_history(user=user, config=StreamingHistoryImportConfigInput(directory=history_dir))
+
+        mock_streaming_history.parse_file.assert_awaited_once_with(
+            path=history_dir / "Streaming_History_Audio_0.json", min_ms_played=30_000
+        )
+
     async def test__batch_size__chunks_upserts(
         self,
         user: User,
@@ -226,8 +243,8 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
     ) -> None:
-        (tmp_path / "file1.json").write_text("[]")
-        (tmp_path / "file2.json").write_text("[]")
+        (tmp_path / "Streaming_History_Audio_1.json").write_text("[]")
+        (tmp_path / "Streaming_History_Audio_2.json").write_text("[]")
 
         mock_streaming_history.parse_file.side_effect = [
             (

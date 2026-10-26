@@ -22,8 +22,8 @@ museflow tracks history --email <email> --directory <path> [OPTIONS]
 **Prerequisites**
 
 - The user exists.
-- A directory of exported `*.json` files. All JSON files of the directory are read, so keep only the
-  `Streaming_History_Audio_*.json` files in it.
+- A directory containing the exported `Streaming_History_Audio_*.json` files. Other files of the export
+  (video history, `Userdata.json`, ...) are ignored.
 
 **Example**
 

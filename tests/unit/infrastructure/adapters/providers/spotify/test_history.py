@@ -20,7 +20,7 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__nominal(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "valid_single_track.json", min_ms_played=30_000
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_valid_single_track.json", min_ms_played=30_000
         )
 
         assert len(entries) == 1
@@ -34,7 +34,9 @@ class TestSpotifyStreamingHistoryAdapter:
         assert stats.items_skipped_no_track_id == 0
 
     async def test__parse_file__filter__no_timestamp(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
-        entries, stats = await adapter.parse_file(path=HISTORY_SCENARIOS / "skips_no_timestamp.json", min_ms_played=0)
+        entries, stats = await adapter.parse_file(
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_timestamp.json", min_ms_played=0
+        )
 
         assert len(entries) == 1
         assert stats.items_read == 3
@@ -42,7 +44,7 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__filter__short_play(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "skips_short_play.json", min_ms_played=30_000
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_short_play.json", min_ms_played=30_000
         )
 
         assert len(entries) == 1
@@ -50,21 +52,27 @@ class TestSpotifyStreamingHistoryAdapter:
         assert stats.items_skipped_short_play == 2
 
     async def test__parse_file__filter__no_track_id(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
-        entries, stats = await adapter.parse_file(path=HISTORY_SCENARIOS / "skips_no_track_id.json", min_ms_played=0)
+        entries, stats = await adapter.parse_file(
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_track_id.json", min_ms_played=0
+        )
 
         assert len(entries) == 1
         assert stats.items_read == 3
         assert stats.items_skipped_no_track_id == 2
 
     async def test__parse_file__filter__non_track_uri(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
-        entries, stats = await adapter.parse_file(path=HISTORY_SCENARIOS / "skips_invalid_uri.json", min_ms_played=0)
+        entries, stats = await adapter.parse_file(
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_invalid_uri.json", min_ms_played=0
+        )
 
         assert len(entries) == 1
         assert entries[0].provider_id == "real_track_id"
         assert stats.items_skipped_no_track_id == 2
 
     async def test__parse_file__duplicate_tracks_all_kept(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
-        entries, stats = await adapter.parse_file(path=HISTORY_SCENARIOS / "duplicate_track_ids.json", min_ms_played=0)
+        entries, stats = await adapter.parse_file(
+            path=HISTORY_SCENARIOS / "Streaming_History_Audio_duplicate_track_ids.json", min_ms_played=0
+        )
 
         assert len(entries) == 3
         assert all(entry.provider_id == "dup1" for entry in entries)
