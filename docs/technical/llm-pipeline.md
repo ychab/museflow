@@ -50,6 +50,7 @@ flowchart TD
     N --> O["Sort timeline, upsert, status FINISHED, clear checkpoint"]
     G -. rate limit or invalid reply .-> P["Raise TasteProfileBuildPaused, run again with --resume"]
     J -. rate limit or invalid reply .-> P
+    N -. rate limit or invalid reply .-> P
 ```
 
 Source: [`taste_profile_build.py`](https://github.com/ychab/museflow/blob/main/museflow/application/use_cases/taste_profile_build.py) (orchestration) and [`profilers/gemini/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/profilers/gemini/client.py) (prompts).
@@ -61,7 +62,7 @@ Design decisions:
 - **Merge rules are explicit in the prompt**, not left to the model: if a new segment is more than 80% similar to the last era it extends that era's end date, otherwise it adds an era; the timeline is capped at 15 eras by merging the oldest; `core_identity` is a weighted average (foundation 0.7, segment 0.3); `current_vibe` is replaced wholesale. The weights encode a product opinion: long-term identity moves slowly, current mood does not.
 - **User ratings are part of the signal.** Each track line carries first / last played, play count and, if rated, the score. The prompt tells the model to treat high scores as confirmed anchors and minimum scores as anti-preferences.
 - **Checkpoint and pause.** After every batch the partial profile and batch index are persisted ([Data model](data-model.md#taste-profile)). A rate-limit overrun or an unusable reply raises `TasteProfileBuildPausedException` instead of losing the run; `taste build --resume` continues from the next batch. `TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS` can space out batches to stay under a quota.
-- **The reflect step is not checkpointed.** Checkpoints cover segment and merge only. A failure in the single final call surfaces as an error and a re-run resumes from the last batch, repeating only that final call.
+- **The reflect step is resumable.** The reflection result itself is not checkpointed, but the merged profile is saved after the last batch. A rate-limit overrun or unusable reply in the final call also raises `TasteProfileBuildPausedException` (reported as batch N/N), and `--resume` skips every batch and repeats only that final call.
 - **Reproducibility metadata.** `logic_version` (currently `v1.0`) and the model names used are stored with the profile.
 
 ## Advisor: guided discovery

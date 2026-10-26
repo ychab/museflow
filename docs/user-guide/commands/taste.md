@@ -31,7 +31,7 @@ rated tracks seed the profile, which is useful once a significant part of the li
 [rated](rate.md).
 
 If a build is interrupted (rate limit, network), the command stops with `Build paused at batch X/Y` and exits
-with an error. Run the same command again with `--resume` to continue from the checkpoint.
+with an error. Run the same command again with `--resume` to continue from the checkpoint. This also applies if the final reflection step fails (reported as the last batch, e.g. `3/3`): only that step is repeated.
 
 **Example**
 

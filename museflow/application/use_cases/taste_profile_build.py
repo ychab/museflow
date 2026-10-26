@@ -62,42 +62,47 @@ class BuildTasteProfileUseCase:
             else:
                 logger.warning("No checkpoint found for this profile, starting from scratch")
 
-        for i, batch in enumerate(batches, start=1):
-            if i <= start_batch_index:
-                continue
+        # Index of the step in progress; len(batches) denotes the final reflection step.
+        step = start_batch_index + 1
+        try:
+            for i, batch in enumerate(batches, start=1):
+                if i <= start_batch_index:
+                    continue
 
-            logger.info(
-                f"About processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
-            )
+                step = i
+                logger.info(
+                    f"About processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
+                )
 
-            try:
                 segment = await self._profiler.build_profile_segment(list(batch))
                 current_profile = (
                     segment
                     if current_profile is None
                     else await self._profiler.merge_profiles(current_profile, segment)
                 )
-            except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
-                logger.warning(f"Taste profile batch {i} failed, pausing build: {e}")
-                raise TasteProfileBuildPausedException(i, len(batches), reason=str(e)) from e
 
-            await self._taste_profile_repository.save_checkpoint(
-                user_id=user.id,
-                name=config.name,
-                profiler=self._profiler.profiler_type,
-                logic_version=self._profiler.logic_version,
-                profiler_metadata=self._profiler.profiler_metadata,
-                tracks_count=len(tracks),
-                profile_data=current_profile,
-                batch_index=i,
-            )
+                await self._taste_profile_repository.save_checkpoint(
+                    user_id=user.id,
+                    name=config.name,
+                    profiler=self._profiler.profiler_type,
+                    logic_version=self._profiler.logic_version,
+                    profiler_metadata=self._profiler.profiler_metadata,
+                    tracks_count=len(tracks),
+                    profile_data=current_profile,
+                    batch_index=i,
+                )
 
-            if config.throttling_sleep_seconds > 0 and i < len(batches):
-                logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
-                await asyncio.sleep(config.throttling_sleep_seconds)
+                if config.throttling_sleep_seconds > 0 and i < len(batches):
+                    logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
+                    await asyncio.sleep(config.throttling_sleep_seconds)
 
-        logger.info("About processing psychographic reflection")
-        current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
+            # The merged profile is already checkpointed: a reflection failure is resumable too.
+            step = len(batches)
+            logger.info("About processing psychographic reflection")
+            current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
+        except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
+            logger.warning(f"Taste profile build failed at step {step} / {len(batches)}, pausing build: {e}")
+            raise TasteProfileBuildPausedException(step, len(batches), reason=str(e)) from e
 
         taste_profile = TasteProfile(
             user_id=user.id,
