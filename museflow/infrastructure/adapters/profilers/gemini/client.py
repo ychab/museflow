@@ -166,8 +166,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        data: dict[str, Any] = response.json()
-        return data
+        return cast(dict[str, Any], response.json())
 
     @self_heal()
     @validate_response(GeminiTasteProfileContent, adapter="profiler")

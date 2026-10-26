@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import Any
+from typing import cast
 
 import httpx
 from httpx import codes
@@ -142,8 +143,7 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        data: dict[str, Any] = response.json()
-        return data
+        return cast(dict[str, Any], response.json())
 
     async def get_discovery_strategy(
         self,
