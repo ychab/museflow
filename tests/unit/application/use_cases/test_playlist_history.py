@@ -86,6 +86,41 @@ class TestPlaylistHistoryUseCase:
         mock_provider_library.create_playlist.assert_not_awaited()
         mock_playlist_repository.save.assert_not_awaited()
 
+    async def test__dry_run__without_provider_library__ok(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+    ) -> None:
+        track = TrackFactory.build()
+        mock_track_repository.get_list.return_value = [track]
+
+        result = await playlist_history(
+            user=UserFactory.build(),
+            config=PlaylistHistoryConfigInput(dry_run=True),
+            track_repository=mock_track_repository,
+            playlist_repository=mock_playlist_repository,
+            provider_library=None,
+        )
+
+        assert result.playlist is None
+        assert result.tracks == [track]
+
+    async def test__no_dry_run__without_provider_library__raises(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+    ) -> None:
+        with pytest.raises(ValueError, match="provider_library is required"):
+            await playlist_history(
+                user=UserFactory.build(),
+                config=PlaylistHistoryConfigInput(),
+                track_repository=mock_track_repository,
+                playlist_repository=mock_playlist_repository,
+                provider_library=None,
+            )
+
+        mock_track_repository.get_list.assert_not_awaited()
+
     async def test__group_by_artists__played_count(
         self,
         mock_track_repository: mock.AsyncMock,

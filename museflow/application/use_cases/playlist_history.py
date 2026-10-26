@@ -29,8 +29,11 @@ async def playlist_history(
     config: PlaylistHistoryConfigInput,
     track_repository: TrackRepository,
     playlist_repository: PlaylistRepository,
-    provider_library: ProviderLibraryPort,
+    provider_library: ProviderLibraryPort | None,
 ) -> PlaylistHistoryResult:
+    if provider_library is None and not config.dry_run:
+        raise ValueError("provider_library is required unless config.dry_run is set")
+
     exclude_ids = None
     if not config.allow_duplicate:
         exclude_ids = list(await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY))
@@ -77,7 +80,7 @@ async def playlist_history(
         config.name_suffix if config.name_suffix is not None else datetime.now(UTC).isoformat(timespec="seconds")
     )
 
-    playlist = await provider_library.create_playlist(
+    playlist = await provider_library.create_playlist(  # type: ignore[union-attr]
         name=f"{name_prefix} - {name_suffix}",
         type=PlaylistType.HISTORY,
         tracks=tracks,

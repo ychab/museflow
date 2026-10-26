@@ -95,7 +95,7 @@ def discover(
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
-        help="Discover tracks without creating a playlist",
+        help="Discover tracks without creating a playlist (still searches the provider catalogue)",
     ),
 ) -> None:
     """Discover new tracks guided by your AI taste profile."""
