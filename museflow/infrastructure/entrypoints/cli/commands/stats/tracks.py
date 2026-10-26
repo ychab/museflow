@@ -17,6 +17,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
 
 
@@ -40,8 +41,7 @@ def stats_tracks(
     sort: TrackSortBy = typer.Option(TrackSortBy.SCORE, "--sort", help="Ranking strategy"),
     limit: int = typer.Option(20, help="Max rows in the table", min=1),
 ) -> None:
-    if score_min is not None and score_max is not None and score_min > score_max:
-        raise typer.BadParameter("--score-min cannot be greater than --score-max")
+    validate_score_range(score_min, score_max)
 
     try:
         tracks = asyncio.run(

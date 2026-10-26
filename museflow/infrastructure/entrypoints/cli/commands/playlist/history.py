@@ -33,6 +33,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
+from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 console = Console()
 
@@ -113,8 +114,7 @@ def playlist_history(
     ),
 ) -> None:
     """Create a playlist from your history tracks, filtered and ordered by play count."""
-    if score_min is not None and score_max is not None and score_min > score_max:
-        raise typer.BadParameter("--score-min cannot be greater than --score-max")
+    validate_score_range(score_min, score_max)
     if played_first_min is not None and played_first_max is not None and played_first_min > played_first_max:
         raise typer.BadParameter("--played-first-min cannot be after --played-first-max")
     if played_last_min is not None and played_last_max is not None and played_last_min > played_last_max:
