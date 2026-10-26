@@ -36,7 +36,11 @@ class TestAddArtistParserCommand:
         ],
     )
     def test__email__invalid(
-        self, runner: CliRunner, email: str, expected_msg: str, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        email: str,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(app, ["blacklist", "add-artist", "--email", email, "Taylor Swift"])
         assert result.exit_code != 0
@@ -57,7 +61,10 @@ class TestAddArtistCommand:
         assert "Taylor Swift" in result.output
 
     def test__user_not_found(
-        self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["blacklist", "add-artist", "--email", "test@example.com", "Taylor Swift"])
@@ -103,7 +110,11 @@ class TestAddTrackParserCommand:
         ],
     )
     def test__email__invalid(
-        self, runner: CliRunner, email: str, expected_msg: str, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        email: str,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(
             app,
@@ -130,7 +141,10 @@ class TestAddTrackCommand:
         assert "Shake It Off" in result.output
 
     def test__user_not_found(
-        self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_logic.side_effect = UserNotFound()
         result = runner.invoke(

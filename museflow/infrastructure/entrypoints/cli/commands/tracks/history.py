@@ -89,7 +89,9 @@ def history(
 
 
 async def history_logic(
-    email: EmailStr, config: StreamingHistoryImportConfigInput, provider: MusicProvider
+    email: EmailStr,
+    config: StreamingHistoryImportConfigInput,
+    provider: MusicProvider,
 ) -> ImportStreamingHistoryReport:
     async with AsyncExitStack() as stack:
         session = await stack.enter_async_context(get_db())

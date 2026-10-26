@@ -45,7 +45,10 @@ class TestRemoveCommand:
         assert result.exit_code == 0
 
     def test__user_not_found(
-        self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["blacklist", "remove", "--email", "test@example.com", str(uuid.uuid4())])
@@ -53,7 +56,10 @@ class TestRemoveCommand:
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
     def test__blacklist_item_not_found(
-        self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_logic.side_effect = BlacklistItemNotFoundError("1 item(s) not found")
         result = runner.invoke(app, ["blacklist", "remove", "--email", "test@example.com", str(uuid.uuid4())])

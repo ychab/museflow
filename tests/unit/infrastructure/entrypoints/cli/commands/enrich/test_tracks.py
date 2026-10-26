@@ -83,7 +83,10 @@ class TestEnrichTracksCommand:
         assert "2 batch(es) failed" in result.output
 
     def test__user_not_found(
-        self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_enrich_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_enrich_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
@@ -91,7 +94,10 @@ class TestEnrichTracksCommand:
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
     def test__generic_exception(
-        self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_enrich_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_enrich_logic.side_effect = Exception("Gemini down")
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])

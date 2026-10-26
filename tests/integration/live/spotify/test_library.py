@@ -83,7 +83,9 @@ class TestSpotifyLibraryLive:
 
     @pytest.fixture
     def spotify_library_live(
-        self, user: User, spotify_session_live: SpotifyOAuthSessionClient
+        self,
+        user: User,
+        spotify_session_live: SpotifyOAuthSessionClient,
     ) -> SpotifyLibraryAdapter:
         return SpotifyLibraryAdapter(user=user, session_client=spotify_session_live)
 

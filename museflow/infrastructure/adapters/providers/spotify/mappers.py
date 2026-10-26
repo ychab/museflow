@@ -13,7 +13,8 @@ from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTr
 
 
 def to_domain_token_payload(
-    spotify_token: SpotifyToken, existing_refresh_token: str | None = None
+    spotify_token: SpotifyToken,
+    existing_refresh_token: str | None = None,
 ) -> OAuthProviderTokenPayload:
     """Converts a SpotifyToken schema object to a domain OAuthProviderTokenPayload.
 
