@@ -14,9 +14,8 @@ logger = logging.getLogger(__name__)
 class Reconciler:
     """Domain service responsible for reconciling tracks using fuzzy text matching."""
 
-    def __init__(self, match_threshold: float = 80.0, score_minimum: float = 60.0) -> None:
+    def __init__(self, match_threshold: float = 80.0) -> None:
         self.MATCH_THRESHOLD: Final[float] = match_threshold
-        self.SCORE_MINIMUM: Final[float] = score_minimum
 
     def reconcile(
         self,
@@ -30,6 +29,8 @@ class Reconciler:
             artists=track_suggested.artists,
         )
 
+        # Scores are 0.0 when a component is below MATCH_THRESHOLD, otherwise between MATCH_THRESHOLD and 100.
+        # A best score of 0.0 therefore means no candidate matched.
         best_match: Track | None = None
         best_score = -1.0
 
@@ -39,7 +40,7 @@ class Reconciler:
                 best_score = score
                 best_match = candidate
 
-        if best_match and best_score >= self.SCORE_MINIMUM:
+        if best_match and best_score > 0.0:
             logger.debug(
                 f"Matched '{track_suggested.primary_artist} - {track_suggested.name}' "
                 f"-> '{best_match.name}' (Score: {best_score:.1f})"

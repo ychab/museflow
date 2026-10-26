@@ -259,6 +259,5 @@ async def gemini_enricher() -> AsyncGenerator[GeminiTrackEnricherAdapter]:
 def reconciler(request: pytest.FixtureRequest) -> Reconciler:
     params = getattr(request, "param", {})
     match_threshold = params.get("match_threshold", 80.0)
-    score_minimum = params.get("score_minimum", 60.0)
 
-    return Reconciler(match_threshold=match_threshold, score_minimum=score_minimum)
+    return Reconciler(match_threshold=match_threshold)
