@@ -26,11 +26,11 @@ Streaming_History_Audio_2018-2020_1.json
 Streaming_History_Audio_2021-2024_2.json
 ```
 
-Other files (video history, user data, and so on) are not needed.
+The other files of the export (video history, user data, and so on) are not needed.
 
-!!! warning
-    `tracks history` reads **every `*.json` file** of the directory it is given. To be safe, point
-    `--directory` at a folder that contains only the `Streaming_History_Audio_*.json` files.
+!!! note
+    `tracks history` only reads the `Streaming_History_Audio_*.json` files of the directory it is given. The other
+    files of the export can stay in the folder, so you can point `--directory` at the unzipped export as is.
 
 ## What MuseFlow reads
 
