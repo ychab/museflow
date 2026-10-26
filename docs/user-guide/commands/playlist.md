@@ -35,7 +35,7 @@ museflow playlist discover --email <email> [OPTIONS]
 | `--playlist-limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 | `--max-attempts` | `3` | Maximum number of advisor calls before stopping (1 to 10). |
 | `--max-tracks-per-artist` | `3` | Maximum tracks per artist in the final playlist (1 to 10). |
-| `--dry-run` | off | Discover tracks without creating a playlist. |
+| `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 
 **Focus strategies**
 
@@ -115,7 +115,8 @@ museflow playlist history --email user@example.com --genre electronic --genre po
 
 **Output.** A table of matched tracks (artist, track, play count, score). With `--dry-run`, the command stops
 with a notice that the playlist was not created. Otherwise it prints the saved playlist name and ID. If nothing
-matches, it suggests trying `--duplicate`.
+matches, it suggests trying `--duplicate`. `--dry-run` needs no provider connection, so it works even if you
+have not run `museflow spotify connect`.
 
 ### Genre and mood values
 

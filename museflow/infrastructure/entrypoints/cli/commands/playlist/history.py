@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
 from museflow.application.use_cases.playlist_history import playlist_history as playlist_history_use_case
 from museflow.domain.enums import GenreTag
@@ -188,7 +189,8 @@ async def playlist_history_logic(
 
     Raises:
         UserNotFound: If the user with the given email is not found.
-        ProviderAuthTokenNotFoundError: If the user's auth token for the provider is not found.
+        ProviderAuthTokenNotFoundError: If the user's auth token for the provider is not found
+            (not required in dry-run mode).
         PlaylistNoTracksError: If no history tracks match the given filters.
     """
     async with AsyncExitStack() as stack:
@@ -203,17 +205,19 @@ async def playlist_history_logic(
         if not user:
             raise UserNotFound()
 
-        auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
-        if auth_token is None:
-            raise ProviderAuthTokenNotFoundError()
+        provider_library: ProviderLibraryPort | None = None
+        if not config.dry_run:
+            auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
+            if auth_token is None:
+                raise ProviderAuthTokenNotFoundError()
 
-        provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-        provider_library_factory = get_provider_library_factory(
-            provider=provider,
-            session=session,
-            oauth_client=provider_client,
-        )
-        provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
+            provider_client = await stack.enter_async_context(get_provider_oauth(provider))
+            provider_library_factory = get_provider_library_factory(
+                provider=provider,
+                session=session,
+                oauth_client=provider_client,
+            )
+            provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
         return await playlist_history_use_case(
             user=user,
