@@ -38,8 +38,9 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
 
     # Discovery-specific — nullable, only set for type == PlaylistType.DISCOVERY
+    # (profile_id is set to NULL when the taste profile is deleted)
     profile_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("museflow_taste_profile.id", ondelete="CASCADE"),
+        ForeignKey("museflow_taste_profile.id", ondelete="SET NULL"),
         nullable=True,
         default=None,
     )

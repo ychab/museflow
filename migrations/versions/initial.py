@@ -138,7 +138,7 @@ def upgrade() -> None:
     sa.Column('custom_instructions', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['profile_id'], ['museflow_taste_profile.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['profile_id'], ['museflow_taste_profile.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
