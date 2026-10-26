@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 27f4c020ce7d
+Revision ID: 1ebb76f4b98e
 Revises:
-Create Date: 2026-10-26 18:49:47.939383
+Create Date: 2026-10-26 19:56:17.502870
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '27f4c020ce7d'
+revision: str = '1ebb76f4b98e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -113,7 +113,7 @@ def upgrade() -> None:
     sa.Column('score_skipped', sa.Boolean(), server_default='false', nullable=False),
     sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('moods', postgresql.ARRAY(sa.String()), nullable=False),
-    sa.Column('locale', sa.String(length=10), nullable=True),
+    sa.Column('locales', postgresql.ARRAY(sa.String()), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
