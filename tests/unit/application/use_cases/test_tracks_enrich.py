@@ -133,6 +133,45 @@ class TestTracksEnrichUseCase:
         assert result.error_count == 1
         assert result.enriched_count == 2
 
+    async def test__empty_enricher_result__counted_as_error_not_enriched(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        mock_track_repository.get_list.return_value = TrackFactory.batch(3)
+        mock_enricher.enrich_tracks.return_value = []
+
+        result = await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        assert result == EnrichTracksReport(enriched_count=0, error_count=1)
+        mock_track_repository.bulk_update.assert_not_awaited()
+
+    async def test__partial_enricher_result__counts_only_returned_tracks(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        user = UserFactory.build()
+        tracks = TrackFactory.batch(3)
+        mock_track_repository.get_list.return_value = tracks
+        mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=tracks[0].id)]
+
+        result = await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        assert result == EnrichTracksReport(enriched_count=1, error_count=0)
+        mock_track_repository.bulk_update.assert_awaited_once()
+
     async def test__genres__written_directly_to_update(
         self,
         mock_track_repository: mock.AsyncMock,

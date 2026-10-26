@@ -65,11 +65,19 @@ async def tracks_enrich(
 
                 enriched_tracks.append(enriched)
 
+        if not enriched_tracks:
+            logger.warning(
+                f"Enrichment batch {i}/{total_batches} returned no enrichment",
+                extra={"batch": i, "total": total_batches},
+            )
+            error_count += 1
+            continue
+
         await track_repository.bulk_update(enriched_tracks, fields=config.fields)
-        enriched_count += len(batch)
+        enriched_count += len(enriched_tracks)
         logger.info(
-            f"Enriched batch {i}/{total_batches} ({len(batch)} tracks)",
-            extra={"batch": i, "total": total_batches, "count": len(batch)},
+            f"Enriched batch {i}/{total_batches} ({len(enriched_tracks)}/{len(batch)} tracks)",
+            extra={"batch": i, "total": total_batches, "count": len(enriched_tracks)},
         )
 
     return EnrichTracksReport(enriched_count=enriched_count, error_count=error_count)
