@@ -25,7 +25,11 @@ def enrich(
     only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
     only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locale only."),
     force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have the requested fields."),
-    batch_size: int = typer.Option(200, "--batch-size", help="Number of tracks per Gemini request."),
+    batch_size: int = typer.Option(
+        EnrichTracksConfigInput.batch_size,
+        "--batch-size",
+        help="Number of tracks per Gemini request.",
+    ),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
     try:

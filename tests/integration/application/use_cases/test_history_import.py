@@ -101,6 +101,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             user=user,
             config=StreamingHistoryImportConfigInput(
                 directory=HISTORY_DIR,
+                min_ms_played=30_000,
                 purge=True,
             ),
         )

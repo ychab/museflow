@@ -37,14 +37,14 @@ def build(
         help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
     ),
     track_limit: int = typer.Option(
-        3000,
+        BuildTasteProfileConfigInput.track_limit,
         "--track-limit",
         help="Max seed tracks to build the profile",
         min=1,
         max=20000,
     ),
     batch_size: int = typer.Option(
-        200,
+        BuildTasteProfileConfigInput.batch_size,
         "--batch-size",
         help="Batch sizes for profiles",
         min=1,

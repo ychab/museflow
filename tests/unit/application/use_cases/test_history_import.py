@@ -209,7 +209,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         await use_case.import_history(user=user, config=StreamingHistoryImportConfigInput(directory=history_dir))
 
         mock_streaming_history.parse_file.assert_awaited_once_with(
-            path=history_dir / "Streaming_History_Audio_0.json", min_ms_played=30_000
+            path=history_dir / "Streaming_History_Audio_0.json", min_ms_played=90_000
         )
 
     async def test__batch_size__chunks_upserts(
