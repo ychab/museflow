@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
+    @property
+    def file_glob(self) -> str:
+        # Spotify exports also contain video history and account files, which must not be parsed
+        return "Streaming_History_Audio_*.json"
+
     async def parse_file(
         self,
         path: Path,

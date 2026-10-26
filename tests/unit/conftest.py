@@ -162,6 +162,7 @@ def mock_provider_library() -> mock.AsyncMock:
 @pytest.fixture
 def mock_streaming_history() -> mock.AsyncMock:
     port = mock.AsyncMock(spec=StreamingHistoryPort)
+    port.file_glob = "Streaming_History_Audio_*.json"
     port.parse_file.return_value = ([], StreamingHistoryFileStats())
     return port
 

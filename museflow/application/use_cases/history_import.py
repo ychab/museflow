@@ -15,9 +15,6 @@ from museflow.domain.utils.text import generate_fingerprint
 
 logger = logging.getLogger(__name__)
 
-# Spotify exports also contain video history and account files, which must not be parsed
-AUDIO_HISTORY_GLOB = "Streaming_History_Audio_*.json"
-
 
 @dataclass(frozen=True, kw_only=True)
 class ImportStreamingHistoryReport:
@@ -38,9 +35,9 @@ class ImportStreamingHistoryReport:
 
 class ImportStreamingHistoryUseCase:
     """
-    Import a user's Spotify streaming history from exported JSON files.
+    Import a user's streaming history from a provider's exported JSON files.
 
-    Parses the audio history files (Streaming_History_Audio_*.json) of the given directory, filters entries by minimum
+    Parses the provider's streaming history files of the given directory, filters entries by minimum
     playback duration, deduplicates track IDs, and bulk-upserts them into
     the repository directly from file metadata — no external API calls.
     """
@@ -59,9 +56,11 @@ class ImportStreamingHistoryUseCase:
             raise StreamingHistoryDirectoryNotFound(f"Directory not found: {config.directory}")
 
         # Validate files
-        json_files = sorted(config.directory.glob(AUDIO_HISTORY_GLOB))
+        json_files = sorted(config.directory.glob(self._streaming_history.file_glob))
         if not json_files:
-            raise StreamingHistoryDirectoryNotFound(f"No {AUDIO_HISTORY_GLOB} files found in: {config.directory}")
+            raise StreamingHistoryDirectoryNotFound(
+                f"No {self._streaming_history.file_glob} files found in: {config.directory}"
+            )
 
         # Purge if requested
         tracks_purged = 0
