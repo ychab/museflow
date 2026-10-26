@@ -19,7 +19,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 @app.command("remove", help="Remove one or more blacklist entries by their ID.")
 def remove(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
-    item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `muse blacklist list`)"),
+    item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `museflow blacklist list`)"),
 ) -> None:
     try:
         asyncio.run(remove_logic(email=email, item_ids=item_ids))

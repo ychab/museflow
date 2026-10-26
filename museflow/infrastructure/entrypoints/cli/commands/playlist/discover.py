@@ -131,11 +131,11 @@ def discover(
         )
         raise typer.Exit(code=1) from e
     except TasteProfileNotFoundException as e:
-        typer.secho("No profile found. Run muse taste build --name <name> first.", fg=typer.colors.RED, err=True)
+        typer.secho("No profile found. Run `museflow taste build --name <name>` first.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except TasteProfileStatusNotReadyException as e:
         typer.secho(
-            "Taste profile is still being built. Run `muse taste build` to completion first.",
+            "Taste profile is still being built. Run `museflow taste build` to completion first.",
             fg=typer.colors.RED,
             err=True,
         )
