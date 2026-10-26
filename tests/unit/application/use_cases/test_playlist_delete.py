@@ -19,7 +19,9 @@ class TestPlaylistDeleteUseCase:
 
     @pytest.fixture
     def use_case_with_remote(
-        self, mock_playlist_repository: mock.AsyncMock, mock_provider_library: mock.AsyncMock
+        self,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
     ) -> PlaylistDeleteUseCase:
         return PlaylistDeleteUseCase(
             playlist_repository=mock_playlist_repository,
@@ -27,7 +29,9 @@ class TestPlaylistDeleteUseCase:
         )
 
     async def test__delete__nominal(
-        self, use_case: PlaylistDeleteUseCase, mock_playlist_repository: mock.AsyncMock
+        self,
+        use_case: PlaylistDeleteUseCase,
+        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
         playlist_id = uuid.uuid4()
@@ -37,7 +41,9 @@ class TestPlaylistDeleteUseCase:
         mock_playlist_repository.delete.assert_awaited_once_with(user_id=user.id, playlist_id=playlist_id)
 
     async def test__delete__not_found(
-        self, use_case: PlaylistDeleteUseCase, mock_playlist_repository: mock.AsyncMock
+        self,
+        use_case: PlaylistDeleteUseCase,
+        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
         mock_playlist_repository.delete.return_value = False
@@ -114,7 +120,9 @@ class TestPlaylistDeleteUseCase:
         mock_playlist_repository.delete.assert_not_awaited()
 
     async def test__purge__nominal(
-        self, use_case: PlaylistDeleteUseCase, mock_playlist_repository: mock.AsyncMock
+        self,
+        use_case: PlaylistDeleteUseCase,
+        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
         mock_playlist_repository.purge.return_value = 5

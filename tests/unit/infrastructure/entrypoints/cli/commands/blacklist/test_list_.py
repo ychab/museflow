@@ -36,7 +36,11 @@ class TestListParserCommand:
         ],
     )
     def test__email__invalid(
-        self, runner: CliRunner, email: str, expected_msg: str, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        email: str,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(app, ["blacklist", "list", "--email", email])
         assert result.exit_code != 0
@@ -66,7 +70,10 @@ class TestListCommand:
         assert "Shake It Off" in result.output
 
     def test__user_not_found(
-        self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
     ) -> None:
         mock_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["blacklist", "list", "--email", "test@example.com"])

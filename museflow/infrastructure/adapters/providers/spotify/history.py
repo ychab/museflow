@@ -32,7 +32,8 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
 
     @staticmethod
     def _parse_file_sync(
-        path: Path, min_ms_played: int
+        path: Path,
+        min_ms_played: int,
     ) -> tuple[list[StreamingHistoryEntry], StreamingHistoryFileStats]:
         track_entries: list[StreamingHistoryEntry] = []
 
