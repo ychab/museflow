@@ -19,7 +19,6 @@ class TestBuildEnrichmentConfig:
         return items
 
     def test__all_fields__locales_required(self, item: GeminiSchemaProperty) -> None:
-
         assert item.properties is not None
         assert item.required is not None
         assert "locales" in item.properties
@@ -27,7 +26,6 @@ class TestBuildEnrichmentConfig:
         assert item.properties["locales"].type == "array"
 
     def test__all_fields__genres_and_moods_items_are_enums(self, item: GeminiSchemaProperty) -> None:
-
         assert item.properties is not None
         genres_items = item.properties["genres"].items
         moods_items = item.properties["moods"].items
@@ -38,7 +36,6 @@ class TestBuildEnrichmentConfig:
 
     @pytest.mark.parametrize("item", [frozenset({EnrichField.GENRE})], indirect=True)
     def test__locales_not_requested__absent_from_schema(self, item: GeminiSchemaProperty) -> None:
-
         assert item.properties is not None
         assert item.required is not None
         assert "locales" not in item.properties
