@@ -35,7 +35,7 @@ museflow rate history --email <email> [OPTIONS]
 | `--limit` | `10` | Maximum number of tracks to rate. |
 | `--reset` | off | Clear all existing history track scores before rating. |
 | `--play` | off | Play each track before rating. |
-| `--play-provider` | `spotify` | Provider to use for playback. Requires `--play`. |
+| `--play-provider` | `spotify` | Provider to use for playback. Requires `--play` (an error otherwise). |
 | `--artist` | none | Filter by primary artist (case-insensitive). |
 
 **Prerequisites.** Imported history. For `--play`, a connected Spotify account and an **active Spotify device**
@@ -67,7 +67,7 @@ museflow rate playlist [playlist_id] --email <email> [OPTIONS]
 | `--email` | required | User email address. |
 | `--limit` | `20` | Max unrated tracks to show (queue mode only). |
 | `--play` | off | Play each track before rating. |
-| `--play-provider` | `spotify` | Provider to use for playback. Requires `--play`. |
+| `--play-provider` | `spotify` | Provider to use for playback. Requires `--play` (an error otherwise). |
 
 **Examples**
 

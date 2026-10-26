@@ -49,19 +49,22 @@ class RatePlaylistResult:
 def rate_playlist(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist UUID to rate"),
-    limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)"),
+    limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)", min=1),
     play: bool = typer.Option(False, "--play", help="Play each track before rating"),
-    play_provider: MusicProvider = typer.Option(
-        MusicProvider.SPOTIFY, "--play-provider", help="Provider to use for playback. Requires --play."
+    play_provider: MusicProvider | None = typer.Option(
+        None, "--play-provider", help="Provider to use for playback (default: spotify). Requires --play."
     ),
 ) -> None:
+    if play_provider is not None and not play:
+        raise typer.BadParameter("--play-provider requires --play")
+
     try:
         result = asyncio.run(
             rate_playlist_logic(
                 email=email,
                 playlist_id=playlist_id,
                 limit=limit,
-                provider=play_provider if play else None,
+                provider=(play_provider or MusicProvider.SPOTIFY) if play else None,
             )
         )
     except UserNotFound as e:
