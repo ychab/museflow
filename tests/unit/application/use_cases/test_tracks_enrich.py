@@ -1,4 +1,7 @@
+import logging
 from unittest import mock
+
+import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
@@ -6,6 +9,7 @@ from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.track import TrackEnrichmentFactory
@@ -185,7 +189,7 @@ class TestTracksEnrichUseCase:
                 track_id=track.id,
                 genres=[GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.AFRO_RAP],
                 moods=["chill"],
-                locale="fr",
+                locales=["fr"],
             )
         ]
 
@@ -202,9 +206,9 @@ class TestTracksEnrichUseCase:
         assert fields_arg == frozenset(EnrichField)
         assert len(tracks_arg) == 1
         assert tracks_arg[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP, GenreTag.AFRO_RAP]
-        assert tracks_arg[0].locale == "fr"
+        assert tracks_arg[0].locales == ["fr"]
 
-    async def test__locale_only__only_locale_written_and_existing_genres_preserved(
+    async def test__locales_only__only_locales_written_and_existing_genres_preserved(
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
@@ -212,7 +216,7 @@ class TestTracksEnrichUseCase:
     ) -> None:
         track = TrackFactory.build(genres=[GenreTag.HIP_HOP], moods=["chill"])
         mock_track_repository.get_list.return_value = [track]
-        mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locale="fr")]
+        mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locales=["fr"])]
 
         await tracks_enrich(
             user,
@@ -226,9 +230,9 @@ class TestTracksEnrichUseCase:
         fields_arg = call_args.kwargs["fields"]
         assert fields_arg == frozenset({EnrichField.LOCALE})
         assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
-        assert tracks_arg[0].locale == "fr"
+        assert tracks_arg[0].locales == ["fr"]
 
-    async def test__locale_only__missing_fields_filter_uses_only_locale(
+    async def test__locales_only__missing_fields_filter_uses_only_locales(
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
@@ -247,13 +251,13 @@ class TestTracksEnrichUseCase:
             user_id=user.id, missing_fields=frozenset({EnrichField.LOCALE}), limit=None
         )
 
-    async def test__genre_only__locale_field_not_written(
+    async def test__genre_only__locales_field_not_written(
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        track = TrackFactory.build(locale="en")
+        track = TrackFactory.build(locales=["en"])
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [
             TrackEnrichmentFactory.build(track_id=track.id, genres=[GenreTag.HIP_HOP])
@@ -271,4 +275,78 @@ class TestTracksEnrichUseCase:
         fields_arg = call_args.kwargs["fields"]
         assert fields_arg == frozenset({EnrichField.GENRE})
         assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
-        assert tracks_arg[0].locale == "en"  # unchanged
+        assert tracks_arg[0].locales == ["en"]  # unchanged
+
+    async def test__empty_locales__written_and_counted(
+        self,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        track = TrackFactory.build(locales=None)
+        mock_track_repository.get_list.return_value = [track]
+        mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locales=[])]
+
+        result = await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
+            mock_track_repository,
+            mock_enricher,
+        )
+
+        assert result == EnrichTracksReport(enriched_count=1, error_count=0)
+        tracks_arg = mock_track_repository.bulk_update.call_args[0][0]
+        assert tracks_arg[0].locales == []
+
+    async def test__empty_genres__not_applied_but_other_fields_are(
+        self,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        track = TrackFactory.build(genres=[GenreTag.HIP_HOP])
+        mock_track_repository.get_list.return_value = [track]
+        mock_enricher.enrich_tracks.return_value = [
+            TrackEnrichmentFactory.build(track_id=track.id, genres=[], moods=[MoodTag.CHILL], locales=["fr"])
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            result = await tracks_enrich(
+                user,
+                EnrichTracksConfigInput(),
+                mock_track_repository,
+                mock_enricher,
+            )
+
+        assert result == EnrichTracksReport(enriched_count=1, error_count=0)
+        tracks_arg = mock_track_repository.bulk_update.call_args[0][0]
+        assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
+        assert tracks_arg[0].moods == [MoodTag.CHILL]
+        assert tracks_arg[0].locales == ["fr"]
+        assert "Enrichment returned no genres" in caplog.messages
+
+    async def test__empty_moods_and_missing_locales__nothing_applied_and_not_counted(
+        self,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        track = TrackFactory.build()
+        mock_track_repository.get_list.return_value = [track]
+        mock_enricher.enrich_tracks.return_value = [
+            TrackEnrichmentFactory.build(track_id=track.id, moods=[], locales=None)
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            result = await tracks_enrich(
+                user,
+                EnrichTracksConfigInput(fields=frozenset({EnrichField.MOOD, EnrichField.LOCALE})),
+                mock_track_repository,
+                mock_enricher,
+            )
+
+        assert result == EnrichTracksReport(enriched_count=0, error_count=1)
+        mock_track_repository.bulk_update.assert_not_awaited()
+        assert "Enrichment returned no moods" in caplog.messages

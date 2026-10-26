@@ -81,7 +81,7 @@ async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
                 continue
             track = fingerprint_to_track[entry.fingerprint]
             updated_tracks.append(
-                dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locale=entry.locale)
+                dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locales=entry.locales)
             )
 
         if updated_tracks:

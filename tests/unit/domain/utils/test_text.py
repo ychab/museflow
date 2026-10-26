@@ -2,6 +2,7 @@ import pytest
 
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.utils.text import unidecode_lower_text
+from museflow.domain.utils.text import validate_locales
 
 
 class TestUnidecodeLower:
@@ -41,3 +42,20 @@ class TestNormalizeText:
     )
     def test__nominal(self, text: str, expected_str: str) -> None:
         assert normalize_text(text) == expected_str
+
+
+class TestValidateLocales:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            pytest.param(["FR", "en", "fr"], ["fr", "en"], id="normalized-deduplicated"),
+            pytest.param(["fra", 3, "en"], ["en"], id="invalid-dropped"),
+            pytest.param([], [], id="empty-is-an-answer"),
+            pytest.param(["fra"], None, id="only-invalid"),
+            pytest.param([None], None, id="only-null"),
+            pytest.param("fr", None, id="not-a-list"),
+            pytest.param(None, None, id="none"),
+        ],
+    )
+    def test__nominal(self, value: object, expected: list[str] | None) -> None:
+        assert validate_locales(value) == expected

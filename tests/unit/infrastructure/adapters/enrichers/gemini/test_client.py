@@ -66,14 +66,18 @@ class TestGeminiTrackEnricherAdapter:
         assert len(result) == 1
         assert result[0].genres == [GenreTag.HIP_HOP, GenreTag.AFRO_RAP]
 
-    async def test__enrich_tracks__locale__valid__normalized(
+    async def test__enrich_tracks__locales__valid__normalized_and_deduplicated(
         self,
         gemini_enricher: GeminiTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         track = TrackFactory.build()
         payload = json.dumps(
-            {"enriched_tracks": [{"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locale": "FR"}]}
+            {
+                "enriched_tracks": [
+                    {"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locales": ["FR", "en", "fr"]}
+                ]
+            }
         )
         httpx_mock.add_response(
             url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
@@ -84,16 +88,16 @@ class TestGeminiTrackEnricherAdapter:
         result = await gemini_enricher.enrich_tracks([track], fields=frozenset(EnrichField))
 
         assert len(result) == 1
-        assert result[0].locale == "fr"
+        assert result[0].locales == ["fr", "en"]
 
-    async def test__enrich_tracks__locale__invalid__silently_dropped(
+    async def test__enrich_tracks__locales__only_invalid__none(
         self,
         gemini_enricher: GeminiTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         track = TrackFactory.build()
         payload = json.dumps(
-            {"enriched_tracks": [{"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locale": "fra"}]}
+            {"enriched_tracks": [{"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locales": ["fra"]}]}
         )
         httpx_mock.add_response(
             url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
@@ -104,16 +108,16 @@ class TestGeminiTrackEnricherAdapter:
         result = await gemini_enricher.enrich_tracks([track], fields=frozenset(EnrichField))
 
         assert len(result) == 1
-        assert result[0].locale is None
+        assert result[0].locales is None
 
-    async def test__enrich_tracks__locale__null__defaults_to_none(
+    async def test__enrich_tracks__locales__null__defaults_to_none(
         self,
         gemini_enricher: GeminiTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         track = TrackFactory.build()
         payload = json.dumps(
-            {"enriched_tracks": [{"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locale": None}]}
+            {"enriched_tracks": [{"track_index": 0, "genres": ["hip-hop"], "moods": ["chill"], "locales": None}]}
         )
         httpx_mock.add_response(
             url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
@@ -124,15 +128,15 @@ class TestGeminiTrackEnricherAdapter:
         result = await gemini_enricher.enrich_tracks([track], fields=frozenset(EnrichField))
 
         assert len(result) == 1
-        assert result[0].locale is None
+        assert result[0].locales is None
 
-    async def test__enrich_tracks__locale_only__prompt_omits_genre_taxonomy(
+    async def test__enrich_tracks__locales_only__prompt_omits_genre_taxonomy(
         self,
         gemini_enricher: GeminiTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         track = TrackFactory.build()
-        payload = json.dumps({"enriched_tracks": [{"track_index": 0, "locale": "fr"}]})
+        payload = json.dumps({"enriched_tracks": [{"track_index": 0, "locales": ["fr"]}]})
         httpx_mock.add_response(
             url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
             method="POST",
@@ -142,7 +146,7 @@ class TestGeminiTrackEnricherAdapter:
         result = await gemini_enricher.enrich_tracks([track], fields=frozenset({EnrichField.LOCALE}))
 
         assert len(result) == 1
-        assert result[0].locale == "fr"
+        assert result[0].locales == ["fr"]
         assert result[0].genres == []
         assert result[0].moods == []
 
@@ -171,7 +175,7 @@ class TestGeminiTrackEnricherAdapter:
         assert len(result) == 1
         assert result[0].genres == [GenreTag.HIP_HOP, GenreTag.RAP]
         assert result[0].moods == []
-        assert result[0].locale is None
+        assert result[0].locales is None
 
         request = httpx_mock.get_requests()[0]
         body = json.loads(request.content)

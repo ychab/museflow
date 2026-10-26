@@ -27,7 +27,7 @@ class TrackFactory(DataclassFactory[Track]):
     source = TrackSource.HISTORY
     score = None
     score_skipped = False
-    locale = None
+    locales = None
 
 
 class TrackSuggestedFactory(DataclassFactory[TrackSuggested]):

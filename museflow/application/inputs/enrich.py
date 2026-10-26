@@ -1,15 +1,14 @@
 from dataclasses import dataclass
-from typing import Annotated
 
 from pydantic import BaseModel
 from pydantic import field_validator
-from pydantic.functional_validators import BeforeValidator
+from pydantic import model_validator
 
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
-from museflow.domain.utils.text import validate_locale
+from museflow.domain.utils.text import validate_locales
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -25,7 +24,24 @@ class EnrichEntryInput(BaseModel):
 
     genres: list[GenreTag] = []
     moods: list[MoodTag] = []
-    locale: Annotated[LocaleCode | None, BeforeValidator(validate_locale)] = None
+    locales: list[LocaleCode] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_locale(cls, data: object) -> object:
+        """Accept the legacy single `locale` key of old `enrich export` files."""
+        if not isinstance(data, dict) or "locale" not in data:
+            return data
+        data = dict(data)
+        legacy = data.pop("locale")
+        if "locales" not in data:
+            data["locales"] = [legacy]
+        return data
+
+    @field_validator("locales", mode="before")
+    @classmethod
+    def _filter_locales(cls, v: object) -> list[str] | None:
+        return validate_locales(v)
 
     @field_validator("genres", mode="before")
     @classmethod

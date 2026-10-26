@@ -18,12 +18,12 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_user_reposi
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
-@app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locale metadata.")
+@app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
 def enrich(
     email: str = typer.Option(..., help="User email address.", parser=parse_email),
     only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
     only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
-    only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locale only."),
+    only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locales (sung languages) only."),
     force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have the requested fields."),
     batch_size: int = typer.Option(
         EnrichTracksConfigInput.batch_size,

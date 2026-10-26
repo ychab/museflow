@@ -286,8 +286,8 @@ class TestPlaylistHistoryUseCase:
         playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
-        matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="fr")
-        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
+        matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
 
         result = await playlist_history(
             user=user,
@@ -307,9 +307,9 @@ class TestPlaylistHistoryUseCase:
         playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
-        fr = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="fr")
-        en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="en")
-        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locale="de")
+        fr = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
+        en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["de"])
 
         result = await playlist_history(
             user=user,

@@ -37,7 +37,7 @@ erDiagram
         bool score_skipped
         array genres
         array moods
-        string locale
+        array locales
     }
     PLAYLIST {
         uuid id PK
@@ -113,7 +113,7 @@ Re-import is idempotent. `TrackRepository.bulk_upsert` ([source](https://github.
 | `score` | keep existing unless null (`COALESCE`), a re-import never overwrites a rating |
 | `provider_links` | JSONB concatenation |
 | `played_count` | replaced by the incoming count (the import recomputes it from the files) |
-| `score_skipped`, `genres`, `moods`, `locale` | **never updated**, so user decisions and enrichment survive a re-import |
+| `score_skipped`, `genres`, `moods`, `locales` | **never updated**, so user decisions and enrichment survive a re-import |
 
 The last row is a deliberate asymmetry: derived data from the import may be refreshed, human or LLM-added data may not. The restore path for ratings and enrichment is the `rate` and `enrich` export / import commands, not the importer.
 
@@ -139,7 +139,7 @@ The cost is false merges (two different songs with the same normalised title and
 | `source` | `TrackSource` is an `IntFlag` stored as an integer: `HISTORY = 1`, `DISCOVERY = 2`. A bit field rather than an enum so one track can be both (imported from history, or suggested then later heard) without a join table |
 | `score` | Optional rating, `0` to `10` (`DISCOVERY_TRACK_SCORE_MIN/MAX`). `0` means actively disliked; an interactive rating that is at or below `DISCOVERY_BLACKLIST_SCORE_THRESHOLD` (3) prompts the user to blacklist the track and its artist, tracks at or above `DISCOVERY_LIKED_SCORE_THRESHOLD` (7) feed the advisor as taste anchors, capped by `DISCOVERY_LIKED_TRACKS_LIMIT` (200) |
 | `score_skipped` | The user chose not to rate this track and not to be asked again |
-| `genres`, `moods`, `locale` | Enrichment output (below). Postgres `ARRAY(String)` for the lists, ISO 639-1 code for the language |
+| `genres`, `moods`, `locales` | Enrichment output (below). Postgres `ARRAY(String)` for the lists; `locales` holds ISO 639-1 codes of every sung language. `locales` is nullable and the distinction matters: `NULL` means never enriched (or the call failed) so the track is eligible for enrichment, `[]` means the model answered that there is no sung language (instrumental, or no reliable signal) so the track is not re-sent unless `--force` |
 
 Discovery tracks are written to the same table (with zeroed play data) so they are excluded from later sessions by the same fingerprint check as played tracks.
 

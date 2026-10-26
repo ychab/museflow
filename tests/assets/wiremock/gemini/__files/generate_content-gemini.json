@@ -4,7 +4,7 @@
       "content": {
         "parts": [
           {
-            "text": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"folk\", \"indie-folk\"], \"moods\": [\"chill\"], \"locale\": \"fr\"}]}"
+            "text": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"folk\", \"indie-folk\"], \"moods\": [\"chill\"], \"locales\": [\"fr\"]}]}"
           }
         ],
         "role": "model"

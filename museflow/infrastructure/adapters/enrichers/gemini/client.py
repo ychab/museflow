@@ -73,9 +73,10 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
 
         if EnrichField.LOCALE in fields:
             parts.append(
-                "### LOCALE RULE\n"
-                "- `locale`: 2-letter ISO 639-1 code for the **language the track is sung in** "
-                "(lyrics language, not artist nationality).\n"
+                "### LOCALES RULE\n"
+                "- `locales`: list of 2-letter ISO 639-1 codes of **every language sung in the track** "
+                "(lyrics language, not artist nationality). Return several codes when the lyrics mix languages "
+                "(e.g. a duet).\n"
                 "- Use signals in priority order:\n"
                 "  1. Title script: non-Latin characters are strong evidence "
                 "(Hangul → ko, Cyrillic → ru/uk/bg, Arabic script → ar/fa, "
@@ -83,7 +84,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                 "  2. Title vocabulary: recognisable non-English words in the title "
                 "(French articles/prepositions, Spanish, Portuguese, Italian, German, Arabic words, etc.).\n"
                 "  3. Artist cultural context: use as fallback when the title gives no language signal.\n"
-                "- Omit ONLY when: (a) the track appears instrumental (no lyrics), "
+                "- Return an empty list ONLY when: (a) the track appears instrumental (no lyrics), "
                 "or (b) none of the above signals give you reasonable confidence.\n"
                 "- Do NOT conflate artist nationality with lyrics language "
                 "(e.g. a French artist singing in English → en).\n"
@@ -145,7 +146,7 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
                 track_id=tracks[item.track_index].id,
                 genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
                 moods=[MoodTag(m) for m in item.moods if m in MoodTag._value2member_map_],
-                locale=item.locale,
+                locales=item.locales,
             )
             for item in content.enriched_tracks
             if 0 <= item.track_index < len(tracks)

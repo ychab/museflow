@@ -128,6 +128,31 @@ class TestTrackSQLRepository:
         unrated_list = await track_repository.get_list(user.id, unrated_only=True)
         assert [t.id for t in unrated_list] == [unrated_db.id]
 
+    async def test__get_list__missing_fields__locale__null_eligible_empty_list_not(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        never_enriched_db = await TrackModelFactory.create_async(user_id=user.id, locales=None)
+        await TrackModelFactory.create_async(user_id=user.id, locales=[])
+        await TrackModelFactory.create_async(user_id=user.id, locales=["fr"])
+
+        result = await track_repository.get_list(user.id, missing_fields=frozenset({EnrichField.LOCALE}))
+        assert [t.id for t in result] == [never_enriched_db.id]
+
+    async def test__get_list__filtering__locales__overlap(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        duet_db = await TrackModelFactory.create_async(user_id=user.id, locales=["fr", "en"])
+        await TrackModelFactory.create_async(user_id=user.id, locales=["de"])
+        await TrackModelFactory.create_async(user_id=user.id, locales=[])
+        await TrackModelFactory.create_async(user_id=user.id, locales=None)
+
+        result = await track_repository.get_list(user.id, locales=["en"])
+        assert [t.id for t in result] == [duet_db.id]
+
     async def test__get_list__filtering__artist_name(
         self,
         user: User,
