@@ -293,7 +293,7 @@ class TestDiscoverCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "No profile found. Run muse taste build --name <name> first." in output
+        assert "No profile found. Run `museflow taste build --name <name>` first." in output
 
     def test__taste_profile_status_not_ready(
         self,
@@ -307,7 +307,7 @@ class TestDiscoverCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "Taste profile is still being built. Run `muse taste build` to completion first." in output
+        assert "Taste profile is still being built. Run `museflow taste build` to completion first." in output
 
     def test__no_track_new_found(
         self,

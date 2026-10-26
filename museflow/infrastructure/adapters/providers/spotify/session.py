@@ -149,7 +149,7 @@ class SpotifyOAuthSessionClient:
                 )
                 await self.auth_token_repository.delete(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
                 raise ProviderAuthTokenNotFoundError(
-                    "Spotify refresh token is no longer valid — run 'muse spotify connect' first."
+                    "Spotify refresh token is no longer valid — run 'museflow spotify connect' first."
                 ) from e
 
             # Update in DB

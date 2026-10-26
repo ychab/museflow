@@ -31,7 +31,7 @@ def list_(
         raise typer.Exit(code=1) from e
 
     if not playlists:
-        typer.secho("No playlists found. Run `muse playlist discover` first.", fg=typer.colors.YELLOW)
+        typer.secho("No playlists found. Run `museflow playlist discover` first.", fg=typer.colors.YELLOW)
         return
 
     table = Table(title="Playlists")
