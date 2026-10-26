@@ -3,21 +3,21 @@ from unittest import mock
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 
 from tests.unit.factories.entities.track import TrackFactory
-from tests.unit.factories.entities.user import UserFactory
 from tests.unit.factories.value_objects.track import TrackEnrichmentFactory
 
 
 class TestTracksEnrichUseCase:
     async def test__no_tracks__returns_zero_counts(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_track_repository.get_list.return_value = []
 
         result = await tracks_enrich(
@@ -32,10 +32,10 @@ class TestTracksEnrichUseCase:
 
     async def test__nominal__enriches_all_tracks(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         tracks = TrackFactory.batch(3)
         mock_track_repository.get_list.return_value = tracks
         enrichments = [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks]
@@ -56,10 +56,10 @@ class TestTracksEnrichUseCase:
 
     async def test__force__disables_unenriched_only_filter(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_track_repository.get_list.return_value = []
 
         await tracks_enrich(
@@ -73,10 +73,10 @@ class TestTracksEnrichUseCase:
 
     async def test__limit__forwarded_to_repository(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_track_repository.get_list.return_value = []
 
         await tracks_enrich(
@@ -92,10 +92,10 @@ class TestTracksEnrichUseCase:
 
     async def test__batch_splitting__calls_enricher_once_per_batch(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         tracks = TrackFactory.batch(5)
         mock_track_repository.get_list.return_value = tracks
         mock_enricher.enrich_tracks.return_value = []
@@ -111,10 +111,10 @@ class TestTracksEnrichUseCase:
 
     async def test__enricher_error__increments_error_count_and_continues(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         tracks = TrackFactory.batch(4)
         mock_track_repository.get_list.return_value = tracks
 
@@ -135,10 +135,10 @@ class TestTracksEnrichUseCase:
 
     async def test__empty_enricher_result__counted_as_error_not_enriched(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_track_repository.get_list.return_value = TrackFactory.batch(3)
         mock_enricher.enrich_tracks.return_value = []
 
@@ -154,10 +154,10 @@ class TestTracksEnrichUseCase:
 
     async def test__partial_enricher_result__counts_only_returned_tracks(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         tracks = TrackFactory.batch(3)
         mock_track_repository.get_list.return_value = tracks
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=tracks[0].id)]
@@ -174,10 +174,10 @@ class TestTracksEnrichUseCase:
 
     async def test__genres__written_directly_to_update(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         track = TrackFactory.build()
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [
@@ -206,10 +206,10 @@ class TestTracksEnrichUseCase:
 
     async def test__locale_only__only_locale_written_and_existing_genres_preserved(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         track = TrackFactory.build(genres=[GenreTag.HIP_HOP], moods=["chill"])
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locale="fr")]
@@ -230,10 +230,10 @@ class TestTracksEnrichUseCase:
 
     async def test__locale_only__missing_fields_filter_uses_only_locale(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_track_repository.get_list.return_value = []
 
         await tracks_enrich(
@@ -249,10 +249,10 @@ class TestTracksEnrichUseCase:
 
     async def test__genre_only__locale_field_not_written(
         self,
+        user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         track = TrackFactory.build(locale="en")
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [

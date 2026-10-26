@@ -167,6 +167,7 @@ class UserSQLRepository(UserRepository):
 - 100% strict type hints everywhere — including tests. Native union: `str | None`. IDs: `uuid.UUID`.
 - No `Any` unless justified. Ruff line length: 119.
 - Async everywhere: FastAPI, SQLAlchemy, httpx.
+- **A signature either fits on one line (≤ 119 chars) or puts one parameter per line with a trailing comma** — never all parameters together on a single indented line. The trailing comma keeps `ruff format` from collapsing them back.
 - **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
 - **In use case functions and class constructors, DI parameters (repositories + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
 - **Group members of the same kind together in a module** (private helper functions, then classes). Never interleave them (no class → function → class).
