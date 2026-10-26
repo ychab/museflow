@@ -1,4 +1,5 @@
 import json
+from collections.abc import Iterator
 from datetime import UTC
 from datetime import datetime
 from typing import Any
@@ -412,3 +413,105 @@ class TestBuildTasteProfileUseCase:
         assert exc_info.value.reason == "rate limit"
         mock_taste_profile_repository.save_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()
+
+    @pytest.fixture
+    def mock_reflect(
+        self, request: pytest.FixtureRequest, gemini_profiler: GeminiTasteProfileAdapter
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            gemini_profiler,
+            "reflect_on_profile",
+            new_callable=mock.AsyncMock,
+            side_effect=request.param,
+        ) as mocked:
+            yield mocked
+
+    @pytest.fixture
+    def mock_segment(
+        self,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            gemini_profiler,
+            "build_profile_segment",
+            new_callable=mock.AsyncMock,
+            return_value=profile_data,
+        ) as mocked:
+            yield mocked
+
+    @pytest.fixture
+    def mock_merge(
+        self,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            gemini_profiler,
+            "merge_profiles",
+            new_callable=mock.AsyncMock,
+            return_value=profile_data,
+        ) as mocked:
+            yield mocked
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize(
+        ("mock_reflect", "reason"),
+        [
+            (TasteProfilerRateLimitExceeded("rate limit"), "rate limit"),
+            (TasteProfileBuildException("bad response"), "bad response"),
+        ],
+        indirect=["mock_reflect"],
+    )
+    async def test__reflect_fail__pauses_after_last_checkpoint(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_segment: mock.AsyncMock,
+        mock_merge: mock.AsyncMock,
+        mock_reflect: mock.AsyncMock,
+        reason: str,
+    ) -> None:
+        mock_track_repository.get_list.return_value = tracks
+
+        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+            await use_case.build_profile(user=user, config=config)
+
+        assert exc_info.value.batch_index == 3
+        assert exc_info.value.total_batches == 3
+        assert exc_info.value.reason == reason
+        assert mock_taste_profile_repository.save_checkpoint.call_count == 3
+        mock_taste_profile_repository.upsert.assert_not_called()
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("mock_reflect", [None], indirect=True)
+    async def test__resume__checkpoint_at_last_batch__only_reflects(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        profile_data: TasteProfileData,
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_segment: mock.AsyncMock,
+        mock_merge: mock.AsyncMock,
+        mock_reflect: mock.AsyncMock,
+    ) -> None:
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
+        mock_track_repository.get_list.return_value = tracks
+        mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 3)
+        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_reflect.side_effect = None
+        mock_reflect.return_value = profile_data
+
+        await use_case.build_profile(user=user, config=config)
+
+        mock_segment.assert_not_called()
+        mock_merge.assert_not_called()
+        mock_reflect.assert_awaited_once_with(profile_data)
+        mock_taste_profile_repository.save_checkpoint.assert_not_called()
+        mock_taste_profile_repository.upsert.assert_called_once()
