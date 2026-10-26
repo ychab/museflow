@@ -160,7 +160,7 @@ A track's `genres` list is ordered `[macro, meso, micro?]`, so the first element
 
 `museflow_playlist` stores both kinds of playlists in one table with a `type` column (`PlaylistType`): `DISCOVERY` (AI-curated) and `HISTORY` (a persisted "best of" from the user's own library). They were once two separate concepts (an ephemeral playlist and a persisted discovery playlist) and were merged (commit `467a4ce`) so a new type does not need a new table. Columns specific to discovery (`profile_id`, `reasoning`, `focus`, `genre`, `mood`, `custom_instructions`) are nullable and set only for that type, recording *why* the playlist exists. Membership and order live in `museflow_playlist_track` (`position`).
 
-`profile_id` references the taste profile with `ON DELETE CASCADE`, so **deleting a taste profile also deletes the discovery playlists it guided**.
+`profile_id` references the taste profile with `ON DELETE SET NULL`: deleting a taste profile keeps the discovery playlists it guided (they can still be listed and rated) and only drops the link. The column is informational; no code reads it back.
 
 ## Taste profile
 
