@@ -6,7 +6,7 @@ from pathlib import Path
 @dataclass(frozen=True, kw_only=True)
 class StreamingHistoryImportConfigInput:
     directory: Path
-    min_ms_played: int = 30_000
+    min_ms_played: int = 90_000
     batch_size: int = 20
     purge: bool = False
 

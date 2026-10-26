@@ -12,6 +12,8 @@ from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
 from museflow.application.use_cases.playlist_history import playlist_history as playlist_history_use_case
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
+from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
@@ -42,8 +44,20 @@ def playlist_history(
     name_suffix: str | None = typer.Option(
         None, "--name-suffix", help="Custom name suffix for the playlist (replaces the timestamp)"
     ),
-    score_min: int | None = typer.Option(None, "--score-min", help="Minimum track score (0-10)", min=0, max=10),
-    score_max: int | None = typer.Option(None, "--score-max", help="Maximum track score (0-10)", min=0, max=10),
+    score_min: int | None = typer.Option(
+        None,
+        "--score-min",
+        help="Minimum track score (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
+    score_max: int | None = typer.Option(
+        None,
+        "--score-max",
+        help="Maximum track score (0-10)",
+        min=DISCOVERY_TRACK_SCORE_MIN,
+        max=DISCOVERY_TRACK_SCORE_MAX,
+    ),
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
     genre: list[GenreTag] = typer.Option([], "--genre", help="Filter by genre tag (repeatable, OR logic)"),
     mood: list[MoodTag] = typer.Option([], "--mood", help="Filter by mood tag (repeatable, OR logic)"),
@@ -89,9 +103,14 @@ def playlist_history(
         help="Preview matched tracks without creating a playlist",
     ),
     sort: PlaylistHistoryOrderBy = typer.Option(
-        PlaylistHistoryOrderBy.PLAYED_COUNT, "--sort", help="Sort tracks by this field"
+        PlaylistHistoryConfigInput.sort_by, "--sort", help="Sort tracks by this field"
     ),
-    limit: int = typer.Option(20, "--limit", help="Maximum number of tracks in the playlist", min=1),
+    limit: int = typer.Option(
+        PlaylistHistoryConfigInput.limit,
+        "--limit",
+        help="Maximum number of tracks in the playlist",
+        min=1,
+    ),
 ) -> None:
     """Create a playlist from your history tracks, filtered and ordered by play count."""
     if score_min is not None and score_max is not None and score_min > score_max:

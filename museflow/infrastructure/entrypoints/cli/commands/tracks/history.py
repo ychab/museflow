@@ -35,10 +35,12 @@ def history(
         MusicProvider.SPOTIFY, "--provider", help="Music provider to import streaming history from"
     ),
     min_duration_played: int = typer.Option(
-        90, "--min-duration-played", help="Minimum duration played in seconds to include"
+        StreamingHistoryImportConfigInput.min_ms_played // 1_000,
+        "--min-duration-played",
+        help="Minimum duration played in seconds to include",
     ),
     batch_size: int = typer.Option(
-        20,
+        StreamingHistoryImportConfigInput.batch_size,
         "--batch-size",
         help="Number of tracks to upsert per batch",
         min=1,

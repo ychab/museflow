@@ -36,7 +36,7 @@ class DiscoverTasteConfigInput:
     reconciler_limit: int = 10
     playlist_limit: int = 10
 
-    max_attempts: int = 5
+    max_attempts: int = 3
     max_tracks_per_artist: int = 3
 
     score_band_width: float = 0.05

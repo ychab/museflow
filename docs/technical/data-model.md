@@ -101,7 +101,7 @@ A streaming-history export is an event log: one line per play. MuseFlow aggregat
 | One row per play | ~228,000 | Keeps full time series; every query aggregates; far too much for an LLM prompt |
 | **One row per track (chosen)** | ~11,300 after filtering | Loses the exact play timeline, keeps what the product needs: how much, since when, until when |
 
-The ~228k and ~11k figures come from the author's own export (see [What my data taught me](../product/insights.md)). The aggregation is also what makes the history small enough to send to an LLM in batches (see [LLM pipeline](llm-pipeline.md)). Two import filters shrink the data further: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds in the CLI) are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
+The ~228k and ~11k figures come from the author's own export (see [What my data taught me](../product/insights.md)). The aggregation is also what makes the history small enough to send to an LLM in batches (see [LLM pipeline](llm-pipeline.md)). Two import filters shrink the data further: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds) are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
 
 Re-import is idempotent. `TrackRepository.bulk_upsert` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track.py)) uses `INSERT ... ON CONFLICT (user_id, fingerprint) DO UPDATE` with per-column merge rules:
 
