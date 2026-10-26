@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from datetime import timedelta
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -91,7 +92,7 @@ class TestSpotifyOAuthSessionClient:
     ) -> None:
         session_client.auth_token = auth_token_expired
 
-        async def slow_refresh(*args: object, **kwargs: object) -> OAuthProviderTokenPayload:
+        async def slow_refresh(refresh_token: str) -> OAuthProviderTokenPayload:
             await asyncio.sleep(0.05)
             return token_payload
 
@@ -125,13 +126,21 @@ class TestSpotifyOAuthSessionClient:
             expires_at=auth_token.token_expires_at + timedelta(seconds=3600)
         )
 
-        async def slow_refresh(*args: object) -> OAuthProviderTokenPayload:
+        async def slow_refresh(refresh_token: str) -> OAuthProviderTokenPayload:
             await asyncio.sleep(0.05)
             return new_token_payload
 
         mock_provider_oauth.refresh_access_token.side_effect = slow_refresh
 
-        async def mock_api_call(token_payload: OAuthProviderTokenPayload, **kwargs: object) -> dict[str, object]:
+        async def mock_api_call(
+            method: str,
+            endpoint: str,
+            *,
+            token_payload: OAuthProviderTokenPayload,
+            params: dict[str, Any] | None,
+            json_data: dict[str, Any] | None,
+            ignored_status_codes: frozenset[int] | None,
+        ) -> dict[str, Any]:
             # If using the NEW token -> Success
             if token_payload.access_token == new_token_payload.access_token:
                 return {}

@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Any
 from typing import Self
+from typing import cast
 
 import httpx
 from httpx import codes
@@ -84,8 +85,7 @@ class HttpClientMixin:
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        data: dict[str, Any] = response.json()
-        return data
+        return cast(dict[str, Any], response.json())
 
     async def close(self) -> None:
         await self._client.aclose()

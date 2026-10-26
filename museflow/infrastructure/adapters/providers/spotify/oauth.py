@@ -2,6 +2,7 @@ import asyncio
 import base64
 import logging
 from typing import Any
+from typing import cast
 from urllib.parse import urlencode
 
 import httpx
@@ -233,5 +234,4 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         if response.status_code == codes.NO_CONTENT:
             return {}
 
-        data: dict[str, Any] = response.json()
-        return data
+        return cast(dict[str, Any], response.json())
