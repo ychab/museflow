@@ -45,3 +45,7 @@ class DiscoverTasteConfigInput:
     liked_tracks_limit: int = 200
 
     dry_run: bool = False
+
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
