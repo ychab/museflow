@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 51656d7d295c
+Revision ID: 27f4c020ce7d
 Revises:
-Create Date: 2026-06-27 00:21:13.467423
+Create Date: 2026-10-26 18:49:47.939383
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '51656d7d295c'
+revision: str = '27f4c020ce7d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -111,8 +111,8 @@ def upgrade() -> None:
     sa.Column('source', sa.Integer(), nullable=False),
     sa.Column('score', sa.Integer(), nullable=True),
     sa.Column('score_skipped', sa.Boolean(), server_default='false', nullable=False),
-    sa.Column('genres', postgresql.ARRAY(sa.String()), server_default='{}', nullable=False),
-    sa.Column('moods', postgresql.ARRAY(sa.String()), server_default='{}', nullable=False),
+    sa.Column('genres', postgresql.ARRAY(sa.String()), nullable=False),
+    sa.Column('moods', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('locale', sa.String(length=10), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
