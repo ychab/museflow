@@ -36,7 +36,7 @@ class Track(BaseEntity):
 
     genres: list[GenreTag] = field(default_factory=list)
     moods: list[MoodTag] = field(default_factory=list)
-    locale: LocaleCode | None = None
+    locales: list[LocaleCode] | None = None
 
     @property
     def primary_artist(self) -> str:

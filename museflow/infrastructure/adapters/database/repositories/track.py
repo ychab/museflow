@@ -32,7 +32,7 @@ class TrackSQLRepository(TrackRepository):
     _ENRICH_FIELD_TO_COLUMN: dict[EnrichField, str] = {
         EnrichField.GENRE: "genres",
         EnrichField.MOOD: "moods",
-        EnrichField.LOCALE: "locale",
+        EnrichField.LOCALE: "locales",
     }
 
     def __init__(self, session: AsyncSession) -> None:
@@ -111,14 +111,14 @@ class TrackSQLRepository(TrackRepository):
             if EnrichField.MOOD in missing_fields:
                 conditions.append(func.array_length(TrackModel.moods, 1).is_(None))
             if EnrichField.LOCALE in missing_fields:
-                conditions.append(TrackModel.locale.is_(None))
+                conditions.append(TrackModel.locales.is_(None))
             stmt = stmt.where(or_(*conditions))
         if genres is not None:
             stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
         if moods is not None:
             stmt = stmt.where(TrackModel.moods.overlap([m.value for m in moods]))
         if locales is not None:
-            stmt = stmt.where(TrackModel.locale.in_(locales))
+            stmt = stmt.where(TrackModel.locales.overlap(locales))
 
         # Ordering
         if order is None and min_score is not None:
@@ -168,8 +168,8 @@ class TrackSQLRepository(TrackRepository):
         created_count: int = 0
 
         index_elements: list[str] = ["user_id", "fingerprint"]
-        # score_skipped, genres, moods, locale excluded so re-imports never overwrite user decisions/enrichment
-        index_excluded: list[str] = ["id", "score_skipped", "genres", "moods", "locale"] + index_elements
+        # score_skipped, genres, moods, locales excluded so re-imports never overwrite user decisions/enrichment
+        index_excluded: list[str] = ["id", "score_skipped", "genres", "moods", "locales"] + index_elements
 
         tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
 

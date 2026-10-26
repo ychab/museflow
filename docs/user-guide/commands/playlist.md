@@ -82,7 +82,7 @@ museflow playlist history --email <email> [OPTIONS]
 | `--artist` | none | Filter by primary artist name. |
 | `--genre` | none | Filter by genre tag (repeatable, OR logic). |
 | `--mood` | none | Filter by mood tag (repeatable, OR logic). |
-| `--locale` | none | Filter by locale/language code, ISO 639-1 (repeatable, OR logic). |
+| `--locale` | none | Filter by sung language, ISO 639-1 (repeatable, matches any of the track's languages). |
 | `--played-first-min` | none | Filter tracks first played on or after this date (YYYY-MM-DD). |
 | `--played-first-max` | none | Filter tracks first played on or before this date (YYYY-MM-DD). |
 | `--played-last-min` | none | Filter tracks last played on or after this date (YYYY-MM-DD). |
@@ -142,7 +142,7 @@ micro tags, see `museflow playlist history --help` for the complete list). Macro
 `--mood` accepts: `energetic`, `chill`, `melancholic`, `upbeat`, `aggressive`, `romantic`, `focus`, `party`,
 `introspective`, `euphoric`, `peaceful`, `dark`.
 
-`--locale` is a two-letter ISO 639-1 language code, such as `en`, `fr` or `es`.
+`--locale` is a two-letter ISO 639-1 language code, such as `en`, `fr` or `es`. A track can be sung in several languages (a duet, say), and it matches when any of them is in the list.
 
 ## `playlist list`
 

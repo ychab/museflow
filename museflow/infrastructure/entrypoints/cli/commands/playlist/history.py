@@ -65,7 +65,7 @@ def playlist_history(
     locale: list[LocaleCode] = typer.Option(
         [],
         "--locale",
-        help="Filter by locale/language code, ISO 639-1 (repeatable, OR logic)",
+        help="Filter by sung language, ISO 639-1 (repeatable, matches any of the track's languages)",
         parser=parse_locale,
     ),
     played_first_min: date | None = typer.Option(

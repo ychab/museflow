@@ -5,7 +5,7 @@ Add genre, mood and language metadata to tracks with an LLM, and back it up. Enr
 
 ## `enrich tracks`
 
-Enriches tracks with AI-inferred genre, mood and locale metadata.
+Enriches tracks with AI-inferred genre, mood and locales (sung languages) metadata.
 
 ```bash
 museflow enrich tracks --email <email> [OPTIONS]
@@ -16,7 +16,7 @@ museflow enrich tracks --email <email> [OPTIONS]
 | `--email` | required | User email address. |
 | `--only-genre` | off | Enrich genre tags only. |
 | `--only-mood` | off | Enrich mood labels only. |
-| `--only-locale` | off | Enrich locale only. |
+| `--only-locale` | off | Enrich locales (sung languages) only. |
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
 | `--batch-size` | `200` | Number of tracks per Gemini request. |
 | `--limit` | none | Maximum number of tracks to process. |
@@ -28,7 +28,7 @@ missing a requested field are processed, so the command is safe to re-run after 
 on a small sample first.
 
 Genres follow a three-level taxonomy (macro genre, sub-genre, optional micro tag), moods are picked among 12
-labels, and the locale is an ISO 639-1 language code. See the
+labels, and the locales are the ISO 639-1 codes of every language sung in the track. A track with no sung language (instrumental, or no reliable signal) gets an empty list and is not sent to the model again unless you pass `--force`. See the
 [allowed values](playlist.md#genre-and-mood-values).
 
 **Examples**
@@ -43,7 +43,7 @@ re-run processes the missing tracks), or `No tracks to enrich.`.
 
 ## `enrich export`
 
-Exports the genres and moods of all enriched tracks to a YAML file, keyed by track fingerprint.
+Exports the genres, moods and locales of all enriched tracks to a YAML file, keyed by track fingerprint.
 
 ```bash
 museflow enrich export --email <email> --output <path>
@@ -58,7 +58,7 @@ museflow enrich export --email <email> --output <path>
 
 ## `enrich import`
 
-Restores genres and moods from a YAML file produced by `enrich export`, without calling the LLM.
+Restores genres, moods and locales from a YAML file produced by `enrich export`, without calling the LLM. Files from older versions, with a single `locale` key, are still accepted.
 
 ```bash
 museflow enrich import --email <email> --input <path>

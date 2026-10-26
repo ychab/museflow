@@ -48,6 +48,8 @@ class TestMigrations:
             return cast(list[object], compare_metadata(MigrationContext.configure(connection), Base.metadata))
 
         engine = create_async_engine(url=migration_db_url)
-        async with engine.connect() as conn:
-            assert await conn.run_sync(diff) == []
-        await engine.dispose()
+        try:
+            async with engine.connect() as conn:
+                assert await conn.run_sync(diff) == []
+        finally:
+            await engine.dispose()

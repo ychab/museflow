@@ -37,4 +37,4 @@ class TrackEnrichment:
     track_id: uuid.UUID
     genres: list[GenreTag]
     moods: list[MoodTag]
-    locale: LocaleCode | None = None
+    locales: list[LocaleCode] | None = None

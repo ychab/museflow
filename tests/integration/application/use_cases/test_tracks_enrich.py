@@ -44,7 +44,7 @@ class TestTracksEnrichUseCase:
         track_repository: TrackRepository,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"], locale="en")
+        await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"], locales=["en"])
         await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
 
         result = await tracks_enrich(
@@ -56,7 +56,7 @@ class TestTracksEnrichUseCase:
 
         assert result.enriched_count == 1
 
-    async def test__locale_only__preserves_existing_genres_and_updates_locale(
+    async def test__locales_only__preserves_existing_genres_and_updates_locales(
         self,
         user: User,
         track_repository: TrackRepository,
@@ -74,9 +74,9 @@ class TestTracksEnrichUseCase:
         assert result.enriched_count == 1
         tracks = await track_repository.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.HIP_HOP]
-        assert tracks[0].locale == "fr"
+        assert tracks[0].locales == ["fr"]
 
-    async def test__genre_only__updates_genres_and_leaves_locale_null(
+    async def test__genre_only__updates_genres_and_leaves_locales_null(
         self,
         user: User,
         track_repository: TrackRepository,
@@ -94,4 +94,4 @@ class TestTracksEnrichUseCase:
         assert result.enriched_count == 1
         tracks = await track_repository.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.FOLK, GenreTag.INDIE_FOLK]
-        assert tracks[0].locale is None
+        assert tracks[0].locales is None

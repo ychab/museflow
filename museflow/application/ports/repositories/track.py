@@ -73,7 +73,7 @@ class TrackRepository(ABC):
             missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
             genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
             moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
-            locales: When set, only tracks whose locale is in this list (OR) are returned.
+            locales: When set, only tracks whose locales array overlaps (OR) with any listed code are returned.
 
         Returns:
             A list of `Track` entities.
