@@ -143,6 +143,7 @@ class UserSQLRepository(UserRepository):
 - `.scalar_one_or_none()` for optional, `.scalar_one()` for required.
 - `.returning()` on updates/deletes to avoid extra SELECT round-trip.
 - `await self.session.commit()` then `await self.session.refresh(obj)` after mutations.
+- **Each repository mutation commits on its own, by design**: progress (paid LLM batches, checkpoints, refreshed tokens) survives a later failure, and re-runs are idempotent. When a flow mixes a remote side effect with local writes, do the remote call first, so a provider failure leaves nothing behind locally.
 - Use `pg_insert(...).on_conflict_do_update(...)` for upserts (PostgreSQL-specific).
 
 ### External API Adapters (Spotify, Gemini)

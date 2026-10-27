@@ -52,7 +52,8 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 - **Mapping (DB <-> Domain)**:
   - **To Entity**: Implement `to_entity(self) -> Entity` method on the SQLAlchemy Model.
 - **Transactions**:
-  - Use `async_session.begin()` or context managers for atomicity.
+  - Each repository mutation commits on its own: progress survives a later failure and re-runs are idempotent.
+  - When a flow mixes a remote side effect (provider API) with local writes, call the remote side first.
   - Repositories should accept an `AsyncSession`.
 
 #### B. External APIs (Spotify, etc.)
