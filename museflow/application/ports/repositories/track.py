@@ -22,7 +22,6 @@ class TrackRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
-        provider_ids: list[str] | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
         source: TrackSource | None = None,
@@ -48,7 +47,6 @@ class TrackRepository(ABC):
         Args:
             user_id: The ID of the user whose tracks are to be retrieved.
             provider: A provider to filter on.
-            provider_ids: Filter to only return tracks whose provider_id is in this list.
             order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
                    Use RANDOM as the sole entry for random ordering. Nullable columns
                    always sort NULLs last regardless of direction. Ignored when min_score is set
@@ -95,7 +93,7 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
+    async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         """Performs a bulk "upsert" (insert or update) of track records.
 
         This method efficiently handles large batches of tracks, inserting new ones
@@ -106,8 +104,8 @@ class TrackRepository(ABC):
             batch_size: The number of records to process in each batch.
 
         Returns:
-            A tuple containing a list of the UUIDs of the upserted tracks and the
-            total number of created rows.
+            A tuple containing the row ID of each upserted track keyed by fingerprint (the existing row's ID on
+            conflict), and the total number of created rows.
 
         Note:
             Some fields might be intentionally excluded from the ON CONFLICT DO UPDATE clause

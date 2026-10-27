@@ -22,7 +22,6 @@ from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
-from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.enums import TrackSource
@@ -248,23 +247,11 @@ class DiscoverTasteUseCase:
             replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
             for t in tracks
         ]
-        discovery_spotify_ids = [
-            pid for t in discovery_tracks if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None
-        ]
-
         # One transaction: the discovery tracks and their local playlist are saved together, or not at all.
         async with self._unit_of_work.atomic():
-            await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
-
-            # Fetch back to get the actual DB UUIDs (needed for the join table FK)
-            tracks_db = await self._track_repository.get_list(
-                user_id=user.id,
-                provider_ids=discovery_spotify_ids,
-            )
-            tracks_db_by_pid = {
-                pid: t for t in tracks_db if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None
-            }
-            tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
+            track_ids, _ = await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
+            # The DB IDs are needed for the join table FK (an existing row keeps its own ID).
+            tracks_with_ids = [replace(t, id=track_ids[t.fingerprint]) for t in discovery_tracks]
 
             playlist = replace(
                 playlist,

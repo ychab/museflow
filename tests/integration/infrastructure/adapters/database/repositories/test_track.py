@@ -349,8 +349,9 @@ class TestTrackSQLRepository:
         )
 
         assert len(track_ids) == len(tracks_create) == create_count == 10
+        assert track_ids == {t.fingerprint: t.id for t in tracks_create}
 
-        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids))
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids.values()))
         results = await async_session_db.execute(stmt)
         tracks_db = results.scalars().all()
 
@@ -376,7 +377,7 @@ class TestTrackSQLRepository:
         assert len(track_ids) == len(tracks_update) == len(tracks) == 10
         assert create_count == 0
 
-        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids))
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids.values()))
         results = await async_session_db.execute(stmt)
         tracks_db = results.scalars().all()
 
@@ -386,6 +387,21 @@ class TestTrackSQLRepository:
         artists = [track_db.artists[0] for track_db in tracks_db]
         expected_artists = ["SCH" for _ in range(len(tracks_db))]
         assert artists == expected_artists
+
+    async def test__bulk_upsert__conflict__returns_existing_id(
+        self,
+        tracks: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        existing = tracks[0]
+        # Same user and fingerprint, but a new entity ID: the row already in the DB wins.
+        track_ids, create_count = await track_repository.bulk_upsert(
+            [dataclasses.replace(existing, id=uuid.uuid4())],
+            batch_size=10,
+        )
+
+        assert track_ids == {existing.fingerprint: existing.id}
+        assert create_count == 0
 
     async def test__bulk_upsert__both(
         self,
@@ -398,8 +414,9 @@ class TestTrackSQLRepository:
 
         assert len(track_ids) == len(tracks_mix) == 10
         assert create_count == 5
+        assert track_ids == {t.fingerprint: t.id for t in tracks_mix}
 
-        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids)).order_by(TrackModel.created_at.asc())
+        stmt = select(TrackModel).where(TrackModel.id.in_(track_ids.values())).order_by(TrackModel.created_at.asc())
         results = await async_session_db.execute(stmt)
         tracks_db = results.scalars().all()
         assert len(tracks_db) == len(tracks_mix)
