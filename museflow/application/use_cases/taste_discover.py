@@ -12,6 +12,7 @@ from museflow.application.ports.repositories.blacklist import BlacklistRepositor
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
@@ -61,6 +62,7 @@ class DiscoverTasteUseCase:
         taste_profile_repository: TasteProfileRepository,
         blacklist_repository: BlacklistRepository,
         playlist_repository: PlaylistRepository,
+        unit_of_work: UnitOfWorkPort,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
         reconciler: Reconciler,
@@ -70,6 +72,7 @@ class DiscoverTasteUseCase:
         self._taste_profile_repository = taste_profile_repository
         self._blacklist_repository = blacklist_repository
         self._playlist_repository = playlist_repository
+        self._unit_of_work = unit_of_work
         self._provider_library = provider_library
         self._advisor = advisor
         self._reconciler = reconciler
@@ -245,30 +248,35 @@ class DiscoverTasteUseCase:
             replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
             for t in tracks
         ]
-        await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
-
-        # Fetch back to get the actual DB UUIDs (needed for the join table FK)
         discovery_spotify_ids = [
             pid for t in discovery_tracks if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None
         ]
-        tracks_db = await self._track_repository.get_list(
-            user_id=user.id,
-            provider_ids=discovery_spotify_ids,
-        )
-        tracks_db_by_pid = {pid: t for t in tracks_db if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None}
-        tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
 
-        playlist = replace(
-            playlist,
-            profile_id=profile.id,
-            reasoning=strategy.reasoning,
-            focus=config.focus,
-            genre=config.genre,
-            mood=config.mood,
-            custom_instructions=config.custom_instructions,
-            tracks=tracks_with_ids,
-        )
-        playlist_db = await self._playlist_repository.save(playlist)
+        # One transaction: the discovery tracks and their local playlist are saved together, or not at all.
+        async with self._unit_of_work.atomic():
+            await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
+
+            # Fetch back to get the actual DB UUIDs (needed for the join table FK)
+            tracks_db = await self._track_repository.get_list(
+                user_id=user.id,
+                provider_ids=discovery_spotify_ids,
+            )
+            tracks_db_by_pid = {
+                pid: t for t in tracks_db if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None
+            }
+            tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
+
+            playlist = replace(
+                playlist,
+                profile_id=profile.id,
+                reasoning=strategy.reasoning,
+                focus=config.focus,
+                genre=config.genre,
+                mood=config.mood,
+                custom_instructions=config.custom_instructions,
+                tracks=tracks_with_ids,
+            )
+            playlist_db = await self._playlist_repository.save(playlist)
 
         return DiscoverTasteResult(
             playlist=playlist_db,

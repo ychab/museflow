@@ -34,6 +34,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oa
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -234,6 +235,7 @@ async def discover_logic(
         taste_profile_repository = get_taste_profile_repository(session)
         blacklist_repository = get_blacklist_repository(session)
         playlist_repository = get_playlist_repository(session)
+        unit_of_work = get_unit_of_work(session)
 
         provider_client = await stack.enter_async_context(get_provider_oauth(provider))
         provider_library_factory = get_provider_library_factory(
@@ -260,6 +262,7 @@ async def discover_logic(
             taste_profile_repository=taste_profile_repository,
             blacklist_repository=blacklist_repository,
             playlist_repository=playlist_repository,
+            unit_of_work=unit_of_work,
             provider_library=provider_library,
             advisor=advisor_adapter,
             reconciler=reconciler,
