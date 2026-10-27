@@ -141,7 +141,7 @@ class UserSQLRepository(UserRepository):
 ```
 - Inject `AsyncSession`. Use `select/update/delete` (SQLAlchemy 2.0 style, no legacy).
 - `.scalar_one_or_none()` for optional, `.scalar_one()` for required.
-- `.returning()` on updates/deletes to avoid extra SELECT round-trip.
+- `.returning()` on inserts/updates/deletes to avoid extra SELECT round-trip. Key returned rows by a column (e.g. fingerprint), never by position: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
 - `await self.session.commit()` then `await self.session.refresh(obj)` after mutations.
 - **Each repository mutation commits on its own, by design**: progress (paid LLM batches, checkpoints, refreshed tokens) survives a later failure, and re-runs are idempotent. When a flow mixes a remote side effect with local writes, do the remote call first, so a provider failure leaves nothing behind locally.
 - **`UnitOfWorkPort.atomic()`** groups writes only when a partial state would be *wrong*, not merely incomplete (today: discover's tracks upsert + playlist save). `SQLUnitOfWork` turns the session's `commit` into `flush` for the block, so repositories stay unchanged. Never put a remote call inside the block, and never nest blocks.

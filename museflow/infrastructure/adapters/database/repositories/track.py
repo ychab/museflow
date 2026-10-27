@@ -3,8 +3,10 @@ import uuid
 from datetime import date
 from typing import Any
 
+from sqlalchemy import Boolean
 from sqlalchemy import delete
 from sqlalchemy import func
+from sqlalchemy import literal_column
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
@@ -42,7 +44,6 @@ class TrackSQLRepository(TrackRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider | None = None,
-        provider_ids: list[str] | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
         source: TrackSource | None = None,
@@ -72,13 +73,6 @@ class TrackSQLRepository(TrackRepository):
                     "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
                     "WHERE elem->>'provider' = :provider)"
                 ).bindparams(provider=provider.value)
-            )
-        if provider_ids is not None:
-            stmt = stmt.where(
-                text(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
-                    "WHERE elem->>'provider_id' = ANY(:provider_ids))"
-                ).bindparams(provider_ids=provider_ids)
             )
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
@@ -163,8 +157,9 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnowIdentifiers(fingerprints=known_fingerprints)
 
-    async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[list[uuid.UUID], int]:
-        track_ids: list[uuid.UUID] = []
+    async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
+        # Keyed by fingerprint: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
+        track_ids: dict[str, uuid.UUID] = {}
         created_count: int = 0
 
         index_elements: list[str] = ["user_id", "fingerprint"]
@@ -203,15 +198,16 @@ class TrackSQLRepository(TrackRepository):
                     if key not in index_excluded
                 },
             ).returning(
+                TrackModel.fingerprint,
                 TrackModel.id,
-                text("(xmax = 0) AS was_created"),
+                literal_column("xmax = 0", Boolean).label("was_created"),
             )
 
             results = await self.session.execute(upsert_stmt)
             rows = results.all()
 
-            track_ids.extend([row[0] for row in rows])
-            created_count += sum(row[1] for row in rows)
+            track_ids.update({row.fingerprint: row.id for row in rows})
+            created_count += sum(row.was_created for row in rows)
 
         await self.session.commit()
 

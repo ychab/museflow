@@ -10,7 +10,6 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
-from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -32,24 +31,13 @@ from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyF
 class TestDiscoverTasteUseCase:
     @pytest.fixture
     def track_roundtrip(self, mock_track_repository: mock.AsyncMock) -> None:
-        """Simulates the bulk_upsert → get_list roundtrip using local state instead of call_args inspection."""
-        upserted: list[Track] = []
+        """No liked tracks, and bulk_upsert returns the row IDs keyed by fingerprint like the real repository."""
 
-        async def _bulk_upsert(tracks: list[Track], *, batch_size: int = 100) -> tuple[list[uuid.UUID], int]:
-            upserted.extend(tracks)
-            return ([], 0)
+        async def _bulk_upsert(tracks: list[Track], *, batch_size: int = 100) -> tuple[dict[str, uuid.UUID], int]:
+            return {t.fingerprint: t.id for t in tracks}, len(tracks)
 
-        async def _get_list(
-            *_: object,
-            provider_ids: list[str] | None = None,
-            **__: object,
-        ) -> list[Track]:
-            if provider_ids is None:
-                return list(upserted)
-            return [t for t in upserted if t.get_provider_id(MusicProvider.SPOTIFY) in provider_ids]
-
+        mock_track_repository.get_list.return_value = []
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
-        mock_track_repository.get_list.side_effect = _get_list
 
     @pytest.fixture
     def mock_unit_of_work(self) -> mock.Mock:
