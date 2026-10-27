@@ -1,3 +1,5 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
@@ -11,6 +13,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
@@ -24,6 +27,7 @@ class TestDiscoverTasteUseCase:
         taste_profile_repository: TasteProfileRepository,
         blacklist_repository: BlacklistRepository,
         playlist_repository: PlaylistRepository,
+        async_session_db: AsyncSession,
         spotify_library: ProviderLibraryPort,
         gemini_advisor: GeminiAdvisorAdapter,
         reconciler: Reconciler,
@@ -33,6 +37,7 @@ class TestDiscoverTasteUseCase:
             taste_profile_repository=taste_profile_repository,
             blacklist_repository=blacklist_repository,
             playlist_repository=playlist_repository,
+            unit_of_work=SQLUnitOfWork(async_session_db),
             provider_library=spotify_library,
             advisor=gemini_advisor,
             reconciler=reconciler,

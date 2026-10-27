@@ -1,9 +1,11 @@
+import contextlib
 import uuid
 from unittest import mock
 
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
@@ -50,12 +52,19 @@ class TestDiscoverTasteUseCase:
         mock_track_repository.get_list.side_effect = _get_list
 
     @pytest.fixture
+    def mock_unit_of_work(self) -> mock.Mock:
+        unit_of_work = mock.Mock(spec=UnitOfWorkPort)
+        unit_of_work.atomic.return_value = contextlib.nullcontext()
+        return unit_of_work
+
+    @pytest.fixture
     def use_case(
         self,
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.Mock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
         mock_reconciler: mock.Mock,
@@ -69,6 +78,7 @@ class TestDiscoverTasteUseCase:
             taste_profile_repository=mock_taste_profile_repository,
             blacklist_repository=mock_blacklist_repository,
             playlist_repository=mock_playlist_repository,
+            unit_of_work=mock_unit_of_work,
             provider_library=mock_provider_library,
             advisor=mock_advisor,
             reconciler=mock_reconciler,

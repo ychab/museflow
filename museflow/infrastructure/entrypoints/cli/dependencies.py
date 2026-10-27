@@ -16,6 +16,7 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.enums import MusicAdvisor
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
@@ -29,6 +30,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
@@ -210,6 +212,10 @@ def get_blacklist_repository(session: AsyncSession) -> BlacklistRepository:
 
 def get_playlist_repository(session: AsyncSession) -> PlaylistRepository:
     return PlaylistSQLRepository(session)
+
+
+def get_unit_of_work(session: AsyncSession) -> UnitOfWorkPort:
+    return SQLUnitOfWork(session)
 
 
 # --- Services ---
