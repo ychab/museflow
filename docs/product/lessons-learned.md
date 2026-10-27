@@ -73,9 +73,11 @@ What I would instrument first:
 - **One LLM vendor.** The pivot reduced the dependency on the music provider and created one on the LLM provider.
   The ports are ready for another vendor; none is implemented yet.
 - **One music provider.** Multi-provider history merge is possible by design, untested in practice.
-- **Commands are not atomic.** Some commands commit in several steps; a failure in the middle (e.g. while creating
-  the playlist on the provider) can leave partial data behind. The fix — one unit of work per command — is designed
-  but not done.
+- **Commands are not atomic, on purpose.** I first planned one transaction per command, then asked when atomicity
+  is really needed: only when a partial state is *wrong*, not merely *incomplete*. Most commands produce an
+  incomplete but valid state that a re-run completes, and committing step by step keeps paid LLM work. The real
+  defect was ordering: discovery now creates the remote playlist before writing anything locally. A database failure
+  right after a remote call can still leave an orphan playlist on the provider.
 - **A CLI, not an app.** Perfect for me, a barrier for anyone else.
 - **One application doing everything.** See below.
 
@@ -104,8 +106,7 @@ could become a way to choose a model on the result that matters rather than on a
 1. Instrument the metrics above, starting with the discovery keep rate.
 2. Fix the era segmentation and merge logic of the taste profile.
 3. Put an LLM gateway (OpenRouter, for instance) behind the ports to compare models on quality *and* cost.
-4. One transaction per command.
-5. Only then, think about a UI.
+4. Only then, think about a UI.
 
 ## The meta-lesson
 
