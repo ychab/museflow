@@ -76,8 +76,9 @@ What I would instrument first:
 - **Commands are not atomic, on purpose.** I first planned one transaction per command, then asked when atomicity
   is really needed: only when a partial state is *wrong*, not merely *incomplete*. Most commands produce an
   incomplete but valid state that a re-run completes, and committing step by step keeps paid LLM work. The real
-  defect was ordering: discovery now creates the remote playlist before writing anything locally. A database failure
-  right after a remote call can still leave an orphan playlist on the provider.
+  defect was ordering: discovery now creates the remote playlist before writing anything locally. Its two local
+  writes (tracks and playlist) then share one transaction, through a small unit of work that leaves the repositories
+  untouched. A database failure right after a remote call can still leave an orphan playlist on the provider.
 - **A CLI, not an app.** Perfect for me, a barrier for anyone else.
 - **One application doing everything.** See below.
 

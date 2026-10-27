@@ -54,6 +54,8 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 - **Transactions**:
   - Each repository mutation commits on its own: progress survives a later failure and re-runs are idempotent.
   - When a flow mixes a remote side effect (provider API) with local writes, call the remote side first.
+  - When several local writes form one fact (a partial state would be wrong), wrap them in
+    `UnitOfWorkPort.atomic()`. No remote call inside the block, no nested blocks.
   - Repositories should accept an `AsyncSession`.
 
 #### B. External APIs (Spotify, etc.)
