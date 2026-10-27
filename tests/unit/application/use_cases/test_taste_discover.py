@@ -12,6 +12,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
+from museflow.domain.exceptions import ProviderRateLimitExceeded
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -704,6 +705,36 @@ class TestDiscoverTasteUseCase:
                 user=user,
                 config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, max_attempts=1),
             )
+
+    async def test__remote_playlist_creation_fails__nothing_written(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
+
+        reconciled_track = TrackFactory.build()
+        mock_provider_library.search_tracks.return_value = [reconciled_track]
+        mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.side_effect = ProviderRateLimitExceeded("Spotify rate limit")
+
+        with pytest.raises(ProviderRateLimitExceeded):
+            await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, dry_run=False),
+            )
+
+        mock_track_repository.bulk_upsert.assert_not_awaited()
+        mock_playlist_repository.save.assert_not_awaited()
 
     async def test__discovery_tracks_upserted_to_museflow_track(
         self,

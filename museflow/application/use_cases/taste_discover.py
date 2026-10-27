@@ -233,6 +233,13 @@ class DiscoverTasteUseCase:
             logger.info("Dry-run mode: skipping playlist creation.")
             return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
 
+        # Remote first: if the provider call fails, nothing has been written locally.
+        playlist = await self._provider_library.create_playlist(
+            name=f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}",
+            type=PlaylistType.DISCOVERY,
+            tracks=tracks,
+        )
+
         # Upsert discovery tracks into museflow_track so they're excluded from future sessions
         discovery_tracks = [
             replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
@@ -250,12 +257,6 @@ class DiscoverTasteUseCase:
         )
         tracks_db_by_pid = {pid: t for t in tracks_db if (pid := t.get_provider_id(MusicProvider.SPOTIFY)) is not None}
         tracks_with_ids = [tracks_db_by_pid[pid] for pid in discovery_spotify_ids if pid in tracks_db_by_pid]
-
-        playlist = await self._provider_library.create_playlist(
-            name=f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}",
-            type=PlaylistType.DISCOVERY,
-            tracks=tracks,
-        )
 
         playlist = replace(
             playlist,
