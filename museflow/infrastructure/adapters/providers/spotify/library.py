@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from museflow import __project_name__
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
@@ -39,10 +39,12 @@ class SpotifyLibraryFactory:
 
     This factory handles the dependency injection required to create a
     `SpotifyLibraryAdapter`, specifically wiring up the `SpotifyOAuthSessionClient`
-    with the necessary repositories and clients.
+    with the unit of work that persists refreshed tokens, and the OAuth client.
+
+    Give it its own unit of work, not the one of the use case: a refresh happens in the middle of a remote call.
     """
 
-    auth_token_repository: OAuthProviderTokenRepository
+    uow: UnitOfWorkPort
     oauth_client: SpotifyOAuthAdapter
 
     def create(self, user: User, auth_token: OAuthProviderUserToken) -> ProviderLibraryPort:
@@ -60,7 +62,7 @@ class SpotifyLibraryFactory:
             session_client=SpotifyOAuthSessionClient(
                 user=user,
                 auth_token=auth_token,
-                auth_token_repository=self.auth_token_repository,
+                uow=self.uow,
                 oauth_client=self.oauth_client,
             ),
         )
