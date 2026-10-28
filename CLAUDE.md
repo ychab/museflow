@@ -81,23 +81,29 @@ class UserRepository(ABC):
 ```python
 async def user_create(
     user_in: UserCreateInput,           # inputs first
-    user_repository: UserRepository,    # repositories next
+    uow: UnitOfWorkPort,                # unit of work next
     password_hasher: PasswordHasherPort, # other ports last
 ) -> User:
-    ...
+    async with uow:
+        return await uow.users.create(user_in, ...)
 ```
 
 **Complex — class with named method (when injected state is needed):**
 ```python
 class ImportStreamingHistoryUseCase:
-    def __init__(self, provider_library: ProviderLibraryPort, track_repository: TrackRepository) -> None:
-        self._provider_library = provider_library
-        self._track_repository = track_repository
+    def __init__(self, uow: UnitOfWorkPort, streaming_history: StreamingHistoryPort) -> None:
+        self._uow = uow
+        self._streaming_history = streaming_history
 
     async def import_history(self, user: User, config: ImportStreamingHistoryConfigInput) -> ImportStreamingHistoryReport:
         ...
 ```
-- Accept ports via parameters (DI). NEVER instantiate repositories inside use cases.
+- Accept ports via parameters (DI). NEVER instantiate repositories inside use cases: reach them through the unit of work (`uow.tracks`, `uow.playlists`, …).
+- **The use case owns the transactions.** Each `async with uow:` block is one short transaction: a clean exit commits, an exception rolls back, `await uow.rollback()` discards on purpose. Open a block per step:
+  - reads that feed a remote call (LLM, provider) sit in a block closed **before** the call: never a remote call, a user prompt or a long wait inside a block;
+  - a step that must survive a later failure (paid LLM batch, checkpoint, import chunk) gets its own block;
+  - writes that must succeed or fail together (a partial state would be *wrong*, not merely incomplete) share one block.
+  When a flow mixes a remote side effect with local writes, do the remote call first, so a provider failure leaves nothing behind locally. Blocks don't nest; one `uow` instance serves one flow at a time.
 - Accept Input Schemas, return Domain Entities (dataclasses). Input Schemas can be Pydantic `BaseModel` **or** `@dataclass(frozen=True, kw_only=True)` — both are valid.
 - Use a class only when the use case holds injected dependencies and is called with user-specific args.
 
@@ -142,9 +148,8 @@ class UserSQLRepository(UserRepository):
 - Inject `AsyncSession`. Use `select/update/delete` (SQLAlchemy 2.0 style, no legacy).
 - `.scalar_one_or_none()` for optional, `.scalar_one()` for required.
 - `.returning()` on inserts/updates/deletes to avoid extra SELECT round-trip. Key returned rows by a column (e.g. fingerprint), never by position: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
-- `await self.session.commit()` then `await self.session.refresh(obj)` after mutations.
-- **Each repository mutation commits on its own, by design**: progress (paid LLM batches, checkpoints, refreshed tokens) survives a later failure, and re-runs are idempotent. When a flow mixes a remote side effect with local writes, do the remote call first, so a provider failure leaves nothing behind locally.
-- **`UnitOfWorkPort.atomic()`** groups writes only when a partial state would be *wrong*, not merely incomplete (today: discover's tracks upsert + playlist save). `SQLUnitOfWork` turns the session's `commit` into `flush` for the block, so repositories stay unchanged. Never put a remote call inside the block, and never nest blocks.
+- **Repositories never commit**: `await self.session.flush()` (then `refresh(obj)` if needed) after mutations, so SQL and integrity errors surface right away. The unit of work commits.
+- `SQLUnitOfWork` opens a new session per block and closes it on exit, so the connection goes back to the pool and no transaction outlives the block. It builds the repositories on that session; add a new repository to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
 - Use `pg_insert(...).on_conflict_do_update(...)` for upserts (PostgreSQL-specific).
 
 ### External API Adapters (Spotify, Gemini)
@@ -170,8 +175,8 @@ class UserSQLRepository(UserRepository):
 - No `Any` unless justified. Ruff line length: 119.
 - Async everywhere: FastAPI, SQLAlchemy, httpx.
 - **A signature either fits on one line (≤ 119 chars) or puts one parameter per line with a trailing comma** — never all parameters together on a single indented line. The trailing comma keeps `ruff format` from collapsing them back.
-- **Group function parameters by logical role** — input schemas first, then repositories, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
-- **In use case functions and class constructors, DI parameters (repositories + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
+- **Group function parameters by logical role** — input schemas first, then the unit of work, then other ports (providers, advisors, hashers). Keep each group contiguous. Callers use keyword args, so order is documentation, not necessity.
+- **In use case functions and class constructors, DI parameters (unit of work + ports) must be contiguous.** Never scatter a port between operation flags or domain inputs — if a port is added later, insert it next to the other DI params, not at the end of the signature.
 - **No single-letter variable names** (`e = enrichment_by_id[...]`): use a descriptive name. Allowed only where the scope is a single expression or idiom: comprehension/generator variables, lambda parameters, loop indexes (`for i, batch in enumerate(...)`) and `except ... as e`.
 - **Group members of the same kind together in a module** (private helper functions, then classes). Never interleave them (no class → function → class).
 - **No duplicated inner functions.** If the same inner function (closure) shape appears in more than one place, centralize it as a decorator or shared helper (e.g. `@self_heal`, tenacity's `@retry`) instead of repeating it. An inner function is acceptable only when it is genuinely specific to a single use case.
@@ -236,6 +241,7 @@ museflow/application/use_cases/user_create.py
 - `autouse=True` only for fixtures every test in scope needs.
 - `request.param` for parametrized fixtures — never module-level `_make_*` helpers.
 - `async_session_db` (auto-rollback) by default; `async_session_trans` only for explicit commit testing.
+- Use cases get `uow` (integration: each block runs in a savepoint of the test transaction) or `mock_uow` (unit: its repositories are the `mock_*_repository` fixtures; `mock_uow.block_open` tells whether a remote call ran inside a block).
 - **Never `with mock.patch(...)` inside a test method** — always a `pytest.fixture` instead.
 
 ### CLI Command Tests

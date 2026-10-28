@@ -45,7 +45,8 @@ Create ALL of the following layers (skip a layer only if it clearly doesn't appl
 - SQLAlchemy 2.0 style: `select/update/delete`
 - `.scalar_one_or_none()` / `.scalar_one()`
 - `.returning()` on mutations
-- `commit()` then `refresh()` after writes
+- `flush()` (then `refresh()` if needed) after writes, never `commit()`: the use case's unit of work commits
+- Expose the repository on `UnitOfWorkPort` and build it in `SQLUnitOfWork.__aenter__`
 
 ### 8. API Endpoint — `museflow/infrastructure/entrypoints/api/v1/endpoints/<name>.py`
 - FastAPI router with proper response models
