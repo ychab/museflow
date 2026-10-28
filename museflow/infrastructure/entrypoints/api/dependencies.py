@@ -11,17 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import jwt
 
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
-from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
-from museflow.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
@@ -45,20 +41,14 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:  # pragma: no cover
-    async with session_scope() as session:
+    """Raw session for the health check only: everything else goes through the unit of work."""
+    async with async_session_factory() as session:
         yield session
 
 
-def get_auth_state_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderStateRepository:
-    return OAuthProviderStateSQLRepository(session)
-
-
-def get_auth_token_repository(session: AsyncSession = Depends(get_db)) -> OAuthProviderTokenRepository:
-    return OAuthProviderTokenSQLRepository(session)
-
-
-def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepository:
-    return UserSQLRepository(session)
+def get_unit_of_work() -> UnitOfWorkPort:
+    # FastAPI caches it for the request, whose steps run one after another.
+    return SQLUnitOfWork(async_session_factory)
 
 
 async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
@@ -78,7 +68,7 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    user_repository: UserRepository = Depends(get_user_repository),
+    uow: UnitOfWorkPort = Depends(get_unit_of_work),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> User:
     logger = logging.getLogger(f"{__name__}.get_current_user")
@@ -106,7 +96,8 @@ async def get_current_user(
         logger.debug("No user ID found in token")
         raise credentials_exception
 
-    user = await user_repository.get_by_id(uuid.UUID(user_id))
+    async with uow:
+        user = await uow.users.get_by_id(uuid.UUID(user_id))
     if user is None:
         logger.debug("No user associated to the token", extra={"user_id": str(user_id)})
         raise credentials_exception
@@ -116,17 +107,17 @@ async def get_current_user(
 
 async def get_user_from_state(
     state: str,
-    auth_state_repository: OAuthProviderStateRepository = Depends(get_auth_state_repository),
-    user_repository: UserRepository = Depends(get_user_repository),
+    uow: UnitOfWorkPort = Depends(get_unit_of_work),
 ) -> User:
     if not state:
         raise HTTPException(status_code=400, detail="Missing state parameter")
 
-    auth_state = await auth_state_repository.consume(state=state)
+    async with uow:
+        auth_state = await uow.auth_states.consume(state=state)
+        user = await uow.users.get_by_id(auth_state.user_id) if auth_state else None
+
     if not auth_state:
         raise HTTPException(status_code=400, detail="Invalid or expired state")
-
-    user = await user_repository.get_by_id(auth_state.user_id)
     if not user:
         raise HTTPException(status_code=400, detail="Unable to load user from state")
 
