@@ -1,6 +1,3 @@
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -20,16 +17,3 @@ async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
     autoflush=False,  # Require explicit .flush() in transaction to see changes
     autocommit=False,  # Require explicit .commit() in transaction to see changes
 )
-
-
-@asynccontextmanager
-async def session_scope() -> AsyncGenerator[AsyncSession]:
-    db_session: AsyncSession = async_session_factory()
-
-    try:
-        yield db_session
-    except:
-        await db_session.rollback()
-        raise
-    finally:
-        await db_session.close()

@@ -8,15 +8,18 @@ from httpx import ASGITransport
 from httpx import AsyncClient
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import pytest
 
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.domain.entities.user import User
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.api.dependencies import get_spotify_oauth
+from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.api.main import app
 
 
@@ -41,6 +44,7 @@ def access_token(access_token_manager: AccessTokenManagerPort, user: User) -> st
 async def async_client(
     mock_api_logger: None,
     async_session_db: AsyncSession,
+    uow_session_factory: async_sessionmaker[AsyncSession],
     request: pytest.FixtureRequest,
 ) -> AsyncGenerator[AsyncClient]:
     """
@@ -78,6 +82,9 @@ async def async_client(
             yield async_session_db
 
         app.dependency_overrides[get_db] = override_get_db
+
+    # Units of work run on the test connection, each block in a savepoint of the test transaction
+    app.dependency_overrides[get_unit_of_work] = lambda: SQLUnitOfWork(uow_session_factory)
 
     # Override Spotify client if fixture is used
     if "spotify_oauth" in request.fixturenames:

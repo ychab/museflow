@@ -5,9 +5,8 @@ from fastapi import HTTPException
 
 import pytest
 
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.user import User
 from museflow.infrastructure.config.settings.app import app_settings
@@ -18,21 +17,21 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_s
 class TestGetCurrentUser:
     async def test__nominal(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        user_repository: UserRepository,
         access_token_manager: AccessTokenManagerPort,
     ) -> None:
         current_user = await get_current_user(
             token=access_token_manager.create({"sub": str(user.id)}),
-            user_repository=user_repository,
+            uow=uow,
             access_token_manager=access_token_manager,
         )
         assert current_user.id == user.id
 
     async def test__error_expired_signature(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        user_repository: UserRepository,
         access_token_manager: AccessTokenManagerPort,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -41,7 +40,7 @@ class TestGetCurrentUser:
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(
                 token=access_token_manager.create({"sub": str(user.id)}),
-                user_repository=user_repository,
+                uow=uow,
                 access_token_manager=access_token_manager,
             )
 
@@ -49,14 +48,14 @@ class TestGetCurrentUser:
 
     async def test__user_not_exists(
         self,
-        user_repository: UserRepository,
+        uow: UnitOfWorkPort,
         access_token_manager: AccessTokenManagerPort,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         with caplog.at_level(logging.DEBUG) and pytest.raises(HTTPException) as exc_info:
             await get_current_user(
                 token=access_token_manager.create({"sub": str(uuid.uuid4())}),
-                user_repository=user_repository,
+                uow=uow,
                 access_token_manager=access_token_manager,
             )
 
@@ -68,15 +67,13 @@ class TestGetCurrentUser:
 class TestGetUserFromState:
     async def test__nominal(
         self,
+        uow: UnitOfWorkPort,
         user: User,
         auth_state: OAuthProviderState,
-        auth_state_repository: OAuthProviderStateRepository,
-        user_repository: UserRepository,
     ) -> None:
         current_user = await get_user_from_state(
             state=auth_state.state,
-            auth_state_repository=auth_state_repository,
-            user_repository=user_repository,
+            uow=uow,
         )
 
         assert current_user is not None
