@@ -15,17 +15,9 @@ from typer.testing import CliRunner
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
-from museflow.application.ports.repositories.users import UserRepository
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
 
-type DatabasePatcherFactory = Callable[[str], ContextPatcher]
 type DependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
 type AsyncDependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
 
@@ -86,22 +78,6 @@ def mock_typer_confirm() -> Iterable[mock.Mock]:
 
 
 @pytest.fixture
-def mock_get_db_factory() -> DatabasePatcherFactory:
-    @contextmanager
-    def _patcher(target_path: str) -> Iterator[mock.Mock]:
-        session_mock = mock.Mock(name="db_session")
-
-        @asynccontextmanager
-        async def get_db() -> AsyncGenerator[mock.Mock]:
-            yield session_mock
-
-        with mock.patch(target_path, side_effect=get_db):
-            yield session_mock
-
-    return _patcher
-
-
-@pytest.fixture
 def mock_dependency_factory() -> DependencyPatcherFactory:
     """Factory to patch standard CLI dependencies (Repositories, Services)."""
 
@@ -129,86 +105,18 @@ def mock_async_context_dependency_factory() -> AsyncDependencyPatcherFactory:
     return _patcher
 
 
-# --- DB session Mock ---
+# --- Unit of work Mock ---
 
 
 @pytest.fixture
-def mock_get_db(target_path: str, mock_get_db_factory: DatabasePatcherFactory) -> Iterable[mock.Mock]:
-    with mock_get_db_factory(f"{target_path}.get_db") as mock_db:
-        yield mock_db
-
-
-# --- Repository Mocks ---
-
-
-@pytest.fixture
-def mock_user_repository(
+def mock_get_unit_of_work(
     target_path: str,
     mock_dependency_factory: DependencyPatcherFactory,
+    mock_uow: mock.AsyncMock,
 ) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=UserRepository)
-    with mock_dependency_factory(f"{target_path}.get_user_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_auth_state_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=OAuthProviderStateRepository)
-    with mock_dependency_factory(f"{target_path}.get_auth_state_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_auth_token_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=OAuthProviderTokenRepository)
-    with mock_dependency_factory(f"{target_path}.get_auth_token_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_track_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=TrackRepository)
-    with mock_dependency_factory(f"{target_path}.get_track_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_blacklist_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=BlacklistRepository)
-    with mock_dependency_factory(f"{target_path}.get_blacklist_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_playlist_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=PlaylistRepository)
-    with mock_dependency_factory(f"{target_path}.get_playlist_repository", repo) as mock_repo:
-        yield mock_repo
-
-
-@pytest.fixture
-def mock_taste_profile_repository(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    repo = mock.AsyncMock(spec=TasteProfileRepository)
-    with mock_dependency_factory(f"{target_path}.get_taste_profile_repository", repo) as mock_repo:
-        yield mock_repo
+    """Patches the command's `get_unit_of_work`; configure the repositories through the `mock_*_repository` fixtures."""
+    with mock_dependency_factory(f"{target_path}.get_unit_of_work", mock_uow) as uow:
+        yield uow
 
 
 # --- Adapter Mocks ---

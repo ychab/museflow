@@ -174,7 +174,7 @@ class TestStatsArtistsCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_track_repository")
+@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_track_repository")
 class TestStatsArtistsLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.artists"
 

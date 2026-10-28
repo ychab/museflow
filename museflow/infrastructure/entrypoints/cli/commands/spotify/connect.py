@@ -5,20 +5,16 @@ from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import typer
 
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_state_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_spotify_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -54,19 +50,18 @@ def connect(
 
 async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -> None:
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
         provider_oauth = await stack.enter_async_context(get_spotify_oauth())
-        user_repository = get_user_repository(session)
-        auth_state_repository = get_auth_state_repository(session)
         state_token_generator = get_state_token_generator()
 
-        user = await user_repository.get_by_email(email)
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
         if not user:
             raise UserNotFound()
 
         authorization_url = await oauth_redirect(
             user=user,
-            auth_state_repository=auth_state_repository,
+            uow=uow,
             provider=MusicProvider.SPOTIFY,
             provider_oauth=provider_oauth,
             state_token_generator=state_token_generator,
@@ -77,8 +72,7 @@ async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -
         typer.launch(str(authorization_url))
 
         await _wait_for_authentication(
-            session=session,
-            auth_state_repository=auth_state_repository,
+            uow=uow,
             user_id=user.id,
             timeout=timeout,
             poll_interval=poll_interval,
@@ -86,8 +80,7 @@ async def connect_logic(email: EmailStr, timeout: float, poll_interval: float) -
 
 
 async def _wait_for_authentication(
-    session: AsyncSession,
-    auth_state_repository: OAuthProviderStateRepository,
+    uow: UnitOfWorkPort,
     user_id: uuid.UUID,
     timeout: float,
     poll_interval: float,
@@ -99,10 +92,9 @@ async def _wait_for_authentication(
         await asyncio.sleep(poll_interval)
         typer.echo(".", nl=False)  # Visual feedback
 
-        # Force SQLAlchemy to forget cached data so we see external updates
-        session.expire_all()
-
-        auth_state = await auth_state_repository.get(user_id=user_id, provider=MusicProvider.SPOTIFY)
+        # A new block per poll: a fresh session sees the state consumed by the API callback.
+        async with uow:
+            auth_state = await uow.auth_states.get(user_id=user_id, provider=MusicProvider.SPOTIFY)
         if auth_state is None:
             return
 

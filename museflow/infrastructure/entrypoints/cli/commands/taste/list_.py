@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
@@ -11,9 +10,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -55,14 +52,10 @@ def list_(
 
 
 async def list_logic(email: EmailStr) -> list[TasteProfile]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        return await list_taste_profiles(
-            user_id=user.id,
-            taste_profile_repository=get_taste_profile_repository(session),
-        )
+    return await list_taste_profiles(user_id=user.id, uow=uow)

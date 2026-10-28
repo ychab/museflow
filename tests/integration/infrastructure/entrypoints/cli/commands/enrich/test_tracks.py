@@ -23,7 +23,7 @@ class TestEnrichTracksLogic:
         result = await enrich_logic(email=user.email)
 
         assert result.enriched_count == 1
-        called_user = mock_use_case.call_args.args[0]
+        called_user = mock_use_case.call_args.kwargs["user"]
         assert called_user.id == user.id
 
     async def test__user_not_found(self, mock_use_case: mock.AsyncMock) -> None:

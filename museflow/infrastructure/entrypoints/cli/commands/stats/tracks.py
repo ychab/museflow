@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 from typing import cast
 
 from pydantic import EmailStr
@@ -13,9 +12,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 from museflow.infrastructure.entrypoints.cli.types import TrackSortBy
@@ -81,24 +78,21 @@ async def tracks_logic(
     score_max: int | None,
     sort: TrackSortBy,
 ) -> list[Track]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if not user:
             raise UserNotFound()
 
-        tracks = await track_repository.get_list(
+        tracks = await uow.tracks.get_list(
             user_id=user.id,
             min_score=score_min if score_min is not None else 0,
             max_score=score_max,
             limit=None,
         )
-        if sort == TrackSortBy.PLAYED_COUNT:
-            tracks.sort(key=lambda t: (-t.played_count, t.artists[0] if t.artists else ""))
-        else:
-            tracks.sort(key=lambda t: (-cast(int, t.score), t.artists[0] if t.artists else ""))
+
+    if sort == TrackSortBy.PLAYED_COUNT:
+        tracks.sort(key=lambda t: (-t.played_count, t.artists[0] if t.artists else ""))
+    else:
+        tracks.sort(key=lambda t: (-cast(int, t.score), t.artists[0] if t.artists else ""))
 
     return tracks[:limit]

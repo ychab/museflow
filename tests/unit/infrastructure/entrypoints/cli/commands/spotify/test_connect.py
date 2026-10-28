@@ -171,7 +171,9 @@ class TestSpotifyConnectCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_auth_state_repository", "mock_spotify_client")
+@pytest.mark.usefixtures(
+    "mock_get_unit_of_work", "mock_user_repository", "mock_auth_state_repository", "mock_spotify_client"
+)
 class TestSpotifyConnectLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect"
 

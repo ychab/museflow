@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from contextlib import AsyncExitStack
 
 import typer
 from rich.console import Console
@@ -12,9 +11,7 @@ from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 console = Console()
@@ -63,17 +60,10 @@ def view(
 
 
 async def view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-        user_repository = get_user_repository(session)
-        playlist_repository = get_playlist_repository(session)
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        return await playlist_view(
-            user=user,
-            playlist_id=playlist_id,
-            playlist_repository=playlist_repository,
-        )
+    return await playlist_view(user=user, playlist_id=playlist_id, uow=uow)

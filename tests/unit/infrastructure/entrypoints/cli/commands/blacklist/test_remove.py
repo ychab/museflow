@@ -73,7 +73,7 @@ class TestRemoveCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_blacklist_repository")
+@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
 class TestRemoveLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

@@ -31,7 +31,6 @@ class TestTracksEnrichUseCase:
         assert result.enriched_count == 1
         assert result.error_count == 0
 
-        # A fresh session: the test session still caches the track as the factory created it.
         async with uow:
             tracks = await uow.tracks.get_list(user_id=user.id)
         assert len(tracks) == 1
@@ -74,7 +73,6 @@ class TestTracksEnrichUseCase:
         )
 
         assert result.enriched_count == 1
-        # A fresh session: the test session still caches the track as the factory created it.
         async with uow:
             tracks = await uow.tracks.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.HIP_HOP]
@@ -96,7 +94,6 @@ class TestTracksEnrichUseCase:
         )
 
         assert result.enriched_count == 1
-        # A fresh session: the test session still caches the track as the factory created it.
         async with uow:
             tracks = await uow.tracks.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.FOLK, GenreTag.INDIE_FOLK]

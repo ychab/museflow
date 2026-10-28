@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
@@ -10,9 +9,7 @@ from museflow.domain.entities.blacklist import BlacklistedArtist
 from museflow.domain.entities.blacklist import BlacklistedTrack
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -34,16 +31,14 @@ def add_artist(
 
 
 async def add_artists_logic(email: EmailStr, artist_names: list[str]) -> list[BlacklistedArtist]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        use_case = AddToBlacklistUseCase(blacklist_repository=get_blacklist_repository(session))
-
-        return [await use_case.add_artist(user_id=user.id, artist_name=artist_name) for artist_name in artist_names]
+    use_case = AddToBlacklistUseCase(uow=uow)
+    return [await use_case.add_artist(user_id=user.id, artist_name=artist_name) for artist_name in artist_names]
 
 
 @app.command("add-track", help="Add a track to your blacklist.")
@@ -67,12 +62,11 @@ def add_track(
 
 
 async def add_track_logic(email: EmailStr, name: str, artist_name: str) -> BlacklistedTrack:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        use_case = AddToBlacklistUseCase(blacklist_repository=get_blacklist_repository(session))
-        return await use_case.add_track(user_id=user.id, name=name, artist_name=artist_name)
+    use_case = AddToBlacklistUseCase(uow=uow)
+    return await use_case.add_track(user_id=user.id, name=name, artist_name=artist_name)

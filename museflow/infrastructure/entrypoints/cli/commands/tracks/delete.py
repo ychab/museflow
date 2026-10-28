@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 from dataclasses import dataclass
 
 from pydantic import EmailStr
@@ -10,9 +9,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.types import SourceFilter
 
@@ -70,40 +67,40 @@ async def delete_logic(
     purge: bool = False,
     yes: bool = False,
 ) -> TracksDeleteResult:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user = await get_user_repository(session).get_by_email(email)
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
         if not user:
             raise UserNotFound()
 
-        track_repository = get_track_repository(session)
-
-        tracks = await track_repository.get_list(
+        tracks = await uow.tracks.get_list(
             user_id=user.id,
             artist_name=artist,
             source=source,
             provider=provider,
         )
-        if name is not None:
-            tracks = [t for t in tracks if t.name.lower() == name.lower()]
 
-        count = len(tracks)
-        if count == 0:
-            return TracksDeleteResult(no_tracks=True)
+    if name is not None:
+        tracks = [t for t in tracks if t.name.lower() == name.lower()]
 
-        if artist and not name and not purge:
-            for track in sorted(tracks, key=lambda t: t.name):
-                typer.echo(f"  {track.name}")
+    count = len(tracks)
+    if count == 0:
+        return TracksDeleteResult(no_tracks=True)
 
-        if not yes:
-            typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
+    if artist and not name and not purge:
+        for track in sorted(tracks, key=lambda t: t.name):
+            typer.echo(f"  {track.name}")
 
-        deleted = await track_repository.delete(
+    # The confirmation waits for the user: keep it out of any block.
+    if not yes:
+        typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
+
+    async with uow:
+        deleted = await uow.tracks.delete(
             user_id=user.id,
             artist_name=artist,
             track_name=name,
             source=source,
             provider=provider,
         )
-        return TracksDeleteResult(deleted_count=deleted)
+    return TracksDeleteResult(deleted_count=deleted)

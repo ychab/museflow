@@ -23,13 +23,9 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
@@ -213,35 +209,25 @@ async def playlist_history_logic(
         PlaylistNoTracksError: If no history tracks match the given filters.
     """
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        auth_token_repository = get_auth_token_repository(session)
-        track_repository = get_track_repository(session)
-        playlist_repository = get_playlist_repository(session)
-
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
+            if not user:
+                raise UserNotFound()
+            auth_token = None if config.dry_run else await uow.auth_tokens.get(user_id=user.id, provider=provider)
 
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
-            auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
             if auth_token is None:
                 raise ProviderAuthTokenNotFoundError()
 
             provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-            provider_library_factory = get_provider_library_factory(
-                provider=provider,
-                session=session,
-                oauth_client=provider_client,
-            )
+            provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
             provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
         return await playlist_history_use_case(
             user=user,
             config=config,
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=provider_library,
         )

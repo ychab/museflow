@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
@@ -10,9 +9,7 @@ import yaml
 
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -39,24 +36,21 @@ def export(
 
 
 async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        tracks = await track_repository.get_list(user_id=user.id)
-        enriched = [t for t in tracks if t.genres or t.moods or t.locales is not None]
-        return [
-            {
-                "fingerprint": t.fingerprint,
-                "genres": [g.value for g in t.genres],
-                "moods": [m.value for m in t.moods],
-                "locales": t.locales,
-            }
-            for t in enriched
-        ]
+        tracks = await uow.tracks.get_list(user_id=user.id)
+
+    enriched = [t for t in tracks if t.genres or t.moods or t.locales is not None]
+    return [
+        {
+            "fingerprint": t.fingerprint,
+            "genres": [g.value for g in t.genres],
+            "moods": [m.value for m in t.moods],
+            "locales": t.locales,
+        }
+        for t in enriched
+    ]

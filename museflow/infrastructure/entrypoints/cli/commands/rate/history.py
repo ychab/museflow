@@ -22,13 +22,9 @@ from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -97,26 +93,19 @@ async def rate_history_logic(
     artist: str | None = None,
 ) -> RateHistoryResult:
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-        blacklist_repository = get_blacklist_repository(session)
-
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
+            if not user:
+                raise UserNotFound()
+            auth_token = (
+                await uow.auth_tokens.get(user_id=user.id, provider=provider) if provider is not None else None
+            )
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-            auth_token_repository = get_auth_token_repository(session)
-            provider_library_factory = get_provider_library_factory(
-                provider=provider,
-                session=session,
-                oauth_client=provider_client,
-            )
-            auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
+            provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
             if auth_token is None:
                 raise ProviderAuthTokenNotFoundError(
                     f"No {provider} auth token found — run 'museflow {provider} connect' first."
@@ -125,18 +114,20 @@ async def rate_history_logic(
 
         if reset:
             typer.confirm("This will clear all history track scores. Continue?", abort=True)
-            count = await track_repository.reset_score(user_id=user.id, source=TrackSource.HISTORY)
+            async with uow:
+                count = await uow.tracks.reset_score(user_id=user.id, source=TrackSource.HISTORY)
             typer.secho(f"Reset {count} score(s).", fg=typer.colors.YELLOW)
 
-        tracks = await track_repository.get_list(
-            user_id=user.id,
-            source=TrackSource.HISTORY,
-            unrated_only=True,
-            exclude_skipped=True,
-            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-            limit=limit,
-            artist_name=artist,
-        )
+        async with uow:
+            tracks = await uow.tracks.get_list(
+                user_id=user.id,
+                source=TrackSource.HISTORY,
+                unrated_only=True,
+                exclude_skipped=True,
+                order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
+                limit=limit,
+                artist_name=artist,
+            )
         if not tracks:
             return RateHistoryResult(no_tracks=True)
 
@@ -206,21 +197,22 @@ async def rate_history_logic(
                 track_id=track_id,
                 score=track_score,
                 user_id=user.id,
-                track_repository=track_repository,
+                uow=uow,
             )
 
         for track_id in tracks_perm_skipped:
             await track_skip(
                 track_id=track_id,
                 user_id=user.id,
-                track_repository=track_repository,
+                uow=uow,
             )
 
-        for track_name, artist_name in blacklist_track_pairs:
-            await blacklist_repository.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
+        async with uow:
+            for track_name, artist_name in blacklist_track_pairs:
+                await uow.blacklist.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
 
-        for artist_name in blacklist_artist_names:
-            await blacklist_repository.add_artist(user_id=user.id, artist_name=artist_name)
+            for artist_name in blacklist_artist_names:
+                await uow.blacklist.add_artist(user_id=user.id, artist_name=artist_name)
 
     return RateHistoryResult(
         rated_count=len(tracks_rated),

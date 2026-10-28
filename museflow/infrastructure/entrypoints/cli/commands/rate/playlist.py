@@ -23,14 +23,9 @@ from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -100,27 +95,19 @@ async def rate_playlist_logic(
     provider: MusicProvider | None = None,
 ) -> RatePlaylistResult:
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        playlist_repository = get_playlist_repository(session)
-        track_repository = get_track_repository(session)
-        blacklist_repository = get_blacklist_repository(session)
-
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
+            if not user:
+                raise UserNotFound()
+            auth_token = (
+                await uow.auth_tokens.get(user_id=user.id, provider=provider) if provider is not None else None
+            )
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-            auth_token_repository = get_auth_token_repository(session)
-            provider_library_factory = get_provider_library_factory(
-                provider=provider,
-                session=session,
-                oauth_client=provider_client,
-            )
-            auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
+            provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
             if auth_token is None:
                 raise ProviderAuthTokenNotFoundError(
                     f"No {provider} auth token found — run 'museflow {provider} connect' first."
@@ -129,18 +116,20 @@ async def rate_playlist_logic(
 
         tracks: list[Track]
         if playlist_id is not None:
-            playlist = await playlist_repository.get(user.id, playlist_id)
+            async with uow:
+                playlist = await uow.playlists.get(user.id, playlist_id)
             if playlist is None:
                 raise PlaylistNotFoundError()
             tracks = playlist.tracks
         else:
-            tracks = await track_repository.get_list(
-                user_id=user.id,
-                source=TrackSource.DISCOVERY,
-                unrated_only=True,
-                order=[(TrackOrderBy.CREATED_AT, SortOrder.DESC)],
-                limit=limit,
-            )
+            async with uow:
+                tracks = await uow.tracks.get_list(
+                    user_id=user.id,
+                    source=TrackSource.DISCOVERY,
+                    unrated_only=True,
+                    order=[(TrackOrderBy.CREATED_AT, SortOrder.DESC)],
+                    limit=limit,
+                )
             if not tracks:
                 return RatePlaylistResult(no_tracks=True)
 
@@ -206,14 +195,15 @@ async def rate_playlist_logic(
                 track_id=track_id,
                 score=track_score,
                 user_id=user.id,
-                track_repository=track_repository,
+                uow=uow,
             )
 
-        for track_name, artist_name in blacklist_track_pairs:
-            await blacklist_repository.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
+        async with uow:
+            for track_name, artist_name in blacklist_track_pairs:
+                await uow.blacklist.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
 
-        for artist_name in blacklist_artist_names:
-            await blacklist_repository.add_artist(user_id=user.id, artist_name=artist_name)
+            for artist_name in blacklist_artist_names:
+                await uow.blacklist.add_artist(user_id=user.id, artist_name=artist_name)
 
     return RatePlaylistResult(
         rated_count=len(tracks_rated),

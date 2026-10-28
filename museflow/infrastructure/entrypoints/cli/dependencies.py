@@ -1,19 +1,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -22,14 +13,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
-from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
-from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
-from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
-from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
-from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
-from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
-from museflow.infrastructure.adapters.database.session import session_scope
+from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
@@ -59,12 +43,6 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 
 
 # --- Context manager ---
-
-
-@asynccontextmanager
-async def get_db() -> AsyncGenerator[AsyncSession]:
-    async with session_scope() as session:
-        yield session
 
 
 @asynccontextmanager
@@ -153,24 +131,15 @@ async def get_taste_profiler(profiler: TasteProfiler) -> AsyncGenerator[TastePro
 # --- Adapter manager ---
 
 
-def get_spotify_library_factory(
-    session: AsyncSession,
-    spotify_client: SpotifyOAuthAdapter,
-) -> SpotifyLibraryFactory:
-    return SpotifyLibraryFactory(
-        auth_token_repository=get_auth_token_repository(session),
-        oauth_client=spotify_client,
-    )
+def get_spotify_library_factory(spotify_client: SpotifyOAuthAdapter) -> SpotifyLibraryFactory:
+    # Its own unit of work: a token refresh happens in the middle of a remote call of the use case.
+    return SpotifyLibraryFactory(uow=get_unit_of_work(), oauth_client=spotify_client)
 
 
-def get_provider_library_factory(
-    provider: MusicProvider,
-    session: AsyncSession,
-    oauth_client: SpotifyOAuthAdapter,
-) -> SpotifyLibraryFactory:
+def get_provider_library_factory(provider: MusicProvider, oauth_client: SpotifyOAuthAdapter) -> SpotifyLibraryFactory:
     match provider:
         case MusicProvider.SPOTIFY:
-            return get_spotify_library_factory(session=session, spotify_client=oauth_client)
+            return get_spotify_library_factory(spotify_client=oauth_client)
         case _:
             raise ValueError(f"Unknown provider: {provider}")
 
@@ -183,39 +152,11 @@ def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPo
             raise ValueError(f"Unknown provider: {provider}")
 
 
-# --- Repositories ---
+# --- Unit of work ---
 
 
-def get_user_repository(session: AsyncSession) -> UserRepository:
-    return UserSQLRepository(session)
-
-
-def get_auth_state_repository(session: AsyncSession) -> OAuthProviderStateRepository:
-    return OAuthProviderStateSQLRepository(session)
-
-
-def get_auth_token_repository(session: AsyncSession) -> OAuthProviderTokenRepository:
-    return OAuthProviderTokenSQLRepository(session)
-
-
-def get_track_repository(session: AsyncSession) -> TrackRepository:
-    return TrackSQLRepository(session)
-
-
-def get_taste_profile_repository(session: AsyncSession) -> TasteProfileRepository:
-    return TasteProfileSQLRepository(session)
-
-
-def get_blacklist_repository(session: AsyncSession) -> BlacklistRepository:
-    return BlacklistSQLRepository(session)
-
-
-def get_playlist_repository(session: AsyncSession) -> PlaylistRepository:
-    return PlaylistSQLRepository(session)
-
-
-def get_unit_of_work(session: AsyncSession) -> UnitOfWorkPort:
-    return SQLUnitOfWork(session)
+def get_unit_of_work() -> UnitOfWorkPort:
+    return SQLUnitOfWork(async_session_factory)
 
 
 # --- Services ---

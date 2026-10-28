@@ -9,9 +9,8 @@ from museflow.application.use_cases.user_create import user_create
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.infrastructure.entrypoints.cli.commands.users import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
@@ -43,11 +42,8 @@ def create(
 async def user_create_logic(email: EmailStr, password: str) -> User:
     password_hasher = get_password_hasher()
 
-    async with get_db() as session:
-        user = await user_create(
-            user_data=UserCreateInput(email=email, password=password),
-            user_repository=get_user_repository(session),
-            password_hasher=password_hasher,
-        )
-
-    return user
+    return await user_create(
+        user_data=UserCreateInput(email=email, password=password),
+        uow=get_unit_of_work(),
+        password_hasher=password_hasher,
+    )

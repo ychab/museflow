@@ -1,6 +1,5 @@
 import asyncio
 from collections import defaultdict
-from contextlib import AsyncExitStack
 from dataclasses import dataclass
 
 from pydantic import EmailStr
@@ -13,9 +12,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -79,16 +76,12 @@ async def candidates_logic(
     max_tracks: int,
     min_avg: float,
 ) -> list[CandidateRow]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if not user:
             raise UserNotFound()
 
-        all_tracks = await track_repository.get_list(
+        all_tracks = await uow.tracks.get_list(
             user_id=user.id,
             source=source.to_track_source(),
             limit=None,

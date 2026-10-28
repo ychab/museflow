@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
@@ -11,9 +10,7 @@ import yaml
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -42,19 +39,14 @@ def export(
 
 
 async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        rated = await track_repository.get_list(user_id=user.id, min_score=DISCOVERY_TRACK_SCORE_MIN)
-        skipped = await track_repository.get_list(user_id=user.id, score_skipped_only=True)
+        rated = await uow.tracks.get_list(user_id=user.id, min_score=DISCOVERY_TRACK_SCORE_MIN)
+        skipped = await uow.tracks.get_list(user_id=user.id, score_skipped_only=True)
 
-        result: list[dict[str, Any]] = [{"fingerprint": t.fingerprint, "score": t.score} for t in rated]
-        result += [{"fingerprint": t.fingerprint, "score_skipped": True} for t in skipped]
-        return result
+    result: list[dict[str, Any]] = [{"fingerprint": t.fingerprint, "score": t.score} for t in rated]
+    result += [{"fingerprint": t.fingerprint, "score_skipped": True} for t in skipped]
+    return result
