@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
@@ -8,9 +7,7 @@ import typer
 from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistUseCase
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -34,12 +31,11 @@ def purge(
 
 
 async def purge_logic(email: EmailStr) -> int:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        use_case = RemoveFromBlacklistUseCase(blacklist_repository=get_blacklist_repository(session))
-        return await use_case.purge(user_id=user.id)
+    use_case = RemoveFromBlacklistUseCase(uow=uow)
+    return await use_case.purge(user_id=user.id)

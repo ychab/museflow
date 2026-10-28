@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
@@ -11,9 +10,7 @@ from museflow.application.use_cases.blacklist_list import list_blacklist
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 console = Console()
@@ -51,11 +48,10 @@ def list_(
 
 
 async def list_logic(email: EmailStr) -> UserBlacklist:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        return await list_blacklist(user_id=user.id, blacklist_repository=get_blacklist_repository(session))
+    return await list_blacklist(user_id=user.id, uow=uow)

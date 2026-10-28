@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,9 +14,7 @@ from museflow.application.inputs.enrich import EnrichEntryInput
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -58,19 +55,15 @@ def import_(
 
 
 async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    entries = TypeAdapter(list[EnrichEntryInput]).validate_python(data)
 
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    # One block: the import is saved as a whole, or not at all.
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        entries = TypeAdapter(list[EnrichEntryInput]).validate_python(data)
-
-        all_tracks = await track_repository.get_list(user_id=user.id)
+        all_tracks = await uow.tracks.get_list(user_id=user.id)
         fingerprint_to_track = {t.fingerprint: t for t in all_tracks}
 
         updated_tracks = []
@@ -85,6 +78,6 @@ async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
             )
 
         if updated_tracks:
-            await track_repository.bulk_update(updated_tracks, fields=frozenset(EnrichField))
+            await uow.tracks.bulk_update(updated_tracks, fields=frozenset(EnrichField))
 
-        return EnrichImportResult(imported_count=len(updated_tracks), not_found_count=not_found_count)
+    return EnrichImportResult(imported_count=len(updated_tracks), not_found_count=not_found_count)

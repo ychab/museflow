@@ -27,7 +27,7 @@ class TestDependencies:
 
     def test__get_provider_library_factory__unknown(self) -> None:
         with pytest.raises(ValueError, match="Unknown provider: FOO"):
-            get_provider_library_factory(provider="FOO", session=mock.Mock(), oauth_client=mock.Mock())  # type: ignore[arg-type]
+            get_provider_library_factory(provider="FOO", oauth_client=mock.Mock())  # type: ignore[arg-type]
 
     def test__get_streaming_history_adapter__unknown(self) -> None:
         with pytest.raises(ValueError, match="Unknown provider: FOO"):

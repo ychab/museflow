@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,12 +10,9 @@ import typer
 import yaml
 
 from museflow.application.inputs.rate import RateEntryInput
-from museflow.application.use_cases.rate import track_skip
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -58,19 +54,15 @@ def import_(
 
 
 async def import_logic(email: EmailStr, data: list[Any]) -> RateImportResult:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
+    entries = TypeAdapter(list[RateEntryInput]).validate_python(data)
 
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    # One block: the import is saved as a whole, or not at all.
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        entries = TypeAdapter(list[RateEntryInput]).validate_python(data)
-
-        all_tracks = await track_repository.get_list(user_id=user.id)
+        all_tracks = await uow.tracks.get_list(user_id=user.id)
         fingerprint_to_id = {t.fingerprint: t.id for t in all_tracks}
 
         imported_count = 0
@@ -82,12 +74,12 @@ async def import_logic(email: EmailStr, data: list[Any]) -> RateImportResult:
                 continue
             track_id = fingerprint_to_id[entry.fingerprint]
             if entry.score_skipped:
-                await track_skip(track_id=track_id, user_id=user.id, track_repository=track_repository)
+                await uow.tracks.skip(user_id=user.id, track_id=track_id)
                 skipped_count += 1
             elif entry.score is not None:
-                await track_repository.rate(user_id=user.id, track_id=track_id, score=entry.score)
+                await uow.tracks.rate(user_id=user.id, track_id=track_id, score=entry.score)
                 imported_count += 1
 
-        return RateImportResult(
-            imported_count=imported_count, skipped_count=skipped_count, not_found_count=not_found_count
-        )
+    return RateImportResult(
+        imported_count=imported_count, skipped_count=skipped_count, not_found_count=not_found_count
+    )

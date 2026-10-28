@@ -14,11 +14,8 @@ from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profiler
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -99,22 +96,15 @@ async def build_logic(
     rated_only: bool,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
         profiler_adapter = await stack.enter_async_context(get_taste_profiler(profiler))
 
-        user_repository = get_user_repository(session)
-        track_repository = get_track_repository(session)
-        taste_profile_repository = get_taste_profile_repository(session)
-
-        user = await user_repository.get_by_email(email)
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        use_case = BuildTasteProfileUseCase(
-            profiler=profiler_adapter,
-            track_repository=track_repository,
-            taste_profile_repository=taste_profile_repository,
-        )
+        use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter)
         config = BuildTasteProfileConfigInput(
             name=name,
             resume=resume,

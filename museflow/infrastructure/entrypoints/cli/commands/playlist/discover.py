@@ -25,17 +25,10 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import ADVISOR_TO_PROFILER
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor_adapter
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_playlist_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
-from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 console = Console()
@@ -227,42 +220,24 @@ async def discover_logic(
     profiler = ADVISOR_TO_PROFILER[advisor]
 
     async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        auth_token_repository = get_auth_token_repository(session)
-        track_repository = get_track_repository(session)
-        taste_profile_repository = get_taste_profile_repository(session)
-        blacklist_repository = get_blacklist_repository(session)
-        playlist_repository = get_playlist_repository(session)
-        unit_of_work = get_unit_of_work(session)
+        uow = get_unit_of_work()
+        async with uow:
+            user = await uow.users.get_by_email(email)
+            if not user:
+                raise UserNotFound()
+            auth_token = await uow.auth_tokens.get(user_id=user.id, provider=provider)
+        if auth_token is None:
+            raise ProviderAuthTokenNotFoundError()
 
         provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-        provider_library_factory = get_provider_library_factory(
-            provider=provider,
-            session=session,
-            oauth_client=provider_client,
-        )
+        provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
+        provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
         advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
         reconciler = get_reconciler()
 
-        user = await user_repository.get_by_email(email)
-        if not user:
-            raise UserNotFound()
-
-        auth_token = await auth_token_repository.get(user_id=user.id, provider=provider)
-        if auth_token is None:
-            raise ProviderAuthTokenNotFoundError()
-
-        provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
-
         use_case = DiscoverTasteUseCase(
-            track_repository=track_repository,
-            taste_profile_repository=taste_profile_repository,
-            blacklist_repository=blacklist_repository,
-            playlist_repository=playlist_repository,
-            unit_of_work=unit_of_work,
+            uow=uow,
             provider_library=provider_library,
             advisor=advisor_adapter,
             reconciler=reconciler,

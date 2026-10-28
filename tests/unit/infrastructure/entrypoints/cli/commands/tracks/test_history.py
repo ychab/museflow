@@ -227,7 +227,7 @@ class TestHistoryCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_db",
+    "mock_get_unit_of_work",
     "mock_user_repository",
     "mock_track_repository",
 )

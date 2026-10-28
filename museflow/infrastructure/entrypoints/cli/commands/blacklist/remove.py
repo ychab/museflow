@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
 
@@ -10,9 +9,7 @@ from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistU
 from museflow.domain.exceptions import BlacklistItemNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_blacklist_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -36,11 +33,11 @@ def remove(
 
 
 async def remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-        user = await get_user_repository(session).get_by_email(email)
-        if not user:
-            raise UserNotFound()
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        use_case = RemoveFromBlacklistUseCase(blacklist_repository=get_blacklist_repository(session))
-        await use_case.remove(user_id=user.id, item_ids=item_ids)
+    use_case = RemoveFromBlacklistUseCase(uow=uow)
+    await use_case.remove(user_id=user.id, item_ids=item_ids)

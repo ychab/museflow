@@ -11,9 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.spotify import app
 from museflow.infrastructure.entrypoints.cli.commands.spotify import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_auth_token_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -35,12 +33,9 @@ def info(
 
 
 async def info_logic(email: EmailStr) -> OAuthProviderUserToken | None:
-    async with get_db() as session:
-        user_repository = get_user_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound(f"User with email '{email}' not found.")
 
-        auth_token_repository = get_auth_token_repository(session)
-        return await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        return await uow.auth_tokens.get(user_id=user.id, provider=MusicProvider.SPOTIFY)

@@ -80,7 +80,7 @@ class TestListCommand:
         assert "Playlists" in result.output
 
 
-@pytest.mark.usefixtures("mock_get_db", "mock_user_repository", "mock_playlist_repository")
+@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_playlist_repository")
 class TestListLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.list_"
 

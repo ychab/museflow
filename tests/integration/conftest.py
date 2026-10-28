@@ -5,12 +5,14 @@ from collections.abc import Iterable
 
 from pydantic import HttpUrl
 
+from sqlalchemy import event
 from sqlalchemy import make_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import ORMExecuteState
 
 import pytest
 from tenacity import stop_after_attempt
@@ -73,6 +75,11 @@ from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
+
+
+def _populate_existing(orm_execute_state: ORMExecuteState) -> None:
+    if orm_execute_state.is_select:
+        orm_execute_state.update_execution_options(populate_existing=True)
 
 
 @pytest.fixture(scope="session")
@@ -193,6 +200,10 @@ async def async_session_db(
             # The data is visible to subsequent selects in the test, but
             # allows the rollback below to still work.
             async_session.commit = async_session.flush  # type: ignore[method-assign]
+
+            # Code under test writes through its own sessions (units of work): reload rows on every SELECT so the
+            # test session never serves an object it cached before those writes.
+            event.listen(async_session.sync_session, "do_orm_execute", _populate_existing)
 
             yield async_session
 

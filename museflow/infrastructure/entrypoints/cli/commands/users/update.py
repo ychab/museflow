@@ -9,9 +9,8 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.use_cases.user_update import user_update
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.users import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
@@ -47,16 +46,15 @@ async def user_update_logic(
 ) -> None:
     password_hasher = get_password_hasher()
 
-    async with get_db() as session:
-        user_repository = get_user_repository(session)
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_id(user_id)
+    if not user:
+        raise UserNotFound()
 
-        user = await user_repository.get_by_id(user_id)
-        if not user:
-            raise UserNotFound()
-
-        await user_update(
-            user=user,
-            user_data=user_data,
-            user_repository=user_repository,
-            password_hasher=password_hasher,
-        )
+    await user_update(
+        user=user,
+        user_data=user_data,
+        uow=uow,
+        password_hasher=password_hasher,
+    )

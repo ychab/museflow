@@ -2,7 +2,6 @@ import asyncio
 import dataclasses
 import tempfile
 import webbrowser
-from contextlib import AsyncExitStack
 from enum import StrEnum
 from pathlib import Path
 
@@ -17,9 +16,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_db
-from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
-from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -61,21 +58,17 @@ def view(
 
 
 async def view_logic(email: EmailStr, name: str) -> TasteProfile:
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(get_db())
-
-        user_repository = get_user_repository(session)
-        taste_profile_repository = get_taste_profile_repository(session)
-
-        user = await user_repository.get_by_email(email)
+    async with get_unit_of_work() as uow:
+        user = await uow.users.get_by_email(email)
         if user is None:
             raise UserNotFound()
 
-        taste_profile = await taste_profile_repository.get(user_id=user.id, name=name)
-        if not taste_profile:
-            raise TasteProfileNotFoundException()
+        taste_profile = await uow.taste_profiles.get(user_id=user.id, name=name)
 
-        return taste_profile
+    if not taste_profile:
+        raise TasteProfileNotFoundException()
+
+    return taste_profile
 
 
 def generate_profile_html_content(taste_profile: TasteProfile) -> str:
