@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 
@@ -20,16 +20,17 @@ class EnrichTracksReport:
 async def tracks_enrich(
     user: User,
     config: EnrichTracksConfigInput,
-    track_repository: TrackRepository,
+    uow: UnitOfWorkPort,
     track_enricher: TrackEnricherPort,
 ) -> EnrichTracksReport:
     missing_fields = None if config.force else config.fields
 
-    tracks = await track_repository.get_list(
-        user_id=user.id,
-        missing_fields=missing_fields,
-        limit=config.limit,
-    )
+    async with uow:
+        tracks = await uow.tracks.get_list(
+            user_id=user.id,
+            missing_fields=missing_fields,
+            limit=config.limit,
+        )
 
     if not tracks:
         return EnrichTracksReport(enriched_count=0, error_count=0)
@@ -83,7 +84,9 @@ async def tracks_enrich(
             error_count += 1
             continue
 
-        await track_repository.bulk_update(enriched_tracks, fields=config.fields)
+        # One block per batch: a paid batch survives a later failure.
+        async with uow:
+            await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
         enriched_count += len(enriched_tracks)
         logger.info(
             f"Enriched batch {i}/{total_batches} ({len(enriched_tracks)}/{len(batch)} tracks)",

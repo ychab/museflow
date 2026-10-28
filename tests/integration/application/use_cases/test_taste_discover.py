@@ -1,19 +1,13 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
@@ -23,21 +17,13 @@ class TestDiscoverTasteUseCase:
     @pytest.fixture
     def use_case(
         self,
-        track_repository: TrackRepository,
-        taste_profile_repository: TasteProfileRepository,
-        blacklist_repository: BlacklistRepository,
-        playlist_repository: PlaylistRepository,
-        async_session_db: AsyncSession,
+        uow: UnitOfWorkPort,
         spotify_library: ProviderLibraryPort,
         gemini_advisor: GeminiAdvisorAdapter,
         reconciler: Reconciler,
     ) -> DiscoverTasteUseCase:
         return DiscoverTasteUseCase(
-            track_repository=track_repository,
-            taste_profile_repository=taste_profile_repository,
-            blacklist_repository=blacklist_repository,
-            playlist_repository=playlist_repository,
-            unit_of_work=SQLUnitOfWork(async_session_db),
+            uow=uow,
             provider_library=spotify_library,
             advisor=gemini_advisor,
             reconciler=reconciler,
@@ -48,7 +34,6 @@ class TestDiscoverTasteUseCase:
         self,
         use_case: DiscoverTasteUseCase,
         user: User,
-        taste_profile_repository: TasteProfileRepository,
     ) -> None:
         await TasteProfileModelFactory.create_async(user_id=user.id, profiler=TasteProfiler.GEMINI.value)
 

@@ -1,11 +1,12 @@
 import uuid
 
-from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.taste import TasteProfile
 
 
 async def list_taste_profiles(
     user_id: uuid.UUID,
-    taste_profile_repository: TasteProfileRepository,
+    uow: UnitOfWorkPort,
 ) -> list[TasteProfile]:
-    return await taste_profile_repository.list(user_id=user_id)
+    async with uow:
+        return await uow.taste_profiles.list(user_id=user_id)

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.user import User
@@ -45,11 +45,11 @@ class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def use_case(
         self,
-        track_repository: TrackRepository,
+        uow: UnitOfWorkPort,
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
-            track_repository=track_repository,
+            uow=uow,
             streaming_history=spotify_streaming_history,
         )
 
@@ -229,7 +229,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         dup_use_case = ImportStreamingHistoryUseCase(
-            track_repository=use_case._track_repository,
+            uow=use_case._uow,
             streaming_history=spotify_streaming_history,
         )
 

@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Any
 from unittest import mock
 
+import httpx
+
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -92,14 +94,12 @@ class TestBuildTasteProfileUseCase:
     @pytest.fixture
     def use_case(
         self,
+        mock_uow: mock.AsyncMock,
         gemini_profiler: GeminiTasteProfileAdapter,
-        mock_track_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=gemini_profiler,
-            track_repository=mock_track_repository,
-            taste_profile_repository=mock_taste_profile_repository,
+            uow=mock_uow,
         )
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -135,6 +135,45 @@ class TestBuildTasteProfileUseCase:
         assert profile is expected_profile
         mock_taste_profile_repository.upsert.assert_called_once()
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__profiler_calls__run_outside_any_block(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        tracks: list[Track],
+        mock_uow: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = tracks
+        blocks_open: list[bool] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            blocks_open.append(mock_uow.block_open)
+            return httpx.Response(200, json=gemini_response)
+
+        httpx_mock.add_callback(
+            respond,
+            url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+            method="POST",
+            is_reusable=True,
+        )
+        config = BuildTasteProfileConfigInputFactory.build(
+            track_limit=10,
+            batch_size=3,
+            throttling_sleep_seconds=0.0,
+            resume=False,
+        )
+
+        await use_case.build_profile(user=user, config=config)
+
+        # 3 segments + 2 merges + 1 reflection
+        assert blocks_open == [False] * 6
+        # The seeds read, one checkpoint per batch, then the final upsert
+        assert mock_uow.__aenter__.await_count == 5
 
     @pytest.mark.parametrize("tracks", [2], indirect=True)
     async def test__nominal__single_batch(

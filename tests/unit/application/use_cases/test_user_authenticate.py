@@ -12,6 +12,7 @@ from museflow.domain.exceptions import UserNotFound
 class TestUserService:
     async def test_authenticate__nominal(
         self,
+        mock_uow: mock.AsyncMock,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
@@ -21,7 +22,7 @@ class TestUserService:
         user_auth = await user_authenticate(
             email=user.email,
             password="testtest",
-            user_repository=mock_user_repository,
+            uow=mock_uow,
             password_hasher=mock_password_hasher,
         )
         assert user_auth is not None
@@ -29,6 +30,7 @@ class TestUserService:
 
     async def test_authenticate__not_found(
         self,
+        mock_uow: mock.AsyncMock,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
         caplog: pytest.LogCaptureFixture,
@@ -39,12 +41,13 @@ class TestUserService:
             await user_authenticate(
                 email="foo@example.com",
                 password="testtest",
-                user_repository=mock_user_repository,
+                uow=mock_uow,
                 password_hasher=mock_password_hasher,
             )
 
     async def test_authenticate__wrong_password(
         self,
+        mock_uow: mock.AsyncMock,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
@@ -57,13 +60,14 @@ class TestUserService:
             await user_authenticate(
                 email=user.email,
                 password="blahblah",
-                user_repository=mock_user_repository,
+                uow=mock_uow,
                 password_hasher=mock_password_hasher,
             )
 
     @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
     async def test_authenticate__inactive(
         self,
+        mock_uow: mock.AsyncMock,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
@@ -75,6 +79,6 @@ class TestUserService:
             await user_authenticate(
                 email=user.email,
                 password="testtest",
-                user_repository=mock_user_repository,
+                uow=mock_uow,
                 password_hasher=mock_password_hasher,
             )

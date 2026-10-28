@@ -8,10 +8,6 @@ from datetime import datetime
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
@@ -57,21 +53,13 @@ class DiscoverTasteUseCase:
 
     def __init__(
         self,
-        track_repository: TrackRepository,
-        taste_profile_repository: TasteProfileRepository,
-        blacklist_repository: BlacklistRepository,
-        playlist_repository: PlaylistRepository,
-        unit_of_work: UnitOfWorkPort,
+        uow: UnitOfWorkPort,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
         reconciler: Reconciler,
         profiler: TasteProfiler,
     ) -> None:
-        self._track_repository = track_repository
-        self._taste_profile_repository = taste_profile_repository
-        self._blacklist_repository = blacklist_repository
-        self._playlist_repository = playlist_repository
-        self._unit_of_work = unit_of_work
+        self._uow = uow
         self._provider_library = provider_library
         self._advisor = advisor
         self._reconciler = reconciler
@@ -100,26 +88,27 @@ class DiscoverTasteUseCase:
             TasteProfileNotFoundException: If no matching taste profile is found.
             DiscoveryTrackNoNew: If no new tracks are found after all attempts.
         """
-        # Load the taste profile once before the loop
-        if config.profile_name is not None:
-            profile = await self._taste_profile_repository.get(user_id=user.id, name=config.profile_name)
-        else:
-            profile = await self._taste_profile_repository.get_latest(user_id=user.id, profiler=self._profiler)
+        # Load everything the attempts need once, before the loop
+        async with self._uow as uow:
+            if config.profile_name is not None:
+                profile = await uow.taste_profiles.get(user_id=user.id, name=config.profile_name)
+            else:
+                profile = await uow.taste_profiles.get_latest(user_id=user.id, profiler=self._profiler)
 
-        if profile is None:
-            raise TasteProfileNotFoundException()
-        elif profile.status == TasteProfileStatus.BUILDING:
-            raise TasteProfileStatusNotReadyException()
+            if profile is None:
+                raise TasteProfileNotFoundException()
+            elif profile.status == TasteProfileStatus.BUILDING:
+                raise TasteProfileStatusNotReadyException()
 
-        blacklist = await self._blacklist_repository.get_all(user.id)
+            blacklist = await uow.blacklist.get_all(user.id)
+            liked_tracks = await uow.tracks.get_list(
+                user_id=user.id,
+                min_score=config.liked_tracks_score_threshold,
+                limit=config.liked_tracks_limit,
+            )
+
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
-
-        liked_tracks = await self._track_repository.get_list(
-            user_id=user.id,
-            min_score=config.liked_tracks_score_threshold,
-            limit=config.liked_tracks_limit,
-        )
 
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []
@@ -175,7 +164,7 @@ class DiscoverTasteUseCase:
             tracks_survived = await filter_known_tracks(
                 user=user,
                 tracks_scored=tracks_all,
-                track_repository=self._track_repository,
+                uow=self._uow,
             )
             logger.info(f"Tracks after filtering known: {len(tracks_survived)}")
 
@@ -247,9 +236,9 @@ class DiscoverTasteUseCase:
             replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
             for t in tracks
         ]
-        # One transaction: the discovery tracks and their local playlist are saved together, or not at all.
-        async with self._unit_of_work.atomic():
-            track_ids, _ = await self._track_repository.bulk_upsert(discovery_tracks, batch_size=100)
+        # One block: the discovery tracks and their local playlist are saved together, or not at all.
+        async with self._uow as uow:
+            track_ids, _ = await uow.tracks.bulk_upsert(discovery_tracks, batch_size=100)
             # The DB IDs are needed for the join table FK (an existing row keeps its own ID).
             tracks_with_ids = [replace(t, id=track_ids[t.fingerprint]) for t in discovery_tracks]
 
@@ -263,7 +252,7 @@ class DiscoverTasteUseCase:
                 custom_instructions=config.custom_instructions,
                 tracks=tracks_with_ids,
             )
-            playlist_db = await self._playlist_repository.save(playlist)
+            playlist_db = await uow.playlists.save(playlist)
 
         return DiscoverTasteResult(
             playlist=playlist_db,

@@ -109,11 +109,25 @@ def mock_uow(
     mock_blacklist_repository: mock.AsyncMock,
     mock_playlist_repository: mock.AsyncMock,
 ) -> mock.AsyncMock:
-    """Unit of work whose repositories are the repository mocks above, so tests configure those directly."""
+    """Unit of work whose repositories are the repository mocks above, so tests configure those directly.
+
+    `block_open` tells whether a block is open, so a test can check that a remote call runs outside any block.
+    """
     uow = mock.AsyncMock(spec=UnitOfWorkPort)
-    uow.__aenter__.return_value = uow
-    # A truthy value would swallow the exceptions raised in the block.
-    uow.__aexit__.return_value = None
+    uow.block_open = False
+
+    async def enter() -> mock.AsyncMock:
+        if uow.block_open:
+            raise RuntimeError("A unit of work block is already open")
+        uow.block_open = True
+        return uow
+
+    async def exit_(*exc_info: object) -> None:
+        # Returning None (not a truthy mock) lets the exceptions raised in the block propagate.
+        uow.block_open = False
+
+    uow.__aenter__.side_effect = enter
+    uow.__aexit__.side_effect = exit_
 
     uow.users = mock_user_repository
     uow.auth_states = mock_auth_state_repository

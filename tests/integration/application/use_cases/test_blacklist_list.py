@@ -1,4 +1,4 @@
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.blacklist_list import list_blacklist
 from museflow.domain.entities.user import User
 
@@ -9,22 +9,22 @@ from tests.integration.factories.models.blacklist import BlacklistedTrackModelFa
 class TestListBlacklistUseCase:
     async def test__empty(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        blacklist_repository: BlacklistRepository,
     ) -> None:
-        result = await list_blacklist(user_id=user.id, blacklist_repository=blacklist_repository)
+        result = await list_blacklist(user_id=user.id, uow=uow)
 
         assert result.is_empty
 
     async def test__with_artists_and_tracks(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        blacklist_repository: BlacklistRepository,
     ) -> None:
         artist_db = await BlacklistedArtistModelFactory.create_async(user_id=user.id)
         track_db = await BlacklistedTrackModelFactory.create_async(user_id=user.id)
 
-        result = await list_blacklist(user_id=user.id, blacklist_repository=blacklist_repository)
+        result = await list_blacklist(user_id=user.id, uow=uow)
 
         assert len(result.artists) == 1
         assert result.artists[0].id == artist_db.id

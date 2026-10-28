@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.user import UserUpdateInput
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_update import user_update
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
@@ -17,9 +17,9 @@ from tests.integration.factories.models.user import UserModelFactory
 class TestUserUpdateUseCase:
     async def test_update_email__nominal(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user_update_data = UserUpdateInput(email="foo@example.com")
@@ -27,7 +27,7 @@ class TestUserUpdateUseCase:
         await user_update(
             user=user,
             user_data=user_update_data,
-            user_repository=user_repository,
+            uow=uow,
             password_hasher=password_hasher,
         )
 
@@ -40,9 +40,9 @@ class TestUserUpdateUseCase:
 
     async def test_update_email__same_as_before(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user_update_data = UserUpdateInput(email=user.email)
@@ -50,7 +50,7 @@ class TestUserUpdateUseCase:
         await user_update(
             user=user,
             user_data=user_update_data,
-            user_repository=user_repository,
+            uow=uow,
             password_hasher=password_hasher,
         )
 
@@ -62,8 +62,8 @@ class TestUserUpdateUseCase:
 
     async def test_update_email__already_exists(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         other_user_db = await UserModelFactory.create_async()
@@ -73,15 +73,15 @@ class TestUserUpdateUseCase:
             await user_update(
                 user=user,
                 user_data=user_update_data,
-                user_repository=user_repository,
+                uow=uow,
                 password_hasher=password_hasher,
             )
 
     async def test_update_password(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        user_repository: UserRepository,
         password_hasher: PasswordHasherPort,
     ) -> None:
         password = "blahblah"
@@ -90,7 +90,7 @@ class TestUserUpdateUseCase:
         user_updated = await user_update(
             user=user,
             user_data=user_update_data,
-            user_repository=user_repository,
+            uow=uow,
             password_hasher=password_hasher,
         )
 
