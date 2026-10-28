@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 from museflow.application.mappers.auth import auth_token_update_from_token_payload
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -34,13 +34,13 @@ class SpotifyOAuthSessionClient:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepository,
+        uow: UnitOfWorkPort,
         oauth_client: SpotifyOAuthAdapter,
         token_buffer_seconds: int = spotify_settings.TOKEN_BUFFER_SECONDS,
     ):
         self.user = user
         self.auth_token = auth_token
-        self.auth_token_repository = auth_token_repository
+        self.uow = uow
         self.oauth_client = oauth_client
         self.token_buffer_seconds = token_buffer_seconds
 
@@ -147,17 +147,19 @@ class SpotifyOAuthSessionClient:
                     "Spotify refresh token invalid — user must reconnect",
                     extra={"user_id": str(self.user.id), "provider": MusicProvider.SPOTIFY},
                 )
-                await self.auth_token_repository.delete(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
+                async with self.uow as uow:
+                    await uow.auth_tokens.delete(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
                 raise ProviderAuthTokenNotFoundError(
                     "Spotify refresh token is no longer valid — run 'museflow spotify connect' first."
                 ) from e
 
-            # Update in DB
-            await self.auth_token_repository.update(
-                user_id=self.user.id,
-                provider=MusicProvider.SPOTIFY,
-                auth_token_data=auth_token_update_from_token_payload(token_payload),
-            )
+            # Update in DB, committed right away: the new token must survive a later failure of the command
+            async with self.uow as uow:
+                await uow.auth_tokens.update(
+                    user_id=self.user.id,
+                    provider=MusicProvider.SPOTIFY,
+                    auth_token_data=auth_token_update_from_token_payload(token_payload),
+                )
 
             # Update also in memory
             self.auth_token = auth_token_from_token_payload(

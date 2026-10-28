@@ -244,13 +244,13 @@ async def spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
 def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
-    mock_auth_token_repository: mock.AsyncMock,
+    mock_uow: mock.AsyncMock,
     spotify_oauth: SpotifyOAuthAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
         auth_token=auth_token,
-        auth_token_repository=mock_auth_token_repository,
+        uow=mock_uow,
         oauth_client=spotify_oauth,
     )
 

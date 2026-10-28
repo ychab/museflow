@@ -1,6 +1,9 @@
 import json
 from collections.abc import AsyncGenerator
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
 import pytest
 
 from museflow import __project_name__
@@ -11,6 +14,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -63,6 +67,7 @@ class TestSpotifyLibraryLive:
         self,
         user: User,
         auth_token_repository: OAuthProviderTokenRepository,
+        uow_session_factory: async_sessionmaker[AsyncSession],
         spotify_refresh_token: str,
         spotify_oauth_live: SpotifyOAuthAdapter,
     ) -> SpotifyOAuthSessionClient:
@@ -77,7 +82,7 @@ class TestSpotifyLibraryLive:
         return SpotifyOAuthSessionClient(
             user=user,
             auth_token=auth_token,
-            auth_token_repository=auth_token_repository,
+            uow=SQLUnitOfWork(uow_session_factory),
             oauth_client=spotify_oauth_live,
         )
 

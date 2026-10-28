@@ -257,23 +257,26 @@ def playlist_repository(async_session_db: AsyncSession) -> PlaylistRepository:
 
 
 @pytest.fixture
-def uow(async_session_db: AsyncSession | None) -> UnitOfWorkPort:
-    """Unit of work on the test database.
+def uow_session_factory(async_session_db: AsyncSession | None) -> async_sessionmaker[AsyncSession]:
+    """Session factory for the units of work, on the test database.
 
     With the default session, each block runs in a savepoint of the test transaction: its commit is visible to the
     test and still rolled back at the end. With `async_session_trans`, blocks really commit.
     """
     if async_session_db is None:
-        return SQLUnitOfWork(async_session_factory)
+        return async_session_factory
 
-    return SQLUnitOfWork(
-        async_sessionmaker(
-            bind=async_session_db.bind,
-            join_transaction_mode="create_savepoint",
-            expire_on_commit=False,
-            autoflush=False,
-        )
+    return async_sessionmaker(
+        bind=async_session_db.bind,
+        join_transaction_mode="create_savepoint",
+        expire_on_commit=False,
+        autoflush=False,
     )
+
+
+@pytest.fixture
+def uow(uow_session_factory: async_sessionmaker[AsyncSession]) -> UnitOfWorkPort:
+    return SQLUnitOfWork(uow_session_factory)
 
 
 # --- Entity factories ---
@@ -374,13 +377,14 @@ async def spotify_oauth(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Spoti
 def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
-    auth_token_repository: OAuthProviderTokenRepository,
+    uow_session_factory: async_sessionmaker[AsyncSession],
     spotify_oauth: SpotifyOAuthAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
         auth_token=auth_token,
-        auth_token_repository=auth_token_repository,
+        # Its own unit of work, as in production: a refresh happens in the middle of a remote call.
+        uow=SQLUnitOfWork(uow_session_factory),
         oauth_client=spotify_oauth,
     )
 

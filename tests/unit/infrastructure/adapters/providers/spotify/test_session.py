@@ -33,13 +33,13 @@ class TestSpotifyOAuthSessionClient:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        mock_auth_token_repository: mock.AsyncMock,
+        mock_uow: mock.AsyncMock,
         mock_provider_oauth: mock.AsyncMock,
     ) -> SpotifyOAuthSessionClient:
         return SpotifyOAuthSessionClient(
             user=user,
             auth_token=auth_token,
-            auth_token_repository=mock_auth_token_repository,
+            uow=mock_uow,
             oauth_client=mock_provider_oauth,
         )
 
