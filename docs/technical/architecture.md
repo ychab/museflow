@@ -54,7 +54,8 @@ Two points are easy to miss:
 | `AdvisorPort` | `GeminiAdvisorAdapter` |
 | `TasteProfilerPort` | `GeminiTasteProfileAdapter` |
 | `TrackEnricherPort` | `GeminiTrackEnricherAdapter` |
-| `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over an injected `AsyncSession` |
+| `UnitOfWorkPort` (one short transaction per `async with` block, gives access to the repositories) | `SQLUnitOfWork`, a new session per block |
+| `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over the block's `AsyncSession`; they flush, the unit of work commits |
 | `PasswordHasherPort`, `StateTokenGeneratorPort`, `AccessTokenManagerPort` | Argon2, a `random.SystemRandom` state-token generator, PyJWT |
 
 Where the vendor is already an enum (`MusicProvider`, `MusicAdvisor`, `TasteProfiler`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package. A `/new-provider` command in `.claude/commands/` encodes that checklist.
@@ -71,15 +72,15 @@ sequenceDiagram
     participant CLI as CLI discover / discover_logic
     participant DI as cli/dependencies.py
     participant UC as DiscoverTasteUseCase
-    participant Repo as Repositories (SQL)
+    participant UoW as Unit of work (short SQL blocks)
     participant Adv as AdvisorPort (Gemini adapter)
     participant Rec as Reconciler (domain)
     participant Lib as ProviderLibraryPort (Spotify adapter)
 
-    CLI->>DI: open session, OAuth client, advisor, reconciler
-    CLI->>Repo: user by email, auth token
+    CLI->>DI: unit of work, OAuth client, advisor, reconciler
+    CLI->>UoW: block: user by email, auth token
     CLI->>UC: create_suggestions_playlist(user, config)
-    UC->>Repo: taste profile (named or latest), blacklist, liked tracks
+    UC->>UoW: block: taste profile (named or latest), blacklist, liked tracks
     loop up to max_attempts, stop once playlist_limit reached
         UC->>Adv: get_discovery_strategy(profile, focus, exclusions, liked tracks)
         Adv-->>UC: DiscoveryTasteStrategy (suggested tracks with scores, search queries)
@@ -87,24 +88,23 @@ sequenceDiagram
         UC->>Rec: reconcile(suggestion, candidates)
         Rec-->>UC: best match and confidence, or nothing
         UC->>Lib: search_tracks per strategy query
-        UC->>Repo: drop tracks the user already knows (by fingerprint)
+        UC->>UoW: block: drop tracks the user already knows (by fingerprint)
     end
     UC->>UC: sort by advisor score band then match confidence, cap per artist, trim
-    UC->>Repo: upsert tracks as DISCOVERY source
     UC->>Lib: create_playlist
-    UC->>Repo: save playlist and its tracks
+    UC->>UoW: one block: upsert tracks as DISCOVERY source, save playlist and its tracks
     UC-->>CLI: DiscoverTasteResult
     CLI->>CLI: render panel and tables
 ```
 
 What the diagram encodes, with the reasoning behind each step:
 
-1. **Composition happens in the entrypoint.** `discover_logic` opens the DB session and each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
-2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost.
+1. **Composition happens in the entrypoint.** `discover_logic` gets a unit of work and opens each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
+2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while Gemini thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule.
 3. **Two sources of candidates.** Suggestions are reconciled against the catalogue; the strategy's free-text search queries are also run, with a fixed advisor score of 0.8 and reconciler score of 1.0 (a constant in the use case, see [`taste_discover.py`](https://github.com/ychab/museflow/blob/main/museflow/application/use_cases/taste_discover.py)).
 4. **"Known" is decided by fingerprint**, not by provider id, so a re-release or a different catalogue entry of a track the user already played is still excluded (see [Data model](data-model.md)).
 5. **Ordering is banded.** Tracks are sorted by advisor score rounded down to a band (`DISCOVERY_SCORE_BAND_WIDTH`, default 0.05), then by reconciliation confidence within the band. Banding stops tiny, meaningless score differences from outranking a more certain catalogue match.
-6. **Side effects come last, remote first.** The remote playlist is created first; only then are the discovery tracks upserted (so they are excluded from future sessions) and the local playlist row saved. A provider failure therefore leaves nothing behind locally. The tracks upsert and the playlist save then run in one transaction (`UnitOfWorkPort.atomic()`): a database failure keeps neither. `SQLUnitOfWork` turns the session's `commit` into `flush` for the block, so the repositories, which commit on their own everywhere else, stay unchanged. See [Known gaps](privacy-and-data.md#known-gaps).
+6. **Side effects come last, remote first.** The remote playlist is created first; only then are the discovery tracks upserted (so they are excluded from future sessions) and the local playlist row saved. A provider failure therefore leaves nothing behind locally. The tracks upsert and the playlist save then run in one block of the unit of work: a database failure keeps neither. Elsewhere, flows open one block per step, so paid LLM batches and checkpoints are kept when a later step fails. See [Known gaps](privacy-and-data.md#known-gaps).
 
 ## Conventions and why they exist
 

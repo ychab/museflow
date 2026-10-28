@@ -52,11 +52,15 @@ This project follows **Clean Architecture (Hexagonal)** principles.
 - **Mapping (DB <-> Domain)**:
   - **To Entity**: Implement `to_entity(self) -> Entity` method on the SQLAlchemy Model.
 - **Transactions**:
-  - Each repository mutation commits on its own: progress survives a later failure and re-runs are idempotent.
-  - When a flow mixes a remote side effect (provider API) with local writes, call the remote side first.
-  - When several local writes form one fact (a partial state would be wrong), wrap them in
-    `UnitOfWorkPort.atomic()`. No remote call inside the block, no nested blocks.
-  - Repositories should accept an `AsyncSession`.
+  - Use cases own the transactions through `UnitOfWorkPort`: each `async with uow:` block opens a session, commits on
+    a clean exit, rolls back on an exception (or `await uow.rollback()`), and closes the session.
+  - Repositories accept an `AsyncSession` and never commit: they flush.
+  - One block per step: a step that must survive a later failure (paid LLM batch, checkpoint) gets its own block, so
+    progress is kept and re-runs are idempotent. Writes that form one fact (a partial state would be wrong) share
+    one block.
+  - Never a remote call (LLM, provider), a user prompt or a long wait inside a block: no connection stays idle in
+    transaction. When a flow mixes a remote side effect with local writes, call the remote side first.
+  - Blocks don't nest; one unit of work instance serves one flow at a time.
 
 #### B. External APIs (Spotify, etc.)
 - **DTOs**: Define Pydantic models matching the *external* API shape exactly.

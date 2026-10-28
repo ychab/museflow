@@ -77,8 +77,15 @@ What I would instrument first:
   is really needed: only when a partial state is *wrong*, not merely *incomplete*. Most commands produce an
   incomplete but valid state that a re-run completes, and committing step by step keeps paid LLM work. The real
   defect was ordering: discovery now creates the remote playlist before writing anything locally. Its two local
-  writes (tracks and playlist) then share one transaction, through a small unit of work that leaves the repositories
-  untouched. A database failure right after a remote call can still leave an orphan playlist on the provider.
+  writes (tracks and playlist) then share one transaction. A database failure right after a remote call can still
+  leave an orphan playlist on the provider.
+- **A session per command was the wrong scope.** Repositories committed on their own over one session per command,
+  so a plain read reopened a transaction that stayed *idle in transaction* during the next Gemini call, holding
+  locks that block migrations and the snapshot that VACUUM needs. Two patches came first: a small unit of work that
+  swapped `commit` for `flush` on the shared session, then an explicit "release before a remote call" step, closed
+  unmerged because nobody would think of calling it. The fix was structural: use cases now own short transactions
+  through a classic unit of work (one session per `async with` block, repositories never commit), so a remote call
+  inside a transaction is visible in the code instead of hidden behind a read.
 - **A CLI, not an app.** Perfect for me, a barrier for anyone else.
 - **One application doing everything.** See below.
 
