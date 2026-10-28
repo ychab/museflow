@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 
@@ -21,6 +22,7 @@ async def tracks_enrich(
     user: User,
     config: EnrichTracksConfigInput,
     track_repository: TrackRepository,
+    unit_of_work: UnitOfWorkPort,
     track_enricher: TrackEnricherPort,
 ) -> EnrichTracksReport:
     missing_fields = None if config.force else config.fields
@@ -38,6 +40,9 @@ async def tracks_enrich(
     total_batches = len(batches)
     enriched_count = 0
     error_count = 0
+
+    # End the read transaction: each Gemini batch can take minutes.
+    await unit_of_work.release()
 
     for i, batch in enumerate(batches, start=1):
         try:

@@ -26,3 +26,10 @@ class TestSQLUnitOfWork:
         session.rollback.assert_not_awaited()
         assert session.commit is commit
         assert session.info == {}
+
+    async def test__release_inside_block__raises(self, session: mock.AsyncMock) -> None:
+        unit_of_work = SQLUnitOfWork(session)
+
+        async with unit_of_work.atomic():
+            with pytest.raises(RuntimeError, match="inside a unit of work block"):
+                await unit_of_work.release()

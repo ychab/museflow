@@ -95,11 +95,13 @@ class TestBuildTasteProfileUseCase:
         gemini_profiler: GeminiTasteProfileAdapter,
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=gemini_profiler,
             track_repository=mock_track_repository,
             taste_profile_repository=mock_taste_profile_repository,
+            unit_of_work=mock_unit_of_work,
         )
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -167,6 +169,33 @@ class TestBuildTasteProfileUseCase:
         assert profile is not None
         assert profile.user_id == user.id
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
+
+    @pytest.mark.parametrize("tracks", [2], indirect=True)
+    async def test__read_transaction_released_before_profiler_calls(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
+        mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
+        gemini_profiler: GeminiTasteProfileAdapter,
+        gemini_response: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = tracks
+        for _ in range(2):
+            httpx_mock.add_response(
+                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                method="POST",
+                json=gemini_response,
+            )
+        requests_sent_on_release: list[int] = []
+        mock_unit_of_work.release.side_effect = lambda: requests_sent_on_release.append(len(httpx_mock.get_requests()))
+
+        await use_case.build_profile(user=user, config=config)
+
+        assert requests_sent_on_release == [0]
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__throttling(

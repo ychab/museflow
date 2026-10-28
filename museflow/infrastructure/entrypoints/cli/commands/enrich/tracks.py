@@ -14,6 +14,7 @@ from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -86,9 +87,16 @@ async def enrich_logic(
         enricher = await stack.enter_async_context(get_gemini_enricher())
         user_repository = get_user_repository(session)
         track_repository = get_track_repository(session)
+        unit_of_work = get_unit_of_work(session)
 
         user = await user_repository.get_by_email(email)
         if not user:
             raise UserNotFound()
 
-        return await tracks_enrich(user, config, track_repository, enricher)
+        return await tracks_enrich(
+            user=user,
+            config=config,
+            track_repository=track_repository,
+            unit_of_work=unit_of_work,
+            track_enricher=enricher,
+        )

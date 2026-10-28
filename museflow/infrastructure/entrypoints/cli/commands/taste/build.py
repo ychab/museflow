@@ -18,6 +18,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_db
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profile_repository
 from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_track_repository
+from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import get_user_repository
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -105,6 +106,7 @@ async def build_logic(
         user_repository = get_user_repository(session)
         track_repository = get_track_repository(session)
         taste_profile_repository = get_taste_profile_repository(session)
+        unit_of_work = get_unit_of_work(session)
 
         user = await user_repository.get_by_email(email)
         if user is None:
@@ -114,6 +116,7 @@ async def build_logic(
             profiler=profiler_adapter,
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
+            unit_of_work=unit_of_work,
         )
         config = BuildTasteProfileConfigInput(
             name=name,

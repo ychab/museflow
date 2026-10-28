@@ -11,6 +11,7 @@ from museflow.application.use_cases.taste_profile_build import BuildTasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -33,11 +34,13 @@ class TestGeminiBuildTasteProfileUseCase:
         gemini_profiler: GeminiTasteProfileAdapter,
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
+        async_session_db: AsyncSession,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=gemini_profiler,
             track_repository=track_repository,
             taste_profile_repository=taste_profile_repository,
+            unit_of_work=SQLUnitOfWork(async_session_db),
         )
 
     async def test__nominal(

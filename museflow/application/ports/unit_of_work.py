@@ -4,10 +4,10 @@ from contextlib import AbstractAsyncContextManager
 
 
 class UnitOfWorkPort(ABC):
-    """Port for grouping several repository writes into one transaction.
+    """Port for controlling transactions on top of repositories that commit on their own.
 
     Repositories commit on their own by default (commit per step). Use `atomic()` only when a partial state would
-    be wrong, not merely incomplete.
+    be wrong, not merely incomplete, and `release()` before a long remote call that follows a read.
     """
 
     @abstractmethod
@@ -19,5 +19,17 @@ class UnitOfWorkPort(ABC):
 
         Raises:
             RuntimeError: If a block is already open on the same session.
+        """
+        ...
+
+    @abstractmethod
+    async def release(self) -> None:
+        """End the open transaction, if any, before a long remote call.
+
+        A read opens a transaction that only the next commit ends: without this call, the connection would stay idle
+        in transaction for the whole remote call.
+
+        Raises:
+            RuntimeError: If called inside an `atomic()` block.
         """
         ...

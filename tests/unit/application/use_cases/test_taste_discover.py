@@ -1,11 +1,9 @@
-import contextlib
 import uuid
 from unittest import mock
 
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
@@ -40,19 +38,13 @@ class TestDiscoverTasteUseCase:
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture
-    def mock_unit_of_work(self) -> mock.Mock:
-        unit_of_work = mock.Mock(spec=UnitOfWorkPort)
-        unit_of_work.atomic.return_value = contextlib.nullcontext()
-        return unit_of_work
-
-    @pytest.fixture
     def use_case(
         self,
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
-        mock_unit_of_work: mock.Mock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
         mock_reconciler: mock.Mock,
@@ -733,6 +725,46 @@ class TestDiscoverTasteUseCase:
 
         mock_track_repository.bulk_upsert.assert_not_awaited()
         mock_playlist_repository.save.assert_not_awaited()
+
+    async def test__read_transaction_released_before_remote_calls(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
+        reconciled_track = TrackFactory.build()
+        mock_provider_library.search_tracks.return_value = [reconciled_track]
+        mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        calls = mock.Mock()
+        calls.attach_mock(mock_unit_of_work.release, "release")
+        calls.attach_mock(mock_advisor.get_discovery_strategy, "get_discovery_strategy")
+        calls.attach_mock(mock_provider_library.create_playlist, "create_playlist")
+
+        # The same track comes back at each attempt, so the limit is never reached: both attempts run.
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=2, advisor_limit=5, max_attempts=2, dry_run=False),
+        )
+
+        assert [name for name, _, _ in calls.mock_calls] == [
+            "release",
+            "get_discovery_strategy",
+            "release",
+            "get_discovery_strategy",
+            "release",
+            "create_playlist",
+        ]
 
     async def test__discovery_tracks_upserted_to_museflow_track(
         self,

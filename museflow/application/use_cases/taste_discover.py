@@ -129,6 +129,10 @@ class DiscoverTasteUseCase:
         for attempt in range(1, config.max_attempts + 1):
             logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
 
+            # End the read transaction (initial reads, or the previous attempt's known-tracks filter): the advisor
+            # call can take minutes.
+            await self._unit_of_work.release()
+
             logger.debug("--- Discovery strategy ---")
             strategy = await self._advisor.get_discovery_strategy(
                 profile=profile,
@@ -234,6 +238,9 @@ class DiscoverTasteUseCase:
         if config.dry_run:
             logger.info("Dry-run mode: skipping playlist creation.")
             return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
+
+        # End the read transaction before the provider call.
+        await self._unit_of_work.release()
 
         # Remote first: if the provider call fails, nothing has been written locally.
         playlist = await self._provider_library.create_playlist(

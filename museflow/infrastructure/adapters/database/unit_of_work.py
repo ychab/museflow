@@ -39,3 +39,13 @@ class SQLUnitOfWork(UnitOfWorkPort):
         finally:
             self.session.commit = commit  # type: ignore[method-assign]
             del self.session.info[ATOMIC_SESSION_KEY]
+
+    async def release(self) -> None:
+        # Inside atomic(), commit is a flush: the call would release nothing.
+        if self.session.info.get(ATOMIC_SESSION_KEY):
+            raise RuntimeError("Cannot release the transaction inside a unit of work block")
+
+        # Nothing is pending (every write already committed): this only ends the read transaction. Unlike a
+        # rollback, a commit does not expire the loaded instances (expire_on_commit=False).
+        if self.session.in_transaction():
+            await self.session.commit()

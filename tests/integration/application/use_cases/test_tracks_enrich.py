@@ -1,3 +1,5 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
@@ -6,6 +8,7 @@ from museflow.application.use_cases.tracks_enrich import tracks_enrich
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -17,6 +20,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         track_repository: TrackRepository,
+        async_session_db: AsyncSession,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
@@ -25,6 +29,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(batch_size=10),
             track_repository,
+            SQLUnitOfWork(async_session_db),
             gemini_enricher,
         )
 
@@ -42,6 +47,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         track_repository: TrackRepository,
+        async_session_db: AsyncSession,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"], locales=["en"])
@@ -51,6 +57,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             track_repository,
+            SQLUnitOfWork(async_session_db),
             gemini_enricher,
         )
 
@@ -60,6 +67,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         track_repository: TrackRepository,
+        async_session_db: AsyncSession,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"])
@@ -68,6 +76,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.LOCALE})),
             track_repository,
+            SQLUnitOfWork(async_session_db),
             gemini_enricher,
         )
 
@@ -80,6 +89,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         track_repository: TrackRepository,
+        async_session_db: AsyncSession,
         gemini_enricher: GeminiTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id)
@@ -88,6 +98,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.GENRE})),
             track_repository,
+            SQLUnitOfWork(async_session_db),
             gemini_enricher,
         )
 

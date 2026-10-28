@@ -1,3 +1,4 @@
+import contextlib
 from collections.abc import AsyncGenerator
 from unittest import mock
 
@@ -20,6 +21,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
@@ -96,6 +98,13 @@ def mock_blacklist_repository() -> mock.AsyncMock:
 @pytest.fixture
 def mock_playlist_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=PlaylistRepository)
+
+
+@pytest.fixture
+def mock_unit_of_work() -> mock.AsyncMock:
+    unit_of_work = mock.AsyncMock(spec=UnitOfWorkPort)
+    unit_of_work.atomic.return_value = contextlib.nullcontext()
+    return unit_of_work
 
 
 # --- Entity Mocks ---

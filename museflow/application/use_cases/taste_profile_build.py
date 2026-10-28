@@ -9,6 +9,7 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
@@ -28,10 +29,12 @@ class BuildTasteProfileUseCase:
         profiler: TasteProfilerPort,
         track_repository: TrackRepository,
         taste_profile_repository: TasteProfileRepository,
+        unit_of_work: UnitOfWorkPort,
     ) -> None:
         self._profiler = profiler
         self._track_repository = track_repository
         self._taste_profile_repository = taste_profile_repository
+        self._unit_of_work = unit_of_work
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # Select the most-listened tracks as seeds (best signal quality)
@@ -61,6 +64,9 @@ class BuildTasteProfileUseCase:
                 logger.info(f"Resuming taste profile from batch {start_batch_index + 1} / {len(batches)}")
             else:
                 logger.warning("No checkpoint found for this profile, starting from scratch")
+
+        # End the read transaction: each profiler step can take minutes.
+        await self._unit_of_work.release()
 
         # Index of the step in progress; len(batches) denotes the final reflection step.
         step = start_batch_index + 1

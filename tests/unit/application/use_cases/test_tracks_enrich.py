@@ -20,6 +20,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
@@ -28,16 +29,41 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
         assert result == EnrichTracksReport(enriched_count=0, error_count=0)
         mock_enricher.enrich_tracks.assert_not_awaited()
 
+    async def test__read_transaction_released_before_enricher_calls(
+        self,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = TrackFactory.batch(2)
+        mock_enricher.enrich_tracks.return_value = []
+        calls = mock.Mock()
+        calls.attach_mock(mock_unit_of_work.release, "release")
+        calls.attach_mock(mock_enricher.enrich_tracks, "enrich_tracks")
+
+        await tracks_enrich(
+            user,
+            EnrichTracksConfigInput(batch_size=1),
+            mock_track_repository,
+            mock_unit_of_work,
+            mock_enricher,
+        )
+
+        assert [name for name, _, _ in calls.mock_calls] == ["release", "enrich_tracks", "enrich_tracks"]
+
     async def test__nominal__enriches_all_tracks(
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         tracks = TrackFactory.batch(3)
@@ -49,6 +75,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -62,6 +89,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
@@ -70,6 +98,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(force=True),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -79,6 +108,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
@@ -87,6 +117,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(limit=50),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -98,6 +129,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         tracks = TrackFactory.batch(5)
@@ -108,6 +140,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(batch_size=2),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -117,6 +150,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         tracks = TrackFactory.batch(4)
@@ -131,6 +165,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(batch_size=2),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -141,6 +176,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(3)
@@ -150,6 +186,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -160,6 +197,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         tracks = TrackFactory.batch(3)
@@ -170,6 +208,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -180,6 +219,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build()
@@ -197,6 +237,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -212,6 +253,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(genres=[GenreTag.HIP_HOP], moods=["chill"])
@@ -222,6 +264,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -236,6 +279,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
@@ -244,6 +288,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -255,6 +300,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(locales=["en"])
@@ -267,6 +313,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(fields=frozenset({EnrichField.GENRE})),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -281,6 +328,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(locales=None)
@@ -291,6 +339,7 @@ class TestTracksEnrichUseCase:
             user,
             EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
             mock_track_repository,
+            mock_unit_of_work,
             mock_enricher,
         )
 
@@ -302,6 +351,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -316,6 +366,7 @@ class TestTracksEnrichUseCase:
                 user,
                 EnrichTracksConfigInput(),
                 mock_track_repository,
+                mock_unit_of_work,
                 mock_enricher,
             )
 
@@ -330,6 +381,7 @@ class TestTracksEnrichUseCase:
         self,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_unit_of_work: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -344,6 +396,7 @@ class TestTracksEnrichUseCase:
                 user,
                 EnrichTracksConfigInput(fields=frozenset({EnrichField.MOOD, EnrichField.LOCALE})),
                 mock_track_repository,
+                mock_unit_of_work,
                 mock_enricher,
             )
 

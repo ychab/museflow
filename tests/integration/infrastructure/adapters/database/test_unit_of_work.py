@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +53,38 @@ class TestSQLUnitOfWork:
                 select(func.count()).select_from(PlaylistModel).where(PlaylistModel.user_id == user_id)
             )
         return tracks_count or 0, playlists_count or 0
+
+    @staticmethod
+    async def backend_state(pid: int) -> str | None:
+        async with async_session_factory() as session:
+            state: str | None = await session.scalar(
+                text("SELECT state FROM pg_stat_activity WHERE pid = :pid").bindparams(pid=pid)
+            )
+        return state
+
+    async def test__release__ends_read_transaction(
+        self,
+        async_session_trans: AsyncSession,
+        unit_of_work: SQLUnitOfWork,
+    ) -> None:
+        # Any read opens a transaction (autobegin) that only a commit ends.
+        pid = await async_session_trans.scalar(text("SELECT pg_backend_pid()"))
+        assert pid is not None
+        assert await self.backend_state(pid) == "idle in transaction"
+
+        await unit_of_work.release()
+
+        assert await self.backend_state(pid) != "idle in transaction"
+        assert not async_session_trans.in_transaction()
+
+    async def test__release__no_transaction__noop(
+        self,
+        async_session_trans: AsyncSession,
+        unit_of_work: SQLUnitOfWork,
+    ) -> None:
+        await unit_of_work.release()
+
+        assert not async_session_trans.in_transaction()
 
     async def test__block_succeeds__writes_committed_together(
         self,
