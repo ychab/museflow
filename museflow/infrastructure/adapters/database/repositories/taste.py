@@ -74,7 +74,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         ).returning(TasteProfileModel)
 
         profile_db = (await self.session.execute(upsert_stmt)).scalar_one()
-        await self.session.commit()
+        await self.session.flush()
 
         return profile_db.to_entity()
 
@@ -115,7 +115,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             },
         )
         await self.session.execute(upsert_stmt)
-        await self.session.commit()
+        await self.session.flush()
 
     async def get_checkpoint(self, user_id: uuid.UUID, name: str) -> tuple[TasteProfileData, int] | None:
         stmt = select(TasteProfileModel).where(

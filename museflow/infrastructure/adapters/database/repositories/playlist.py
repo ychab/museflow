@@ -25,7 +25,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         for i, track in enumerate(playlist.tracks):
             self.session.add(PlaylistTrackDB(playlist_id=playlist.id, track_id=track.id, position=i))
 
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(playlist_db)
 
         return replace(playlist_db.to_entity(), tracks=playlist.tracks)
@@ -70,7 +70,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         )
         result = await self.session.execute(stmt)
         deleted = result.scalar_one_or_none() is not None
-        await self.session.commit()
+        await self.session.flush()
         return deleted
 
     async def purge(
@@ -87,5 +87,5 @@ class PlaylistSQLRepository(PlaylistRepository):
 
         result = await self.session.execute(stmt.returning(PlaylistDB.id))
         deleted_ids = result.scalars().all()
-        await self.session.commit()
+        await self.session.flush()
         return len(deleted_ids)
