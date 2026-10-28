@@ -9,6 +9,7 @@ from sqlalchemy import make_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
 
 import pytest
@@ -28,6 +29,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
@@ -47,6 +49,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
@@ -251,6 +254,26 @@ def blacklist_repository(async_session_db: AsyncSession) -> BlacklistRepository:
 @pytest.fixture
 def playlist_repository(async_session_db: AsyncSession) -> PlaylistRepository:
     return PlaylistSQLRepository(async_session_db)
+
+
+@pytest.fixture
+def uow(async_session_db: AsyncSession | None) -> UnitOfWorkPort:
+    """Unit of work on the test database.
+
+    With the default session, each block runs in a savepoint of the test transaction: its commit is visible to the
+    test and still rolled back at the end. With `async_session_trans`, blocks really commit.
+    """
+    if async_session_db is None:
+        return SQLUnitOfWork(async_session_factory)
+
+    return SQLUnitOfWork(
+        async_sessionmaker(
+            bind=async_session_db.bind,
+            join_transaction_mode="create_savepoint",
+            expire_on_commit=False,
+            autoflush=False,
+        )
+    )
 
 
 # --- Entity factories ---

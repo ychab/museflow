@@ -1,20 +1,18 @@
 import uuid
+from dataclasses import replace
 
 from sqlalchemy import func
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.pool import QueuePool
 
 import pytest
 
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
-from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
-from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 
@@ -22,20 +20,13 @@ from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
 
 
+@pytest.mark.usefixtures("async_session_trans")
 class TestSQLUnitOfWork:
-    """Real commits (`async_session_trans`): the default session turns commits into flushes and would hide them."""
+    """Real commits (`async_session_trans`): the default test session runs each block in a savepoint."""
 
     @pytest.fixture
-    def unit_of_work(self, async_session_trans: AsyncSession) -> SQLUnitOfWork:
-        return SQLUnitOfWork(async_session_trans)
-
-    @pytest.fixture
-    def track_repository(self, async_session_trans: AsyncSession) -> TrackRepository:
-        return TrackSQLRepository(async_session_trans)
-
-    @pytest.fixture
-    def playlist_repository(self, async_session_trans: AsyncSession) -> PlaylistRepository:
-        return PlaylistSQLRepository(async_session_trans)
+    def unit_of_work(self) -> SQLUnitOfWork:
+        return SQLUnitOfWork(async_session_factory)
 
     @pytest.fixture
     def tracks(self, user: User) -> list[Track]:
@@ -53,43 +44,64 @@ class TestSQLUnitOfWork:
             )
         return tracks_count or 0, playlists_count or 0
 
-    async def test__block_succeeds__writes_committed_together(
+    async def test__clean_exit__commits_writes_together(
         self,
         unit_of_work: SQLUnitOfWork,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         user: User,
         tracks: list[Track],
     ) -> None:
-        async with unit_of_work.atomic():
-            await track_repository.bulk_upsert(tracks, batch_size=100)
+        async with unit_of_work as uow:
+            track_ids, _ = await uow.tracks.bulk_upsert(tracks, batch_size=100)
             assert await self.count_rows(user.id) == (0, 0)
 
-            tracks_db = await track_repository.get_list(user_id=user.id)
-            await playlist_repository.save(PlaylistFactory.build(user_id=user.id, profile_id=None, tracks=tracks_db))
+            tracks_with_ids = [replace(t, id=track_ids[t.fingerprint]) for t in tracks]
+            await uow.playlists.save(PlaylistFactory.build(user_id=user.id, profile_id=None, tracks=tracks_with_ids))
             assert await self.count_rows(user.id) == (0, 0)
 
         assert await self.count_rows(user.id) == (2, 1)
 
-    async def test__block_fails__writes_rolled_back(
-        self,
-        unit_of_work: SQLUnitOfWork,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
-        user: User,
-        tracks: list[Track],
-    ) -> None:
-        with pytest.raises(IntegrityError):
-            async with unit_of_work.atomic():
-                await track_repository.bulk_upsert(tracks, batch_size=100)
-                tracks_db = await track_repository.get_list(user_id=user.id)
-                # Unknown owner: the foreign key fails, as a database failure would.
-                await playlist_repository.save(
-                    PlaylistFactory.build(user_id=uuid.uuid4(), profile_id=None, tracks=tracks_db)
-                )
+    async def test__exception__rolls_back(self, unit_of_work: SQLUnitOfWork, user: User, tracks: list[Track]) -> None:
+        with pytest.raises(ValueError, match="boom"):
+            async with unit_of_work as uow:
+                await uow.tracks.bulk_upsert(tracks, batch_size=100)
+                raise ValueError("boom")
 
         assert await self.count_rows(user.id) == (0, 0)
 
-        # The session commits again on its own after the block.
-        await track_repository.bulk_upsert(tracks, batch_size=100)
-        assert await self.count_rows(user.id) == (2, 0)
+    async def test__rollback__discards_writes(
+        self,
+        unit_of_work: SQLUnitOfWork,
+        user: User,
+        tracks: list[Track],
+    ) -> None:
+        async with unit_of_work as uow:
+            await uow.tracks.bulk_upsert(tracks, batch_size=100)
+            await uow.rollback()
+
+        assert await self.count_rows(user.id) == (0, 0)
+
+    async def test__exit__returns_connection_to_pool(
+        self,
+        unit_of_work: SQLUnitOfWork,
+        async_engine: AsyncEngine,
+        user: User,
+    ) -> None:
+        pool = async_engine.pool
+        assert isinstance(pool, QueuePool)
+        checked_out = pool.checkedout()
+
+        async with unit_of_work as uow:
+            await uow.tracks.get_list(user_id=user.id)
+            assert pool.checkedout() == checked_out + 1
+
+        assert pool.checkedout() == checked_out
+
+    async def test__block_reused__opens_new_session(self, unit_of_work: SQLUnitOfWork) -> None:
+        async with unit_of_work:
+            first_session = unit_of_work.session
+
+        async with unit_of_work:
+            assert isinstance(unit_of_work.session, AsyncSession)
+            assert unit_of_work.session is not first_session
+
+        assert unit_of_work.session is None
