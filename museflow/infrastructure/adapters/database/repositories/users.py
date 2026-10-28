@@ -40,7 +40,7 @@ class UserSQLRepository(UserRepository):
         user_db = UserModel(**user_dict)
 
         self.session.add(user_db)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(user_db)
 
         return user_db.to_entity()
@@ -55,7 +55,7 @@ class UserSQLRepository(UserRepository):
         result = await self.session.execute(stmt)
         user_db = result.scalar_one()
 
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(user_db)
 
         return user_db.to_entity()
@@ -64,4 +64,4 @@ class UserSQLRepository(UserRepository):
         stmt = delete(UserModel).where(UserModel.id == user_id)
 
         await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()

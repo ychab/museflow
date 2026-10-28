@@ -209,7 +209,7 @@ class TrackSQLRepository(TrackRepository):
             track_ids.update({row.fingerprint: row.id for row in rows})
             created_count += sum(row.was_created for row in rows)
 
-        await self.session.commit()
+        await self.session.flush()
 
         return track_ids, created_count
 
@@ -222,7 +222,7 @@ class TrackSQLRepository(TrackRepository):
             update(TrackModel),
             [{"id": t.id, **{col: getattr(t, col) for col in columns}} for t in tracks],
         )
-        await self.session.commit()
+        await self.session.flush()
 
     async def rate(self, user_id: uuid.UUID, track_id: uuid.UUID, score: int) -> None:
         stmt = (
@@ -234,7 +234,7 @@ class TrackSQLRepository(TrackRepository):
         result = await self.session.execute(stmt)
         if result.scalar_one_or_none() is None:
             raise TrackNotFoundError()
-        await self.session.commit()
+        await self.session.flush()
 
     async def skip(self, user_id: uuid.UUID, track_id: uuid.UUID) -> None:
         stmt = (
@@ -246,7 +246,7 @@ class TrackSQLRepository(TrackRepository):
         result = await self.session.execute(stmt)
         if result.scalar_one_or_none() is None:
             raise TrackNotFoundError()
-        await self.session.commit()
+        await self.session.flush()
 
     async def reset_score(self, user_id: uuid.UUID, source: TrackSource) -> int:
         stmt = (
@@ -258,7 +258,7 @@ class TrackSQLRepository(TrackRepository):
         )
 
         result = await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()
 
         return len(result.scalars().all())
 
@@ -283,7 +283,7 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
 
         result = await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()
         return int(result.rowcount)  # type: ignore
 
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
@@ -314,5 +314,5 @@ class TrackSQLRepository(TrackRepository):
         )
         result = await self.session.execute(delete_stmt)
 
-        await self.session.commit()
+        await self.session.flush()
         return int(result.rowcount)  # type: ignore

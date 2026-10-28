@@ -32,7 +32,7 @@ class BlacklistSQLRepository(BlacklistRepository):
         ).returning(BlacklistedArtistModel)
 
         row = (await self.session.execute(upsert_stmt)).scalar_one()
-        await self.session.commit()
+        await self.session.flush()
 
         return row.to_entity()
 
@@ -50,7 +50,7 @@ class BlacklistSQLRepository(BlacklistRepository):
         ).returning(BlacklistedTrackModel)
 
         row = (await self.session.execute(upsert_stmt)).scalar_one()
-        await self.session.commit()
+        await self.session.flush()
 
         return row.to_entity()
 
@@ -66,7 +66,7 @@ class BlacklistSQLRepository(BlacklistRepository):
             .returning(BlacklistedTrackModel.id)
         )
         removed: set[uuid.UUID] = set(artist_del.scalars()) | set(track_del.scalars())
-        await self.session.commit()
+        await self.session.flush()
         return removed
 
     async def purge(self, user_id: uuid.UUID) -> int:
@@ -78,7 +78,7 @@ class BlacklistSQLRepository(BlacklistRepository):
         )
 
         total = int(deleted_artists.rowcount) + int(deleted_tracks.rowcount)  # type: ignore[attr-defined]
-        await self.session.commit()
+        await self.session.flush()
 
         return total
 
