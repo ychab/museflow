@@ -3,7 +3,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
@@ -60,14 +60,15 @@ async def reconcile_tracks(
 async def filter_known_tracks(
     user: User,
     tracks_scored: list[TrackScored],
-    track_repository: TrackRepository,
+    uow: UnitOfWorkPort,
 ) -> list[TrackScored]:
     if not tracks_scored:
         return []
-    known_identifiers = await track_repository.get_known_identifiers(
-        user_id=user.id,
-        fingerprints=[ts.track.fingerprint for ts in tracks_scored],
-    )
+    async with uow:
+        known_identifiers = await uow.tracks.get_known_identifiers(
+            user_id=user.id,
+            fingerprints=[ts.track.fingerprint for ts in tracks_scored],
+        )
 
     result: list[TrackScored] = []
     for ts in tracks_scored:

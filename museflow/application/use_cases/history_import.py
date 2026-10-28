@@ -5,7 +5,7 @@ from datetime import datetime
 from museflow.application.inputs.history import StreamingHistoryEntry
 from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.ports.providers.history import StreamingHistoryPort
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
@@ -42,8 +42,8 @@ class ImportStreamingHistoryUseCase:
     the repository directly from file metadata — no external API calls.
     """
 
-    def __init__(self, track_repository: TrackRepository, streaming_history: StreamingHistoryPort) -> None:
-        self._track_repository = track_repository
+    def __init__(self, uow: UnitOfWorkPort, streaming_history: StreamingHistoryPort) -> None:
+        self._uow = uow
         self._streaming_history = streaming_history
 
     async def import_history(
@@ -65,10 +65,11 @@ class ImportStreamingHistoryUseCase:
         # Purge if requested
         tracks_purged = 0
         if config.purge:
-            tracks_purged = await self._track_repository.purge(
-                user_id=user.id,
-                provider=MusicProvider.SPOTIFY,
-            )
+            async with self._uow as uow:
+                tracks_purged = await uow.tracks.purge(
+                    user_id=user.id,
+                    provider=MusicProvider.SPOTIFY,
+                )
             logger.info("History tracks purged.\n")
 
         # Collect all play events per track across all files, keyed by fingerprint.
@@ -99,10 +100,11 @@ class ImportStreamingHistoryUseCase:
         # Filter already-known fingerprints
         known_fingerprints: frozenset[str] = frozenset()
         if unique_fingerprints:
-            known_identifiers = await self._track_repository.get_known_identifiers(
-                user_id=user.id,
-                fingerprints=list(unique_fingerprints),
-            )
+            async with self._uow as uow:
+                known_identifiers = await uow.tracks.get_known_identifiers(
+                    user_id=user.id,
+                    fingerprints=list(unique_fingerprints),
+                )
             known_fingerprints = known_identifiers.fingerprints
         unknown_fingerprints = unique_fingerprints - known_fingerprints
         logger.info(f"Collected {len(unknown_fingerprints)} unknown fingerprints.")
@@ -125,7 +127,8 @@ class ImportStreamingHistoryUseCase:
                 )
                 for fp in known_fingerprints
             ]
-            await self._track_repository.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
+            async with self._uow as uow:
+                await uow.tracks.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
             tracks_played_at_updated = len(updated_tracks)
             logger.info(f"Refreshed play data for {tracks_played_at_updated} already-known tracks.")
 
@@ -151,10 +154,12 @@ class ImportStreamingHistoryUseCase:
                 )
                 for fp in chunk_fps
             ]
-            _, created = await self._track_repository.bulk_upsert(
-                tracks=chunk_tracks,
-                batch_size=config.batch_size,
-            )
+            # One block per chunk: an interrupted import keeps the chunks already saved.
+            async with self._uow as uow:
+                _, created = await uow.tracks.bulk_upsert(
+                    tracks=chunk_tracks,
+                    batch_size=config.batch_size,
+                )
             tracks_created += created
             logger.info(f"... upserted {min(offset + config.batch_size, len(unknown_fps))} / {len(unknown_fps)}...")
 

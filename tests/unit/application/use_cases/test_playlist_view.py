@@ -10,7 +10,9 @@ from tests.unit.factories.entities.user import UserFactory
 
 
 class TestPlaylistViewUseCase:
-    async def test__raises_when_not_found(self, mock_playlist_repository: mock.AsyncMock) -> None:
+    async def test__raises_when_not_found(
+        self, mock_uow: mock.AsyncMock, mock_playlist_repository: mock.AsyncMock
+    ) -> None:
         user = UserFactory.build()
         playlist_id = uuid.uuid4()
         mock_playlist_repository.get.return_value = None
@@ -19,5 +21,5 @@ class TestPlaylistViewUseCase:
             await playlist_view(
                 user=user,
                 playlist_id=playlist_id,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
             )

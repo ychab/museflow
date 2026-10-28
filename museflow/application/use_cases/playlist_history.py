@@ -5,8 +5,7 @@ from datetime import datetime
 
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
@@ -27,34 +26,34 @@ class PlaylistHistoryResult:
 async def playlist_history(
     user: User,
     config: PlaylistHistoryConfigInput,
-    track_repository: TrackRepository,
-    playlist_repository: PlaylistRepository,
+    uow: UnitOfWorkPort,
     provider_library: ProviderLibraryPort | None,
 ) -> PlaylistHistoryResult:
     if provider_library is None and not config.dry_run:
         raise ValueError("provider_library is required unless config.dry_run is set")
 
-    exclude_ids = None
-    if not config.allow_duplicate:
-        exclude_ids = list(await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY))
+    async with uow:
+        exclude_ids = None
+        if not config.allow_duplicate:
+            exclude_ids = list(await uow.playlists.get_track_ids(user.id, type=PlaylistType.HISTORY))
 
-    tracks = await track_repository.get_list(
-        user_id=user.id,
-        source=TrackSource.HISTORY,
-        min_score=config.score_min,
-        max_score=config.score_max,
-        artist_name=config.artist_name,
-        genres=config.genres or None,
-        moods=config.moods or None,
-        locales=config.locales or None,
-        played_first_min=config.played_first_min,
-        played_first_max=config.played_first_max,
-        played_last_min=config.played_last_min,
-        played_last_max=config.played_last_max,
-        exclude_ids=exclude_ids,
-        order=[(TrackOrderBy(config.sort_by.value), SortOrder.DESC)],
-        limit=config.limit,
-    )
+        tracks = await uow.tracks.get_list(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            min_score=config.score_min,
+            max_score=config.score_max,
+            artist_name=config.artist_name,
+            genres=config.genres or None,
+            moods=config.moods or None,
+            locales=config.locales or None,
+            played_first_min=config.played_first_min,
+            played_first_max=config.played_first_max,
+            played_last_min=config.played_last_min,
+            played_last_max=config.played_last_max,
+            exclude_ids=exclude_ids,
+            order=[(TrackOrderBy(config.sort_by.value), SortOrder.DESC)],
+            limit=config.limit,
+        )
     if not tracks:
         raise PlaylistNoTracksError()
 
@@ -85,6 +84,7 @@ async def playlist_history(
         type=PlaylistType.HISTORY,
         tracks=tracks,
     )
-    playlist = await playlist_repository.save(playlist)
+    async with uow:
+        playlist = await uow.playlists.save(playlist)
 
     return PlaylistHistoryResult(playlist=playlist, tracks=tracks)

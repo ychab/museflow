@@ -7,7 +7,7 @@ import pytest
 from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.playlist_history import playlist_history
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
@@ -22,9 +22,8 @@ from tests.integration.factories.models.track import TrackModelFactory
 class TestPlaylistHistoryUseCase:
     async def test__nominal__ordered_by_played_count(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=1)
@@ -34,8 +33,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -44,8 +42,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__dry_run__no_playlist_persisted(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
         playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
@@ -55,8 +53,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=20, dry_run=True),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -66,9 +63,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_score_and_artist(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         matching = await TrackModelFactory.create_async(
@@ -93,8 +89,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(score_min=5, artist_name="Matching Artist", limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -103,9 +98,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__dedup_excludes_tracks_from_previous_history_playlist(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
@@ -114,8 +108,7 @@ class TestPlaylistHistoryUseCase:
         first_result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=1),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
         assert first_result.playlist is not None
@@ -124,8 +117,7 @@ class TestPlaylistHistoryUseCase:
         second_result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -134,9 +126,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__sort_by_score__ordered_correctly(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=3)
@@ -147,8 +138,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -157,9 +147,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_played_first_range(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         inside = await TrackModelFactory.create_async(
@@ -185,8 +174,7 @@ class TestPlaylistHistoryUseCase:
                 played_first_max=date(2025, 12, 31),
                 limit=20,
             ),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -195,9 +183,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_played_last_range(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         inside = await TrackModelFactory.create_async(
@@ -223,8 +210,7 @@ class TestPlaylistHistoryUseCase:
                 played_last_max=date(2026, 9, 22),
                 limit=20,
             ),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -233,9 +219,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_genre(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         matching = await TrackModelFactory.create_async(
@@ -246,8 +231,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -256,9 +240,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_mood(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         matching = await TrackModelFactory.create_async(
@@ -271,8 +254,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(moods=[MoodTag.CHILL], limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -281,9 +263,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_locale(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
@@ -292,8 +273,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(locales=["fr"], limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -302,9 +282,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_multiple_locales__or_logic(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         fr = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
@@ -314,8 +293,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(locales=["fr", "en"], limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 
@@ -324,9 +302,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__filters_by_multiple_genres__or_logic(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        track_repository: TrackRepository,
-        playlist_repository: PlaylistRepository,
         spotify_library: ProviderLibraryPort,
     ) -> None:
         hip_hop = await TrackModelFactory.create_async(
@@ -340,8 +317,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
-            track_repository=track_repository,
-            playlist_repository=playlist_repository,
+            uow=uow,
             provider_library=spotify_library,
         )
 

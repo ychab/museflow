@@ -20,6 +20,7 @@ from tests.unit.factories.entities.user import UserFactory
 class TestPlaylistHistoryUseCase:
     async def test__no_tracks_found__dedup_enabled__raises(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -33,8 +34,7 @@ class TestPlaylistHistoryUseCase:
             await playlist_history(
                 user=user,
                 config=PlaylistHistoryConfigInput(),
-                track_repository=mock_track_repository,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
                 provider_library=mock_provider_library,
             )
 
@@ -44,6 +44,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__no_tracks_found__duplicates_allowed__skips_dedup_lookup(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -55,8 +56,7 @@ class TestPlaylistHistoryUseCase:
             await playlist_history(
                 user=user,
                 config=PlaylistHistoryConfigInput(allow_duplicate=True),
-                track_repository=mock_track_repository,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
                 provider_library=mock_provider_library,
             )
 
@@ -65,6 +65,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__dry_run__skips_playlist_creation(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -76,8 +77,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(dry_run=True),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 
@@ -88,8 +88,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__dry_run__without_provider_library__ok(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build()
         mock_track_repository.get_list.return_value = [track]
@@ -97,8 +97,7 @@ class TestPlaylistHistoryUseCase:
         result = await playlist_history(
             user=UserFactory.build(),
             config=PlaylistHistoryConfigInput(dry_run=True),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=None,
         )
 
@@ -107,15 +106,14 @@ class TestPlaylistHistoryUseCase:
 
     async def test__no_dry_run__without_provider_library__raises(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         with pytest.raises(ValueError, match="provider_library is required"):
             await playlist_history(
                 user=UserFactory.build(),
                 config=PlaylistHistoryConfigInput(),
-                track_repository=mock_track_repository,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
                 provider_library=None,
             )
 
@@ -123,6 +121,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__group_by_artists__played_count(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -140,8 +139,7 @@ class TestPlaylistHistoryUseCase:
         await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(group_by_artists=True),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 
@@ -150,6 +148,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__group_by_artists__score(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -168,8 +167,7 @@ class TestPlaylistHistoryUseCase:
         await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, group_by_artists=True),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 
@@ -178,6 +176,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__playlist_name__custom(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -190,8 +189,7 @@ class TestPlaylistHistoryUseCase:
         await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(name_suffix="My Mix"),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 
@@ -200,6 +198,7 @@ class TestPlaylistHistoryUseCase:
 
     async def test__playlist_name__default__seconds_only(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -212,8 +211,7 @@ class TestPlaylistHistoryUseCase:
         await playlist_history(
             user=user,
             config=PlaylistHistoryConfigInput(),
-            track_repository=mock_track_repository,
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 
@@ -222,8 +220,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__date_filters__forwarded_to_repository(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
@@ -238,8 +236,7 @@ class TestPlaylistHistoryUseCase:
                     played_last_min=date(2026, 1, 1),
                     played_last_max=date(2026, 12, 31),
                 ),
-                track_repository=mock_track_repository,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
                 provider_library=mock_provider_library,
             )
 
@@ -251,8 +248,8 @@ class TestPlaylistHistoryUseCase:
 
     async def test__sort_by_score__flat(
         self,
+        mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
@@ -262,8 +259,7 @@ class TestPlaylistHistoryUseCase:
             await playlist_history(
                 user=user,
                 config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE),
-                track_repository=mock_track_repository,
-                playlist_repository=mock_playlist_repository,
+                uow=mock_uow,
                 provider_library=mock_provider_library,
             )
 

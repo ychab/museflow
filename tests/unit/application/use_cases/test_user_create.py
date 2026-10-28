@@ -19,11 +19,12 @@ class TestUserCreateUseCase:
         self,
         user: User,
         user_create_data: UserCreateInput,
+        mock_uow: mock.AsyncMock,
         mock_user_repository: mock.AsyncMock,
         mock_password_hasher: mock.Mock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
         with pytest.raises(UserAlreadyExistsException) as exc_info:
-            await user_create(user_create_data, mock_user_repository, mock_password_hasher)
+            await user_create(user_create_data, mock_uow, mock_password_hasher)
         assert "Email already registered" in str(exc_info.value)

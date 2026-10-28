@@ -28,11 +28,11 @@ class TestImportStreamingHistorySpotifyUseCase:
     @pytest.fixture
     def use_case(
         self,
-        mock_track_repository: mock.AsyncMock,
+        mock_uow: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
-            track_repository=mock_track_repository,
+            uow=mock_uow,
             streaming_history=mock_streaming_history,
         )
 

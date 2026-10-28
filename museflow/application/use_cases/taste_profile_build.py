@@ -7,8 +7,7 @@ from typing import cast
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
@@ -25,22 +24,21 @@ logger = logging.getLogger(__name__)
 class BuildTasteProfileUseCase:
     def __init__(
         self,
+        uow: UnitOfWorkPort,
         profiler: TasteProfilerPort,
-        track_repository: TrackRepository,
-        taste_profile_repository: TasteProfileRepository,
     ) -> None:
+        self._uow = uow
         self._profiler = profiler
-        self._track_repository = track_repository
-        self._taste_profile_repository = taste_profile_repository
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # Select the most-listened tracks as seeds (best signal quality)
-        tracks = await self._track_repository.get_list(
-            user_id=user.id,
-            min_score=0 if config.rated_only else None,
-            order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-            limit=config.track_limit,
-        )
+        async with self._uow as uow:
+            tracks = await uow.tracks.get_list(
+                user_id=user.id,
+                min_score=0 if config.rated_only else None,
+                order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
+                limit=config.track_limit,
+            )
         if not tracks:
             raise TasteProfileNoSeedException(f"No tracks found for user {user.id}")
 
@@ -55,7 +53,8 @@ class BuildTasteProfileUseCase:
         start_batch_index = 0
         current_profile: TasteProfileData | None = None
         if config.resume:
-            checkpoint = await self._taste_profile_repository.get_checkpoint(user.id, config.name)
+            async with self._uow as uow:
+                checkpoint = await uow.taste_profiles.get_checkpoint(user.id, config.name)
             if checkpoint is not None:
                 current_profile, start_batch_index = checkpoint
                 logger.info(f"Resuming taste profile from batch {start_batch_index + 1} / {len(batches)}")
@@ -81,16 +80,18 @@ class BuildTasteProfileUseCase:
                     else await self._profiler.merge_profiles(current_profile, segment)
                 )
 
-                await self._taste_profile_repository.save_checkpoint(
-                    user_id=user.id,
-                    name=config.name,
-                    profiler=self._profiler.profiler_type,
-                    logic_version=self._profiler.logic_version,
-                    profiler_metadata=self._profiler.profiler_metadata,
-                    tracks_count=len(tracks),
-                    profile_data=current_profile,
-                    batch_index=i,
-                )
+                # One block per batch: a paid batch survives a later failure.
+                async with self._uow as uow:
+                    await uow.taste_profiles.save_checkpoint(
+                        user_id=user.id,
+                        name=config.name,
+                        profiler=self._profiler.profiler_type,
+                        logic_version=self._profiler.logic_version,
+                        profiler_metadata=self._profiler.profiler_metadata,
+                        tracks_count=len(tracks),
+                        profile_data=current_profile,
+                        batch_index=i,
+                    )
 
                 if config.throttling_sleep_seconds > 0 and i < len(batches):
                     logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
@@ -116,4 +117,5 @@ class BuildTasteProfileUseCase:
             updated_at=datetime.now(UTC),
         ).sort_timeline()
 
-        return await self._taste_profile_repository.upsert(taste_profile)
+        async with self._uow as uow:
+            return await uow.taste_profiles.upsert(taste_profile)

@@ -5,8 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
-from museflow.application.ports.repositories.taste import TasteProfileRepository
-from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TasteProfiler
@@ -30,14 +29,12 @@ class TestGeminiBuildTasteProfileUseCase:
     @pytest.fixture
     def use_case(
         self,
+        uow: UnitOfWorkPort,
         gemini_profiler: GeminiTasteProfileAdapter,
-        track_repository: TrackRepository,
-        taste_profile_repository: TasteProfileRepository,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=gemini_profiler,
-            track_repository=track_repository,
-            taste_profile_repository=taste_profile_repository,
+            uow=uow,
         )
 
     async def test__nominal(

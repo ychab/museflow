@@ -14,17 +14,17 @@ from tests.unit.factories.entities.user import UserFactory
 
 class TestPlaylistDeleteUseCase:
     @pytest.fixture
-    def use_case(self, mock_playlist_repository: mock.AsyncMock) -> PlaylistDeleteUseCase:
-        return PlaylistDeleteUseCase(playlist_repository=mock_playlist_repository)
+    def use_case(self, mock_uow: mock.AsyncMock) -> PlaylistDeleteUseCase:
+        return PlaylistDeleteUseCase(uow=mock_uow)
 
     @pytest.fixture
     def use_case_with_remote(
         self,
-        mock_playlist_repository: mock.AsyncMock,
+        mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> PlaylistDeleteUseCase:
         return PlaylistDeleteUseCase(
-            playlist_repository=mock_playlist_repository,
+            uow=mock_uow,
             provider_library=mock_provider_library,
         )
 

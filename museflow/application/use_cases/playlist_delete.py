@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.ports.repositories.playlist import PlaylistRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class PlaylistDeleteUseCase:
     def __init__(
         self,
-        playlist_repository: PlaylistRepository,
+        uow: UnitOfWorkPort,
         provider_library: ProviderLibraryPort | None = None,
     ) -> None:
-        self._playlist_repository = playlist_repository
+        self._uow = uow
         self._provider_library = provider_library
 
     async def delete(self, user: User, playlist_id: uuid.UUID, include_remote: bool = False) -> None:
@@ -25,13 +25,15 @@ class PlaylistDeleteUseCase:
             raise ValueError("provider_library is required when include_remote=True")
 
         if include_remote:
-            playlist = await self._playlist_repository.get(user_id=user.id, playlist_id=playlist_id)
+            async with self._uow as uow:
+                playlist = await uow.playlists.get(user_id=user.id, playlist_id=playlist_id)
             if playlist is None:
                 raise PlaylistNotFoundError()
 
             await self._provider_library.delete_playlist(playlist.provider_id)  # type: ignore[union-attr]
 
-        deleted = await self._playlist_repository.delete(user_id=user.id, playlist_id=playlist_id)
+        async with self._uow as uow:
+            deleted = await uow.playlists.delete(user_id=user.id, playlist_id=playlist_id)
         if not deleted:
             raise PlaylistNotFoundError()
 
@@ -48,9 +50,11 @@ class PlaylistDeleteUseCase:
             raise ValueError("provider_library is required when include_remote=True")
 
         if not include_remote:
-            return await self._playlist_repository.purge(user_id=user.id, type=type, provider=provider)
+            async with self._uow as uow:
+                return await uow.playlists.purge(user_id=user.id, type=type, provider=provider)
 
-        playlists = await self._playlist_repository.list(user_id=user.id)
+        async with self._uow as uow:
+            playlists = await uow.playlists.list(user_id=user.id)
         matching = [
             p for p in playlists if (type is None or p.type == type) and (provider is None or p.provider == provider)
         ]
@@ -65,6 +69,7 @@ class PlaylistDeleteUseCase:
                     extra={"playlist_id": str(playlist.id)},
                 )
                 continue
-            await self._playlist_repository.delete(user_id=user.id, playlist_id=playlist.id)
+            async with self._uow as uow:
+                await uow.playlists.delete(user_id=user.id, playlist_id=playlist.id)
             count += 1
         return count

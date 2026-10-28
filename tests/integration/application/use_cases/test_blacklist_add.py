@@ -2,7 +2,7 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.blacklist_add import AddToBlacklistUseCase
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
@@ -12,11 +12,11 @@ from museflow.infrastructure.adapters.database.models.blacklist import Blacklist
 class TestAddToBlacklistUseCase:
     async def test__add_artist__nominal(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        blacklist_repository: BlacklistRepository,
     ) -> None:
-        use_case = AddToBlacklistUseCase(blacklist_repository=blacklist_repository)
+        use_case = AddToBlacklistUseCase(uow=uow)
 
         entity = await use_case.add_artist(user_id=user.id, artist_name="Taylor Swift")
 
@@ -32,11 +32,11 @@ class TestAddToBlacklistUseCase:
 
     async def test__add_track__nominal(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        blacklist_repository: BlacklistRepository,
     ) -> None:
-        use_case = AddToBlacklistUseCase(blacklist_repository=blacklist_repository)
+        use_case = AddToBlacklistUseCase(uow=uow)
 
         entity = await use_case.add_track(user_id=user.id, name="Shake It Off", artist_name="Taylor Swift")
 

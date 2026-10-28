@@ -11,8 +11,8 @@ from museflow.domain.exceptions import ProviderExchangeCodeError
 class TestOauthCallbackUseCase:
     async def test__exchange_code__exception(
         self,
+        mock_uow: mock.AsyncMock,
         user: User,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_oauth: mock.Mock,
     ) -> None:
         mock_provider_oauth.exchange_code_for_token.side_effect = Exception("Boom")
@@ -22,6 +22,6 @@ class TestOauthCallbackUseCase:
                 code="foo",
                 user=user,
                 provider=MusicProvider.SPOTIFY,
-                auth_token_repository=mock_auth_token_repository,
+                uow=mock_uow,
                 provider_oauth=mock_provider_oauth,
             )

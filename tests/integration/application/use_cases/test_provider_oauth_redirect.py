@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -13,15 +13,15 @@ from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAut
 class TestSpotifyOAuthRedirectUseCase:
     async def test__nominal(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         user: User,
-        auth_state_repository: OAuthProviderStateRepository,
         spotify_oauth: SpotifyOAuthAdapter,
         state_token_generator: StateTokenGeneratorPort,
     ) -> None:
         authorization_url = await oauth_redirect(
             user=user,
-            auth_state_repository=auth_state_repository,
+            uow=uow,
             provider=MusicProvider.SPOTIFY,
             provider_oauth=spotify_oauth,
             state_token_generator=state_token_generator,

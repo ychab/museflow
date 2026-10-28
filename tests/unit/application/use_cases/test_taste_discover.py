@@ -1,11 +1,12 @@
-import contextlib
+import itertools
 import uuid
+from collections.abc import Callable
+from collections.abc import Iterator
 from unittest import mock
 
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
@@ -40,19 +41,11 @@ class TestDiscoverTasteUseCase:
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture
-    def mock_unit_of_work(self) -> mock.Mock:
-        unit_of_work = mock.Mock(spec=UnitOfWorkPort)
-        unit_of_work.atomic.return_value = contextlib.nullcontext()
-        return unit_of_work
-
-    @pytest.fixture
     def use_case(
         self,
-        mock_track_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
+        mock_uow: mock.AsyncMock,
         mock_blacklist_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
-        mock_unit_of_work: mock.Mock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
         mock_reconciler: mock.Mock,
@@ -62,11 +55,7 @@ class TestDiscoverTasteUseCase:
         mock_playlist_repository.save.side_effect = lambda p: p
 
         return DiscoverTasteUseCase(
-            track_repository=mock_track_repository,
-            taste_profile_repository=mock_taste_profile_repository,
-            blacklist_repository=mock_blacklist_repository,
-            playlist_repository=mock_playlist_repository,
-            unit_of_work=mock_unit_of_work,
+            uow=mock_uow,
             provider_library=mock_provider_library,
             advisor=mock_advisor,
             reconciler=mock_reconciler,
@@ -480,6 +469,54 @@ class TestDiscoverTasteUseCase:
         assert mock_advisor.get_discovery_strategy.call_count == 2
         assert len(result.tracks) == 2
         assert len(result.reports) == 2
+
+    async def test__remote_calls__run_outside_any_block(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_uow: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        strategies = iter(
+            DiscoveryTasteStrategyFactory.build(
+                recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
+                search_queries=["query"],
+            )
+            for _ in range(2)
+        )
+        mock_reconciler.reconcile.side_effect = [(TrackFactory.build(), 0.9), (TrackFactory.build(), 0.9)]
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+
+        # Each remote call records whether a unit of work block was open while it ran.
+        blocks_open: list[bool] = []
+
+        def recording(results: Iterator[object]) -> Callable[..., object]:
+            def call(**_: object) -> object:
+                blocks_open.append(mock_uow.block_open)
+                return next(results)
+
+            return call
+
+        mock_advisor.get_discovery_strategy.side_effect = recording(strategies)
+        mock_provider_library.search_tracks.side_effect = recording(itertools.repeat([]))
+        mock_provider_library.create_playlist.side_effect = recording(
+            itertools.repeat(PlaylistFactory.build(user_id=user.id))
+        )
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=2, advisor_limit=5, max_attempts=2),
+        )
+
+        # 2 attempts x (advisor + reconcile search + query search), then the playlist creation
+        assert blocks_open == [False] * 7
+        # Initial reads, the known-tracks filter of each attempt, then the final writes
+        assert mock_uow.__aenter__.await_count == 4
 
     async def test__excluded_tracks_passed_on_second_attempt(
         self,

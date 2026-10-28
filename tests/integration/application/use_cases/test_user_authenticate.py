@@ -1,6 +1,5 @@
-from unittest import mock
-
 from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_authenticate import user_authenticate
 from museflow.domain.entities.user import User
 
@@ -8,14 +7,14 @@ from museflow.domain.entities.user import User
 class TestUserAuthenticateUseCase:
     async def test_authenticate__nominal(
         self,
+        uow: UnitOfWorkPort,
         user: User,
-        user_repository: mock.Mock,
         password_hasher: PasswordHasherPort,
     ) -> None:
         user_auth = await user_authenticate(
             email=user.email,
             password="testtest",
-            user_repository=user_repository,
+            uow=uow,
             password_hasher=password_hasher,
         )
         assert user_auth is not None

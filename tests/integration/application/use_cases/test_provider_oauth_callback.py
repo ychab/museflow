@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_callback import oauth_callback
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
@@ -23,11 +23,11 @@ from tests.integration.utils.wiremock import WireMockContext
 class TestSpotifyOauthCallbackUseCase:
     async def test__token_payload__create(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
         token_payload: OAuthProviderTokenPayload,
-        auth_token_repository: OAuthProviderTokenRepository,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
@@ -47,7 +47,7 @@ class TestSpotifyOauthCallbackUseCase:
             code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,
-            auth_token_repository=auth_token_repository,
+            uow=uow,
             provider_oauth=spotify_oauth,
         )
 
@@ -75,12 +75,12 @@ class TestSpotifyOauthCallbackUseCase:
     @pytest.mark.parametrize("auth_token", [{"provider": MusicProvider.SPOTIFY}], indirect=["auth_token"])
     async def test__token_payload__update(
         self,
+        uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
         frozen_time: datetime,
         user: User,
         token_payload: OAuthProviderTokenPayload,
         auth_token: OAuthProviderUserToken,
-        auth_token_repository: OAuthProviderTokenRepository,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_wiremock: WireMockContext,
     ) -> None:
@@ -100,7 +100,7 @@ class TestSpotifyOauthCallbackUseCase:
             code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,
-            auth_token_repository=auth_token_repository,
+            uow=uow,
             provider_oauth=spotify_oauth,
         )
 

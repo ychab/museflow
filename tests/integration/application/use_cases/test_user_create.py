@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.user import UserCreateInput
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_create import user_create
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
@@ -21,10 +21,10 @@ class TestUserCreateUseCase:
         self,
         async_session_db: AsyncSession,
         user_create_data: UserCreateInput,
-        user_repository: UserRepository,
+        uow: UnitOfWorkPort,
         password_hasher: PasswordHasherPort,
     ) -> None:
-        user = await user_create(user_create_data, user_repository, password_hasher)
+        user = await user_create(user_create_data, uow, password_hasher)
 
         stmt = select(UserModel).where(UserModel.id == user.id)
         result = await async_session_db.execute(stmt)

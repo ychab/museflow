@@ -2,8 +2,8 @@ import logging
 
 from pydantic import EmailStr
 
-from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 async def user_authenticate(
     email: EmailStr,
     password: str,
-    user_repository: UserRepository,
+    uow: UnitOfWorkPort,
     password_hasher: PasswordHasherPort,
 ) -> User:
     """Authenticates a user based on their email and password.
@@ -26,7 +26,7 @@ async def user_authenticate(
     Args:
         email: The user's email address.
         password: The user's plain text password.
-        user_repository: The repository for user data.
+        uow: The unit of work giving access to the user repository.
         password_hasher: The password hasher.
 
     Returns:
@@ -37,7 +37,8 @@ async def user_authenticate(
         UserInvalidCredentials: If the provided password does not match.
         UserInactive: If the user account is not active.
     """
-    user = await user_repository.get_by_email(email)
+    async with uow:
+        user = await uow.users.get_by_email(email)
 
     if not user:
         raise UserNotFound()
