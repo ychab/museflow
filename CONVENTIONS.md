@@ -56,6 +56,8 @@ This project follows **Clean Architecture (Hexagonal)** principles.
   - When a flow mixes a remote side effect (provider API) with local writes, call the remote side first.
   - When several local writes form one fact (a partial state would be wrong), wrap them in
     `UnitOfWorkPort.atomic()`. No remote call inside the block, no nested blocks.
+  - Before a long remote call that follows a read, call `UnitOfWorkPort.release()`, so the connection is not left
+    idle in transaction during the call.
   - Repositories should accept an `AsyncSession`.
 
 #### B. External APIs (Spotify, etc.)

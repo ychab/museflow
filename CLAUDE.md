@@ -145,6 +145,7 @@ class UserSQLRepository(UserRepository):
 - `await self.session.commit()` then `await self.session.refresh(obj)` after mutations.
 - **Each repository mutation commits on its own, by design**: progress (paid LLM batches, checkpoints, refreshed tokens) survives a later failure, and re-runs are idempotent. When a flow mixes a remote side effect with local writes, do the remote call first, so a provider failure leaves nothing behind locally.
 - **`UnitOfWorkPort.atomic()`** groups writes only when a partial state would be *wrong*, not merely incomplete (today: discover's tracks upsert + playlist save). `SQLUnitOfWork` turns the session's `commit` into `flush` for the block, so repositories stay unchanged. Never put a remote call inside the block, and never nest blocks.
+- **`UnitOfWorkPort.release()`** before a long remote call (LLM, provider with retries) that follows a read: a read opens a transaction that only the next commit ends, so the connection would stay *idle in transaction* for the whole call.
 - Use `pg_insert(...).on_conflict_do_update(...)` for upserts (PostgreSQL-specific).
 
 ### External API Adapters (Spotify, Gemini)

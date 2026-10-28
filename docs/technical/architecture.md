@@ -90,8 +90,8 @@ sequenceDiagram
         UC->>Repo: drop tracks the user already knows (by fingerprint)
     end
     UC->>UC: sort by advisor score band then match confidence, cap per artist, trim
-    UC->>Repo: upsert tracks as DISCOVERY source
     UC->>Lib: create_playlist
+    UC->>Repo: upsert tracks as DISCOVERY source
     UC->>Repo: save playlist and its tracks
     UC-->>CLI: DiscoverTasteResult
     CLI->>CLI: render panel and tables
@@ -100,7 +100,7 @@ sequenceDiagram
 What the diagram encodes, with the reasoning behind each step:
 
 1. **Composition happens in the entrypoint.** `discover_logic` opens the DB session and each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
-2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost.
+2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Each attempt starts with `UnitOfWorkPort.release()`: the reads before it opened a transaction, and without the release the connection would stay *idle in transaction* during the advisor call, which can take minutes. `enrich tracks` and `taste build` do the same before their LLM batches.
 3. **Two sources of candidates.** Suggestions are reconciled against the catalogue; the strategy's free-text search queries are also run, with a fixed advisor score of 0.8 and reconciler score of 1.0 (a constant in the use case, see [`taste_discover.py`](https://github.com/ychab/museflow/blob/main/museflow/application/use_cases/taste_discover.py)).
 4. **"Known" is decided by fingerprint**, not by provider id, so a re-release or a different catalogue entry of a track the user already played is still excluded (see [Data model](data-model.md)).
 5. **Ordering is banded.** Tracks are sorted by advisor score rounded down to a band (`DISCOVERY_SCORE_BAND_WIDTH`, default 0.05), then by reconciliation confidence within the band. Banding stops tiny, meaningless score differences from outranking a more certain catalogue match.
