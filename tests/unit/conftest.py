@@ -20,6 +20,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
@@ -96,6 +97,32 @@ def mock_blacklist_repository() -> mock.AsyncMock:
 @pytest.fixture
 def mock_playlist_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=PlaylistRepository)
+
+
+@pytest.fixture
+def mock_uow(
+    mock_user_repository: mock.AsyncMock,
+    mock_auth_state_repository: mock.AsyncMock,
+    mock_auth_token_repository: mock.AsyncMock,
+    mock_track_repository: mock.AsyncMock,
+    mock_taste_profile_repository: mock.AsyncMock,
+    mock_blacklist_repository: mock.AsyncMock,
+    mock_playlist_repository: mock.AsyncMock,
+) -> mock.AsyncMock:
+    """Unit of work whose repositories are the repository mocks above, so tests configure those directly."""
+    uow = mock.AsyncMock(spec=UnitOfWorkPort)
+    uow.__aenter__.return_value = uow
+    # A truthy value would swallow the exceptions raised in the block.
+    uow.__aexit__.return_value = None
+
+    uow.users = mock_user_repository
+    uow.auth_states = mock_auth_state_repository
+    uow.auth_tokens = mock_auth_token_repository
+    uow.tracks = mock_track_repository
+    uow.taste_profiles = mock_taste_profile_repository
+    uow.blacklist = mock_blacklist_repository
+    uow.playlists = mock_playlist_repository
+    return uow
 
 
 # --- Entity Mocks ---
