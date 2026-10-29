@@ -201,6 +201,39 @@ if user is None:
    leaves nothing behind locally.
 5. Blocks don't nest; one instance serves one flow at a time.
 
+## A safety net
+
+Nothing in the code prevents a remote call inside a block. Written by mistake, it still works:
+
+```python
+async with uow:
+    tracks = await uow.tracks.get_list(user_id=user.id, limit=50)
+    enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ Gemini inside the block
+    await uow.tracks.bulk_update(enriched_tracks, fields=fields)
+```
+
+The command succeeds, but during the Gemini call the connection sits idle in transaction, with the locks, the
+snapshot and the pool slot described above. Nobody notices until load grows: with many such calls in parallel, the
+pool and `max_connections` run out, and a migration waiting for a lock makes every later query wait behind it.
+
+So the engine asks PostgreSQL to end any session that stays idle inside a transaction for too long
+([`session.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/session.py)):
+
+```python
+connect_args={
+    "server_settings": {"idle_in_transaction_session_timeout": str(idle_in_transaction_timeout * 1000)},
+},
+```
+
+The mistake above then fails loudly. PostgreSQL logs
+`FATAL: terminating connection due to idle-in-transaction timeout`, the next query in the block raises
+`InterfaceError: ... the underlying connection is closed`, and the block's uncommitted writes are lost, as with any
+exception.
+
+- **60 seconds by default** (`DATABASE_IDLE_IN_TRANSACTION_TIMEOUT`). A correct block idles for milliseconds between
+  two statements, so the limit only catches a remote call, a prompt or a long computation that has no place there.
+- **`0` disables it**, for instance to stop on a breakpoint inside a block. The test engine does not set it.
+
 ## Is it over-engineering?
 
 It is often dismissed as such. In MuseFlow it turned out to be the opposite:
@@ -211,7 +244,8 @@ It is often dismissed as such. In MuseFlow it turned out to be the opposite:
 - **Fewer test mocks.** Unit tests get one `mock_uow` fixture whose attributes are the repository mocks, instead of
   wiring each repository into each use case.
 - **Transactions are visible.** Every database access is an indented block. A remote call inside a block is not
-  prevented, but it now shows in the code instead of hiding behind a read.
+  prevented, but it now shows in the code instead of hiding behind a read, and the safety net above makes it fail
+  at runtime.
 - **One fix, every problem.** Idle transactions, the OAuth callback, the token refresh and the interactive prompts
   were all fixed by the same change, without a rule to remember at each call site.
 

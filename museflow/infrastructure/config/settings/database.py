@@ -1,5 +1,6 @@
 from typing import Self
 
+from pydantic import Field
 from pydantic import PostgresDsn
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
@@ -35,6 +36,9 @@ class DatabaseSettings(BaseSettings):
     USER: str | None = None
     PASSWORD: str | None = None
     PATH: str | None = None
+
+    # Seconds a session may stay idle inside a transaction before PostgreSQL terminates it; 0 disables it.
+    IDLE_IN_TRANSACTION_TIMEOUT: int = Field(default=60, ge=0)
 
     @model_validator(mode="after")
     def build_or_validate_uri(self) -> Self:
