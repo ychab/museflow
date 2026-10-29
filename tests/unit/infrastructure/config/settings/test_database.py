@@ -55,3 +55,17 @@ class TestDatabaseSettings:
         assert "USER" in error_message
         assert "PASSWORD" in error_message
         assert "PATH" in error_message
+
+    def test_idle_in_transaction_timeout_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("DATABASE_IDLE_IN_TRANSACTION_TIMEOUT", raising=False)
+        monkeypatch.setenv("DATABASE_URI", "postgresql+asyncpg://user:pass@localhost:5432/testdb")
+
+        settings = DatabaseSettings(_env_file=None)
+        assert settings.IDLE_IN_TRANSACTION_TIMEOUT == 60
+
+    def test_idle_in_transaction_timeout_negative_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("DATABASE_URI", "postgresql+asyncpg://user:pass@localhost:5432/testdb")
+        monkeypatch.setenv("DATABASE_IDLE_IN_TRANSACTION_TIMEOUT", "-1")
+
+        with pytest.raises(ValidationError, match="IDLE_IN_TRANSACTION_TIMEOUT"):
+            DatabaseSettings(_env_file=None)
