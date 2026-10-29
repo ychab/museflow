@@ -45,10 +45,11 @@ async def user_update_logic(
     user_data: UserUpdateInput,
 ) -> None:
     password_hasher = get_password_hasher()
-
     uow = get_unit_of_work()
+
     async with uow:
         user = await uow.users.get_by_id(user_id)
+
     if not user:
         raise UserNotFound()
 

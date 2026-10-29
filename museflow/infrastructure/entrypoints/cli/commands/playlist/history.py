@@ -210,10 +210,12 @@ async def playlist_history_logic(
     """
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
+
         async with uow:
             user = await uow.users.get_by_email(email)
             if not user:
                 raise UserNotFound()
+
             auth_token = None if config.dry_run else await uow.auth_tokens.get(user_id=user.id, provider=provider)
 
         provider_library: ProviderLibraryPort | None = None

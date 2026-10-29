@@ -28,6 +28,7 @@ async def user_create(
     """
     async with uow:
         existing_user = await uow.users.get_by_email(user_data.email)
+
     if existing_user:
         raise UserAlreadyExistsException("Email already registered")
 

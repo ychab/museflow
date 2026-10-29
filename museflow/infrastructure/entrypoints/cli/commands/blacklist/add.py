@@ -34,6 +34,7 @@ async def add_artists_logic(email: EmailStr, artist_names: list[str]) -> list[Bl
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)
+
     if not user:
         raise UserNotFound()
 
@@ -63,8 +64,10 @@ def add_track(
 
 async def add_track_logic(email: EmailStr, name: str, artist_name: str) -> BlacklistedTrack:
     uow = get_unit_of_work()
+
     async with uow:
         user = await uow.users.get_by_email(email)
+
     if not user:
         raise UserNotFound()
 

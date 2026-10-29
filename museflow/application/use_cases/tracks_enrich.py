@@ -87,6 +87,7 @@ async def tracks_enrich(
         # One block per batch: a paid batch survives a later failure.
         async with uow:
             await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
+
         enriched_count += len(enriched_tracks)
         logger.info(
             f"Enriched batch {i}/{total_batches} ({len(enriched_tracks)}/{len(batch)} tracks)",
