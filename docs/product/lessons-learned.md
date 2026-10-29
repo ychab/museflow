@@ -85,7 +85,8 @@ What I would instrument first:
   swapped `commit` for `flush` on the shared session, then an explicit "release before a remote call" step, closed
   unmerged because nobody would think of calling it. The fix was structural: use cases now own short transactions
   through a classic unit of work (one session per `async with` block, repositories never commit), so a remote call
-  inside a transaction is visible in the code instead of hidden behind a read.
+  inside a transaction is visible in the code instead of hidden behind a read. The full story is in
+  [Why a unit of work](../technical/unit-of-work.md).
 - **A CLI, not an app.** Perfect for me, a barrier for anyone else.
 - **One application doing everything.** See below.
 
