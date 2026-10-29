@@ -13,6 +13,8 @@ async def playlist_view(
 ) -> Playlist:
     async with uow:
         playlist = await uow.playlists.get(user.id, playlist_id)
+
     if playlist is None:
         raise PlaylistNotFoundError()
+
     return playlist

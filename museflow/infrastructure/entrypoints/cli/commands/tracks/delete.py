@@ -68,6 +68,7 @@ async def delete_logic(
     yes: bool = False,
 ) -> TracksDeleteResult:
     uow = get_unit_of_work()
+
     async with uow:
         user = await uow.users.get_by_email(email)
         if not user:
@@ -103,4 +104,5 @@ async def delete_logic(
             source=source,
             provider=provider,
         )
+
     return TracksDeleteResult(deleted_count=deleted)

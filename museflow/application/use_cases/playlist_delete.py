@@ -55,6 +55,7 @@ class PlaylistDeleteUseCase:
 
         async with self._uow as uow:
             playlists = await uow.playlists.list(user_id=user.id)
+
         matching = [
             p for p in playlists if (type is None or p.type == type) and (provider is None or p.provider == provider)
         ]
@@ -69,7 +70,10 @@ class PlaylistDeleteUseCase:
                     extra={"playlist_id": str(playlist.id)},
                 )
                 continue
+
             async with self._uow as uow:
                 await uow.playlists.delete(user_id=user.id, playlist_id=playlist.id)
+
             count += 1
+
         return count

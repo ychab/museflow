@@ -86,10 +86,12 @@ async def delete_logic(
 ) -> int:
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
+
         async with uow:
             user = await uow.users.get_by_email(email)
             if not user:
                 raise UserNotFound()
+
             auth_token = (
                 await uow.auth_tokens.get(user_id=user.id, provider=MusicProvider.SPOTIFY) if include_remote else None
             )

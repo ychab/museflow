@@ -95,6 +95,7 @@ async def _wait_for_authentication(
         # A new block per poll: a fresh session sees the state consumed by the API callback.
         async with uow:
             auth_state = await uow.auth_states.get(user_id=user_id, provider=MusicProvider.SPOTIFY)
+
         if auth_state is None:
             return
 

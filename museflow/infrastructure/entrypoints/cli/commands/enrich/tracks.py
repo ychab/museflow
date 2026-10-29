@@ -85,6 +85,7 @@ async def enrich_logic(
         uow = get_unit_of_work()
         async with uow:
             user = await uow.users.get_by_email(email)
+
         if not user:
             raise UserNotFound()
 

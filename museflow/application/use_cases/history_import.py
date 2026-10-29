@@ -129,6 +129,7 @@ class ImportStreamingHistoryUseCase:
             ]
             async with self._uow as uow:
                 await uow.tracks.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
+
             tracks_played_at_updated = len(updated_tracks)
             logger.info(f"Refreshed play data for {tracks_played_at_updated} already-known tracks.")
 
