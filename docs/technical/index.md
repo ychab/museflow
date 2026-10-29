@@ -39,6 +39,14 @@ Measured on the current `HEAD` of the branch this documentation was written on:
 
     [:octicons-arrow-right-24: Architecture](architecture.md)
 
+-   **Why a unit of work**
+
+    ---
+
+    Who opens and closes transactions: the common patterns, why a session per command failed, and the short blocks that fixed it.
+
+    [:octicons-arrow-right-24: Unit of work](unit-of-work.md)
+
 -   **Data model**
 
     ---

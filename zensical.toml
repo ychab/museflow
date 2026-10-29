@@ -41,6 +41,7 @@ nav = [
   { "Technical" = [
     { "Overview" = "technical/index.md" },
     { "Architecture" = "technical/architecture.md" },
+    { "Unit of work" = "technical/unit-of-work.md" },
     { "Data model" = "technical/data-model.md" },
     { "LLM pipeline" = "technical/llm-pipeline.md" },
     { "Privacy & data" = "technical/privacy-and-data.md" },
