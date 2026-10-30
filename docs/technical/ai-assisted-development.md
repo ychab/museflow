@@ -33,6 +33,7 @@ timeline
     2026-07-01 : CLAUDE.md trimmed 86f57eb
     2026-10-24 : Module grouping and English-only rules 7d1746b
     2026-10-30 : AGENTS.md as the single source
+               : .claude pruned to two skills and one agent
 ```
 
 | Step | Commit | Date | What and why |
@@ -46,7 +47,8 @@ timeline
 | Dead End Protocol | `0d485f2` | 2026-03-24 | A 3-attempt cap on fixing a failing test, then stop and present options A / B / C instead of looping |
 | Plans before code | `7c9b9c5`, `6d8c52a` | 2026-04-04, 2026-05-23 | Seven taste-profile plan files (~1,100 lines) and `plan_v2.md` were committed as working documents. The taste-profile plans were deleted in `c95d10b` (2026-04-06, "plan 6 - final with cli command") and `plan_v2.md` at the V2 cleanup (`af43b52`) |
 | Instruction diet | `86f57eb` | 2026-07-01 | `CLAUDE.md` cut from 442 to 245 lines (+59 / -223 in the commit), because it is loaded into every session and costs tokens every time |
-| Single source | #48 | 2026-10-30 | `CLAUDE.md` (260 lines) and `CONVENTIONS.md` (181 lines, mostly duplicates) replaced by `AGENTS.md` (129 lines, read natively by Claude Code and other agents) and `tests/AGENTS.md` (52 lines, loaded only when working on tests). The always-loaded file went from 16 KB to 8 KB |
+| Single source | #48 | 2026-10-30 | `CLAUDE.md` (260 lines) and `CONVENTIONS.md` (181 lines, mostly duplicates) replaced by `AGENTS.md` (129 lines, read natively by Claude Code and other agents) and `tests/AGENTS.md` (66 lines, loaded only when working on tests). The always-loaded file went from 16 KB to 8 KB |
+| `.claude/` pruned | #48 | 2026-10-30 | Six commands and five agents became two skills (`/arch-review`, `/security-review`) and one agent (`test`). The scaffolding commands were never used and had drifted (`/new-migration` still created revisions the project no longer adds), and the reviewer checklists copied rules that had since changed (repositories passed to use cases, before the unit of work) |
 | Conventional commits and trailers | from `d80bc85` | 2026-05-23 | `feat:` / `fix:` / `chore:` prefixes from late May; `Co-Authored-By` trailers on 15 commits, 12 of them in October 2026 |
 
 ## Growth
@@ -70,17 +72,17 @@ flowchart LR
     P --> C["Claude Code session"]
     CL["AGENTS.md<br/>always loaded contract"] --> C
     CV["tests/AGENTS.md<br/>loaded for test work"] --> C
-    CMD["Slash commands<br/>repeatable workflows"] --> C
+    T["test agent<br/>fixes tests and coverage"] --> C
     C --> D["Diff"]
-    D --> A["Reviewer agents<br/>arch, security, python, test"]
+    D --> A["Review skills<br/>/arch-review, /security-review"]
     A --> H
     H -->|"approve or reject"| G["Commit"]
 ```
 
 - **[`AGENTS.md`](https://github.com/ychab/museflow/blob/main/AGENTS.md) is the always-loaded contract**: stack, architecture, transactions, naming, style, logging and error handling. It is short on purpose (see the diets above): rules that tooling enforces are left to the tooling, and examples are pointers to canonical files rather than code blocks that drift. Claude Code reads it natively, so there is no `CLAUDE.md`, and any other agent tool reads the same file.
 - **[`tests/AGENTS.md`](https://github.com/ychab/museflow/blob/main/tests/AGENTS.md) holds the testing rules**, loaded only when the agent works under `tests/`. It is the only nested instruction file, on purpose: rules scattered across many directories are hard to keep track of.
-- **Commands encode repeatable workflows** so the same checklist is applied each time instead of being re-explained.
-- **Agents are specialised reviewers**, "virtual teammates with roles" in the author's words, explicitly not people. Their narrow scope comes from their instructions; the agent definitions do not restrict tools in their frontmatter, so "read-only" for `engineer` is an instruction, not a sandbox.
+- **Skills are reviews on demand.** `/arch-review` and `/security-review` run in a forked subagent, without the conversation, so the reviewer sees the diff with fresh eyes. They check it against `AGENTS.md` rather than a copy of the rules, and hold only what a review adds: known exceptions, severities, a verdict.
+- **Agents are specialised teammates**, "virtual teammates with roles" in the author's words, explicitly not people. Only `test` remains: it fixes failing tests and coverage gaps autonomously, under the Dead End Protocol.
 - **The human decides and reviews every diff.** Nothing is merged on an agent's say-so, and the 100% branch gate, Ruff, mypy and deptry run regardless of who wrote the change.
 - **Plan first for large features**, so the review happens on a short plan before it has to happen on a large diff.
 
@@ -99,41 +101,33 @@ The contract is edited as patterns that keep coming back wrong are identified. E
 
 Most rules are advisory to the agent and enforced by review, not by tooling, so they can drift: the `assert` ban dates from June, yet two `assert` statements had crept into production modules. It is now enforced by Ruff (`S101`) and none remain. Moving a rule from prose into a lint rule is the more durable fix when one is available.
 
-## Commands and agents
+## Skills and agents
 
-The project configures [Claude Code](https://claude.ai/claude-code) through `AGENTS.md`, `.claude/commands/` and `.claude/agents/`.
+The project configures [Claude Code](https://claude.ai/claude-code) through `AGENTS.md`, `.claude/skills/` and `.claude/agents/`.
 
-### Commands (skills)
+### Skills
 
-Invoke in a Claude Code session with `/command-name [arguments]`.
+Invoke in a Claude Code session with `/skill-name [files]`; Claude may also start them on its own when their
+description matches (before a PR, after a feature). Without files, they review the branch against `origin/main` plus
+uncommitted changes.
 
-| Command | Invocation | What it does |
-|---|---|---|
-| `/new-feature` | `/new-feature <name>` | Scaffolds a feature across all layers: entity, input schema, port, use case, SQLAlchemy model, repository, API endpoint, CLI command, unit and integration tests |
-| `/new-migration` | `/new-migration <description>` | Guides an Alembic migration: generates the file, reviews nullable defaults and `downgrade()`, verifies it runs cleanly |
-| `/add-tests` | `/add-tests <file_path>` | Analyses a source file and generates unit and integration tests targeting 100% branch coverage, reusing existing fixtures and factories |
-| `/new-provider` | `/new-provider <name>` | Scaffolds a new music provider integration (client, session, library adapter, DTOs, mappers, schemas, types, exceptions, settings, WireMock stubs, tests) mirroring the Spotify pattern |
-| `/arch-review` | `/arch-review [files]` | Reviews changed files for Clean Architecture violations (framework imports in domain, repositories instantiated in use cases, wrong `JSONB` / `ARRAY` dialect, missing `to_entity()`, logging secrets) |
-| `/security-review` | `/security-review [files]` | Reviews changed files for security issues (hardcoded secrets, unprotected endpoints, unbounded `Retry-After` sleeps, raw SQL, missing input validation, path traversal) and runs `uv audit` for CVEs |
+| Skill | What it does |
+|---|---|
+| `/arch-review` | Checks the changed files against `AGENTS.md`: layering, transactions (no remote call inside a unit of work block), repositories, CLI output. Reports BLOCKER / WARNING / INFO and a verdict |
+| `/security-review` | Checks the changed files for secrets, unprotected endpoints, OAuth state handling, input validation, raw SQL, unbounded `Retry-After` sleeps and error leakage; runs `uv audit` for CVEs |
 
 ### Agents
 
-Agents are subagents with their own instructions, routed to automatically or invoked explicitly.
-
 | Agent | What it does |
 |---|---|
-| `python` | Fixes lint errors autonomously: runs `make lint`, fixes Ruff / mypy / deptry findings, iterates until clean |
-| `test` | Fixes failing tests and fills coverage gaps: runs `make test`, traces failures, writes missing branches; applies the Dead End Protocol |
-| `arch` | Architecture compliance review of changed files against the hexagonal rules |
-| `security` | Security review of changed files; runs `uv audit` for CVEs |
-| `engineer` | Explains the codebase (feature flows, where things live); read-only by instruction |
+| `test` | Fixes failing tests and fills coverage gaps: runs `make test`, traces failures, writes missing branches following `tests/AGENTS.md`; applies the Dead End Protocol |
 
 ## Lessons
 
 **What worked**
 
 - **Conventions first.** Writing `CONVENTIONS.md` before any agent existed gave the agent something concrete to imitate and gave reviews something concrete to check against.
-- **Reviewer agents on a separate pass.** `arch` and `security` drove fix commits within days of being introduced (listed above), because a reviewer with a narrow checklist catches what a generating session overlooks.
+- **Reviewers on a separate pass.** `arch` and `security` (now the `/arch-review` and `/security-review` skills) drove fix commits within days of being introduced (listed above), because a reviewer with a narrow checklist catches what a generating session overlooks.
 - **A cap on flailing.** The Dead End Protocol turns "the agent is stuck in a loop" into "the agent stops and offers three options", which keeps the human in the decision.
 - **Plans before code**, for the features large enough to need one.
 - **The 100% branch gate as a backstop.** It makes unreviewed shortcuts visible regardless of who wrote them.
@@ -143,4 +137,5 @@ Agents are subagents with their own instructions, routed to automatically or inv
 - **Local-model tooling.** A Continue plugin with a local Ollama `qwen2.5-coder` model was added in `fca41e1` and removed 24 minutes later in `6057540` (2026-03-29); aider left only a `.gitignore` entry (`19682fe`). Neither fit the workflow.
 - **repomix.** Useful while pasting code into a chat window, redundant once an agent could read the repository itself; removed in `107aa9d`, almost four months after it was added.
 - **Oversized always-loaded instructions.** `CLAUDE.md` grew to 442 lines and was loaded into every session. Cutting it to 245 kept the rules that change behaviour and moved detail to `CONVENTIONS.md` and per-directory files. A second pass halved it again: `CONVENTIONS.md` mostly repeated it, so both became one `AGENTS.md`, and the testing rules moved to `tests/AGENTS.md`.
+- **Tooling nobody ran.** Four scaffolding commands (`/new-feature`, `/new-provider`, `/new-migration`, `/add-tests`) and two agents (`python`, `engineer`) were never part of the routine. Unused, they drifted from the code without anyone noticing; they were removed in #48. Lint fixing is left to `make lint` and exploring to Claude Code's built-in agent.
 - **Rules without enforcement.** Prose rules drift (see the `assert` example above, now enforced by Ruff `S101`).

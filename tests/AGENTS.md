@@ -10,6 +10,7 @@ Tests are the **contract with our users**: clean, clear and easy to maintain, no
 - **Error paths belong in unit tests**, with `AsyncMock` repositories. No fake (in-memory) repositories.
 - **All test code is typed**: fixtures, functions, factories, helpers.
 - **No inner imports** in test functions: all imports at module level.
+- A failing test is fixed in the test, never by bending the source; if the source is wrong, fix it on purpose.
 - If an assertion must loop, put an identifier in its message:
   `assert item.active, f"Item {i} (id={item.id}) failed"`.
 
@@ -32,15 +33,28 @@ museflow/application/use_cases/user_create.py
   repositories are the `mock_*_repository` fixtures; `mock_uow.block_open` tells whether a remote call ran inside a
   block).
 - **Never `with mock.patch(...)` inside a test**: always a `pytest.fixture`.
+- `mock.AsyncMock` for async ports, `mock.Mock` for sync ones.
+- Assert logs with `caplog` (e.g. `with caplog.at_level(logging.ERROR), pytest.raises(SomeError):`), never by patching
+  the module `logger`.
 
 ## CLI commands
 Each command has 3 unit classes (`TestXParserCommand`, `TestXCommand`, `TestXLogic`) and 1 integration `TestXLogic`
 (happy path only). Canonical: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
+- `TestXParserCommand`: Typer parsing only; `TestXCommand`: the callback (output, try/except), with `*_logic` mocked;
+  `TestXLogic`: the logic branches, with a `TARGET_PATH` class attribute pointing to the command module.
+- Error paths (user not found, …) belong in the unit `TestXLogic`, not in the integration one.
 
 ## Factories
 - `DataclassFactory` → domain entities, `TypedDictFactory` → TypedDicts, `ModelFactory` → Pydantic,
   `SQLAlchemyFactory` → DB models.
-- Never module-level helpers (`_make_*`, `_build_*`): call the factory directly or use a fixture.
+- Never module-level helpers (`_make_*`, `_build_*`): call the factory directly or use a fixture. A missing factory
+  is added to `tests/unit/factories/`.
+- `__set_relationships__ = False` on SQLAlchemy factories; `__use_defaults__ = True` on `DataclassFactory` subclasses
+  (entity defaults such as `fingerprint = ""` are kept); `__set_as_default_factory_for_type__ = True` on
+  `TypedDictFactory` subclasses, chained with `Use(ChildFactory.build)`; `__allow_none_optionals__ = False` on *Update*
+  input factories.
+- Don't override what polyfactory generates (UUIDs, fields with defaults); set only realistic values (names, emails)
+  or values the test depends on.
 
 ## Markers
 - `@pytest.mark.slow`: skipped by default, run with `--slow`.
