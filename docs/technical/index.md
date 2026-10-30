@@ -83,7 +83,7 @@ Measured on the current `HEAD` of the branch this documentation was written on:
 
     ---
 
-    How conventions, a `CLAUDE.md` contract, commands and reviewer agents were introduced, with dates and commits.
+    How conventions, an `AGENTS.md` contract, commands and reviewer agents were introduced, with dates and commits.
 
     [:octicons-arrow-right-24: AI-assisted development](ai-assisted-development.md)
 

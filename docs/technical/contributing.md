@@ -1,6 +1,6 @@
 # Contributing
 
-MuseFlow is a personal project and showcase, but it is set up so that a change can be made, checked and reviewed the same way each time. This page is the short version; the rules themselves live in [`CONVENTIONS.md`](https://github.com/ychab/museflow/blob/main/CONVENTIONS.md) (detailed reference) and [`CLAUDE.md`](https://github.com/ychab/museflow/blob/main/CLAUDE.md) (the compact contract).
+MuseFlow is a personal project and showcase, but it is set up so that a change can be made, checked and reviewed the same way each time. This page is the short version; the rules themselves live in [`AGENTS.md`](https://github.com/ychab/museflow/blob/main/AGENTS.md), with the testing rules in [`tests/AGENTS.md`](https://github.com/ychab/museflow/blob/main/tests/AGENTS.md).
 
 ## Setup
 

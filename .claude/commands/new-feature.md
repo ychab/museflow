@@ -1,6 +1,6 @@
 # New Feature Scaffold
 
-You are scaffolding a new feature for the MuseFlow project, following strict Clean Architecture conventions defined in CLAUDE.md and CONVENTIONS.md.
+You are scaffolding a new feature for the MuseFlow project, following strict Clean Architecture conventions defined in AGENTS.md.
 
 The feature name is: **$ARGUMENTS**
 
