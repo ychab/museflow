@@ -42,6 +42,7 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
@@ -52,7 +53,7 @@ from museflow.infrastructure.adapters.database.repositories.track import TrackSQ
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
-from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
+from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
@@ -62,6 +63,7 @@ from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.database import database_settings
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 from tests.integration.factories.models.auth import AuthProviderStateModelFactory
 from tests.integration.factories.models.auth import AuthProviderTokenFactory
@@ -456,19 +458,18 @@ async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gem
 
 
 @pytest.fixture
-async def gemini_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTrackEnricherAdapter]:
-    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
+async def openrouter_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
+    monkeypatch.setattr(OpenRouterClient.make_api_call.retry, "stop", stop_after_attempt(1))
 
-    retry_method = GeminiTrackEnricherAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
-
-    async with GeminiTrackEnricherAdapter(
-        api_key="dummy-api-key",
-        model=GeminiModel.FLASH_LITE_2_5,
-        base_url=HttpUrl(base_url) if base_url else None,
-        verify_ssl=False,
-    ) as client:
-        yield client
+    async with OpenRouterTrackEnricherAdapter(
+        client=OpenRouterClient(
+            api_key="dummy-api-key",
+            base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
+            verify_ssl=False,
+        ),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+    ) as enricher:
+        yield enricher
 
 
 # --- Services ---

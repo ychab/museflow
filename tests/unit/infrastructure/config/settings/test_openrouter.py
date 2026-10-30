@@ -47,3 +47,16 @@ class TestOpenRouterSettings:
 
         with pytest.raises(ValidationError):
             OpenRouterSettings(_env_file=None)
+
+
+class TestLLMSettings:
+    def test__with_model__overrides_model_only(self) -> None:
+        llm = LLMSettings(MODEL="google/gemini-2.5-flash", MAX_TOKENS=1000)
+
+        assert llm.with_model("openai/gpt-5-mini") == LLMSettings(MODEL="openai/gpt-5-mini", MAX_TOKENS=1000)
+        assert llm.MODEL == "google/gemini-2.5-flash"
+
+    def test__with_model__none__unchanged(self) -> None:
+        llm = LLMSettings(MODEL="google/gemini-2.5-flash")
+
+        assert llm.with_model(None) is llm

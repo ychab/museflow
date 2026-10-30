@@ -165,12 +165,12 @@ def mock_gemini_profiler(
 
 
 @pytest.fixture
-def mock_gemini_enricher(
+def mock_get_enricher(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     enricher = mock.AsyncMock(spec=TrackEnricherPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_gemini_enricher", enricher) as mock_enricher:
+    with mock_async_context_dependency_factory(f"{target_path}.get_enricher", enricher) as mock_enricher:
         yield mock_enricher
 
 

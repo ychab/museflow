@@ -50,6 +50,14 @@ class TestEnrichTracksParserCommand:
         assert call_kwargs["only_mood"] is False
         assert call_kwargs["only_locale"] is False
 
+    def test__model__defaults_to_none(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert mock_enrich_logic.call_args.kwargs["model"] is None
+
+    def test__model__parsed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--model", "openai/gpt-5-mini"])
+        assert mock_enrich_logic.call_args.kwargs["model"] == "openai/gpt-5-mini"
+
     def test__only_flags__all_default_to_false(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         call_kwargs = mock_enrich_logic.call_args.kwargs
@@ -105,16 +113,30 @@ class TestEnrichTracksCommand:
         assert "Error: Gemini down" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures(
-    "mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_gemini_enricher"
-)
+@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_get_enricher")
 class TestEnrichTracksLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
+
+    @pytest.fixture
+    def spy_get_enricher(self) -> Iterable[mock.MagicMock]:
+        with mock.patch(f"{TARGET_PATH}.get_enricher") as patched:
+            yield patched
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
             await enrich_logic(email="unknown@example.com")
+
+    async def test__model__forwarded_to_enricher(
+        self,
+        mock_track_repository: mock.AsyncMock,
+        spy_get_enricher: mock.MagicMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = []
+
+        await enrich_logic(email="test@example.com", model="openai/gpt-5-mini")
+
+        spy_get_enricher.assert_called_once_with(model="openai/gpt-5-mini")
 
     async def test__passes_config_to_use_case(
         self,

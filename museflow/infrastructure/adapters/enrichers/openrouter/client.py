@@ -1,8 +1,5 @@
 import json
 import logging
-from typing import Any
-
-from pydantic import HttpUrl
 
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.domain.const import GENRE_MACRO_TAGS
@@ -13,39 +10,23 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.track import TrackEnrichment
-from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.common.gemini.validation import validate_response
-from museflow.infrastructure.adapters.enrichers.gemini.schemas import GeminiEnrichmentResponse
-from museflow.infrastructure.adapters.enrichers.gemini.schemas import build_enrichment_config
-from museflow.infrastructure.adapters.http import HttpClientMixin
-from museflow.infrastructure.config.settings.gemini import gemini_settings
+from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
+from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.enrichers.openrouter.schemas import EnrichmentResponse
+from museflow.infrastructure.adapters.enrichers.openrouter.schemas import build_enrichment_schema
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 logger = logging.getLogger(__name__)
 
 
-class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
-    """Adapter that uses the Gemini API to infer genre and mood metadata for tracks."""
+class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
+    """Adapter that infers genre, mood and locale metadata for tracks through OpenRouter."""
 
-    def __init__(
-        self,
-        api_key: str,
-        model: GeminiModel,
-        base_url: HttpUrl | None = None,
-        timeout: float = 180.0,
-        verify_ssl: bool = True,
-    ) -> None:
-        super().__init__(
-            base_url=base_url or gemini_settings.BASE_URL,
-            verify_ssl=verify_ssl,
-            timeout=timeout,
-        )
-        self._api_key = api_key
-        self._model = model
+    def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
+        super().__init__(client=client)
+        self._llm = llm
 
     @staticmethod
     def _build_system_prompt(fields: frozenset[EnrichField]) -> str:
@@ -98,47 +79,27 @@ class GeminiTrackEnricherAdapter(HttpClientMixin, TrackEnricherPort):
 
         return "\n".join(parts)
 
-    @self_heal()
-    @validate_response(GeminiEnrichmentResponse, adapter="enricher")
-    async def _request_enrichment(
-        self,
-        contents: list[GeminiRequestContent],
-        fields: frozenset[EnrichField],
-    ) -> dict[str, Any]:
-        request = GeminiGenerateContentRequest(
-            system_instruction=GeminiRequestContent(parts=[GeminiRequestPart(text=self._build_system_prompt(fields))]),
-            contents=contents,
-            generationConfig=build_enrichment_config(fields),
-        )
-        return await self.make_api_call(
-            method="POST",
-            endpoint=f"/models/{self._model}:generateContent",
-            headers={"x-goog-api-key": self._api_key},
-            json_data=request.model_dump(exclude_none=True),
-        )
-
     async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
+        tracks_json = json.dumps(
+            [
+                {"index": i, "title": track.name, "primary_artist": track.primary_artist}
+                for i, track in enumerate(tracks)
+            ],
+            ensure_ascii=False,
+        )
         try:
-            content = await self._request_enrichment(
+            content = await self._client.complete(
                 [
-                    GeminiRequestContent(
-                        parts=[
-                            GeminiRequestPart(
-                                text=json.dumps(
-                                    [
-                                        {"index": i, "title": track.name, "primary_artist": track.primary_artist}
-                                        for i, track in enumerate(tracks)
-                                    ],
-                                    ensure_ascii=False,
-                                ),
-                            ),
-                        ],
-                    ),
+                    ChatMessage(role="system", content=self._build_system_prompt(fields)),
+                    ChatMessage(role="user", content=tracks_json),
                 ],
-                fields,
+                response_model=EnrichmentResponse,
+                schema=build_enrichment_schema(fields),
+                llm=self._llm,
+                adapter="enricher",
             )
-        except GeminiResponseError as e:
-            logger.exception("Invalid Gemini enrichment response", extra={"failure_kind": e.failure_kind.value})
+        except LLMResponseError as e:
+            logger.exception("Invalid LLM enrichment response", extra={"failure_kind": e.failure_kind.value})
             return []
 
         return [

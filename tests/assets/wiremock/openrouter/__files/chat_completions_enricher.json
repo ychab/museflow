@@ -1,0 +1,27 @@
+{
+  "id": "gen-1761811200-enricher",
+  "provider": "Google",
+  "model": "google/gemini-2.5-flash-lite",
+  "object": "chat.completion",
+  "created": 1761811200,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"folk\", \"indie-folk\"], \"moods\": [\"chill\"], \"locales\": [\"fr\"]}]}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1830,
+    "completion_tokens": 32,
+    "total_tokens": 1862,
+    "cost": 0.0001958
+  }
+}
