@@ -61,9 +61,12 @@ The live tests are a deliberate manual step, never part of `make test` or CI.
 | Ruff | Lint and format, line length 119 | Rule sets `E F I UP B PERF FURB` plus `S101` (no `assert` outside tests); isort with one import per line and custom sections (FastAPI, Pydantic, SQLAlchemy grouped separately) |
 | mypy | Static typing over `museflow` and `tests` | `strict = true`, Pydantic plugin on, Python 3.14 target |
 | deptry | Unused, missing and transitive dependency detection | `asyncpg` allow-listed as a driver loaded by SQLAlchemy |
+| import-linter | Architecture contracts over the import graph, transitive imports included | Five contracts in `pyproject.toml`: the hexagonal layers (infrastructure → application → domain), no framework in `domain`, no infrastructure framework in `application` (Pydantic allowed for input schemas), adapters independent of entrypoints, API and CLI independent of each other |
 | pre-commit | Runs the above plus hygiene hooks (merge-conflict markers, YAML / TOML / JSON validity, trailing whitespace, debug statements) | `.pre-commit-config.yaml` |
 
 `make lint` formats and checks locally; `make lint-check` is the non-mutating variant used in CI.
+
+For Claude Code sessions, a `PostToolUse` hook ([`.claude/hooks/ruff.sh`](https://github.com/ychab/museflow/blob/main/.claude/hooks/ruff.sh)) formats and lints each Python file right after it is edited, and feeds the remaining errors back to the agent, which fixes them before moving on. It is a convenience on top of the checks above, not a replacement: unused imports are left to `make lint` (an import added in one edit is often used in the next), and other agent tools get the same guarantees from pre-commit and CI.
 
 ## Continuous integration
 

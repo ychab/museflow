@@ -55,6 +55,7 @@ dev = [
     "deptry>=0.25.1",
     "ruff>=0.17.2",
     "mypy>=2.4.0",
+    "import-linter>=2.15",
     "types-pyyaml>=6.0.12.20260906",
     # Note: pydantic[dotenv] is usually redundant if you have python-dotenv or pydantic-settings,
     # but kept here to match your original request.
@@ -152,6 +153,65 @@ ignore_missing_imports = true
 DEP002 = [
     # Used as a driver for SQLAlchemy.
     "asyncpg",
+]
+
+[tool.importlinter]
+root_package = "museflow"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Hexagonal layers: infrastructure -> application -> domain"
+type = "layers"
+layers = [
+    "museflow.infrastructure",
+    "museflow.application",
+    "museflow.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain imports no framework"
+type = "forbidden"
+source_modules = ["museflow.domain"]
+forbidden_modules = [
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "httpx",
+    "pydantic",
+    "pydantic_settings",
+    "sqlalchemy",
+    "tenacity",
+    "typer",
+]
+
+[[tool.importlinter.contracts]]
+# Pydantic stays allowed: input schemas may be Pydantic models.
+name = "Application imports no infrastructure framework"
+type = "forbidden"
+source_modules = ["museflow.application"]
+forbidden_modules = [
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "httpx",
+    "pydantic_settings",
+    "sqlalchemy",
+    "tenacity",
+    "typer",
+]
+
+[[tool.importlinter.contracts]]
+name = "Adapters don't depend on entrypoints"
+type = "forbidden"
+source_modules = ["museflow.infrastructure.adapters"]
+forbidden_modules = ["museflow.infrastructure.entrypoints"]
+
+[[tool.importlinter.contracts]]
+name = "API and CLI entrypoints are independent"
+type = "independence"
+modules = [
+    "museflow.infrastructure.entrypoints.api",
+    "museflow.infrastructure.entrypoints.cli",
 ]
 
 

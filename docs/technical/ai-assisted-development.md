@@ -34,6 +34,7 @@ timeline
     2026-10-24 : Module grouping and English-only rules 7d1746b
     2026-10-30 : AGENTS.md as the single source
                : .claude pruned to two skills and one agent
+               : Layering enforced by import-linter, Ruff hook
 ```
 
 | Step | Commit | Date | What and why |
@@ -49,6 +50,7 @@ timeline
 | Instruction diet | `86f57eb` | 2026-07-01 | `CLAUDE.md` cut from 442 to 245 lines (+59 / -223 in the commit), because it is loaded into every session and costs tokens every time |
 | Single source | #48 | 2026-10-30 | `CLAUDE.md` (260 lines) and `CONVENTIONS.md` (181 lines, mostly duplicates) replaced by `AGENTS.md` (129 lines, read natively by Claude Code and other agents) and `tests/AGENTS.md` (66 lines, loaded only when working on tests). The always-loaded file went from 16 KB to 8 KB |
 | `.claude/` pruned | #48 | 2026-10-30 | Six commands and five agents became two skills (`/arch-review`, `/security-review`) and one agent (`test`). The scaffolding commands were never used and had drifted (`/new-migration` still created revisions the project no longer adds), and the reviewer checklists copied rules that had since changed (repositories passed to use cases, before the unit of work) |
+| Rules into tooling | #49 | 2026-10-30 | import-linter checks the hexagonal layering in `make lint`, pre-commit and CI, so the core architecture rule no longer depends on a review. A Claude Code hook runs Ruff on each edited file and feeds the errors back to the agent |
 | Conventional commits and trailers | from `d80bc85` | 2026-05-23 | `feat:` / `fix:` / `chore:` prefixes from late May; `Co-Authored-By` trailers on 15 commits, 12 of them in October 2026 |
 
 ## Growth
@@ -83,6 +85,7 @@ flowchart LR
 - **[`tests/AGENTS.md`](https://github.com/ychab/museflow/blob/main/tests/AGENTS.md) holds the testing rules**, loaded only when the agent works under `tests/`. It is the only nested instruction file, on purpose: rules scattered across many directories are hard to keep track of.
 - **Skills are reviews on demand.** `/arch-review` and `/security-review` run in a forked subagent, without the conversation, so the reviewer sees the diff with fresh eyes. They check it against `AGENTS.md` rather than a copy of the rules, and hold only what a review adds: known exceptions, severities, a verdict.
 - **Agents are specialised teammates**, "virtual teammates with roles" in the author's words, explicitly not people. Only `test` remains: it fixes failing tests and coverage gaps autonomously, under the Dead End Protocol.
+- **Tools check what they can.** import-linter, Ruff and mypy run in `make lint`, pre-commit and CI, whatever wrote the code; a Claude Code hook runs Ruff right after each edit so the agent fixes its mistakes as it goes. Reviews are left with what tools can't see.
 - **The human decides and reviews every diff.** Nothing is merged on an agent's say-so, and the 100% branch gate, Ruff, mypy and deptry run regardless of who wrote the change.
 - **Plan first for large features**, so the review happens on a short plan before it has to happen on a large diff.
 
@@ -138,4 +141,4 @@ uncommitted changes.
 - **repomix.** Useful while pasting code into a chat window, redundant once an agent could read the repository itself; removed in `107aa9d`, almost four months after it was added.
 - **Oversized always-loaded instructions.** `CLAUDE.md` grew to 442 lines and was loaded into every session. Cutting it to 245 kept the rules that change behaviour and moved detail to `CONVENTIONS.md` and per-directory files. A second pass halved it again: `CONVENTIONS.md` mostly repeated it, so both became one `AGENTS.md`, and the testing rules moved to `tests/AGENTS.md`.
 - **Tooling nobody ran.** Four scaffolding commands (`/new-feature`, `/new-provider`, `/new-migration`, `/add-tests`) and two agents (`python`, `engineer`) were never part of the routine. Unused, they drifted from the code without anyone noticing; they were removed in #48. Lint fixing is left to `make lint` and exploring to Claude Code's built-in agent.
-- **Rules without enforcement.** Prose rules drift (see the `assert` example above, now enforced by Ruff `S101`).
+- **Rules without enforcement.** Prose rules drift (see the `assert` example above, now enforced by Ruff `S101`). The layering rule took the same path: written in the instructions and checked by a review agent, it is now a set of import-linter contracts.
