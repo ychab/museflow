@@ -10,14 +10,14 @@ from museflow.application.use_cases.taste_profile_build import BuildTasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
 
 
-@pytest.mark.wiremock("gemini")
-class TestGeminiBuildTasteProfileUseCase:
+@pytest.mark.wiremock("openrouter")
+class TestBuildTasteProfileUseCase:
     @pytest.fixture
     def config(self) -> BuildTasteProfileConfigInput:
         return BuildTasteProfileConfigInputFactory.build(
@@ -30,10 +30,10 @@ class TestGeminiBuildTasteProfileUseCase:
     def use_case(
         self,
         uow: UnitOfWorkPort,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
-            profiler=gemini_profiler,
+            profiler=openrouter_profiler,
             uow=uow,
         )
 
@@ -51,6 +51,8 @@ class TestGeminiBuildTasteProfileUseCase:
         assert profile.tracks_count == 7
         assert profile.user_id == user.id
         assert profile.profiler == TasteProfiler.GEMINI
+        assert profile.logic_version == "v2.0"
+        assert profile.profiler_metadata["gateway"] == "openrouter"
         assert profile.profile["personality_archetype"] == "The Introspective Wanderer"
         assert profile.profile["life_phase_insights"] == [
             "Transition from high-energy rock to ambient introspection during 2022"

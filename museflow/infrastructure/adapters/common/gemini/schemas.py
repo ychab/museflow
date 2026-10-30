@@ -18,10 +18,6 @@ class GeminiSchemaProperty(BaseModel):
         return cls(type="string")
 
     @classmethod
-    def enum_string(cls, values: list[str]) -> GeminiSchemaProperty:
-        return cls(type="string", enum=values)
-
-    @classmethod
     def number(cls) -> GeminiSchemaProperty:
         return cls(type="number")
 

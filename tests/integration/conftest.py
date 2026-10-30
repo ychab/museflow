@@ -54,7 +54,7 @@ from museflow.infrastructure.adapters.database.repositories.users import UserSQL
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -439,25 +439,6 @@ async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Gemi
 
 
 @pytest.fixture
-async def gemini_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiTasteProfileAdapter]:
-    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
-
-    retry_method = GeminiTasteProfileAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
-
-    async with GeminiTasteProfileAdapter(
-        api_key="dummy-api-key",
-        segment_model=GeminiModel.FLASH_2_5,
-        merge_model=GeminiModel.FLASH_2_5,
-        reflect_model=GeminiModel.FLASH_2_5,
-        base_url=HttpUrl(base_url) if base_url else None,
-        verify_ssl=False,
-        max_retry_wait=5,
-    ) as client:
-        yield client
-
-
-@pytest.fixture
 async def openrouter_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
     monkeypatch.setattr(OpenRouterClient.make_api_call.retry, "stop", stop_after_attempt(1))
 
@@ -470,6 +451,23 @@ async def openrouter_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator
         llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
     ) as enricher:
         yield enricher
+
+
+@pytest.fixture
+async def openrouter_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[OpenRouterTasteProfileAdapter]:
+    monkeypatch.setattr(OpenRouterClient.make_api_call.retry, "stop", stop_after_attempt(1))
+
+    async with OpenRouterTasteProfileAdapter(
+        client=OpenRouterClient(
+            api_key="dummy-api-key",
+            base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
+            verify_ssl=False,
+        ),
+        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        reflect_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+    ) as profiler:
+        yield profiler
 
 
 # --- Services ---

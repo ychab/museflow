@@ -184,7 +184,7 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
                     <span>Profiler: {taste_profile.profiler}</span>
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-0">
-                    <span>Reflect Model: {taste_profile.profiler_metadata.get('models', {}).get('reflect', 'N/A')}</span>
+                    <span>Reflect Model: {taste_profile.profiler_metadata.get('steps', {}).get('reflect', {}).get('model', 'N/A')}</span>
                     <span>Updated: {taste_profile.updated_at}</span>
                 </div>
             </footer>
