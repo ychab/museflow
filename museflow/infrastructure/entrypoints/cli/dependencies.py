@@ -12,7 +12,7 @@ from museflow.domain.enums import MusicAdvisor
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
@@ -24,7 +24,6 @@ from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAut
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.config.settings.gemini import gemini_settings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -77,21 +76,20 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
 
 
 @asynccontextmanager
-async def get_gemini_taste_advisor() -> AsyncGenerator[AdvisorPort]:
-    async with GeminiAdvisorAdapter(
-        api_key=gemini_settings.API_KEY,
-        model=gemini_settings.ADVISOR_MODEL,
-        base_url=gemini_settings.BASE_URL,
-        timeout=gemini_settings.HTTP_TIMEOUT,
-        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
-    ) as client:
-        yield client
+async def get_advisor(model: str | None = None) -> AsyncGenerator[AdvisorPort]:
+    client = get_openrouter_client()
+    llm = openrouter_settings.ADVISOR.with_model(model)
+
+    async with OpenRouterAdvisorAdapter(client=client, llm=llm) as advisor:
+        await client.check_models({"advisor": llm})
+        yield advisor
 
 
 @asynccontextmanager
 async def get_enricher(model: str | None = None) -> AsyncGenerator[TrackEnricherPort]:
     client = get_openrouter_client()
     llm = openrouter_settings.ENRICHER.with_model(model)
+
     async with OpenRouterTrackEnricherAdapter(client=client, llm=llm) as enricher:
         await client.check_models({"enricher": llm})
         yield enricher
@@ -131,10 +129,10 @@ async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyO
 
 
 @asynccontextmanager
-async def get_advisor_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorPort]:
+async def get_advisor_adapter(advisor: MusicAdvisor, model: str | None = None) -> AsyncGenerator[AdvisorPort]:
     match advisor:
         case MusicAdvisor.GEMINI:
-            async with get_gemini_taste_advisor() as adapter:
+            async with get_advisor(model) as adapter:
                 yield adapter
         case _:
             raise ValueError(f"Unknown advisor: {advisor}")

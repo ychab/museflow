@@ -13,26 +13,6 @@ class GeminiSchemaProperty(BaseModel):
     required: list[str] | None = None
     enum: list[str] | None = None
 
-    @classmethod
-    def string(cls) -> GeminiSchemaProperty:
-        return cls(type="string")
-
-    @classmethod
-    def number(cls) -> GeminiSchemaProperty:
-        return cls(type="number")
-
-    @classmethod
-    def array(cls, items: GeminiSchemaProperty) -> GeminiSchemaProperty:
-        return cls(type="array", items=items)
-
-    @classmethod
-    def object(
-        cls,
-        properties: dict[str, GeminiSchemaProperty],
-        required: list[str] | None = None,
-    ) -> GeminiSchemaProperty:
-        return cls(type="object", properties=properties, required=required)
-
 
 GeminiSchemaProperty.model_rebuild()
 

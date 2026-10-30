@@ -1,18 +1,3 @@
-import asyncio
-import logging
-from typing import Any
-from typing import cast
-
-import httpx
-from httpx import codes
-
-from pydantic import HttpUrl
-
-from tenacity import retry
-from tenacity import retry_if_exception
-from tenacity import stop_after_attempt
-from tenacity import wait_exponential
-
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
@@ -24,126 +9,28 @@ from museflow.domain.exceptions import AdvisorRateLimitExceeded
 from museflow.domain.exceptions import DiscoveryTasteStrategyException
 from museflow.domain.utils import taste as taste_utils
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.adapters.advisors.gemini.mappers import to_discovery_strategy
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GEMINI_DISCOVERY_STRATEGY_CONFIG
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiDiscoveryStrategyContent
-from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
-from museflow.infrastructure.adapters.common.gemini.validation import validate_response
-from museflow.infrastructure.adapters.http import HttpClientMixin
-from museflow.infrastructure.adapters.http import RateLimitRetry
-from museflow.infrastructure.config.settings.gemini import gemini_settings
-
-logger = logging.getLogger(__name__)
+from museflow.infrastructure.adapters.advisors.openrouter.mappers import to_discovery_strategy
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_STRATEGY_SCHEMA
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import DiscoveryStrategyResponse
+from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
+from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 
-def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, AdvisorRateLimitExceeded):
-        return False  # Rate limit exhausted — let it propagate
+class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
+    """Adapter that asks an LLM, through OpenRouter, for a discovery strategy matching a taste profile."""
 
-    if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
-        return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
-
-    # Retry network error OR manual retry signal (used for 429 with retryDelay)
-    if isinstance(exception, (httpx.RequestError, RateLimitRetry)):
-        return True
-
-    return False
-
-
-class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
-    """Adapter for the Google Gemini API.
-
-    This class implements the `AdvisorPort` and provides methods to interact
-    with the Gemini generative language API to get AI-driven discovery strategies. It
-    includes retry logic for transient network errors and specific HTTP status codes
-    via `HttpClientMixin`.
-    """
-
-    def __init__(
-        self,
-        api_key: str,
-        model: GeminiModel,
-        base_url: HttpUrl | None = None,
-        timeout: float = 30.0,
-        verify_ssl: bool = True,
-        max_retry_wait: int = 60,
-    ) -> None:
-        super().__init__(
-            base_url=base_url or gemini_settings.BASE_URL,
-            verify_ssl=verify_ssl,
-            timeout=timeout,
-        )
-        self._api_key = api_key
-        self._model = model
-        self._max_retry_wait = max_retry_wait
+    def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
+        super().__init__(client=client)
+        self._llm = llm
 
     @property
     def display_name(self) -> str:
-        return "Gemini"
-
-    @retry(
-        retry=retry_if_exception(_is_retryable_error),
-        wait=wait_exponential(multiplier=1, min=2, max=60),  # 2 + 4 + 8 + 16 + 32 = 62 seconds
-        stop=stop_after_attempt(gemini_settings.HTTP_MAX_RETRIES),
-        reraise=True,
-    )
-    async def make_api_call(
-        self,
-        method: str,
-        endpoint: str,
-        *,
-        headers: dict[str, str] | None = None,
-        params: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Makes an API call to the Gemini API.
-
-        This method includes retry logic for transient errors and rate limiting.
-        It specifically handles the `retryDelay` field from Gemini's 429 response body.
-        """
-        try:
-            response = await self._client.request(
-                method=method.upper(),
-                url=f"{str(self._base_url).rstrip('/')}{endpoint}",
-                headers=headers,
-                params=params,
-                json=json_data,
-            )
-            response.raise_for_status()
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == codes.TOO_MANY_REQUESTS:
-                retry_delay = parse_retry_delay(e.response.content)
-                if retry_delay is not None:
-                    if retry_delay > self._max_retry_wait:
-                        logger.warning(
-                            "Gemini rate limit wait exceeds max, aborting",
-                            extra={"retry_delay": retry_delay, "max_retry_wait": self._max_retry_wait},
-                        )
-                        raise AdvisorRateLimitExceeded(
-                            f"Gemini rate limit {retry_delay}s exceeds max wait {self._max_retry_wait}s"
-                        ) from e
-
-                    logger.debug(f"Gemini rate limit exceeded, retrying in {retry_delay} seconds")
-                    await asyncio.sleep(retry_delay + 1)
-                    raise RateLimitRetry() from e
-
-            logger.exception(
-                "Gemini API Error",
-                extra={"status_code": e.response.status_code, "method": method, "endpoint": endpoint},
-            )
-            raise e
-
-        if response.status_code == codes.NO_CONTENT:
-            return {}
-
-        return cast(dict[str, Any], response.json())
+        return "OpenRouter"
 
     async def get_discovery_strategy(
         self,
@@ -262,34 +149,21 @@ class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort):
         user_message = " ".join(user_parts)
 
         try:
-            inner = await self._request_discovery_strategy(
-                [GeminiRequestContent(parts=[GeminiRequestPart(text=user_message)])],
-                system_prompt,
+            content = await self._client.complete(
+                [
+                    ChatMessage(role="system", content=system_prompt),
+                    ChatMessage(role="user", content=user_message),
+                ],
+                response_model=DiscoveryStrategyResponse,
+                schema=DISCOVERY_STRATEGY_SCHEMA,
+                llm=self._llm,
+                adapter="advisor",
             )
-        except RateLimitRetry as e:
-            raise AdvisorRateLimitExceeded(
-                "Gemini rate limit exceeded after max retries for discovery strategy"
-            ) from e
-        except GeminiResponseError as e:
-            raise DiscoveryTasteStrategyException(f"Invalid Gemini response for discovery strategy: {e}") from e
+        except LLMRateLimitError as e:
+            raise AdvisorRateLimitExceeded(str(e)) from e
+        except LLMRequestError as e:
+            raise DiscoveryTasteStrategyException(str(e)) from e
+        except LLMResponseError as e:
+            raise DiscoveryTasteStrategyException(f"Invalid discovery strategy response: {e}") from e
 
-        return to_discovery_strategy(inner)
-
-    @self_heal()
-    @validate_response(GeminiDiscoveryStrategyContent, adapter="advisor")
-    async def _request_discovery_strategy(
-        self,
-        contents: list[GeminiRequestContent],
-        system_prompt: str,
-    ) -> dict[str, Any]:
-        request = GeminiGenerateContentRequest(
-            system_instruction=GeminiRequestContent(parts=[GeminiRequestPart(text=system_prompt)]),
-            contents=contents,
-            generationConfig=GEMINI_DISCOVERY_STRATEGY_CONFIG,
-        )
-        return await self.make_api_call(
-            method="POST",
-            endpoint=f"/models/{self._model}:generateContent",
-            headers={"x-goog-api-key": self._api_key},
-            json_data=request.model_dump(exclude_none=True),
-        )
+        return to_discovery_strategy(content)

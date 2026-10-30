@@ -2,19 +2,19 @@ import pytest
 
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.enums import DiscoveryFocus
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 
 from tests.integration.utils.wiremock import WireMockContext
 
 
-@pytest.mark.wiremock("gemini")
-class TestGeminiAdvisorAdapter:
+@pytest.mark.wiremock("openrouter")
+class TestOpenRouterAdvisorAdapter:
     async def test__get_discovery_strategy__nominal(
         self,
-        gemini_advisor: GeminiAdvisorAdapter,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
         taste_profile: TasteProfile,
     ) -> None:
-        strategy = await gemini_advisor.get_discovery_strategy(
+        strategy = await openrouter_advisor.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
             advisor_limit=5,
@@ -30,13 +30,15 @@ class TestGeminiAdvisorAdapter:
 
     async def test__get_discovery_strategy__invalid_response_then_valid__self_heals(
         self,
-        gemini_advisor: GeminiAdvisorAdapter,
-        gemini_wiremock: WireMockContext,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        openrouter_wiremock: WireMockContext,
         taste_profile: TasteProfile,
     ) -> None:
-        endpoint = "/models/gemini-2.5-flash:generateContent"
-        invalid_body = {"candidates": [{"content": {"parts": [{"text": '{"wrong_key": 1}'}], "role": "model"}}]}
-        gemini_wiremock.create_mapping(
+        endpoint = "/chat/completions"
+        invalid_body = {
+            "choices": [{"message": {"role": "assistant", "content": '{"wrong_key": 1}'}, "finish_reason": "stop"}]
+        }
+        openrouter_wiremock.create_mapping(
             method="POST",
             url_path=endpoint,
             status=200,
@@ -47,7 +49,7 @@ class TestGeminiAdvisorAdapter:
             new_state="invalid-served",
         )
 
-        strategy = await gemini_advisor.get_discovery_strategy(
+        strategy = await openrouter_advisor.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
             advisor_limit=5,

@@ -40,8 +40,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
@@ -422,20 +421,18 @@ def spotify_streaming_history() -> SpotifyStreamingHistoryAdapter:
 
 
 @pytest.fixture
-async def gemini_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[GeminiAdvisorAdapter]:
-    base_url: str | None = os.getenv("WIREMOCK_GEMINI_BASE_URL")
+async def openrouter_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[OpenRouterAdvisorAdapter]:
+    monkeypatch.setattr(OpenRouterClient.make_api_call.retry, "stop", stop_after_attempt(1))
 
-    retry_method = GeminiAdvisorAdapter.make_api_call
-    monkeypatch.setattr(retry_method.retry, "stop", stop_after_attempt(1))
-
-    async with GeminiAdvisorAdapter(
-        api_key="dummy-api-key",
-        model=GeminiModel.FLASH_2_5,
-        base_url=HttpUrl(base_url) if base_url else None,
-        verify_ssl=False,
-        max_retry_wait=5,
-    ) as client:
-        yield client
+    async with OpenRouterAdvisorAdapter(
+        client=OpenRouterClient(
+            api_key="dummy-api-key",
+            base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
+            verify_ssl=False,
+        ),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+    ) as advisor:
+        yield advisor
 
 
 @pytest.fixture
@@ -488,8 +485,8 @@ def spotify_wiremock() -> Iterable[WireMockContext]:
 
 
 @pytest.fixture
-def gemini_wiremock() -> Iterable[WireMockContext]:
-    with WireMockContext(base_url=os.getenv("WIREMOCK_GEMINI_ADMIN_URL", "")) as wiremock_context:
+def openrouter_wiremock() -> Iterable[WireMockContext]:
+    with WireMockContext(base_url=os.environ["WIREMOCK_OPENROUTER_ADMIN_URL"]) as wiremock_context:
         yield wiremock_context
 
 

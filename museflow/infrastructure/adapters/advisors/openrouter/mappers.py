@@ -1,10 +1,10 @@
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiDiscoveryStrategyContent
-from museflow.infrastructure.adapters.advisors.gemini.schemas import GeminiSuggestedTrack
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import DiscoveryStrategyResponse
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import SuggestedTrack
 
 
-def to_track_suggested(track: GeminiSuggestedTrack) -> TrackSuggested:
+def to_track_suggested(track: SuggestedTrack) -> TrackSuggested:
     return TrackSuggested(
         name=track.name,
         artists=track.artists,
@@ -13,7 +13,7 @@ def to_track_suggested(track: GeminiSuggestedTrack) -> TrackSuggested:
     )
 
 
-def to_discovery_strategy(content: GeminiDiscoveryStrategyContent) -> DiscoveryTasteStrategy:
+def to_discovery_strategy(content: DiscoveryStrategyResponse) -> DiscoveryTasteStrategy:
     return DiscoveryTasteStrategy(
         reasoning=content.reasoning,
         strategy_label=content.strategy_label,

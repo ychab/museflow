@@ -86,6 +86,11 @@ def discover(
         min=1,
         max=10,
     ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-2.5-flash).",
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
@@ -99,6 +104,7 @@ def discover(
                 email=email,
                 advisor=advisor,
                 provider=provider,
+                model=model,
                 config=DiscoverTasteConfigInput(
                     focus=focus,
                     profile_name=name,
@@ -200,6 +206,7 @@ async def discover_logic(
     advisor: MusicAdvisor,
     provider: MusicProvider,
     config: DiscoverTasteConfigInput,
+    model: str | None = None,
 ) -> DiscoverTasteResult:
     """Discovers new music guided by the user's taste profile and creates a playlist.
 
@@ -208,6 +215,7 @@ async def discover_logic(
         advisor: The AI advisor to use.
         provider: The music provider to use for search and playlist creation.
         config: The configuration for the discovery process.
+        model: An OpenRouter model id overriding the configured advisor model.
 
     Returns:
         A DiscoverTasteResult with the playlist, strategy, reports, and final tracks.
@@ -236,7 +244,7 @@ async def discover_logic(
         provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
         provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
-        advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor))
+        advisor_adapter = await stack.enter_async_context(get_advisor_adapter(advisor, model))
         reconciler = get_reconciler()
 
         use_case = DiscoverTasteUseCase(
