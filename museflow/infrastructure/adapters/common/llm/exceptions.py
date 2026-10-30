@@ -50,5 +50,14 @@ class LLMRequestError(Exception):
         self.status_code = status_code
 
 
+class LLMModelError(Exception):
+    """A configured model is unknown to OpenRouter, or cannot serve the parameters the step sends."""
+
+    def __init__(self, message: str, *, step: str, model: str) -> None:
+        super().__init__(message)
+        self.step = step
+        self.model = model
+
+
 class LLMRateLimitError(Exception):
     """OpenRouter kept rate-limiting the request past the retry budget."""

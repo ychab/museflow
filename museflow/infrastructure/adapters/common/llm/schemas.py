@@ -69,3 +69,15 @@ class ChatCompletionResponse(BaseModel):
     model: str | None = None  # the model actually used, which differs from the requested one on fallback
     choices: list[ChatChoice] = Field(default_factory=list)
     error: ChatCompletionError | None = None
+
+
+# --- Model catalog ---
+
+
+class CatalogModel(BaseModel):
+    id: str
+    supported_parameters: list[str] = Field(default_factory=list)  # union over the model's provider endpoints
+
+
+class ModelCatalogResponse(BaseModel):
+    data: list[CatalogModel]

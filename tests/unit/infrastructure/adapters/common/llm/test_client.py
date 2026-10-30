@@ -15,6 +15,7 @@ from pytest_httpx import HTTPXMock
 
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.client import _is_retryable_error
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMModelError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
@@ -24,6 +25,7 @@ from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 URL = "https://openrouter.test/api/v1/chat/completions"
+MODELS_URL = "https://openrouter.test/api/v1/models"
 
 VALID_RESPONSE: dict[str, Any] = {
     "model": "google/gemini-2.5-flash",
@@ -32,6 +34,14 @@ VALID_RESPONSE: dict[str, Any] = {
 INVALID_RESPONSE: dict[str, Any] = {
     "model": "google/gemini-2.5-flash",
     "choices": [{"message": {"role": "assistant", "content": '{"value": "nope"}'}, "finish_reason": "stop"}],
+}
+CATALOG: dict[str, Any] = {
+    "data": [
+        {"id": "google/gemini-2.5-flash", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
+        {"id": "openai/gpt-5-mini", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
+        {"id": "mistralai/mistral-small", "supported_parameters": ["structured_outputs"]},
+        {"id": "meta-llama/llama-3-8b-instruct"},
+    ]
 }
 SCHEMA = JsonSchemaProperty.object({"value": JsonSchemaProperty.integer()})
 
@@ -260,6 +270,69 @@ class TestOpenRouterClient:
         result = await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
         assert result == Answer(value=42)
+
+    async def test__check_models__nominal(self, client: OpenRouterClient, httpx_mock: HTTPXMock) -> None:
+        httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
+        llm = LLMSettings(
+            MODEL="google/gemini-2.5-flash",
+            REASONING_EFFORT=ReasoningEffort.LOW,
+            TEMPERATURE=0.3,
+            FALLBACK_MODELS=["openai/gpt-5-mini:nitro"],
+        )
+
+        await client.check_models({"enricher": llm, "advisor": LLMSettings(MODEL="openai/gpt-5-mini")})
+
+        assert len(httpx_mock.get_requests()) == 1
+        assert "Authorization" not in httpx_mock.get_requests()[0].headers
+
+    @pytest.mark.parametrize(
+        ("llm", "expected_model", "expected_message"),
+        [
+            pytest.param(
+                LLMSettings(MODEL="google/gemni-2.5-flash"),
+                "google/gemni-2.5-flash",
+                "Unknown OpenRouter model 'google/gemni-2.5-flash' for the enricher step. "
+                "Did you mean 'google/gemini-2.5-flash'?",
+                id="typo",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="google/gemini-2.5-flash", FALLBACK_MODELS=["foo"]),
+                "foo",
+                "Unknown OpenRouter model 'foo' for the enricher step. See https://openrouter.ai/models.",
+                id="unknown_fallback",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="meta-llama/llama-3-8b-instruct"),
+                "meta-llama/llama-3-8b-instruct",
+                "OpenRouter model 'meta-llama/llama-3-8b-instruct' for the enricher step does not support: "
+                "structured_outputs.",
+                id="no_structured_outputs",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="mistralai/mistral-small", REASONING_EFFORT=ReasoningEffort.HIGH, MAX_TOKENS=1000),
+                "mistralai/mistral-small",
+                "OpenRouter model 'mistralai/mistral-small' for the enricher step does not support: "
+                "reasoning, max_tokens.",
+                id="missing_step_parameters",
+            ),
+        ],
+    )
+    async def test__check_models__invalid(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        expected_model: str,
+        expected_message: str,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
+
+        with pytest.raises(LLMModelError) as exc_info:
+            await client.check_models({"enricher": llm})
+
+        assert str(exc_info.value) == expected_message
+        assert exc_info.value.step == "enricher"
+        assert exc_info.value.model == expected_model
 
     @pytest.mark.parametrize(
         ("exception", "expected"),
