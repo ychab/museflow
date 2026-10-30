@@ -59,6 +59,12 @@ class TestDiscoverParserCommand:
         # fmt: on
         assert result.exit_code == 0
 
+    def test__model__passed_to_logic(self, mock_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--model", "openai/gpt-5-mini"])
+
+        mock_discover_logic.assert_called_once()
+        assert mock_discover_logic.call_args.kwargs["model"] == "openai/gpt-5-mini"
+
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
         [

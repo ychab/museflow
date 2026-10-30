@@ -96,7 +96,7 @@ def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:
     """Map each WireMock server name to the full set of servers it must share an xdist group with.
 
     Tests are marked `@pytest.mark.wiremock(*servers)`. Two servers must end up in the same
-    xdist group if any single test uses both (e.g. `wiremock("gemini", "spotify")`) — and that
+    xdist group if any single test uses both (e.g. `wiremock("openrouter", "spotify")`) — and that
     requirement is transitive: if test A uses only "spotify" and test B uses "gemini" and
     "spotify", then A and B must share a group too, even though A never mentions "gemini".
     Without this, two tests could run concurrently on different xdist workers while hitting the

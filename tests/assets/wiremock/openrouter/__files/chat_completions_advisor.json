@@ -1,0 +1,27 @@
+{
+  "id": "gen-1761811200-advisor",
+  "provider": "Google",
+  "model": "google/gemini-2.5-flash",
+  "object": "chat.completion",
+  "created": 1761811200,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"reasoning\": \"Based on your progressive metal roots and electronic explorations, I recommend expanding into post-rock and math rock territories that bridge your technical and atmospheric preferences.\", \"strategy_label\": \"Progressive Horizons\", \"recommended_tracks\": [{\"name\": \"Mi Pueblo\", \"artists\": [\"Grupo Niche\"], \"score\": 1.0}], \"search_queries\": [\"post-rock instrumental\", \"math rock progressive\"], \"suggested_playlist_name\": \"Sonic Expansion - Progressive Horizons\"}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1500,
+    "completion_tokens": 120,
+    "total_tokens": 1620,
+    "cost": 0.0008
+  }
+}

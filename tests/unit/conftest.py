@@ -28,8 +28,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
+from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
@@ -270,13 +269,12 @@ def spotify_library(
 
 
 @pytest.fixture
-async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
-    async with GeminiAdvisorAdapter(
-        api_key="dummy-api-key",
-        model=GeminiModel.FLASH_2_5,
-        max_retry_wait=5,
-    ) as client:
-        yield client
+async def openrouter_advisor() -> AsyncGenerator[OpenRouterAdvisorAdapter]:
+    async with OpenRouterAdvisorAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+    ) as advisor:
+        yield advisor
 
 
 @pytest.fixture

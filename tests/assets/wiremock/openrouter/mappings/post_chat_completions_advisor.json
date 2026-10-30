@@ -2,16 +2,16 @@
   "priority": 1,
   "request": {
     "method": "POST",
-    "urlPath": "/models/gemini-2.5-flash:generateContent",
+    "urlPath": "/chat/completions",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$.system_instruction"
+        "matchesJsonPath": "$.response_format.json_schema[?(@.name == 'DiscoveryStrategyResponse')]"
       }
     ]
   },
   "response": {
     "status": 200,
-    "bodyFileName": "discovery_strategy_expansion.json",
+    "bodyFileName": "chat_completions_advisor.json",
     "headers": {
       "Content-Type": "application/json"
     }
