@@ -18,9 +18,8 @@ You report violations; you do not fix them.
 ## Rules
 
 The rules are in `AGENTS.md` (and `tests/AGENTS.md` for test files). Read them first, then read each file in scope and
-check it against every rule that applies to its layer. Pay most attention to:
-- **Layering:** `domain/` imports no framework (`fastapi`, `sqlalchemy`, `pydantic`, `httpx`…); `application/` imports
-  nothing from `infrastructure/`.
+check it against every rule that applies to its layer. The layering itself (which layer may import what) is checked by
+import-linter in `make lint`: report its failures, and spend the review on what tools can't see:
 - **Transactions:** no remote call (LLM, provider), user prompt or long wait inside an `async with uow:` block; the
   remote side effect runs before the local writes; writes that form one fact share one block; no nested blocks.
 - **Repositories:** flush, never commit; `.returning()` rows keyed by a column, never by position.

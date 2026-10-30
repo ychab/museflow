@@ -162,6 +162,7 @@ lint-format:  ## Lint and format code
 	uv run ruff format museflow tests
 	uv run mypy
 	uv run deptry .
+	uv run lint-imports
 
 lint: lint-format
 
@@ -170,6 +171,7 @@ lint-check: ## Lint and check code
 	uv run ruff format --check museflow tests
 	uv run mypy
 	uv run deptry .
+	uv run lint-imports
 
 precommit: ## Run pre-commit hooks
 	uv run pre-commit run --all-files

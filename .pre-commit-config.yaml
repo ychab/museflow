@@ -44,3 +44,13 @@ repos:
         language: system
         pass_filenames: false
         require_serial: true
+
+  - repo: local
+    hooks:
+      - id: lint-imports
+        name: lint-imports
+        entry: uv run lint-imports
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true

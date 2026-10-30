@@ -13,10 +13,12 @@ Claude Code skills (`/arch-review`, `/security-review`) and the `test` agent liv
 
 ## Commands
 - `make install` — install deps + pre-commit hooks
-- `make lint` — format + type check + dependency check
+- `make lint` — format + type check + dependency check + import contracts (`lint-imports`)
 - `make test` — all tests with 100% branch coverage (`make test-unit` / `make test-integration` for targeted runs)
 - `make up` / `make down` — Docker (DB + WireMock)
 - `make run` — FastAPI dev server; `make docs-build` — strict docs build
+
+Before considering a task done, run `make lint` and the relevant tests.
 
 ## Language
 Everything written for the repo is in English, whatever the conversation language: code, comments, docstrings, logs,
@@ -44,6 +46,8 @@ museflow/
     ├── config/settings/
     └── entrypoints/ # api (FastAPI), cli (Typer)
 ```
+
+The layering is enforced by import-linter: the contracts live in `pyproject.toml` (`[tool.importlinter]`).
 
 ## Domain
 - Entities are `@dataclass(frozen=True, kw_only=True)` with no framework imports. Canonical: `domain/entities/track.py`.

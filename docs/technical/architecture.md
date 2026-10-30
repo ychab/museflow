@@ -123,4 +123,4 @@ The rules are written down in [`AGENTS.md`](https://github.com/ychab/museflow/bl
 | Repeated closures are centralised as decorators (`@self_heal`, `@validate_response`, tenacity's `@retry`) | Three Gemini adapters share the same failure handling; copy-paste would drift |
 
 !!! note "What is enforced by tooling"
-    Most of the rules above are enforced by review (human and agent), not by tooling. Two exceptions: the ban on `assert` in production code is enforced by Ruff (rule `S101`, ignored under `tests/`), and full type annotation is enforced by mypy in strict mode (see [Quality & testing](quality.md)).
+    Most of the rules above are enforced by review (human and agent), not by tooling. Three exceptions: the layering itself is enforced by import-linter (which layer may import what, and no framework in the domain), the ban on `assert` in production code by Ruff (rule `S101`, ignored under `tests/`), and full type annotation by mypy in strict mode (see [Quality & testing](quality.md)).
