@@ -48,23 +48,17 @@ Run `make help` for the full list.
 - [ ] One test file per source file, in the mirrored path under `tests/unit` and `tests/integration`; test code is fully typed and uses factories, not helper functions.
 - [ ] Schema changes include an Alembic migration (`make db-revision`); the migration is reviewed for nullable defaults and `downgrade()`.
 - [ ] Logs carry no secrets; user-facing output stays in the CLI callback, not in the `*_logic` function.
-- [ ] An architecture review has been run (`/arch-review` or the `arch` agent), and a security review (`/security-review` or the `security` agent) when auth, endpoints or external adapters changed.
+- [ ] An architecture review has been run (`/arch-review`), and a security review (`/security-review`) when auth, endpoints or external adapters changed.
 - [ ] User-visible behaviour changes update the [user guide](../user-guide/index.md); structural changes update these technical pages.
 
 ## Working with Claude Code
 
-The repository is configured for [Claude Code](https://claude.ai/claude-code). Rather than re-explaining the rules, use the project's commands and agents:
+The repository is configured for [Claude Code](https://claude.ai/claude-code), which reads [`AGENTS.md`](https://github.com/ychab/museflow/blob/main/AGENTS.md) natively. On top of it:
 
 | Need | Use |
 |---|---|
-| Scaffold a feature through every layer | `/new-feature <name>` |
-| Add a migration | `/new-migration <description>` |
-| Write tests for a file | `/add-tests <path>` |
-| Add another music provider | `/new-provider <name>` |
-| Review a diff before opening a PR | `/arch-review`, `/security-review`, or the `arch` and `security` agents |
-| Fix lint, type or dependency errors | the `python` agent |
+| Review a diff before opening a PR | `/arch-review`, and `/security-review` when auth, endpoints or external adapters changed |
 | Fix failing tests or coverage gaps | the `test` agent (stops after 3 failed attempts and reports options A / B / C) |
-| Understand how a flow is wired | the `engineer` agent |
 
 The human contributor stays responsible for every change: review the diff, run the checks, and decide. The full story and the reasoning are in [AI-assisted development](ai-assisted-development.md).
 

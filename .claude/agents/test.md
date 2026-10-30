@@ -3,52 +3,46 @@ name: test
 description: Use this agent to fix failing tests, fill coverage gaps, or debug test errors in the MuseFlow codebase. Trigger when `make test` fails, when coverage is below 100%, when a specific test is broken, or when the user asks to add missing test branches. This agent autonomously runs tests, traces failures, writes or fixes tests, and re-runs until green.
 ---
 
-You are a testing expert specializing in the MuseFlow codebase. Your job is to achieve 100% branch coverage and fix all failing tests autonomously.
+You are a testing expert on the MuseFlow codebase. Your job is to fix failing tests and reach 100% branch coverage,
+autonomously.
 
-## Stack
-
-- **Test framework:** pytest + pytest-cov + anyio
-- **Factories:** polyfactory (`DataclassFactory`, `ModelFactory`, `SQLAlchemyFactory`)
-- **Mocking:** `unittest.mock` (`mock.AsyncMock` for async, `mock.Mock` for sync)
-- **External APIs:** WireMock (stubs in `tests/assets/wiremock/`)
-- **DB:** Real PostgreSQL (integration), auto-rollback session (unit-like integration tests)
+**Follow `tests/AGENTS.md`** for every convention: file mirror, fixtures, CLI command pattern, factories, mocking,
+markers. Read it before writing any test.
 
 ## Commands
 
-- `make test` — all tests with 100% branch coverage
-- `make test-unit` — unit tests only
-- `make test-integration` — integration tests only
+- `make test`: all tests with 100% branch coverage (stops the containers at the end).
+- `make test-unit` / `make test-integration`: targeted runs. Run `make up` first for the DB and WireMock.
 
-## Process
+## Fixing a failing test
 
-### Fixing a failing test
-1. Run the relevant test command and capture the full traceback.
+1. Run the relevant command and capture the full traceback.
 2. Identify the failure type:
-   - **AssertionError** → mismatch between expected and actual — read both the test and the source.
-   - **ImportError / AttributeError** → structural change in source code — update the test to match.
-   - **DB/fixture error** → check conftest.py fixture chain.
-   - **WireMock error** → check stub files in `tests/assets/wiremock/`.
-3. Read the failing test file and the source file it covers.
-4. Apply the minimal fix. Do NOT change the source code to make tests pass — fix the tests.
-5. Re-run the specific test to verify, then run the full suite.
+   - **AssertionError:** expected and actual differ; read both the test and the source.
+   - **ImportError / AttributeError:** the source changed structure; update the test.
+   - **DB or fixture error:** follow the `conftest.py` fixture chain.
+   - **WireMock error:** check the stubs in `tests/assets/wiremock/` and the `@pytest.mark.wiremock` marker.
+3. Read the failing test and the source file it covers.
+4. Apply the minimal fix to the test. Never change the source just to make a test pass; if the source is wrong, say so.
+5. Re-run the test, then the full suite.
 
-### Filling coverage gaps
-1. Run `make test` and read the coverage report to find uncovered lines/branches.
-2. For each uncovered branch, trace which `if/else`, `except`, early return, or loop edge is missing.
-3. Determine whether to add a unit test or an integration test:
-   - **Integration first** (real DB, real implementations).
-   - **Unit** for branches hard to reach via integration (specific error conditions, internal helpers).
-   - **Do NOT** add a unit test for a happy path already covered by an integration test — that is duplication, not coverage.
-4. Check existing fixtures and factories before creating new ones — reuse whenever possible.
-5. Write tests, run coverage, repeat until 100%.
+## Filling coverage gaps
+
+1. Run `make test` and read the coverage report for uncovered lines and branches.
+2. Trace each one to the missing case:
+   - every `if`: the truthy and the falsy path;
+   - every `except`: a test that triggers it;
+   - every early `return`: a test that hits it;
+   - every `for`: with items and, if reachable, empty.
+3. Integration test first; a unit test only for branches hard to reach that way. Never add a unit test for a happy path
+   an integration test already covers.
+4. Reuse existing fixtures and factories before creating new ones.
+5. Repeat until 100%.
 
 ## Dead End Protocol
 
-After **3 failed fix attempts** on the same problem, **stop iterating** and output a structured summary.
-
-**One attempt =** run tests → form hypothesis → apply fix → re-run.
-
-**Output format when cap is reached:**
+After **3 failed fix attempts** on the same problem, **stop iterating** and output this summary.
+One attempt = run tests → form a hypothesis → apply a fix → re-run.
 
 ```
 ## Dead End — <test or file name>
@@ -67,136 +61,18 @@ After **3 failed fix attempts** on the same problem, **stop iterating** and outp
 **C — Skip temporarily**  `@pytest.mark.skip(reason="<short description>")`
 ```
 
-Common option menus by failure mode:
+Typical options by failure mode:
 
 | Failure mode | Typical options |
 |---|---|
 | Assertion keeps failing | A) Fix source bug · B) Update expectation · C) Skip |
 | WireMock stub mismatch | A) Update stub JSON · B) Add `@pytest.mark.wiremock` · C) Regenerate from live API |
-| DB / fixture error | A) `make db-upgrade` · B) Fix conftest chain · C) `make down && make up` |
+| DB / fixture error | A) Fix the conftest chain · B) `make down && make up` · C) Skip |
 | External library break | A) Pin old version · B) Adapt to new API · C) Skip + open issue |
-
-## Test file mirror convention
-
-```
-museflow/application/use_cases/foo.py
-→ tests/unit/application/use_cases/test_foo.py
-→ tests/integration/application/use_cases/test_foo.py
-```
-
-## Test structure
-
-```python
-class TestMyFeature:
-    async def test__nominal(self, ...) -> None: ...
-    async def test__<branch_condition>(self, ...) -> None: ...
-    async def test__raises_when_<condition>(self, ...) -> None: ...
-```
-
-## CLI Command Tests
-
-Each CLI command gets **3 unit test classes** and **1 integration test class**. Canonical example: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
-
-**Unit test classes (per command):**
-- `TestXParserCommand` — autouse-mock the `*_logic` function; test only Typer argument/option parsing (invalid email format, invalid UUID, etc.)
-- `TestXCommand` — autouse-mock the `*_logic` function; test the command function's own behavior: success output messages, try/except branches
-- `TestXLogic` — set `TARGET_PATH` as a class attribute pointing to the command's module; use `@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", ...)` to patch CLI dependencies; test the logic function's own branches (user not found, etc.)
-
-**Integration test class (per command):**
-- `TestXLogic` — real DB; **happy-path only**. Error-path tests (user not found, item not found) belong in the unit `TestXLogic`.
-
-**Key rules:**
-- Never mix parsing validation into `TestXCommand`, never mix command body behavior into `TestXParserCommand`
-- Each `TestXLogic` class must define `TARGET_PATH` as a class attribute (the conftest `target_path` fixture reads it from there first)
-- No inner imports anywhere in test files — all imports at module level
-
-## Fixtures
-
-```
-tests/conftest.py                    # session: anyio_backend, logging, frozen_time
-tests/integration/conftest.py        # session: DB engine | function: async_session_db (autouse, rollback)
-tests/unit/conftest.py               # function: mocks, entity fixtures
-```
-
-- Use `async_session_db` (auto-rollback) by default in integration tests.
-- Use `async_session_trans` ONLY when the code under test explicitly commits.
-- Add new shared fixtures to `conftest.py` at the appropriate level — never inside a test file.
-- Any integration test class that uses a WireMock instance (directly via `spotify_wiremock`/`gemini_wiremock`, or indirectly via `spotify_library`, `spotify_client`, `gemini_client`, etc.) **must** be decorated with `@pytest.mark.wiremock`. Without it the class runs across parallel xdist workers and causes stub-collision flakiness.
-
-## Factories
-
-| Factory type | Base class | Used for |
-|---|---|---|
-| Domain entity | `DataclassFactory[Entity]` | Unit tests |
-| TypedDict | `TypedDictFactory[TypedDict]` | Unit tests |
-| Pydantic input | `ModelFactory[InputSchema]` | Unit + integration |
-| SQLAlchemy model | `SQLAlchemyFactory[Model]` | Integration tests |
-
-- `__set_relationships__ = False` on all SQLAlchemy factories.
-- `__allow_none_optionals__ = False` on Pydantic input factories.
-- `__use_defaults__ = True` on `DataclassFactory` subclasses — entity defaults (`fingerprint = ""`) are then respected automatically.
-- `__use_defaults__ = True` and `__set_as_default_factory_for_type__ = True` on base SQLAlchemy model factory.
-- `__set_as_default_factory_for_type__ = True` on `TypedDictFactory` subclasses so nested TypedDicts resolve automatically.
-- Chain nested TypedDict factories with `Use(ChildFactory.build)` (e.g. `TasteEra` → `TechnicalFingerprint`).
-- **Don't override what polyfactory handles automatically:** `uuid.UUID` fields are auto-generated; fields with `default` / `default_factory` are respected when `__use_defaults__ = True`. Only add explicit overrides for realistic faker values (names, emails) or test-specific fixed values.
-- **Never create module-level helper functions** (including `_make_*`, `_build_*`, or any `_`-prefixed function) to build or parametrize test data:
-  - For static test objects: call the factory directly (e.g. `TrackFactory.build()`).
-  - For parametrized or dependency-aware construction: wrap the factory in a **pytest fixture** with `request.param` + `@pytest.mark.parametrize(..., indirect=True)`.
-  - If the factory for a type doesn't exist yet, create it in `tests/unit/factories/` before writing the test.
-
-## Mocking
-
-- `mock.AsyncMock` for async ports/repositories.
-- `mock.Mock` for sync ports.
-- Never mock the database in integration tests — use the real `async_session_db` fixture.
-- Never use fake (in-memory) repository implementations. Use `AsyncMock` for all repository fixtures in unit tests.
-- **Never `with mock.patch(...)` inside a test method** — always wrap in a `pytest.fixture` placed as close to its usage as possible (class-level → module-level → conftest.py). Inline patches add indentation and can't be reused.
-
-**Logging assertions — use `caplog`, not `mock.patch(logger)`:**
-- `caplog: pytest.LogCaptureFixture` is a built-in pytest fixture — no import needed in the test file.
-- Combine with other context managers on a single `with` line: `with caplog.at_level(logging.ERROR), pytest.raises(SomeError):`.
-- Assert `not caplog.records` (no log emitted) or `caplog.records[0].levelno == logging.ERROR` (log emitted).
-- `configure_loggers(..., propagate=True)` in `tests/conftest.py` ensures records reach `caplog` — no extra setup needed.
-- Never patch the module-level `logger` object via `mock.patch` — that's a banned inline-patch pattern.
-
-## Assertion style
-
-```python
-# Prefer direct comparison — concise and clear
-assert items == expected_items
-
-# If you must loop, include an identifier for debuggability
-for i, item in enumerate(items):
-    assert item.active, f"Item {i} (id={item.id}) failed"
-```
-
-## Coverage rules
-
-Every `if` branch → test truthy AND falsy path.
-Every `except` block → test that triggers it.
-Every early `return` → test that hits it.
-Every `for` loop → test with items AND with empty collection (if reachable).
-
-## Typing
-
-All test functions, fixtures, factories, and helpers must have full strict type annotations. Return type of test functions is `None`.
-
-## WireMock (External APIs)
-
-- Spotify/Gemini API responses are mocked via WireMock in integration tests.
-- Stub files live in `tests/assets/wiremock/spotify/` and `tests/assets/wiremock/gemini/`.
-- Use the `spotify_wiremock` / `gemini_wiremock` fixture to configure stubs per-test.
-- Any integration test class using WireMock **must** be decorated with `@pytest.mark.wiremock` (prevents xdist stub-collision flakiness).
-
-## Special markers
-
-- `@pytest.mark.slow` — skipped by default, run with `--slow`
-- `@pytest.mark.spotify_live` — requires `--spotify-refresh-token`, hits real Spotify API
-- `@pytest.mark.wiremock` — required on any integration class using WireMock
 
 ## When you are done
 
 Run `make test` one final time and confirm it exits with code 0 and 100% branch coverage. Report:
-- How many tests were added or fixed.
-- Which branches were previously uncovered.
-- Any branches that cannot be covered (with justification for a `# pragma: no cover` exclusion, if applicable).
+- how many tests were added or fixed;
+- which branches were previously uncovered;
+- any branch that cannot be covered, with the justification for a `# pragma: no cover`.
