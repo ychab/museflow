@@ -38,6 +38,3 @@ class JsonSchemaProperty(BaseModel):
     @classmethod
     def object(cls, properties: dict[str, JsonSchemaProperty]) -> JsonSchemaProperty:
         return cls(type="object", properties=properties, required=list(properties), additionalProperties=False)
-
-
-JsonSchemaProperty.model_rebuild()
