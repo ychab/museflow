@@ -40,3 +40,6 @@ class TestOpenRouterClient:
         )
 
         assert result == Answer(value=42)
+
+    async def test__check_models__nominal(self, openrouter_client: OpenRouterClient) -> None:
+        await openrouter_client.check_models({"enricher": LLMSettings(MODEL="google/gemini-2.5-flash-lite")})

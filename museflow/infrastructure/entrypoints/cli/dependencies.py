@@ -104,10 +104,10 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
 
 @asynccontextmanager
 async def get_enricher(model: str | None = None) -> AsyncGenerator[TrackEnricherPort]:
-    async with OpenRouterTrackEnricherAdapter(
-        client=get_openrouter_client(),
-        llm=openrouter_settings.ENRICHER.with_model(model),
-    ) as enricher:
+    client = get_openrouter_client()
+    llm = openrouter_settings.ENRICHER.with_model(model)
+    async with OpenRouterTrackEnricherAdapter(client=client, llm=llm) as enricher:
+        await client.check_models({"enricher": llm})
         yield enricher
 
 

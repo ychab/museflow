@@ -1,5 +1,7 @@
 import asyncio
+import difflib
 import logging
+from collections.abc import Mapping
 from typing import Any
 from typing import cast
 
@@ -15,12 +17,14 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMModelError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRequest
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
 from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
+from museflow.infrastructure.adapters.common.llm.schemas import ModelCatalogResponse
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
 from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
 from museflow.infrastructure.adapters.common.llm.schemas import ResponseFormat
@@ -50,6 +54,16 @@ def _is_retryable_error(exception: BaseException) -> bool:
         return True
 
     return False
+
+
+def _required_parameters(llm: LLMSettings) -> list[str]:
+    """Parameters the request carries for this step, which `require_parameters` makes mandatory for the provider."""
+    optional = {
+        "reasoning": llm.REASONING_EFFORT is not None,
+        "temperature": llm.TEMPERATURE is not None,
+        "max_tokens": llm.MAX_TOKENS is not None,
+    }
+    return ["structured_outputs", *(name for name, sent in optional.items() if sent)]
 
 
 def _error_message(response: httpx.Response) -> str:
@@ -126,6 +140,41 @@ class OpenRouterClient(HttpClientMixin):
             raise
 
         return cast(dict[str, Any], response.json())
+
+    async def check_models(self, steps: Mapping[str, LLMSettings]) -> None:
+        """Fails fast on a misconfigured model, before any paid call, against OpenRouter's public model catalog.
+
+        Each step's model and fallbacks must exist and support the parameters the step sends. This is a necessary
+        condition only: the routing rules (ZDR, data collection) are applied per provider endpoint at request time.
+
+        Raises:
+            LLMModelError: If a model is unknown or lacks a required parameter.
+        """
+        response_data = await self.make_api_call(method="GET", endpoint="/models")
+        catalog = {model.id: model for model in ModelCatalogResponse.model_validate(response_data).data}
+
+        for step, llm in steps.items():
+            for model_id in [llm.MODEL, *llm.FALLBACK_MODELS]:
+                # Routing shortcuts (`:nitro`, `:floor`, `:online`…) are not listed: check the base model instead
+                model = catalog.get(model_id) or catalog.get(model_id.partition(":")[0])
+                if model is None:
+                    suggestions = difflib.get_close_matches(model_id, catalog, n=1)
+                    hint = (
+                        f" Did you mean '{suggestions[0]}'?" if suggestions else " See https://openrouter.ai/models."
+                    )
+                    raise LLMModelError(
+                        f"Unknown OpenRouter model '{model_id}' for the {step} step.{hint}", step=step, model=model_id
+                    )
+
+                missing = [param for param in _required_parameters(llm) if param not in model.supported_parameters]
+                if missing:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step does not support: {', '.join(missing)}.",
+                        step=step,
+                        model=model_id,
+                    )
+
+        logger.debug(f"OpenRouter models checked for steps: {', '.join(steps)}")
 
     @self_heal()
     async def complete[T: BaseModel](

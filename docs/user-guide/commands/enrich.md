@@ -19,7 +19,7 @@ museflow enrich tracks --email <email> [OPTIONS]
 | `--only-locale` | off | Enrich locales (sung languages) only. |
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
 | `--batch-size` | `200` | Number of tracks per LLM request. |
-| `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-2.5-flash-lite`). It must support structured outputs. |
+| `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-2.5-flash-lite`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--limit` | none | Maximum number of tracks to process. |
 
 Without any `--only-*` flag, all three fields are enriched. The flags can be combined. By default only tracks
