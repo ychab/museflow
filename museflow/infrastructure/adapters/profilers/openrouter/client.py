@@ -1,19 +1,6 @@
-import asyncio
 import json
-import logging
 from typing import Any
 from typing import cast
-
-import httpx
-from httpx import codes
-
-from pydantic import HttpUrl
-
-from tenacity import before_sleep_log
-from tenacity import retry
-from tenacity import retry_if_exception
-from tenacity import stop_after_attempt
-from tenacity import wait_exponential
 
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
@@ -27,35 +14,15 @@ from museflow.domain.enums import MoodTag
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
-from museflow.infrastructure.adapters.common.gemini.exceptions import GeminiResponseError
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiGenerateContentRequest
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestContent
-from museflow.infrastructure.adapters.common.gemini.schemas import GeminiRequestPart
-from museflow.infrastructure.adapters.common.gemini.self_heal import self_heal
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.common.gemini.utils import parse_retry_delay
-from museflow.infrastructure.adapters.common.gemini.validation import validate_response
-from museflow.infrastructure.adapters.http import HttpClientMixin
-from museflow.infrastructure.adapters.http import RateLimitRetry
-from museflow.infrastructure.adapters.profilers.gemini.schemas import GEMINI_TASTE_PROFILE_CONFIG
-from museflow.infrastructure.adapters.profilers.gemini.schemas import GeminiTasteProfileContent
-from museflow.infrastructure.config.settings.gemini import gemini_settings
-
-logger = logging.getLogger(__name__)
-
-
-def _is_retryable_error(exception: BaseException) -> bool:
-    if isinstance(exception, TasteProfilerRateLimitExceeded):
-        return False  # Rate limit exhausted — let it propagate
-
-    if isinstance(exception, httpx.HTTPStatusError):  # Retry 429 and 5xx only
-        return exception.response.status_code == codes.TOO_MANY_REQUESTS or exception.response.status_code >= 500
-
-    # Retry network error OR manual retry signal (used for 429 with retryDelay)
-    if isinstance(exception, (httpx.RequestError, RateLimitRetry)):
-        return True
-
-    return False
+from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
+from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import TASTE_PROFILE_SCHEMA
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import TasteProfileResponse
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 
 def _format_tracks(tracks: list[Track]) -> str:
@@ -73,133 +40,70 @@ def _format_tracks(tracks: list[Track]) -> str:
     return "\n".join(lines)
 
 
-class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
+def _step_metadata(llm: LLMSettings) -> dict[str, Any]:
+    return {
+        "model": llm.MODEL,
+        "fallback_models": llm.FALLBACK_MODELS,
+        "reasoning_effort": llm.REASONING_EFFORT,
+        "max_tokens": llm.MAX_TOKENS,
+        "temperature": llm.TEMPERATURE,
+    }
+
+
+class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
+    """Adapter that builds a taste profile through OpenRouter, each step (segment, merge, reflect) with its own model."""
+
     def __init__(
         self,
-        api_key: str,
-        segment_model: GeminiModel,
-        merge_model: GeminiModel,
-        reflect_model: GeminiModel,
-        base_url: HttpUrl | None = None,
-        timeout: float = 120.0,
-        verify_ssl: bool = True,
-        max_retry_wait: int = 60,
+        client: OpenRouterClient,
+        segment_llm: LLMSettings,
+        merge_llm: LLMSettings,
+        reflect_llm: LLMSettings,
     ) -> None:
-        super().__init__(
-            base_url=base_url or gemini_settings.BASE_URL,
-            verify_ssl=verify_ssl,
-            timeout=timeout,
-        )
-        self._api_key = api_key
-        self._segment_model = segment_model
-        self._merge_model = merge_model
-        self._reflect_model = reflect_model
-        self._max_retry_wait = max_retry_wait
+        super().__init__(client=client)
+        self._segment_llm = segment_llm
+        self._merge_llm = merge_llm
+        self._reflect_llm = reflect_llm
 
     @property
     def display_name(self) -> str:
-        return "Gemini"
+        return "OpenRouter"
 
     @property
     def profiler_type(self) -> TasteProfiler:
+        # Kept until the profiler enum is dropped: `playlist discover` looks the profile up by this value.
         return TasteProfiler.GEMINI
 
     @property
     def logic_version(self) -> str:
-        return "v1.0"
+        return "v2.0"
 
     @property
     def profiler_metadata(self) -> dict[str, Any]:
         return {
-            "models": {
-                "segment": self._segment_model.value,
-                "merge": self._merge_model.value,
-                "reflect": self._reflect_model.value,
-            }
+            "gateway": "openrouter",
+            "steps": {
+                "segment": _step_metadata(self._segment_llm),
+                "merge": _step_metadata(self._merge_llm),
+                "reflect": _step_metadata(self._reflect_llm),
+            },
         }
 
-    @retry(
-        retry=retry_if_exception(_is_retryable_error),
-        wait=wait_exponential(multiplier=1, min=2, max=60),
-        stop=stop_after_attempt(gemini_settings.HTTP_MAX_RETRIES),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True,
-    )
-    async def make_api_call(
-        self,
-        method: str,
-        endpoint: str,
-        *,
-        headers: dict[str, str] | None = None,
-        params: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    async def _complete(self, prompt: str, llm: LLMSettings) -> TasteProfileData:
         try:
-            response = await self._client.request(
-                method=method.upper(),
-                url=f"{str(self._base_url).rstrip('/')}{endpoint}",
-                headers=headers,
-                params=params,
-                json=json_data,
+            content = await self._client.complete(
+                [ChatMessage(role="user", content=prompt)],
+                response_model=TasteProfileResponse,
+                schema=TASTE_PROFILE_SCHEMA,
+                llm=llm,
+                adapter="profiler",
             )
-            response.raise_for_status()
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == codes.TOO_MANY_REQUESTS:
-                retry_delay = parse_retry_delay(e.response.content)
-                if retry_delay is not None:
-                    if retry_delay > self._max_retry_wait:
-                        logger.warning(
-                            "Gemini profiler rate limit wait exceeds max, aborting",
-                            extra={"retry_delay": retry_delay, "max_retry_wait": self._max_retry_wait},
-                        )
-                        raise TasteProfilerRateLimitExceeded(
-                            f"Gemini rate limit {retry_delay}s exceeds max wait {self._max_retry_wait}s"
-                        ) from e
-
-                    logger.debug(f"Gemini profiler rate limit exceeded, retrying in {retry_delay} seconds")
-                    await asyncio.sleep(retry_delay + 1)
-                    raise RateLimitRetry() from e
-
-            raise
-
-        if response.status_code == codes.NO_CONTENT:
-            return {}
-
-        return cast(dict[str, Any], response.json())
-
-    @self_heal()
-    @validate_response(GeminiTasteProfileContent, adapter="profiler")
-    async def _request_taste_profile(self, contents: list[GeminiRequestContent], model: GeminiModel) -> dict[str, Any]:
-        request = GeminiGenerateContentRequest(
-            contents=contents,
-            generationConfig=GEMINI_TASTE_PROFILE_CONFIG,
-        )
-        return await self.make_api_call(
-            method="POST",
-            endpoint=f"/models/{model}:generateContent",
-            headers={"x-goog-api-key": self._api_key},
-            json_data=request.model_dump(exclude_none=True),
-        )
-
-    async def _prompt_request(self, prompt: str, model: GeminiModel) -> TasteProfileData:
-        try:
-            content = await self._request_taste_profile(
-                [GeminiRequestContent(parts=[GeminiRequestPart(text=prompt)])],
-                model,
-            )
-        except RateLimitRetry as e:
-            raise TasteProfilerRateLimitExceeded("Gemini profiler rate limit exceeded after max retries") from e
-        except httpx.HTTPStatusError as e:
-            try:
-                error_detail = e.response.json()["error"]["message"]
-            except KeyError, ValueError:
-                error_detail = e.response.text
-            raise TasteProfileBuildException(
-                f"Gemini API error after max retries: {e.response.status_code} — {error_detail}"
-            ) from e
-        except GeminiResponseError as e:
-            raise TasteProfileBuildException(f"Invalid Gemini taste profile response: {e}") from e
+        except LLMRateLimitError as e:
+            raise TasteProfilerRateLimitExceeded(str(e)) from e
+        except LLMRequestError as e:
+            raise TasteProfileBuildException(str(e)) from e
+        except LLMResponseError as e:
+            raise TasteProfileBuildException(f"Invalid taste profile response: {e}") from e
 
         return cast(TasteProfileData, content.model_dump())
 
@@ -220,6 +124,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             '- "current_vibe": [{"key": tag, "value": weight 0-1}] what this batch reveals right now\n'
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
+            '- "musical_identity_summary", "behavioral_traits", "discovery_style": null\n'
             "\nFor core_identity, current_vibe, and dominant_moods, use ONLY values from this exact vocabulary:\n"
             f"  Genres — macro: {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n"
             f"         — meso:  {', '.join(t.value for t in GENRE_MESO_TAGS)}\n"
@@ -240,7 +145,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )
-        return await self._prompt_request(prompt, self._segment_model)
+        return await self._complete(prompt, self._segment_llm)
 
     async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
         foundation_json = json.dumps(foundation, ensure_ascii=False)
@@ -268,7 +173,8 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "4. Technical Integrity:\n"
             "   - Keep all existing 'technical_fingerprint' values in previous eras UNCHANGED.\n"
             "   - personality_archetype: keep null.\n"
-            "   - life_phase_insights: keep empty.\n\n"
+            "   - life_phase_insights: keep empty.\n"
+            "   - musical_identity_summary, behavioral_traits, discovery_style: keep null.\n\n"
             "For core_identity, current_vibe, and dominant_moods, use ONLY values from this exact vocabulary:\n"
             f"  Genres — macro: {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n"
             f"         — meso:  {', '.join(t.value for t in GENRE_MESO_TAGS)}\n"
@@ -278,7 +184,7 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "Return the full merged JSON. Be mathematically precise and preserve all keys."
         )
 
-        return await self._prompt_request(prompt, self._merge_model)
+        return await self._complete(prompt, self._merge_llm)
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
         profile_json = json.dumps(profile, ensure_ascii=False)
@@ -307,4 +213,4 @@ class GeminiTasteProfileAdapter(HttpClientMixin, TasteProfilerPort):
             "Return the full profile JSON with all five fields populated. Keep all other fields unchanged."
         )
 
-        return await self._prompt_request(prompt, self._reflect_model)
+        return await self._complete(prompt, self._reflect_llm)

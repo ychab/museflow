@@ -36,5 +36,10 @@ class JsonSchemaProperty(BaseModel):
         return cls(type="array", items=items)
 
     @classmethod
-    def object(cls, properties: dict[str, JsonSchemaProperty]) -> JsonSchemaProperty:
-        return cls(type="object", properties=properties, required=list(properties), additionalProperties=False)
+    def object(cls, properties: dict[str, JsonSchemaProperty], *, nullable: bool = False) -> JsonSchemaProperty:
+        return cls(
+            type=["object", "null"] if nullable else "object",
+            properties=properties,
+            required=list(properties),
+            additionalProperties=False,
+        )

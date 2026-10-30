@@ -38,3 +38,10 @@ class TestJsonSchemaProperty:
             "required": ["name", "nickname"],
             "additionalProperties": False,
         }
+
+    def test__object__nullable(self) -> None:
+        schema = JsonSchemaProperty.object({"name": JsonSchemaProperty.string()}, nullable=True)
+
+        assert schema.type == ["object", "null"]
+        assert schema.required == ["name"]
+        assert schema.additionalProperties is False

@@ -17,7 +17,7 @@ from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -89,26 +89,35 @@ async def get_gemini_taste_advisor() -> AsyncGenerator[AdvisorPort]:
 
 
 @asynccontextmanager
-async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
-    async with GeminiTasteProfileAdapter(
-        api_key=gemini_settings.API_KEY,
-        segment_model=gemini_settings.PROFILER_SEGMENT_MODEL,
-        merge_model=gemini_settings.PROFILER_MERGE_MODEL,
-        reflect_model=gemini_settings.PROFILER_REFLECT_MODEL,
-        base_url=gemini_settings.BASE_URL,
-        timeout=gemini_settings.HTTP_TIMEOUT,
-        max_retry_wait=gemini_settings.HTTP_MAX_RETRY_WAIT,
-    ) as client:
-        yield client
-
-
-@asynccontextmanager
 async def get_enricher(model: str | None = None) -> AsyncGenerator[TrackEnricherPort]:
     client = get_openrouter_client()
     llm = openrouter_settings.ENRICHER.with_model(model)
     async with OpenRouterTrackEnricherAdapter(client=client, llm=llm) as enricher:
         await client.check_models({"enricher": llm})
         yield enricher
+
+
+@asynccontextmanager
+async def get_profiler(
+    segment_model: str | None = None,
+    merge_model: str | None = None,
+    reflect_model: str | None = None,
+) -> AsyncGenerator[TasteProfilerPort]:
+    client = get_openrouter_client()
+    segment_llm = openrouter_settings.PROFILER_SEGMENT.with_model(segment_model)
+    merge_llm = openrouter_settings.PROFILER_MERGE.with_model(merge_model)
+    reflect_llm = openrouter_settings.PROFILER_REFLECT.with_model(reflect_model)
+
+    async with OpenRouterTasteProfileAdapter(
+        client=client,
+        segment_llm=segment_llm,
+        merge_llm=merge_llm,
+        reflect_llm=reflect_llm,
+    ) as profiler:
+        await client.check_models(
+            {"profiler segment": segment_llm, "profiler merge": merge_llm, "profiler reflect": reflect_llm}
+        )
+        yield profiler
 
 
 @asynccontextmanager
@@ -132,10 +141,15 @@ async def get_advisor_adapter(advisor: MusicAdvisor) -> AsyncGenerator[AdvisorPo
 
 
 @asynccontextmanager
-async def get_taste_profiler(profiler: TasteProfiler) -> AsyncGenerator[TasteProfilerPort]:
+async def get_taste_profiler(
+    profiler: TasteProfiler,
+    segment_model: str | None = None,
+    merge_model: str | None = None,
+    reflect_model: str | None = None,
+) -> AsyncGenerator[TasteProfilerPort]:
     match profiler:
         case TasteProfiler.GEMINI:
-            async with get_gemini_profiler() as adapter:
+            async with get_profiler(segment_model, merge_model, reflect_model) as adapter:
                 yield adapter
         case _:
             raise ValueError(f"Unknown profiler: {profiler}")

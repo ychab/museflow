@@ -20,11 +20,18 @@ museflow taste build --email <email> --name <name> [OPTIONS]
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000). |
 | `--batch-size` | `200` | Batch sizes for profiles (1 to 1000). |
+| `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-2.5-flash-lite`). |
+| `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
+| `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |
 
 **Prerequisites**
 
 - Tracks imported with [`tracks history`](tracks.md#tracks-history).
-- A Gemini API key. This command calls the LLM and is the most expensive step of the flow.
+- An OpenRouter API key (`OPENROUTER_API_KEY`). This command calls the LLM and is the most expensive step of the
+  flow.
+
+Each step's model must support structured outputs: the command checks the three models against the OpenRouter catalog
+before any call, and stops with a suggestion on a typo.
 
 Without `--rated-only`, all tracks are candidates and rated ones are annotated with their score. With it, only
 rated tracks seed the profile, which is useful once a significant part of the library has been
@@ -37,6 +44,7 @@ with an error. Run the same command again with `--resume` to continue from the c
 
 ```bash
 museflow taste build --email user@example.com --name my-profile --track-limit 1500
+museflow taste build --email user@example.com --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
 **Output.** `Taste profile built: N tracks processed`, then the profile name, the profiler and its logic

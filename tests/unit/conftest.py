@@ -31,8 +31,9 @@ from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
@@ -279,24 +280,23 @@ async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
 
 
 @pytest.fixture
-async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
-    async with GeminiTasteProfileAdapter(
-        api_key="dummy-api-key",
-        segment_model=GeminiModel.FLASH_2_5,
-        merge_model=GeminiModel.FLASH_2_5,
-        reflect_model=GeminiModel.FLASH_2_5,
-        max_retry_wait=5,
-    ) as client:
-        yield client
-
-
-@pytest.fixture
 async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
     async with OpenRouterTrackEnricherAdapter(
         client=OpenRouterClient(api_key="dummy-api-key"),
         llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
     ) as enricher:
         yield enricher
+
+
+@pytest.fixture
+async def openrouter_profiler() -> AsyncGenerator[OpenRouterTasteProfileAdapter]:
+    async with OpenRouterTasteProfileAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
+        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        reflect_llm=LLMSettings(MODEL="google/gemini-2.5-pro", REASONING_EFFORT=ReasoningEffort.HIGH),
+    ) as profiler:
+        yield profiler
 
 
 # --- Services ---

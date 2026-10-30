@@ -19,12 +19,14 @@ from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
+
+URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 class TestBuildTasteProfileUseCase:
@@ -53,7 +55,7 @@ class TestBuildTasteProfileUseCase:
         )
 
     @pytest.fixture
-    def gemini_response(self, profile_data: TasteProfileData) -> dict[str, Any]:
+    def completion(self, profile_data: TasteProfileData) -> dict[str, Any]:
         serializable = {
             **profile_data,
             "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
@@ -61,12 +63,10 @@ class TestBuildTasteProfileUseCase:
         }
 
         return {
-            "candidates": [
+            "choices": [
                 {
-                    "content": {
-                        "parts": [{"text": json.dumps(serializable)}],
-                        "role": "model",
-                    }
+                    "message": {"role": "assistant", "content": json.dumps(serializable)},
+                    "finish_reason": "stop",
                 }
             ]
         }
@@ -95,10 +95,10 @@ class TestBuildTasteProfileUseCase:
     def use_case(
         self,
         mock_uow: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
-            profiler=gemini_profiler,
+            profiler=openrouter_profiler,
             uow=mock_uow,
         )
 
@@ -111,9 +111,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1)
@@ -122,9 +122,9 @@ class TestBuildTasteProfileUseCase:
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
         for _ in range(6):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         expected_profile = TasteProfileFactory.build(user_id=user.id)
@@ -144,8 +144,8 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
-        gemini_response: dict[str, Any],
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         mock_track_repository.get_list.return_value = tracks
@@ -153,11 +153,11 @@ class TestBuildTasteProfileUseCase:
 
         def respond(request: httpx.Request) -> httpx.Response:
             blocks_open.append(mock_uow.block_open)
-            return httpx.Response(200, json=gemini_response)
+            return httpx.Response(200, json=completion)
 
         httpx_mock.add_callback(
             respond,
-            url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+            url=URL,
             method="POST",
             is_reusable=True,
         )
@@ -184,9 +184,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         # 2 tracks → 1 batch → 1 build_profile_segment + 1 reflect_on_profile (no merge)
@@ -194,9 +194,9 @@ class TestBuildTasteProfileUseCase:
 
         for _ in range(2):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
@@ -215,9 +215,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1) — sleep called twice (between batch 1→2 and 2→3, not after last)
@@ -230,9 +230,9 @@ class TestBuildTasteProfileUseCase:
 
         for _ in range(6):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
@@ -252,9 +252,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
@@ -262,9 +262,9 @@ class TestBuildTasteProfileUseCase:
 
         for _ in range(6):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
@@ -313,9 +313,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
@@ -326,9 +326,9 @@ class TestBuildTasteProfileUseCase:
 
         for _ in range(5):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         await use_case.build_profile(user=user, config=config)
@@ -344,9 +344,9 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
-        gemini_response: dict[str, Any],
+        completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
@@ -356,9 +356,9 @@ class TestBuildTasteProfileUseCase:
 
         for _ in range(6):
             httpx_mock.add_response(
-                url=f"{gemini_profiler.base_url}models/gemini-2.5-flash:generateContent",
+                url=URL,
                 method="POST",
-                json=gemini_response,
+                json=completion,
             )
 
         await use_case.build_profile(user=user, config=config)
@@ -373,14 +373,14 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
         # Batch 1 raises TasteProfilerRateLimitExceeded — build pauses immediately, no checkpoint saved
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
         mock_track_repository.get_list.return_value = tracks
 
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "build_profile_segment",
             new_callable=mock.AsyncMock,
             side_effect=TasteProfilerRateLimitExceeded("rate limit"),
@@ -402,14 +402,14 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
         # Batch 1 raises TasteProfileBuildException — build pauses immediately, no checkpoint saved
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
         mock_track_repository.get_list.return_value = tracks
 
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "build_profile_segment",
             new_callable=mock.AsyncMock,
             side_effect=TasteProfileBuildException("bad response"),
@@ -431,7 +431,7 @@ class TestBuildTasteProfileUseCase:
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
     ) -> None:
         # Batch 1 succeeds (checkpoint saved), batch 2 fails — pauses at 2/3, upsert never called
@@ -439,7 +439,7 @@ class TestBuildTasteProfileUseCase:
         mock_track_repository.get_list.return_value = tracks
 
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "build_profile_segment",
             new_callable=mock.AsyncMock,
             side_effect=[profile_data, TasteProfilerRateLimitExceeded("rate limit")],
@@ -457,10 +457,10 @@ class TestBuildTasteProfileUseCase:
     def mock_reflect(
         self,
         request: pytest.FixtureRequest,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> Iterator[mock.AsyncMock]:
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "reflect_on_profile",
             new_callable=mock.AsyncMock,
             side_effect=request.param,
@@ -470,11 +470,11 @@ class TestBuildTasteProfileUseCase:
     @pytest.fixture
     def mock_segment(
         self,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
     ) -> Iterator[mock.AsyncMock]:
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "build_profile_segment",
             new_callable=mock.AsyncMock,
             return_value=profile_data,
@@ -484,11 +484,11 @@ class TestBuildTasteProfileUseCase:
     @pytest.fixture
     def mock_merge(
         self,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
     ) -> Iterator[mock.AsyncMock]:
         with mock.patch.object(
-            gemini_profiler,
+            openrouter_profiler,
             "merge_profiles",
             new_callable=mock.AsyncMock,
             return_value=profile_data,

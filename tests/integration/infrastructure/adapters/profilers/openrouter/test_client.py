@@ -2,14 +2,14 @@ import pytest
 
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.track import TrackFactory
 
 
-@pytest.mark.wiremock("gemini")
-class TestGeminiTasteProfileAdapter:
+@pytest.mark.wiremock("openrouter")
+class TestOpenRouterTasteProfileAdapter:
     @pytest.fixture
     def tracks(self) -> list[Track]:
         return TrackFactory.batch(3)
@@ -24,9 +24,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__build_profile_segment__nominal(
         self,
         tracks: list[Track],
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
-        profile = await gemini_profiler.build_profile_segment(tracks)
+        profile = await openrouter_profiler.build_profile_segment(tracks)
 
         assert profile == TasteProfileData(
             taste_timeline=[
@@ -55,9 +55,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__merge_profiles__nominal(
         self,
         profile_data: TasteProfileData,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
-        profile_merged = await gemini_profiler.merge_profiles(profile_data, profile_data)
+        profile_merged = await openrouter_profiler.merge_profiles(profile_data, profile_data)
 
         assert profile_merged == TasteProfileData(
             taste_timeline=[
@@ -98,9 +98,9 @@ class TestGeminiTasteProfileAdapter:
     async def test__reflect_on_profile__nominal(
         self,
         profile_data: TasteProfileData,
-        gemini_profiler: GeminiTasteProfileAdapter,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
-        profile_reflected = await gemini_profiler.reflect_on_profile(profile_data)
+        profile_reflected = await openrouter_profiler.reflect_on_profile(profile_data)
 
         assert profile_reflected == TasteProfileData(
             taste_timeline=[
