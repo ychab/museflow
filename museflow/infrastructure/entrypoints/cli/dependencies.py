@@ -13,9 +13,10 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
-from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
+from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
@@ -24,6 +25,7 @@ from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.gemini import gemini_settings
+from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
 ADVISOR_TO_PROFILER: dict[MusicAdvisor, TasteProfiler] = {
@@ -40,6 +42,19 @@ def get_password_hasher() -> PasswordHasherPort:
 
 def get_state_token_generator() -> StateTokenGeneratorPort:
     return SystemStateTokenGenerator()
+
+
+# --- LLM ---
+
+
+def get_openrouter_client() -> OpenRouterClient:
+    return OpenRouterClient(
+        api_key=openrouter_settings.API_KEY,
+        base_url=openrouter_settings.BASE_URL,
+        timeout=openrouter_settings.HTTP_TIMEOUT,
+        max_retry_wait=openrouter_settings.HTTP_MAX_RETRY_WAIT,
+        zdr=openrouter_settings.ZDR,
+    )
 
 
 # --- Context manager ---
@@ -88,12 +103,10 @@ async def get_gemini_profiler() -> AsyncGenerator[TasteProfilerPort]:
 
 
 @asynccontextmanager
-async def get_gemini_enricher() -> AsyncGenerator[TrackEnricherPort]:
-    async with GeminiTrackEnricherAdapter(
-        api_key=gemini_settings.API_KEY,
-        model=gemini_settings.ENRICHER_MODEL,
-        base_url=gemini_settings.BASE_URL,
-        timeout=gemini_settings.HTTP_TIMEOUT,
+async def get_enricher(model: str | None = None) -> AsyncGenerator[TrackEnricherPort]:
+    async with OpenRouterTrackEnricherAdapter(
+        client=get_openrouter_client(),
+        llm=openrouter_settings.ENRICHER.with_model(model),
     ) as enricher:
         yield enricher
 

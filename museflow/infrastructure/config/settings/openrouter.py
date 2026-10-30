@@ -17,6 +17,10 @@ class LLMSettings(BaseModel):
     TEMPERATURE: float | None = Field(default=None, ge=0.0, le=2.0)
     FALLBACK_MODELS: list[str] = Field(default_factory=list)
 
+    def with_model(self, model: str | None) -> LLMSettings:
+        """Returns these settings with `model` in place of `MODEL`, unchanged when `model` is None (a CLI override)."""
+        return self.model_copy(update={"MODEL": model}) if model else self
+
 
 class OpenRouterSettings(BaseSettings):
     model_config = SettingsConfigDict(

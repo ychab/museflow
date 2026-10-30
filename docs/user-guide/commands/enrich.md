@@ -18,13 +18,14 @@ museflow enrich tracks --email <email> [OPTIONS]
 | `--only-mood` | off | Enrich mood labels only. |
 | `--only-locale` | off | Enrich locales (sung languages) only. |
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
-| `--batch-size` | `200` | Number of tracks per Gemini request. |
+| `--batch-size` | `200` | Number of tracks per LLM request. |
+| `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-2.5-flash-lite`). It must support structured outputs. |
 | `--limit` | none | Maximum number of tracks to process. |
 
 Without any `--only-*` flag, all three fields are enriched. The flags can be combined. By default only tracks
 missing a requested field are processed, so the command is safe to re-run after a new import.
 
-**Prerequisites.** Imported tracks and a Gemini API key. This command calls the LLM: use `--limit` to try it
+**Prerequisites.** Imported tracks and an OpenRouter API key (`OPENROUTER_API_KEY`). This command calls the LLM: use `--limit` to try it
 on a small sample first.
 
 Genres follow a three-level taxonomy (macro genre, sub-genre, optional micro tag), moods are picked among 12
@@ -36,6 +37,7 @@ labels, and the locales are the ISO 639-1 codes of every language sung in the tr
 ```bash
 museflow enrich tracks --email user@example.com --limit 200
 museflow enrich tracks --email user@example.com --only-mood --force
+museflow enrich tracks --email user@example.com --limit 20 --model openai/gpt-5-mini
 ```
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a

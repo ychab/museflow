@@ -30,11 +30,13 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
 from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -289,9 +291,12 @@ async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
 
 
 @pytest.fixture
-async def gemini_enricher() -> AsyncGenerator[GeminiTrackEnricherAdapter]:
-    async with GeminiTrackEnricherAdapter(api_key="dummy-api-key", model=GeminiModel.FLASH_LITE_2_5) as client:
-        yield client
+async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
+    async with OpenRouterTrackEnricherAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key"),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+    ) as enricher:
+        yield enricher
 
 
 # --- Services ---
