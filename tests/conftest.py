@@ -34,7 +34,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "gemini_live: mark test as requiring live Gemini API access")
     config.addinivalue_line(
         "markers",
-        "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'gemini') — "
+        "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'gemini', 'openrouter') — "
         "groups tests by server set so each group runs serially on a single xdist worker",
     )
 
@@ -122,6 +122,7 @@ def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:
     for item in items:
         if marker := item.get_closest_marker("wiremock"):
             servers = sorted(set(marker.args))
+            find(servers[0])  # registers a server only ever used alone
             for server in servers[1:]:
                 union(servers[0], server)
 
