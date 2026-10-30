@@ -18,7 +18,6 @@ junit.xml
 **/.claude/*.local.json
 
 external_data
-.aider*
 
 # Docs build output
 /site

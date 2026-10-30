@@ -108,7 +108,7 @@ What the diagram encodes, with the reasoning behind each step:
 
 ## Conventions and why they exist
 
-The rules are written down in [`CONVENTIONS.md`](https://github.com/ychab/museflow/blob/main/CONVENTIONS.md) (detailed reference) and [`CLAUDE.md`](https://github.com/ychab/museflow/blob/main/CLAUDE.md) (the short contract loaded into every AI session, see [AI-assisted development](ai-assisted-development.md)). The ones that shape the code most:
+The rules are written down in [`AGENTS.md`](https://github.com/ychab/museflow/blob/main/AGENTS.md) (the contract loaded into every AI session, see [AI-assisted development](ai-assisted-development.md)). The ones that shape the code most:
 
 | Convention | Reason |
 |---|---|
@@ -117,7 +117,7 @@ The rules are written down in [`CONVENTIONS.md`](https://github.com/ychab/musefl
 | Ports are ABCs that accept input schemas and return entities | Use cases stay framework-free and are tested with `AsyncMock` instead of fakes |
 | SQLAlchemy models are `MappedAsDataclass` with symmetric `from_entity` / `to_entity` | One place maps each direction, repositories never build models field by field. Every model implements `to_entity`; `from_entity` exists on the two models whose repositories write whole entities (`Track`, `Playlist`), although the contract asks for both everywhere |
 | Use cases are plain async functions; a class only when injected state is needed (for example `DiscoverTasteUseCase`) | Function by default, class when the constructor genuinely carries dependencies |
-| Parameters grouped by role: inputs, then repositories, then other ports; DI parameters contiguous | Callers use keywords, so order is documentation; a consistent order makes a signature scannable |
+| Parameters grouped by role: inputs, then the unit of work, then other ports; DI parameters contiguous | Callers use keywords, so order is documentation; a consistent order makes a signature scannable |
 | CLI commands are thin sync wrappers around an `asyncio.run()` of a `<command>_logic` coroutine; the logic returns data and never prints | Output stays in the callback, so logic is unit-testable without capturing stdout, and the same logic can be reused |
 | `HttpClientMixin` first, port second in the base class list (`class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort)`) | The mixin supplies concrete methods (`close`, the async context manager) that the port declares abstract. With the port first, Python's MRO would find the abstract version first and the class could not be instantiated. |
 | Repeated closures are centralised as decorators (`@self_heal`, `@validate_response`, tenacity's `@retry`) | Three Gemini adapters share the same failure handling; copy-paste would drift |

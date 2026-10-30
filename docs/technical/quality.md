@@ -2,7 +2,7 @@
 
 ## Philosophy
 
-The testing rules are written in [`CLAUDE.md`](https://github.com/ychab/museflow/blob/main/CLAUDE.md) and [`CONVENTIONS.md`](https://github.com/ychab/museflow/blob/main/CONVENTIONS.md) and are meant to read as a contract: tests describe what the system promises, not how it is wired.
+The testing rules are written in [`tests/AGENTS.md`](https://github.com/ychab/museflow/blob/main/tests/AGENTS.md) and are meant to read as a contract: tests describe what the system promises, not how it is wired.
 
 | Principle | In practice |
 |---|---|

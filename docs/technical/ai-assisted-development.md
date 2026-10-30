@@ -32,6 +32,7 @@ timeline
     2026-06-27 : repomix removed 107aa9d
     2026-07-01 : CLAUDE.md trimmed 86f57eb
     2026-10-24 : Module grouping and English-only rules 7d1746b
+    2026-10-30 : AGENTS.md as the single source
 ```
 
 | Step | Commit | Date | What and why |
@@ -45,6 +46,7 @@ timeline
 | Dead End Protocol | `0d485f2` | 2026-03-24 | A 3-attempt cap on fixing a failing test, then stop and present options A / B / C instead of looping |
 | Plans before code | `7c9b9c5`, `6d8c52a` | 2026-04-04, 2026-05-23 | Seven taste-profile plan files (~1,100 lines) and `plan_v2.md` were committed as working documents. The taste-profile plans were deleted in `c95d10b` (2026-04-06, "plan 6 - final with cli command") and `plan_v2.md` at the V2 cleanup (`af43b52`) |
 | Instruction diet | `86f57eb` | 2026-07-01 | `CLAUDE.md` cut from 442 to 245 lines (+59 / -223 in the commit), because it is loaded into every session and costs tokens every time |
+| Single source | #48 | 2026-10-30 | `CLAUDE.md` (260 lines) and `CONVENTIONS.md` (181 lines, mostly duplicates) replaced by `AGENTS.md` (129 lines, read natively by Claude Code and other agents) and `tests/AGENTS.md` (52 lines, loaded only when working on tests). The always-loaded file went from 16 KB to 8 KB |
 | Conventional commits and trailers | from `d80bc85` | 2026-05-23 | `feat:` / `fix:` / `chore:` prefixes from late May; `Co-Authored-By` trailers on 15 commits, 12 of them in October 2026 |
 
 ## Growth
@@ -66,8 +68,8 @@ The project grew roughly 3.5 times in source and 4 times in tests after the agen
 flowchart LR
     H["Human: intent and review"] --> P["Plan for large features"]
     P --> C["Claude Code session"]
-    CL["CLAUDE.md<br/>always loaded contract"] --> C
-    CV["CONVENTIONS.md<br/>detailed reference"] --> C
+    CL["AGENTS.md<br/>always loaded contract"] --> C
+    CV["tests/AGENTS.md<br/>loaded for test work"] --> C
     CMD["Slash commands<br/>repeatable workflows"] --> C
     C --> D["Diff"]
     D --> A["Reviewer agents<br/>arch, security, python, test"]
@@ -75,8 +77,8 @@ flowchart LR
     H -->|"approve or reject"| G["Commit"]
 ```
 
-- **`CLAUDE.md` is the always-loaded contract**: stack, architecture, naming, logging, error handling, testing rules and the Dead End Protocol. It is short on purpose (see the diet above).
-- **[`CONVENTIONS.md`](https://github.com/ychab/museflow/blob/main/CONVENTIONS.md) is the detailed reference**, read when needed rather than on every session. `tests/CLAUDE.md` points the agent at the testing rules.
+- **[`AGENTS.md`](https://github.com/ychab/museflow/blob/main/AGENTS.md) is the always-loaded contract**: stack, architecture, transactions, naming, style, logging and error handling. It is short on purpose (see the diets above): rules that tooling enforces are left to the tooling, and examples are pointers to canonical files rather than code blocks that drift. Claude Code reads it natively, so there is no `CLAUDE.md`, and any other agent tool reads the same file.
+- **[`tests/AGENTS.md`](https://github.com/ychab/museflow/blob/main/tests/AGENTS.md) holds the testing rules**, loaded only when the agent works under `tests/`. It is the only nested instruction file, on purpose: rules scattered across many directories are hard to keep track of.
 - **Commands encode repeatable workflows** so the same checklist is applied each time instead of being re-explained.
 - **Agents are specialised reviewers**, "virtual teammates with roles" in the author's words, explicitly not people. Their narrow scope comes from their instructions; the agent definitions do not restrict tools in their frontmatter, so "read-only" for `engineer` is an instruction, not a sandbox.
 - **The human decides and reviews every diff.** Nothing is merged on an agent's say-so, and the 100% branch gate, Ruff, mypy and deptry run regardless of who wrote the change.
@@ -84,7 +86,7 @@ flowchart LR
 
 ### Rules added over time
 
-`CLAUDE.md` is edited as patterns that keep coming back wrong are identified. Examples, found with `git log -S"<rule text>" -- CLAUDE.md`:
+The contract is edited as patterns that keep coming back wrong are identified. Examples, found with `git log -S"<rule text>" -- CLAUDE.md` (the file was `CLAUDE.md` until 2026-10-30):
 
 | Rule | Commit | Date |
 |---|---|---|
@@ -99,7 +101,7 @@ Most rules are advisory to the agent and enforced by review, not by tooling, so 
 
 ## Commands and agents
 
-The project configures [Claude Code](https://claude.ai/claude-code) through `CLAUDE.md`, `CONVENTIONS.md`, `.claude/commands/` and `.claude/agents/`.
+The project configures [Claude Code](https://claude.ai/claude-code) through `AGENTS.md`, `.claude/commands/` and `.claude/agents/`.
 
 ### Commands (skills)
 
@@ -140,5 +142,5 @@ Agents are subagents with their own instructions, routed to automatically or inv
 
 - **Local-model tooling.** A Continue plugin with a local Ollama `qwen2.5-coder` model was added in `fca41e1` and removed 24 minutes later in `6057540` (2026-03-29); aider left only a `.gitignore` entry (`19682fe`). Neither fit the workflow.
 - **repomix.** Useful while pasting code into a chat window, redundant once an agent could read the repository itself; removed in `107aa9d`, almost four months after it was added.
-- **Oversized always-loaded instructions.** `CLAUDE.md` grew to 442 lines and was loaded into every session. Cutting it to 245 kept the rules that change behaviour and moved detail to `CONVENTIONS.md` and per-directory files.
+- **Oversized always-loaded instructions.** `CLAUDE.md` grew to 442 lines and was loaded into every session. Cutting it to 245 kept the rules that change behaviour and moved detail to `CONVENTIONS.md` and per-directory files. A second pass halved it again: `CONVENTIONS.md` mostly repeated it, so both became one `AGENTS.md`, and the testing rules moved to `tests/AGENTS.md`.
 - **Rules without enforcement.** Prose rules drift (see the `assert` example above, now enforced by Ruff `S101`).
