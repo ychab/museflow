@@ -6,7 +6,7 @@ The testing rules are written in [`tests/AGENTS.md`](https://github.com/ychab/mu
 
 | Principle | In practice |
 |---|---|
-| **Integration tests are the primary focus** | Full flows run against a real PostgreSQL and WireMock stand-ins for Spotify and Gemini, so SQL (including the `ON CONFLICT` merge rules), HTTP mapping and use-case orchestration are exercised together |
+| **Integration tests are the primary focus** | Full flows run against a real PostgreSQL and WireMock stand-ins for Spotify and OpenRouter, so SQL (including the `ON CONFLICT` merge rules), HTTP mapping and use-case orchestration are exercised together |
 | **Unit tests fill gaps** | Error branches and edge cases that are awkward to reach end to end: rate-limit exhaustion, invalid LLM replies, empty inputs. Ports are replaced with `mock.AsyncMock` / `mock.Mock(spec=Port)` |
 | **No fake in-memory repositories** | A fake repository is a second implementation that can disagree with the real one. The real one runs against a real database; the mock only asserts calls |
 | **Do not mirror happy paths** | If an integration test covers the nominal flow, there is no unit test repeating it |
@@ -37,16 +37,16 @@ Measured on the current tree:
 
 **Two session fixtures.** `async_session_db` is the autouse default: the test runs inside an outer transaction that is rolled back at the end, which is fast and needs no cleanup. The code under test writes through its unit of work, whose blocks run on the same connection with `join_transaction_mode="create_savepoint"`: each block's commit releases a savepoint, so the test sees the rows and they still disappear at the end. Since those writes go through other sessions, the test session reloads rows on every SELECT (`populate_existing`) instead of serving what it cached. `async_session_trans` is for the rare test where real commit semantics matter (the unit of work itself); it commits for real and cleans up with `TRUNCATE ... RESTART IDENTITY CASCADE`, which is slower.
 
-**WireMock for both external APIs.** `docker-compose.yml` starts one WireMock container for Spotify and one for Gemini, with stub assets under `tests/assets/wiremock/`. A small `WireMockContext` creates per-test mappings and deletes them on exit, and resets scenario state when scenarios were used. Adapter tests therefore exercise real HTTP, retries and header handling.
+**WireMock for both external APIs.** `docker-compose.yml` starts one WireMock container for Spotify and one for OpenRouter, with stub assets under `tests/assets/wiremock/`. A small `WireMockContext` creates per-test mappings and deletes them on exit, and resets scenario state when scenarios were used. Adapter tests therefore exercise real HTTP, retries and header handling.
 
-**Parallelism without WireMock races.** WireMock is a shared mutable resource: a one-off stub created by one test can match a request from another test running on a different worker. Tests that use it are marked `@pytest.mark.wiremock("spotify")` or `("gemini")` (or both). A collection hook in [`tests/conftest.py`](https://github.com/ychab/museflow/blob/main/tests/conftest.py) groups tests by server using union-find: if any test uses both servers, the two servers merge into one group transitively. Each group becomes one `xdist_group`, which `--dist=loadgroup` pins to a single worker so its tests run serially. The rest of the suite still runs fully parallel (`-n auto`). The history of this fix (a per-ID cleanup first, then the union-find grouping) is in the git log; the mechanism is documented in the hook's docstring.
+**Parallelism without WireMock races.** WireMock is a shared mutable resource: a one-off stub created by one test can match a request from another test running on a different worker. Tests that use it are marked `@pytest.mark.wiremock("spotify")` or `("openrouter")` (or both). A collection hook in [`tests/conftest.py`](https://github.com/ychab/museflow/blob/main/tests/conftest.py) groups tests by server using union-find: if any test uses both servers, the two servers merge into one group transitively. Each group becomes one `xdist_group`, which `--dist=loadgroup` pins to a single worker so its tests run serially. The rest of the suite still runs fully parallel (`-n auto`). The history of this fix (a per-ID cleanup first, then the union-find grouping) is in the git log; the mechanism is documented in the hook's docstring.
 
 **Markers for what must not run by default.**
 
 | Marker | Behaviour |
 |---|---|
 | `spotify_live` | Hits the real Spotify API; skipped unless `--spotify-refresh-token` is passed |
-| `gemini_live` | Hits the real Gemini API; skipped unless `--gemini-live` is passed. Spends real money |
+| `openrouter_live` | Hits the real OpenRouter API; skipped unless `--openrouter-live` is passed. Spends real money |
 | `slow` | Skipped unless `--slow` is passed (registered; no test currently uses it) |
 | `wiremock(*servers)` | Grouping marker described above |
 

@@ -23,7 +23,6 @@ museflow playlist discover --email <email> [OPTIONS]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | required | User email address. |
-| `--advisor` | `gemini` | The AI advisor to use. |
 | `--provider` | `spotify` | The music provider to use. |
 | `--focus` | `expansion` | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. |
 | `--name` | latest profile | Taste profile name (defaults to latest). |

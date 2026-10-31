@@ -173,7 +173,7 @@ A track's `genres` list is ordered `[macro, meso, micro?]`, so the first element
 | `current_vibe` | What the latest batch reveals right now | segment + merge (replaced each time) |
 | `personality_archetype`, `life_phase_insights`, `musical_identity_summary`, `behavioral_traits`, `discovery_style` | Narrative and numeric traits | final reflection |
 
-Document storage fits because the profile is read and written as a whole, never queried by section, and its shape is owned by a prompt that will keep evolving. `logic_version` and `profiler_metadata` (the model names used) are stored beside it so a profile can be traced to the code and models that produced it.
+Document storage fits because the profile is read and written as a whole, never queried by section, and its shape is owned by a prompt that will keep evolving. `logic_version` and `profiler_metadata` (the gateway and the model settings of each step) are stored beside it so a profile can be traced to the code and models that produced it.
 
 **Checkpointing** reuses the same row. While a build runs, each completed batch upserts the partial profile into `profile`, sets `status = BUILDING`, and records `checkpoint_profile` and `checkpoint_batch_index`. `--resume` reads the checkpoint and continues from the next batch. On completion the row becomes `FINISHED` and the checkpoint columns are cleared. `discover` refuses a profile that is still `BUILDING`.
 

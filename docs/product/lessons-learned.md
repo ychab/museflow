@@ -66,12 +66,13 @@ What I would instrument first:
 ## Current limits, stated plainly
 
 - **Privacy is POC-grade.** The import minimises personal data and no user identifier is sent to the LLM — only
-  artist/title pairs, ratings and the profile. But users are identified by email in the database, and on Gemini's
-  free tier, prompts may be used by Google to improve its products. A real product would need the paid tier or a
-  self-hosted model, data retention rules and account deletion. Details in
+  artist/title pairs, ratings and the profile. Prompts are only routed to Zero Data Retention endpoints, but that
+  rests on the policies the providers declare. And users are identified by email in the database. A real product
+  would need contractual guarantees or a self-hosted model, data retention rules and account deletion. Details in
   [privacy & data](../technical/privacy-and-data.md).
-- **One LLM vendor.** The pivot reduced the dependency on the music provider and created one on the LLM provider.
-  The ports are ready for another vendor; none is implemented yet.
+- **One LLM gateway.** The pivot reduced the dependency on the music provider and created one on the LLM provider.
+  OpenRouter removed the lock-in on a model vendor and moved it to a gateway; the ports would let a direct vendor
+  adapter come back if the gateway had to go.
 - **One music provider.** Multi-provider history merge is possible by design, untested in practice.
 - **Commands are not atomic, on purpose.** I first planned one transaction per command, then asked when atomicity
   is really needed: only when a partial state is *wrong*, not merely *incomplete*. Most commands produce an
@@ -114,7 +115,7 @@ could become a way to choose a model on the result that matters rather than on a
 
 1. Instrument the metrics above, starting with the discovery keep rate.
 2. Fix the era segmentation and merge logic of the taste profile.
-3. Put an LLM gateway (OpenRouter, for instance) behind the ports to compare models on quality *and* cost.
+3. Compare models on quality *and* cost, now that the OpenRouter gateway makes each step a setting.
 4. Only then, think about a UI.
 
 ## The meta-lesson

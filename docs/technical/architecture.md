@@ -1,6 +1,6 @@
 # Architecture
 
-MuseFlow follows Clean / Hexagonal Architecture. The reason is practical rather than ceremonial: the product depends on three things that change independently and fail independently, namely a streaming provider (Spotify today), an LLM vendor (Gemini today), and a database. Each sits behind a port, so the use cases and the matching logic can be tested without any of them and the vendors can be swapped by adding an adapter.
+MuseFlow follows Clean / Hexagonal Architecture. The reason is practical rather than ceremonial: the product depends on three things that change independently and fail independently, namely a streaming provider (Spotify today), an LLM (any model behind the OpenRouter gateway), and a database. Each sits behind a port, so the use cases and the matching logic can be tested without any of them and the vendors can be swapped by adding an adapter.
 
 ## Layers and the dependency rule
 
@@ -9,7 +9,7 @@ flowchart TB
     subgraph INFRA["infrastructure (implements ports, owns every framework)"]
         direction TB
         EP["entrypoints<br/>cli (Typer) / api (FastAPI)"]
-        AD["adapters<br/>providers/spotify<br/>advisors, profilers, enrichers / gemini<br/>database (models + repositories)"]
+        AD["adapters<br/>providers/spotify<br/>advisors, profilers, enrichers / openrouter<br/>database (models + repositories)"]
     end
     subgraph APP["application (orchestration)"]
         direction TB
@@ -37,7 +37,7 @@ flowchart TB
 |---|---|---|---|
 | Domain | `museflow/domain/` | the standard library and a few pure helpers (`rapidfuzz`, `unidecode`) | Frozen-dataclass entities, value objects, the `Reconciler` service, enums, constants, exceptions |
 | Application | `museflow/application/` | domain only | Use cases, input schemas, port interfaces (`abc.ABC`) |
-| Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and Gemini adapters, settings, Typer and FastAPI entrypoints |
+| Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
 
 Two points are easy to miss:
 
@@ -51,14 +51,14 @@ Two points are easy to miss:
 | `ProviderLibraryPort` (search, create / delete playlist, play) | `SpotifyLibraryAdapter`, built by `SpotifyLibraryFactory` |
 | `ProviderOAuthPort` | `SpotifyOAuthAdapter` |
 | `StreamingHistoryPort` (parse an export file) | `SpotifyStreamingHistoryAdapter` |
-| `AdvisorPort` | `GeminiAdvisorAdapter` |
-| `TasteProfilerPort` | `GeminiTasteProfileAdapter` |
-| `TrackEnricherPort` | `GeminiTrackEnricherAdapter` |
+| `AdvisorPort` | `OpenRouterAdvisorAdapter` |
+| `TasteProfilerPort` | `OpenRouterTasteProfileAdapter` |
+| `TrackEnricherPort` | `OpenRouterTrackEnricherAdapter` |
 | `UnitOfWorkPort` (one short transaction per `async with` block, gives access to the repositories) | `SQLUnitOfWork`, a new session per block |
 | `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over the block's `AsyncSession`; they flush, the unit of work commits |
 | `PasswordHasherPort`, `StateTokenGeneratorPort`, `AccessTokenManagerPort` | Argon2, a `random.SystemRandom` state-token generator, PyJWT |
 
-Where the vendor is already an enum (`MusicProvider`, `MusicAdvisor`, `TasteProfiler`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package.
+Where the vendor is an enum (`MusicProvider`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package. The LLM side needs no such switch: OpenRouter is the single adapter, and the vendor choice became a model setting per step ([LLM pipeline](llm-pipeline.md#model-choice-per-step)). The move from direct Gemini calls to the gateway replaced the adapters and the settings; the ports and the use cases did not change, apart from dropping the vendor enums.
 
 MuseFlow is deliberately a single application. If it grew, the ports above are where it would split into services (import, profiling, recommendations and playlists, enrichment); the trade-off is discussed in [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app).
 
@@ -73,7 +73,7 @@ sequenceDiagram
     participant DI as cli/dependencies.py
     participant UC as DiscoverTasteUseCase
     participant UoW as Unit of work (short SQL blocks)
-    participant Adv as AdvisorPort (Gemini adapter)
+    participant Adv as AdvisorPort (OpenRouter adapter)
     participant Rec as Reconciler (domain)
     participant Lib as ProviderLibraryPort (Spotify adapter)
 
@@ -100,7 +100,7 @@ sequenceDiagram
 What the diagram encodes, with the reasoning behind each step:
 
 1. **Composition happens in the entrypoint.** `discover_logic` gets a unit of work and opens each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
-2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while Gemini thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule. Why this design, and what came before it: [Why a unit of work](unit-of-work.md).
+2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while the model thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule. Why this design, and what came before it: [Why a unit of work](unit-of-work.md).
 3. **Two sources of candidates.** Suggestions are reconciled against the catalogue; the strategy's free-text search queries are also run, with a fixed advisor score of 0.8 and reconciler score of 1.0 (a constant in the use case, see [`taste_discover.py`](https://github.com/ychab/museflow/blob/main/museflow/application/use_cases/taste_discover.py)).
 4. **"Known" is decided by fingerprint**, not by provider id, so a re-release or a different catalogue entry of a track the user already played is still excluded (see [Data model](data-model.md)).
 5. **Ordering is banded.** Tracks are sorted by advisor score rounded down to a band (`DISCOVERY_SCORE_BAND_WIDTH`, default 0.05), then by reconciliation confidence within the band. Banding stops tiny, meaningless score differences from outranking a more certain catalogue match.
@@ -119,8 +119,8 @@ The rules are written down in [`AGENTS.md`](https://github.com/ychab/museflow/bl
 | Use cases are plain async functions; a class only when injected state is needed (for example `DiscoverTasteUseCase`) | Function by default, class when the constructor genuinely carries dependencies |
 | Parameters grouped by role: inputs, then the unit of work, then other ports; DI parameters contiguous | Callers use keywords, so order is documentation; a consistent order makes a signature scannable |
 | CLI commands are thin sync wrappers around an `asyncio.run()` of a `<command>_logic` coroutine; the logic returns data and never prints | Output stays in the callback, so logic is unit-testable without capturing stdout, and the same logic can be reused |
-| `HttpClientMixin` first, port second in the base class list (`class GeminiAdvisorAdapter(HttpClientMixin, AdvisorPort)`) | The mixin supplies concrete methods (`close`, the async context manager) that the port declares abstract. With the port first, Python's MRO would find the abstract version first and the class could not be instantiated. |
-| Repeated closures are centralised as decorators (`@self_heal`, `@validate_response`, tenacity's `@retry`) | Three Gemini adapters share the same failure handling; copy-paste would drift |
+| `HttpClientMixin` first, port second in the base class list (`class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort)`) | The mixin supplies concrete methods (`close`, the async context manager) that the port declares abstract. With the port first, Python's MRO would find the abstract version first and the class could not be instantiated. |
+| Repeated closures are centralised as decorators (`@self_heal`, tenacity's `@retry`) or shared by composition (`OpenRouterClient`) | Three LLM adapters share the same failure handling; copy-paste would drift |
 
 !!! note "What is enforced by tooling"
     Most of the rules above are enforced by review (human and agent), not by tooling. Three exceptions: the layering itself is enforced by import-linter (which layer may import what, and no framework in the domain), the ban on `assert` in production code by Ruff (rule `S101`, ignored under `tests/`), and full type annotation by mypy in strict mode (see [Quality & testing](quality.md)).
