@@ -10,7 +10,7 @@ This page walks through the path from an empty install to a first playlist. Ever
   application credentials, settings).
 - The API server running (`make run` or `make up`) when connecting a Spotify account: the OAuth callback is
   received by the API, and the CLI waits for it.
-- A Gemini API key configured, for the steps that call an LLM (`enrich tracks`, `taste build`,
+- An OpenRouter API key configured, for the steps that call an LLM (`enrich tracks`, `taste build`,
   `playlist discover`).
 - Your Spotify **Extended streaming history**, see [Spotify data export](spotify-data-export.md).
 
@@ -88,7 +88,7 @@ Adds genre, mood and language metadata to tracks with an LLM. Required for the `
 museflow taste build --email user@example.com --name my-profile
 ```
 
-Analyses the library with Gemini and stores a master taste profile (eras, personality archetype, life-phase
+Analyses the library with an LLM and stores a master taste profile (eras, personality archetype, life-phase
 insights). Add `--rated-only` when enough tracks have been rated. See [`taste`](commands/taste.md).
 
 ### 7. Discover a playlist

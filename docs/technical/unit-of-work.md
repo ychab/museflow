@@ -130,7 +130,7 @@ of the project and hands them out on a fresh session. The transaction is the pri
 ## Concrete cases
 
 **Reads before a remote call, writes per paid batch** (`tracks_enrich`). The read block closes before the first
-Gemini call. Each batch gets its own block, so a paid batch survives a later failure:
+LLM call. Each batch gets its own block, so a paid batch survives a later failure:
 
 ```python
 async with uow:
@@ -208,11 +208,11 @@ Nothing in the code prevents a remote call inside a block. Written by mistake, i
 ```python
 async with uow:
     tracks = await uow.tracks.get_list(user_id=user.id, limit=50)
-    enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ Gemini inside the block
+    enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ LLM call inside the block
     await uow.tracks.bulk_update(enriched_tracks, fields=fields)
 ```
 
-The command succeeds, but during the Gemini call the connection sits idle in transaction, with the locks, the
+The command succeeds, but during the LLM call the connection sits idle in transaction, with the locks, the
 snapshot and the pool slot described above. Nobody notices until load grows: with many such calls in parallel, the
 pool and `max_connections` run out, and a migration waiting for a lock makes every later query wait behind it.
 

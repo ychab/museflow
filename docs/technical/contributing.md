@@ -4,7 +4,7 @@ MuseFlow is a personal project and showcase, but it is set up so that a change c
 
 ## Setup
 
-Requirements and step-by-step installation (Python 3.14, `uv`, Docker Compose, `direnv`, a Spotify developer app and a Gemini API key) are in the [README](https://github.com/ychab/museflow#readme). In short:
+Requirements and step-by-step installation (Python 3.14, `uv`, Docker Compose, `direnv`, a Spotify developer app and an OpenRouter API key) are in the [README](https://github.com/ychab/museflow#readme). In short:
 
 ```bash
 make install        # dependencies and pre-commit hooks
@@ -35,7 +35,7 @@ Run `make help` for the full list.
 ## Branches and commits
 
 - Work on a short-lived branch off `main`, named `<type>/<topic>` (for example `docs/overhaul`).
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`, with an optional scope (`feat(gemini): add self-healing for invalid structured responses`). The convention has been used since the V2 line started in May 2026; earlier history uses free-form messages.
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`, with an optional scope (`feat(llm): check the configured models against the OpenRouter catalog`). The convention has been used since the V2 line started in May 2026; earlier history uses free-form messages.
 - Everything written for the repository is **in English**: code, comments, docstrings, log messages, CLI help, tests, commit messages and docs.
 - Commits made with an AI assistant carry a `Co-Authored-By` trailer.
 - Dependency updates arrive as a single weekly Dependabot PR; patch and minor updates are auto-merged, major ones are reviewed by hand (see [Quality & testing](quality.md#continuous-integration)).
@@ -64,4 +64,4 @@ The human contributor stays responsible for every change: review the diff, run t
 
 ## Notes for tests that touch external APIs
 
-Never add a test that calls the live Gemini or Spotify APIs to the default suite. Live tests are marked `gemini_live` / `spotify_live`, are skipped unless opted in, and cost money or use a real account. Use WireMock stubs under `tests/assets/wiremock/` and mark the class `@pytest.mark.wiremock("spotify")` or `("gemini")` so parallel workers do not race on stubs.
+Never add a test that calls the live OpenRouter or Spotify APIs to the default suite. Live tests are marked `openrouter_live` / `spotify_live`, are skipped unless opted in, and cost money or use a real account. Use WireMock stubs under `tests/assets/wiremock/` and mark the class `@pytest.mark.wiremock("spotify")` or `("openrouter")` so parallel workers do not race on stubs.

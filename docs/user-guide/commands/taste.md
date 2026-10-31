@@ -15,7 +15,6 @@ museflow taste build --email <email> --name <name> [OPTIONS]
 | --- | --- | --- |
 | `--email` | required | User email address. |
 | `--name` | required | Profile name (unique per user). |
-| `--profiler` | `gemini` | The profiler to use for building the taste profile. |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000). |
@@ -47,8 +46,8 @@ museflow taste build --email user@example.com --name my-profile --track-limit 15
 museflow taste build --email user@example.com --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** `Taste profile built: N tracks processed`, then the profile name, the profiler and its logic
-version, the number of eras, the personality archetype and the life-phase insights.
+**Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
+step (segment, merge, reflect), the number of eras, the personality archetype and the life-phase insights.
 
 ## `taste list`
 
@@ -62,7 +61,7 @@ museflow taste list --email <email>
 | --- | --- | --- |
 | `--email` | required | User email address. |
 
-**Output.** A table with ID, name, profiler, status, tracks and last update, or `No taste profiles found.`.
+**Output.** A table with ID, name, logic version, status, tracks and last update, or `No taste profiles found.`.
 A profile whose build was paused shows an in-progress status and cannot be used for discovery until completed.
 
 ## `taste view`
