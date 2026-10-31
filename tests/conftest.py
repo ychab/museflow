@@ -21,20 +21,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="A valid Spotify Refresh Token to run live API tests.",
     )
     parser.addoption(
-        "--gemini-live",
+        "--openrouter-live",
         action="store_true",
         default=False,
-        help="Run live Gemini API tests (requires GEMINI_API_KEY).",
+        help="Run live OpenRouter API tests (requires OPENROUTER_API_KEY).",
     )
 
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow (not executed by default)")
     config.addinivalue_line("markers", "spotify_live: mark test as requiring live Spotify API access")
-    config.addinivalue_line("markers", "gemini_live: mark test as requiring live Gemini API access")
+    config.addinivalue_line("markers", "openrouter_live: mark test as requiring live OpenRouter API access")
     config.addinivalue_line(
         "markers",
-        "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'gemini', 'openrouter') — "
+        "wiremock(*servers): test uses one or more WireMock servers ('spotify', 'openrouter') — "
         "groups tests by server set so each group runs serially on a single xdist worker",
     )
 
@@ -56,8 +56,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         if item.get_closest_marker("spotify_live") and not config.getoption("--spotify-refresh-token"):
             item.add_marker(skip_spotify)
 
-        if item.get_closest_marker("gemini_live") and not config.getoption("--gemini-live"):
-            item.add_marker(pytest.mark.skip(reason="need --gemini-live option to run"))
+        if item.get_closest_marker("openrouter_live") and not config.getoption("--openrouter-live"):
+            item.add_marker(pytest.mark.skip(reason="need --openrouter-live option to run"))
 
         if group_name := get_wiremock_group_name(item, wiremock_server_groups):
             item.add_marker(pytest.mark.xdist_group(group_name))
@@ -97,8 +97,8 @@ def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:
 
     Tests are marked `@pytest.mark.wiremock(*servers)`. Two servers must end up in the same
     xdist group if any single test uses both (e.g. `wiremock("openrouter", "spotify")`) — and that
-    requirement is transitive: if test A uses only "spotify" and test B uses "gemini" and
-    "spotify", then A and B must share a group too, even though A never mentions "gemini".
+    requirement is transitive: if test A uses only "spotify" and test B uses "openrouter" and
+    "spotify", then A and B must share a group too, even though A never mentions "openrouter".
     Without this, two tests could run concurrently on different xdist workers while hitting the
     same physical WireMock instance, racing on stub mappings (a one-off override stub created by
     one test can be matched by a request from another test before it's torn down).

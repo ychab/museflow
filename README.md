@@ -93,7 +93,7 @@ Before running the application, you need to configure the environment variables 
     Open `.env` and fill in the required secrets:
     *   `SPOTIFY_CLIENT_ID`: Your Spotify App Client ID.
     *   `SPOTIFY_CLIENT_SECRET`: Your Spotify App Client Secret.
-    *   `GEMINI_API_KEY`: Your Gemini API key.
+    *   `OPENROUTER_API_KEY`: Your OpenRouter API key.
     *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters, generate with `openssl rand -hex 32`).
 
     Personal overrides (e.g. a non-standard `DATABASE_PORT`) can also be added to `.env` — they take precedence over `.envrc` defaults.

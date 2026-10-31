@@ -153,7 +153,7 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = tracks
 
         mock_enricher.enrich_tracks.side_effect = [
-            RuntimeError("Gemini 503"),
+            RuntimeError("OpenRouter 503"),
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[2:]],
         ]
 
