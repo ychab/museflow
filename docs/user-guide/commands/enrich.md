@@ -43,6 +43,17 @@ museflow enrich tracks --email user@example.com --limit 20 --model openai/gpt-5-
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
 re-run processes the missing tracks), or `No tracks to enrich.`.
 
+**When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
+succeed:
+
+- at once, when OpenRouter refuses the request for a reason every batch shares: invalid API key, no credits left,
+  unknown model, no provider available, a lasting outage or a rate limit;
+- after 3 failed batches in a row, whatever the cause.
+
+It prints `Enrichment stopped at batch N/M after X track(s): <reason>` and exits with code 1. The tracks enriched
+before the stop are saved: fix the cause, then run the same command again; tracks already enriched are skipped. With
+`--force`, a new run starts over from the first track.
+
 ## `enrich export`
 
 Exports the genres, moods and locales of all enriched tracks to a YAML file, keyed by track fingerprint.

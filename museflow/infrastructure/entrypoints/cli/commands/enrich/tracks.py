@@ -7,8 +7,9 @@ import typer
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
-from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.enums import EnrichField
+from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
@@ -50,6 +51,17 @@ def enrich(
         )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
+    except TrackEnrichmentAbortedException as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        if force:
+            typer.secho("With --force, a new run starts over from the first track.", fg=typer.colors.YELLOW, err=True)
+        else:
+            typer.secho(
+                "Run the command again to continue: tracks already enriched are skipped.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
+        raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -96,4 +108,5 @@ async def enrich_logic(
         if not user:
             raise UserNotFound()
 
-        return await tracks_enrich(user=user, config=config, uow=uow, track_enricher=enricher)
+        use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher)
+        return await use_case.enrich(user=user, config=config)
