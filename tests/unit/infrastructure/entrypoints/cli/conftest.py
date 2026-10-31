@@ -155,7 +155,7 @@ def mock_provider_library_factory(
 
 
 @pytest.fixture
-def mock_taste_profiler(
+def mock_get_profiler(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:

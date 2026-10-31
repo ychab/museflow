@@ -299,7 +299,7 @@ class TestTasteBuildCommand:
     "mock_user_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
-    "mock_taste_profiler",
+    "mock_get_profiler",
 )
 class TestTasteBuildLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.build"
