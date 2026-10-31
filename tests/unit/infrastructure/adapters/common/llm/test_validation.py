@@ -131,7 +131,7 @@ class TestParseCompletion:
         expected_detail: str,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        with caplog.at_level(logging.WARNING), pytest.raises(LLMResponseError) as exc_info:
+        with caplog.at_level(logging.DEBUG), pytest.raises(LLMResponseError) as exc_info:
             parse_completion(response_data, Answer, "test")
 
         assert exc_info.value.failure_kind == expected_kind
@@ -139,4 +139,8 @@ class TestParseCompletion:
         assert exc_info.value.raw_text == expected_raw
         assert expected_detail in exc_info.value.detail
         assert exc_info.value.self_healable
-        assert caplog.records[0].__dict__["raw_preview"] == expected_raw
+        warning, preview = caplog.records[-2:]
+        assert warning.levelno == logging.WARNING
+        assert "raw_preview" not in warning.__dict__
+        assert preview.levelno == logging.DEBUG
+        assert preview.__dict__["raw_preview"] == expected_raw

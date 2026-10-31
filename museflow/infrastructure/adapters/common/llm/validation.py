@@ -101,7 +101,8 @@ def parse_completion[T: BaseModel](response_data: dict[str, Any], response_model
     """Turns the raw JSON body of a chat completion into `response_model`.
 
     Fails early and explicitly on provider errors, empty, refused, truncated (`length`), non-JSON or schema-violating
-    replies. Every failure is logged as a WARNING.
+    replies. Every failure is logged as a WARNING; the start of the reply only at DEBUG, since it may quote the user's
+    taste.
 
     Raises:
         LLMResponseError: If the reply is unusable.
@@ -109,13 +110,10 @@ def parse_completion[T: BaseModel](response_data: dict[str, Any], response_model
     try:
         return _parse(response_data, response_model, adapter)
     except LLMResponseError as e:
-        logger.warning(
-            f"LLM {adapter} response unusable ({e.failure_kind})",
-            extra={
-                "adapter": adapter,
-                "failure_kind": e.failure_kind.value,
-                "finish_reason": e.finish_reason,
-                "raw_preview": e.raw_text[:_RAW_PREVIEW_LENGTH],
-            },
+        extra = {"adapter": adapter, "failure_kind": e.failure_kind.value, "finish_reason": e.finish_reason}
+        logger.warning(f"LLM {adapter} response unusable ({e.failure_kind})", extra=extra)
+        logger.debug(
+            f"LLM {adapter} unusable response preview",
+            extra={**extra, "raw_preview": e.raw_text[:_RAW_PREVIEW_LENGTH]},
         )
         raise
