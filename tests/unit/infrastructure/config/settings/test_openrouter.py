@@ -2,9 +2,9 @@ from pydantic import ValidationError
 
 import pytest
 
-from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.config.settings.openrouter import OpenRouterSettings
+from museflow.infrastructure.types import ReasoningEffort
 
 
 class TestOpenRouterSettings:

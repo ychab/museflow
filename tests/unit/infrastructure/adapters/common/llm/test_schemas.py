@@ -6,7 +6,7 @@ from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
 from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
 from museflow.infrastructure.adapters.common.llm.schemas import ResponseFormat
-from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
+from museflow.infrastructure.types import ReasoningEffort
 
 
 class TestChatCompletionRequest:
