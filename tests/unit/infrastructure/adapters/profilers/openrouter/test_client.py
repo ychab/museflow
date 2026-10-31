@@ -7,7 +7,6 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
@@ -46,9 +45,6 @@ def completion(profile_data: TasteProfileData) -> dict[str, Any]:
 class TestOpenRouterTasteProfileAdapter:
     def test__display_name(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
         assert openrouter_profiler.display_name == "OpenRouter"
-
-    def test__profiler_type(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
-        assert openrouter_profiler.profiler_type == TasteProfiler.GEMINI
 
     def test__logic_version(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
         assert openrouter_profiler.logic_version == "v2.0"

@@ -4,7 +4,6 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.user import User
-from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
@@ -41,7 +40,6 @@ class TestTasteBuildLogic:
 
         profile = await build_logic(
             email=user.email,
-            profiler=TasteProfiler.GEMINI,
             name="my-profile",
             resume=False,
             rated_only=False,

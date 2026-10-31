@@ -32,5 +32,12 @@ class TasteProfileDataFactory(TypedDictFactory[TasteProfileData]):
 class TasteProfileFactory(DataclassFactory[TasteProfile]):
     __model__ = TasteProfile
 
-    profiler_metadata: dict[str, Any] = {}
+    profiler_metadata: dict[str, Any] = {
+        "gateway": "openrouter",
+        "steps": {
+            "segment": {"model": "google/gemini-2.5-flash-lite"},
+            "merge": {"model": "google/gemini-2.5-flash"},
+            "reflect": {"model": "google/gemini-2.5-pro"},
+        },
+    }
     status = TasteProfileStatus.FINISHED

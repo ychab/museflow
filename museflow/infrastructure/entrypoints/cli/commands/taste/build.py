@@ -8,13 +8,12 @@ import typer
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_taste_profiler
+from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -23,10 +22,6 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 def build(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
-    profiler: TasteProfiler = typer.Option(
-        default=TasteProfiler.GEMINI,
-        help="The profiler to use for building the taste profile",
-    ),
     resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
     rated_only: bool = typer.Option(
         False,
@@ -67,7 +62,6 @@ def build(
         profile = asyncio.run(
             build_logic(
                 email=email,
-                profiler=profiler,
                 name=name,
                 resume=resume,
                 rated_only=rated_only,
@@ -96,7 +90,9 @@ def build(
 
     typer.secho(f"\nTaste profile built: {profile.tracks_count} tracks processed", fg=typer.colors.GREEN)
     typer.echo(f"Name: {profile.name}")
-    typer.echo(f"Profiler: {profile.profiler} ({profile.logic_version})")
+    typer.echo(f"Logic version: {profile.logic_version}")
+    for step, step_metadata in profile.profiler_metadata["steps"].items():
+        typer.echo(f"Model ({step}): {step_metadata['model']}")
     typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
     if profile.profile["personality_archetype"]:
         typer.secho(f"Archetype: {profile.profile['personality_archetype']}", fg=typer.colors.CYAN)
@@ -106,7 +102,6 @@ def build(
 
 async def build_logic(
     email: EmailStr,
-    profiler: TasteProfiler,
     name: str,
     track_limit: int,
     batch_size: int,
@@ -117,9 +112,7 @@ async def build_logic(
     reflect_model: str | None = None,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
-        profiler_adapter = await stack.enter_async_context(
-            get_taste_profiler(profiler, segment_model, merge_model, reflect_model)
-        )
+        profiler_adapter = await stack.enter_async_context(get_profiler(segment_model, merge_model, reflect_model))
 
         uow = get_unit_of_work()
         async with uow:

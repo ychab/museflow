@@ -11,7 +11,6 @@ from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MoodTag
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
@@ -68,11 +67,6 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
     @property
     def display_name(self) -> str:
         return "OpenRouter"
-
-    @property
-    def profiler_type(self) -> TasteProfiler:
-        # Kept until the profiler enum is dropped: `playlist discover` looks the profile up by this value.
-        return TasteProfiler.GEMINI
 
     @property
     def logic_version(self) -> str:

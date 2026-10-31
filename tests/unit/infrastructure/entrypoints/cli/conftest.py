@@ -160,7 +160,7 @@ def mock_taste_profiler(
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     profiler = mock.AsyncMock(spec=TasteProfilerPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_taste_profiler", profiler) as mock_profiler:
+    with mock_async_context_dependency_factory(f"{target_path}.get_profiler", profiler) as mock_profiler:
         yield mock_profiler
 
 

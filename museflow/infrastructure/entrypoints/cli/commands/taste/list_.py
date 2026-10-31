@@ -33,7 +33,7 @@ def list_(
     table = Table(title="Taste Profiles")
     table.add_column("ID", style="dim")
     table.add_column("Name")
-    table.add_column("Profiler")
+    table.add_column("Logic")
     table.add_column("Status")
     table.add_column("Tracks")
     table.add_column("Updated At")
@@ -42,7 +42,7 @@ def list_(
         table.add_row(
             str(profile.id),
             profile.name,
-            profile.profiler.value,
+            profile.logic_version,
             profile.status.value,
             str(profile.tracks_count),
             profile.updated_at.strftime("%Y-%m-%d %H:%M:%S"),

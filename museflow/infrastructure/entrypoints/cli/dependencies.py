@@ -8,9 +8,7 @@ from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.domain.enums import MusicAdvisor
 from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
@@ -26,11 +24,6 @@ from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
-
-ADVISOR_TO_PROFILER: dict[MusicAdvisor, TasteProfiler] = {
-    MusicAdvisor.GEMINI: TasteProfiler.GEMINI,
-}
-
 
 # --- Security ---
 
@@ -126,31 +119,6 @@ async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyO
                 yield client
         case _:
             raise ValueError(f"Unknown provider: {provider}")
-
-
-@asynccontextmanager
-async def get_advisor_adapter(advisor: MusicAdvisor, model: str | None = None) -> AsyncGenerator[AdvisorPort]:
-    match advisor:
-        case MusicAdvisor.GEMINI:
-            async with get_advisor(model) as adapter:
-                yield adapter
-        case _:
-            raise ValueError(f"Unknown advisor: {advisor}")
-
-
-@asynccontextmanager
-async def get_taste_profiler(
-    profiler: TasteProfiler,
-    segment_model: str | None = None,
-    merge_model: str | None = None,
-    reflect_model: str | None = None,
-) -> AsyncGenerator[TasteProfilerPort]:
-    match profiler:
-        case TasteProfiler.GEMINI:
-            async with get_profiler(segment_model, merge_model, reflect_model) as adapter:
-                yield adapter
-        case _:
-            raise ValueError(f"Unknown profiler: {profiler}")
 
 
 # --- Adapter manager ---

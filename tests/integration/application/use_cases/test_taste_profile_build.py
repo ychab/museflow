@@ -8,7 +8,6 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
-from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
@@ -50,7 +49,6 @@ class TestBuildTasteProfileUseCase:
 
         assert profile.tracks_count == 7
         assert profile.user_id == user.id
-        assert profile.profiler == TasteProfiler.GEMINI
         assert profile.logic_version == "v2.0"
         assert profile.profiler_metadata["gateway"] == "openrouter"
         assert profile.profile["personality_archetype"] == "The Introspective Wanderer"

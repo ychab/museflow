@@ -181,7 +181,6 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
             <footer class="flex flex-col md:flex-row justify-between text-[9px] uppercase tracking-[0.3em] text-slate-600 border-t border-slate-900 pt-8 px-4">
                 <div class="flex gap-6">
                     <span>Logic: {taste_profile.logic_version}</span>
-                    <span>Profiler: {taste_profile.profiler}</span>
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-0">
                     <span>Reflect Model: {taste_profile.profiler_metadata.get('steps', {}).get('reflect', {}).get('model', 'N/A')}</span>
