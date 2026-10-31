@@ -8,9 +8,11 @@ from typer.testing import CliRunner
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.entrypoints.cli.commands.taste.view import generate_profile_html_content
 from museflow.infrastructure.entrypoints.cli.commands.taste.view import view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.entities.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.user import UserFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -178,3 +180,22 @@ class TestTasteViewLogic:
 
         with pytest.raises(TasteProfileNotFoundException):
             await view_logic(email="test@example.com", name="my-profile")
+
+
+class TestGenerateProfileHtmlContent:
+    def test__escapes_profile_text(self) -> None:
+        script = "<script>alert(1)</script>"
+        taste_profile = TasteProfileFactory.build(
+            name=script,
+            profile=TasteProfileDataFactory.build(
+                personality_archetype=script,
+                life_phase_insights=[script],
+                core_identity={script: 0.5},
+            ),
+            profiler_metadata={"steps": {"reflect": {"model": script}}},
+        )
+
+        content = generate_profile_html_content(taste_profile)
+
+        assert "<script>" not in content
+        assert content.count("&lt;script&gt;alert(1)&lt;/script&gt;") == 5
