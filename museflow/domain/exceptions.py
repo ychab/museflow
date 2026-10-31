@@ -83,6 +83,31 @@ class TasteProfileNotFoundException(Exception): ...
 class TasteProfileStatusNotReadyException(Exception): ...
 
 
+# --- Enricher exceptions ---
+
+
+class EnricherRateLimitExceeded(RateLimitExceeded): ...
+
+
+class EnricherUnavailableException(Exception):
+    """The enricher cannot serve any batch (auth, credits, unknown model, no provider, outage): stop the run."""
+
+
+class TrackEnrichmentException(Exception):
+    """A single batch was rejected, e.g. for its content: the run goes on."""
+
+
+class TrackEnrichmentAbortedException(Exception):
+    def __init__(self, batch_index: int, total_batches: int, enriched_count: int, reason: str) -> None:
+        self.batch_index = batch_index
+        self.total_batches = total_batches
+        self.enriched_count = enriched_count
+        self.reason = reason
+        super().__init__(
+            f"Enrichment stopped at batch {batch_index}/{total_batches} after {enriched_count} track(s): {reason}"
+        )
+
+
 # --- Blacklist exceptions ---
 
 

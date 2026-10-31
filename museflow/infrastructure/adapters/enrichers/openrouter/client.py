@@ -1,6 +1,9 @@
 import json
 import logging
 
+import httpx
+from httpx import codes
+
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.domain.const import GENRE_MACRO_TAGS
 from museflow.domain.const import GENRE_MESO_TAGS
@@ -9,9 +12,14 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
+from museflow.domain.exceptions import EnricherRateLimitExceeded
+from museflow.domain.exceptions import EnricherUnavailableException
+from museflow.domain.exceptions import TrackEnrichmentException
 from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
+from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
 from museflow.infrastructure.adapters.enrichers.openrouter.schemas import EnrichmentResponse
@@ -19,6 +27,12 @@ from museflow.infrastructure.adapters.enrichers.openrouter.schemas import build_
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 logger = logging.getLogger(__name__)
+
+# Rejections that may depend on the batch content (e.g. a title flagged by a provider's moderation): the next batch can
+# still succeed. Any other rejection (auth, credits, unknown model, no provider, outage) fails every batch alike.
+_BATCH_STATUS_CODES = frozenset(
+    {codes.BAD_REQUEST, codes.FORBIDDEN, codes.REQUEST_ENTITY_TOO_LARGE, codes.UNPROCESSABLE_ENTITY}
+)
 
 
 class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
@@ -98,6 +112,14 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
                 llm=self._llm,
                 adapter="enricher",
             )
+        except LLMRateLimitError as e:
+            raise EnricherRateLimitExceeded(str(e)) from e
+        except LLMRequestError as e:
+            if e.status_code in _BATCH_STATUS_CODES:
+                raise TrackEnrichmentException(str(e)) from e
+            raise EnricherUnavailableException(str(e)) from e
+        except httpx.RequestError as e:
+            raise EnricherUnavailableException(f"OpenRouter unreachable after retries: {e!r}") from e
         except LLMResponseError as e:
             logger.exception("Invalid LLM enrichment response", extra={"failure_kind": e.failure_kind.value})
             return []

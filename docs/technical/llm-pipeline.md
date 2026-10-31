@@ -144,4 +144,10 @@ async def complete[T: BaseModel](self, messages, /, *, response_model, schema, l
 
 It is a decorator, in the spirit of tenacity's `@retry`, so it can be removed with no other change, and it sits on the one method the three adapters share. It was introduced in commit `a8ad2dc`, on the Gemini adapters, and moved to the OpenRouter client unchanged.
 
-Failure surfaces differ by component, on purpose: the advisor and profiler translate a final failure into a domain exception (`DiscoveryTasteStrategyException`, `TasteProfileBuildException`) that the CLI reports or turns into a pause; the enricher logs an unusable reply and returns an empty result for that batch, and the use case logs any other batch failure and moves on, so one bad batch does not abort a long enrichment run.
+Failure surfaces differ by component, on purpose: the advisor and profiler translate a final failure into a domain exception (`DiscoveryTasteStrategyException`, `TasteProfileBuildException`) that the CLI reports or turns into a pause; the enricher sorts its failures by scope, because it runs over the whole library and every failed batch may still be billed:
+
+- **Fatal for the run**: the request is refused for a reason every batch shares (401 invalid key, 402 no credits, 404 unknown model, 5xx or 503 no provider, network down after the retries, rate limit over the cap). The adapter raises `EnricherUnavailableException` or `EnricherRateLimitExceeded`, and the use case stops at once.
+- **Failed batch**: a rejection that may depend on the batch content (400, 403 moderation, 413, 422), or an unusable reply. The use case logs it and moves on.
+- **Circuit breaker**: after `max_consecutive_failures` failed batches in a row (3, in `EnrichTracksConfigInput`), the use case stops anyway. This caps the cost of a systematic failure nobody foresaw, such as a `MAX_TOKENS` too low truncating every reply, to three paid calls. A successful batch resets the count.
+
+Either stop raises `TrackEnrichmentAbortedException` with the batch reached and the tracks enriched so far. Every batch enriched before the stop is already saved, so a re-run picks up the tracks still missing a field.

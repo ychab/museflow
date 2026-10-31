@@ -16,6 +16,8 @@ class EnrichTracksConfigInput:
     force: bool = False
     batch_size: int = 200
     limit: int | None = None
+    # Each failed batch may still be billed (e.g. truncated replies): stop after this many failures in a row
+    max_consecutive_failures: int = 3
 
 
 class EnrichEntryInput(BaseModel):
