@@ -42,7 +42,7 @@ class BuildTasteProfileUseCase:
         if not tracks:
             raise TasteProfileNoSeedException(f"No tracks found for user {user.id}")
 
-        # Re-sort chronologically so Gemini builds coherent taste eras from date-range batches.
+        # Re-sort chronologically so the LLM builds coherent taste eras from date-range batches.
         max_dt = datetime.max.replace(tzinfo=UTC)
         tracks = sorted(tracks, key=lambda t: t.played_at_last or max_dt)
         logger.debug(f"Taste profile seeds: {len(tracks)} tracks (most played, chronological order)")
@@ -85,7 +85,6 @@ class BuildTasteProfileUseCase:
                     await uow.taste_profiles.save_checkpoint(
                         user_id=user.id,
                         name=config.name,
-                        profiler=self._profiler.profiler_type,
                         logic_version=self._profiler.logic_version,
                         profiler_metadata=self._profiler.profiler_metadata,
                         tracks_count=len(tracks),
@@ -107,7 +106,6 @@ class BuildTasteProfileUseCase:
 
         taste_profile = TasteProfile(
             user_id=user.id,
-            profiler=self._profiler.profiler_type,
             name=config.name,
             profile=current_profile,
             profiler_metadata=self._profiler.profiler_metadata,

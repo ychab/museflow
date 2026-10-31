@@ -11,7 +11,6 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptRe
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.user import User
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import MusicAdvisor
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -46,7 +45,6 @@ class TestDiscoverParserCommand:
             [
                 "playlist", "discover",
                 "--email", "test@example.com",
-                "--advisor", MusicAdvisor.GEMINI,
                 "--provider", MusicProvider.SPOTIFY,
                 "--focus", DiscoveryFocus.EXPANSION,
                 "--advisor-limit", "10",
@@ -92,16 +90,6 @@ class TestDiscoverParserCommand:
 
         output = clean_typer_text(result.output)
         assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
-
-    def test__advisor__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
-        result = runner.invoke(
-            app,
-            ["playlist", "discover", "--email", "test@example.com", "--advisor", "foo"],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert "Invalid value for '--advisor': 'foo' is not" in output
 
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
@@ -424,7 +412,7 @@ class TestDiscoverLogic:
         mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
     ) -> Iterable[mock.AsyncMock]:
         client = mock.AsyncMock()
-        with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor_adapter", client) as mock_client:
+        with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor", client) as mock_client:
             yield mock_client
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
@@ -433,7 +421,6 @@ class TestDiscoverLogic:
         with pytest.raises(UserNotFound):
             await discover_logic(
                 "test@example.com",
-                advisor=MusicAdvisor.GEMINI,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverTasteConfigInput(),
             )
@@ -450,7 +437,6 @@ class TestDiscoverLogic:
         with pytest.raises(ProviderAuthTokenNotFoundError):
             await discover_logic(
                 user.email,
-                advisor=MusicAdvisor.GEMINI,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverTasteConfigInput(),
             )

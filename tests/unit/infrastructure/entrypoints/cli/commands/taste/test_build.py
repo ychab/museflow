@@ -8,7 +8,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
@@ -265,6 +264,7 @@ class TestTasteBuildCommand:
 
         output = clean_typer_text(result.stdout)
         assert "Taste profile built:" in output
+        assert "Model (reflect): google/gemini-2.5-pro" in output
         assert "Dark Metal Wanderer" in output
 
     @pytest.mark.parametrize(
@@ -310,7 +310,6 @@ class TestTasteBuildLogic:
         with pytest.raises(UserNotFound):
             await build_logic(
                 email="test@example.com",
-                profiler=TasteProfiler.GEMINI,
                 name="my-profile",
                 track_limit=3000,
                 batch_size=200,

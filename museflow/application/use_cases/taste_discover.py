@@ -19,7 +19,6 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.enums import PlaylistType
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import TasteProfileNotFoundException
@@ -57,13 +56,11 @@ class DiscoverTasteUseCase:
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
         reconciler: Reconciler,
-        profiler: TasteProfiler,
     ) -> None:
         self._uow = uow
         self._provider_library = provider_library
         self._advisor = advisor
         self._reconciler = reconciler
-        self._profiler = profiler
 
     async def create_suggestions_playlist(
         self,
@@ -93,7 +90,7 @@ class DiscoverTasteUseCase:
             if config.profile_name is not None:
                 profile = await uow.taste_profiles.get(user_id=user.id, name=config.profile_name)
             else:
-                profile = await uow.taste_profiles.get_latest(user_id=user.id, profiler=self._profiler)
+                profile = await uow.taste_profiles.get_latest(user_id=user.id)
 
             if profile is None:
                 raise TasteProfileNotFoundException()

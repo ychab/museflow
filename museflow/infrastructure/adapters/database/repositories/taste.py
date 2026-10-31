@@ -10,7 +10,6 @@ from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.taste import TasteProfileStatus
-from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 
@@ -35,11 +34,10 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         profile_db = (await self.session.execute(stmt)).scalar_one_or_none()
         return profile_db.to_entity() if profile_db else None
 
-    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None:
+    async def get_latest(self, user_id: uuid.UUID) -> TasteProfile | None:
         stmt = (
             select(TasteProfileModel)
             .where(TasteProfileModel.user_id == user_id)
-            .where(TasteProfileModel.profiler == profiler.value)
             .order_by(TasteProfileModel.created_at.desc())
             .limit(1)
         )
@@ -52,7 +50,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             id=profile.id,
             name=profile.name,
             user_id=profile.user_id,
-            profiler=profile.profiler,
             profile=profile.profile,
             profiler_metadata=profile.profiler_metadata,
             tracks_count=profile.tracks_count,
@@ -82,7 +79,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         self,
         user_id: uuid.UUID,
         name: str,
-        profiler: TasteProfiler,
         logic_version: str,
         profiler_metadata: dict[str, Any],
         tracks_count: int,
@@ -93,7 +89,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             id=uuid.uuid4(),
             name=name,
             user_id=user_id,
-            profiler=profiler,
             profile=profile_data,
             profiler_metadata=profiler_metadata,
             tracks_count=tracks_count,
