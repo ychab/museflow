@@ -8,36 +8,36 @@ from museflow.domain.enums import DiscoveryFocus
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
 
 
-@pytest.mark.gemini_live
-class TestGeminiAdvisorLive:
+@pytest.mark.openrouter_live
+class TestOpenRouterAdvisorLive:
     """
-    Live integration tests against the real Gemini API.
+    Live integration tests against the real OpenRouter API.
 
-    These tests verify that the Gemini API contract hasn't changed and that our
+    These tests verify that the OpenRouter API contract hasn't changed and that our
     Client Adapter correctly handles real-world responses.
 
     Requirements:
-        - GEMINI_API_KEY set in env or .env file.
-        - Network access to generativelanguage.googleapis.com.
+        - OPENROUTER_API_KEY set in env or .env file.
+        - Network access to openrouter.ai.
 
     Warning:
-        These tests are slow and depend on external services. They are NOT run by default.
+        These tests are slow, depend on external services and spend real money. They are NOT run by default.
 
     To run:
-        GEMINI_API_KEY=<KEY> uv run pytest ./tests/integration/live/gemini --gemini-live --no-cov
+        OPENROUTER_API_KEY=<KEY> uv run pytest ./tests/integration/live/openrouter --openrouter-live --no-cov
     """
 
     @pytest.fixture
-    async def gemini_advisor_live(self) -> AsyncGenerator[AdvisorPort]:
+    async def openrouter_advisor_live(self) -> AsyncGenerator[AdvisorPort]:
         async with get_advisor() as client:
             yield client
 
     async def test__get_discovery_strategy(
         self,
-        gemini_advisor_live: AdvisorPort,
+        openrouter_advisor_live: AdvisorPort,
         taste_profile: TasteProfile,
     ) -> None:
-        strategy = await gemini_advisor_live.get_discovery_strategy(
+        strategy = await openrouter_advisor_live.get_discovery_strategy(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
             advisor_limit=5,

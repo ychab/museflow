@@ -85,7 +85,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - `.returning()` instead of an extra SELECT; key returned rows by a column (e.g. fingerprint), never by position.
   - Upserts with `pg_insert(...).on_conflict_do_update(...)`.
   - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
-- **External APIs** (Spotify, Gemini): DTOs are Pydantic models matching the external shape exactly; standalone mapper
+- **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `asyncio.run()` on a co-located `<command>_logic` function

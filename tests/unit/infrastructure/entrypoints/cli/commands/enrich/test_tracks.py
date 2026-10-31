@@ -107,10 +107,10 @@ class TestEnrichTracksCommand:
         mock_enrich_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_enrich_logic.side_effect = Exception("Gemini down")
+        mock_enrich_logic.side_effect = Exception("OpenRouter down")
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
-        assert "Error: Gemini down" in clean_typer_text(result.stderr)
+        assert "Error: OpenRouter down" in clean_typer_text(result.stderr)
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_get_enricher")
