@@ -280,7 +280,7 @@ async def openrouter_advisor() -> AsyncGenerator[OpenRouterAdvisorAdapter]:
 @pytest.fixture
 async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
     async with OpenRouterTrackEnricherAdapter(
-        client=OpenRouterClient(api_key="dummy-api-key"),
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
         llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
     ) as enricher:
         yield enricher

@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.enums import EnrichField
+from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -100,6 +101,29 @@ class TestEnrichTracksCommand:
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
+
+    @pytest.mark.parametrize(
+        ("args", "expected_hint"),
+        [
+            pytest.param([], "Run the command again to continue", id="resume_hint"),
+            pytest.param(["--force"], "With --force, a new run starts over", id="force_hint"),
+        ],
+    )
+    def test__aborted__shows_progress_and_hint(
+        self,
+        runner: CliRunner,
+        mock_enrich_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
+        args: list[str],
+        expected_hint: str,
+    ) -> None:
+        mock_enrich_logic.side_effect = TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", *args])
+        assert result.exit_code == 1
+
+        output = clean_typer_text(result.stderr)
+        assert "Enrichment stopped at batch 4/12 after 600 track(s): Insufficient credits" in output
+        assert expected_hint in output
 
     def test__generic_exception(
         self,
