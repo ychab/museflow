@@ -41,7 +41,7 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 
 def get_openrouter_client() -> OpenRouterClient:
     return OpenRouterClient(
-        api_key=openrouter_settings.API_KEY,
+        api_key=openrouter_settings.API_KEY.get_secret_value(),
         base_url=openrouter_settings.BASE_URL,
         timeout=openrouter_settings.HTTP_TIMEOUT,
         max_retry_wait=openrouter_settings.HTTP_MAX_RETRY_WAIT,
@@ -56,7 +56,7 @@ def get_openrouter_client() -> OpenRouterClient:
 async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
     async with SpotifyOAuthAdapter(
         client_id=spotify_settings.CLIENT_ID,
-        client_secret=spotify_settings.CLIENT_SECRET,
+        client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
         redirect_uri=spotify_settings.REDIRECT_URI,
         base_url=spotify_settings.BASE_URL,
         auth_endpoint=spotify_settings.AUTH_ENDPOINT,

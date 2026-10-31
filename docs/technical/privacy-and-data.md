@@ -77,9 +77,9 @@ The listening history is **not** read from Spotify's API; it comes only from the
 
 ## Secrets handling
 
-- Configuration comes from environment variables and an optional `.env`, loaded by `pydantic-settings` (`SPOTIFY_*`, `OPENROUTER_*`, `DATABASE_*`, `MUSEFLOW_*`). `.env` is git-ignored; `.env.example` holds placeholders. `MUSEFLOW_SECRET_KEY` (JWT signing) must be at least 32 characters.
+- Configuration comes from environment variables and an optional `.env`, loaded by `pydantic-settings` (`SPOTIFY_*`, `OPENROUTER_*`, `DATABASE_*`, `MUSEFLOW_*`). `.env` is git-ignored; `.env.example` holds placeholders. `MUSEFLOW_SECRET_KEY` (JWT signing) must be at least 32 characters. The secrets (`OPENROUTER_API_KEY`, `SPOTIFY_CLIENT_SECRET`, `MUSEFLOW_SECRET_KEY`) are `SecretStr`, masked in any `repr` or dump of the settings, and `OPENROUTER_BASE_URL` only accepts `https`, since every request carries the key and the listening history.
 - Passwords are hashed with Argon2. OAuth `state` values come from `random.SystemRandom` and are single-use.
-- Logging policy forbids secrets (tokens, passwords, API keys); logs carry user ids, not emails. A grep of the logging calls finds no token or key being logged. This is enforced by convention and review, not by a redaction layer.
+- Logging policy forbids secrets (tokens, passwords, API keys); logs carry user ids, not emails. A grep of the logging calls finds no token or key being logged. This is enforced by convention and review, not by a redaction layer. When an LLM reply is unusable, the warning carries the failure kind only; the start of the reply, which may quote the user's taste, is logged at DEBUG.
 - The tests use dummy credentials set in `pyproject.toml`; WireMock stands in for both APIs, so the test suite never sends real data anywhere.
 
 ## Known gaps

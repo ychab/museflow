@@ -13,6 +13,7 @@ class TestOpenRouterSettings:
 
         assert settings.ENRICHER == LLMSettings(MODEL="google/gemini-2.5-flash-lite")
         assert settings.ZDR is True
+        assert "dummy-api-key" not in repr(settings)  # the key stays masked
 
     def test__nested_override__keeps_step_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OPENROUTER_ADVISOR__REASONING_EFFORT", "high")
@@ -40,9 +41,10 @@ class TestOpenRouterSettings:
             pytest.param("OPENROUTER_ENRICHER__REASONING_EFFORT", "extreme", id="unknown_effort"),
             pytest.param("OPENROUTER_ENRICHER__MAX_TOKENS", "0", id="max_tokens_not_positive"),
             pytest.param("OPENROUTER_ENRICHER__TEMPERATURE", "3", id="temperature_out_of_range"),
+            pytest.param("OPENROUTER_BASE_URL", "http://openrouter.ai/api/v1/", id="base_url_not_https"),
         ],
     )
-    def test__invalid_tuning__raises(self, monkeypatch: pytest.MonkeyPatch, name: str, value: str) -> None:
+    def test__invalid_setting__raises(self, monkeypatch: pytest.MonkeyPatch, name: str, value: str) -> None:
         monkeypatch.setenv(name, value)
 
         with pytest.raises(ValidationError):

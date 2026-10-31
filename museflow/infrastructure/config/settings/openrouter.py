@@ -1,6 +1,10 @@
+from typing import Annotated
+
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import SecretStr
+from pydantic import UrlConstraints
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -33,9 +37,12 @@ class OpenRouterSettings(BaseSettings):
         extra="ignore",
     )
 
-    API_KEY: str
+    API_KEY: SecretStr
 
-    BASE_URL: HttpUrl = Field(default=HttpUrl("https://openrouter.ai/api/v1/"))
+    # HTTPS only: every request carries the API key and the user's listening history
+    BASE_URL: Annotated[HttpUrl, UrlConstraints(allowed_schemes=["https"])] = Field(
+        default=HttpUrl("https://openrouter.ai/api/v1/")
+    )
 
     ADVISOR: LLMSettings = LLMSettings(MODEL="google/gemini-2.5-flash")
 
