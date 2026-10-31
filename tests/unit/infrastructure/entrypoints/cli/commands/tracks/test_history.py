@@ -234,24 +234,26 @@ class TestHistoryCommand:
 class TestHistoryLogicCommand:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tracks.history"
 
+    @pytest.fixture
+    def mock_use_case_cls(self) -> Iterable[mock.Mock]:
+        with mock.patch(f"{self.TARGET_PATH}.ImportStreamingHistoryUseCase") as patched:
+            patched.return_value.import_history = mock.AsyncMock(return_value=ImportStreamingHistoryReport())
+            yield patched
+
     async def test__nominal(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
+        mock_use_case_cls: mock.Mock,
         tmp_path: Path,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
-        with mock.patch(f"{self.TARGET_PATH}.ImportStreamingHistoryUseCase") as mock_use_case_cls:
-            mock_use_case = mock.AsyncMock()
-            mock_use_case.import_history.return_value = ImportStreamingHistoryReport()
-            mock_use_case_cls.return_value = mock_use_case
-
-            report = await history_logic(
-                email=user.email,
-                config=StreamingHistoryImportConfigInput(directory=tmp_path),
-                provider=MusicProvider.SPOTIFY,
-            )
+        report = await history_logic(
+            email=user.email,
+            config=StreamingHistoryImportConfigInput(directory=tmp_path),
+            provider=MusicProvider.SPOTIFY,
+        )
 
         assert report == ImportStreamingHistoryReport()
         mock_use_case_cls.assert_called_once()

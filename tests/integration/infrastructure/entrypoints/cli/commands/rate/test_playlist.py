@@ -1,7 +1,10 @@
+from collections.abc import Iterable
 from unittest import mock
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+import pytest
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
@@ -16,6 +19,11 @@ from tests.integration.factories.models.track import TrackModelFactory
 
 
 class TestRatePlaylistLogic:
+    @pytest.fixture
+    def mock_play_track(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch.object(SpotifyLibraryAdapter, "play_track", new_callable=mock.AsyncMock) as patched:
+            yield patched
+
     async def test__nominal(
         self,
         async_session_db: AsyncSession,
@@ -58,16 +66,16 @@ class TestRatePlaylistLogic:
         auth_token: OAuthProviderUserToken,
         mock_typer_prompt: mock.Mock,
         mock_typer_confirm: mock.Mock,
+        mock_play_track: mock.AsyncMock,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        with mock.patch.object(SpotifyLibraryAdapter, "play_track", new_callable=mock.AsyncMock) as mock_play:
-            await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id, provider=MusicProvider.SPOTIFY)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id, provider=MusicProvider.SPOTIFY)
 
-        mock_play.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
+        mock_play_track.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
