@@ -30,13 +30,13 @@ from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
-from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
+from museflow.infrastructure.types import ReasoningEffort
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory

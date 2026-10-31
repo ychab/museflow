@@ -20,9 +20,9 @@ from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitE
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
-from museflow.infrastructure.adapters.common.llm.types import ReasoningEffort
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
+from museflow.infrastructure.types import ReasoningEffort
 
 URL = "https://openrouter.test/api/v1/chat/completions"
 MODELS_URL = "https://openrouter.test/api/v1/models"
