@@ -102,6 +102,58 @@ class TestBuildTasteProfileUseCase:
             uow=mock_uow,
         )
 
+    @pytest.fixture
+    def mock_sleep(self) -> Iterator[mock.AsyncMock]:
+        with mock.patch(
+            "museflow.application.use_cases.taste_profile_build.asyncio.sleep",
+            new_callable=mock.AsyncMock,
+        ) as mocked:
+            yield mocked
+
+    @pytest.fixture
+    def mock_segment(
+        self,
+        request: pytest.FixtureRequest,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            openrouter_profiler,
+            "build_profile_segment",
+            new_callable=mock.AsyncMock,
+            return_value=profile_data,
+            side_effect=getattr(request, "param", None),
+        ) as mocked:
+            yield mocked
+
+    @pytest.fixture
+    def mock_merge(
+        self,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        profile_data: TasteProfileData,
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            openrouter_profiler,
+            "merge_profiles",
+            new_callable=mock.AsyncMock,
+            return_value=profile_data,
+        ) as mocked:
+            yield mocked
+
+    @pytest.fixture
+    def mock_reflect(
+        self,
+        request: pytest.FixtureRequest,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+    ) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            openrouter_profiler,
+            "reflect_on_profile",
+            new_callable=mock.AsyncMock,
+            side_effect=request.param,
+        ) as mocked:
+            yield mocked
+
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__nominal__multiple_batches(
         self,
@@ -219,6 +271,7 @@ class TestBuildTasteProfileUseCase:
         profile_data: TasteProfileData,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
+        mock_sleep: mock.AsyncMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1) — sleep called twice (between batch 1→2 and 2→3, not after last)
         config = BuildTasteProfileConfigInputFactory.build(
@@ -237,8 +290,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        with mock.patch("museflow.application.use_cases.taste_profile_build.asyncio.sleep") as mock_sleep:
-            await use_case.build_profile(user=user, config=config)
+        await use_case.build_profile(user=user, config=config)
 
         assert mock_sleep.call_count == 2
         mock_sleep.assert_called_with(1.0)
@@ -256,6 +308,7 @@ class TestBuildTasteProfileUseCase:
         profile_data: TasteProfileData,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
+        mock_sleep: mock.AsyncMock,
     ) -> None:
         # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
         mock_track_repository.get_list.return_value = tracks
@@ -269,8 +322,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        with mock.patch("museflow.application.use_cases.taste_profile_build.asyncio.sleep") as mock_sleep:
-            await use_case.build_profile(user=user, config=config)
+        await use_case.build_profile(user=user, config=config)
 
         mock_sleep.assert_not_called()
 
@@ -366,60 +418,34 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
-    async def test__batch_fail__pauses__rate_limit_exceeded(
+    @pytest.mark.parametrize(
+        ("mock_segment", "reason"),
+        [
+            pytest.param(TasteProfilerRateLimitExceeded("rate limit"), "rate limit", id="rate_limit_exceeded"),
+            pytest.param(TasteProfileBuildException("bad response"), "bad response", id="build_exception"),
+        ],
+        indirect=["mock_segment"],
+    )
+    async def test__batch_fail__pauses(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
         tracks: list[Track],
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        mock_segment: mock.AsyncMock,
+        reason: str,
     ) -> None:
-        # Batch 1 raises TasteProfilerRateLimitExceeded — build pauses immediately, no checkpoint saved
-        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        # Batch 1 fails: the build pauses at once, no checkpoint saved
         mock_track_repository.get_list.return_value = tracks
 
-        with mock.patch.object(
-            openrouter_profiler,
-            "build_profile_segment",
-            new_callable=mock.AsyncMock,
-            side_effect=TasteProfilerRateLimitExceeded("rate limit"),
-        ):
-            with pytest.raises(TasteProfileBuildPausedException) as exc_info:
-                await use_case.build_profile(user=user, config=config)
+        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+            await use_case.build_profile(user=user, config=config)
 
         assert exc_info.value.batch_index == 1
         assert exc_info.value.total_batches == 3
-        assert exc_info.value.reason == "rate limit"
-        mock_taste_profile_repository.save_checkpoint.assert_not_called()
-        mock_taste_profile_repository.upsert.assert_not_called()
-
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
-    async def test__batch_fail__pauses__build_exception(
-        self,
-        user: User,
-        use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-    ) -> None:
-        # Batch 1 raises TasteProfileBuildException — build pauses immediately, no checkpoint saved
-        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
-        mock_track_repository.get_list.return_value = tracks
-
-        with mock.patch.object(
-            openrouter_profiler,
-            "build_profile_segment",
-            new_callable=mock.AsyncMock,
-            side_effect=TasteProfileBuildException("bad response"),
-        ):
-            with pytest.raises(TasteProfileBuildPausedException) as exc_info:
-                await use_case.build_profile(user=user, config=config)
-
-        assert exc_info.value.batch_index == 1
-        assert exc_info.value.total_batches == 3
-        assert exc_info.value.reason == "bad response"
+        assert exc_info.value.reason == reason
         mock_taste_profile_repository.save_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
@@ -428,72 +454,25 @@ class TestBuildTasteProfileUseCase:
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
         tracks: list[Track],
+        profile_data: TasteProfileData,
         mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-        profile_data: TasteProfileData,
+        mock_segment: mock.AsyncMock,
     ) -> None:
-        # Batch 1 succeeds (checkpoint saved), batch 2 fails — pauses at 2/3, upsert never called
-        config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3)
+        # Batch 1 succeeds (checkpoint saved), batch 2 fails: pauses at 2/3, upsert never called
         mock_track_repository.get_list.return_value = tracks
+        mock_segment.side_effect = [profile_data, TasteProfilerRateLimitExceeded("rate limit")]
 
-        with mock.patch.object(
-            openrouter_profiler,
-            "build_profile_segment",
-            new_callable=mock.AsyncMock,
-            side_effect=[profile_data, TasteProfilerRateLimitExceeded("rate limit")],
-        ):
-            with pytest.raises(TasteProfileBuildPausedException) as exc_info:
-                await use_case.build_profile(user=user, config=config)
+        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+            await use_case.build_profile(user=user, config=config)
 
         assert exc_info.value.batch_index == 2
         assert exc_info.value.total_batches == 3
         assert exc_info.value.reason == "rate limit"
         mock_taste_profile_repository.save_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()
-
-    @pytest.fixture
-    def mock_reflect(
-        self,
-        request: pytest.FixtureRequest,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-    ) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_profiler,
-            "reflect_on_profile",
-            new_callable=mock.AsyncMock,
-            side_effect=request.param,
-        ) as mocked:
-            yield mocked
-
-    @pytest.fixture
-    def mock_segment(
-        self,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-        profile_data: TasteProfileData,
-    ) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_profiler,
-            "build_profile_segment",
-            new_callable=mock.AsyncMock,
-            return_value=profile_data,
-        ) as mocked:
-            yield mocked
-
-    @pytest.fixture
-    def mock_merge(
-        self,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-        profile_data: TasteProfileData,
-    ) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_profiler,
-            "merge_profiles",
-            new_callable=mock.AsyncMock,
-            return_value=profile_data,
-        ) as mocked:
-            yield mocked
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     @pytest.mark.parametrize(
