@@ -38,17 +38,15 @@ class Backend:
         return await self.api(messages)  # type: ignore[no-any-return]
 
 
-@pytest.fixture
-def messages() -> list[ChatMessage]:
-    return [ChatMessage(role="user", content="prompt")]
-
-
-@pytest.fixture
-def api(request: pytest.FixtureRequest) -> AsyncMock:
-    return AsyncMock(side_effect=request.param)
-
-
 class TestSelfHeal:
+    @pytest.fixture
+    def messages(self) -> list[ChatMessage]:
+        return [ChatMessage(role="user", content="prompt")]
+
+    @pytest.fixture
+    def api(self, request: pytest.FixtureRequest) -> AsyncMock:
+        return AsyncMock(side_effect=request.param)
+
     @pytest.mark.parametrize("api", [[Answer(value=42)]], indirect=True)
     async def test__valid_first_attempt__returns_result_and_forwards_arguments(
         self,

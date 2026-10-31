@@ -18,31 +18,29 @@ from tests.unit.factories.entities.track import TrackFactory
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
-@pytest.fixture
-def profile_data() -> TasteProfileData:
-    return TasteProfileDataFactory.build(
-        personality_archetype=None,
-        life_phase_insights=[],
-        core_identity={"indie-rock": 0.8, "melancholic": 0.4},  # valid tags, kept by the adapter filter
-        current_vibe={"hip-hop": 0.6},
-    )
-
-
-@pytest.fixture
-def completion(profile_data: TasteProfileData) -> dict[str, Any]:
-    content = {
-        **profile_data,
-        "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
-        "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
-        "behavioral_traits": None,
-    }
-    return {
-        "model": "google/gemini-2.5-flash-lite",
-        "choices": [{"message": {"role": "assistant", "content": json.dumps(content)}, "finish_reason": "stop"}],
-    }
-
-
 class TestOpenRouterTasteProfileAdapter:
+    @pytest.fixture
+    def profile_data(self) -> TasteProfileData:
+        return TasteProfileDataFactory.build(
+            personality_archetype=None,
+            life_phase_insights=[],
+            core_identity={"indie-rock": 0.8, "melancholic": 0.4},  # valid tags, kept by the adapter filter
+            current_vibe={"hip-hop": 0.6},
+        )
+
+    @pytest.fixture
+    def completion(self, profile_data: TasteProfileData) -> dict[str, Any]:
+        content = {
+            **profile_data,
+            "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
+            "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
+            "behavioral_traits": None,
+        }
+        return {
+            "model": "google/gemini-2.5-flash-lite",
+            "choices": [{"message": {"role": "assistant", "content": json.dumps(content)}, "finish_reason": "stop"}],
+        }
+
     def test__display_name(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
         assert openrouter_profiler.display_name == "OpenRouter"
 

@@ -13,20 +13,19 @@ from tests.unit.factories.entities.track import TrackFactory
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
-@pytest.fixture
-def completion(request: pytest.FixtureRequest) -> dict[str, Any]:
-    return {
-        "model": "google/gemini-2.5-flash-lite",
-        "choices": [
-            {
-                "message": {"role": "assistant", "content": json.dumps({"enriched_tracks": request.param})},
-                "finish_reason": "stop",
-            }
-        ],
-    }
-
-
 class TestOpenRouterTrackEnricherAdapter:
+    @pytest.fixture
+    def completion(self, request: pytest.FixtureRequest) -> dict[str, Any]:
+        return {
+            "model": "google/gemini-2.5-flash-lite",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": json.dumps({"enriched_tracks": request.param})},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+
     async def test__enrich_tracks__no_choices__returns_empty(
         self,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
