@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -23,7 +24,7 @@ class AppSettings(BaseSettings):
 
     LOCALE: str = Field(default="en-US", pattern=r"^[a-z]{2}-[A-Z]{2}$")
 
-    SECRET_KEY: str = Field(..., min_length=32)
+    SECRET_KEY: SecretStr = Field(..., min_length=32)
 
     API_V1_PREFIX: str = "/api/v1"
 

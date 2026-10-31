@@ -49,10 +49,14 @@ class JwtAccessTokenManager(AccessTokenManagerPort):
 
         to_encode.update({"exp": expire, "iat": datetime.now(UTC)})
 
-        return jwt.encode(to_encode, app_settings.SECRET_KEY, algorithm=app_settings.ACCESS_TOKEN_ALGORITHM)
+        return jwt.encode(
+            to_encode, app_settings.SECRET_KEY.get_secret_value(), algorithm=app_settings.ACCESS_TOKEN_ALGORITHM
+        )
 
     def decode(self, token: str) -> dict[str, Any]:
-        return jwt.decode(token, app_settings.SECRET_KEY, algorithms=[app_settings.ACCESS_TOKEN_ALGORITHM])
+        return jwt.decode(
+            token, app_settings.SECRET_KEY.get_secret_value(), algorithms=[app_settings.ACCESS_TOKEN_ALGORITHM]
+        )
 
 
 class SystemStateTokenGenerator(StateTokenGeneratorPort):
