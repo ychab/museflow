@@ -32,7 +32,7 @@ def enrich(
     model: str | None = typer.Option(
         None,
         "--model",
-        help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-2.5-flash-lite).",
+        help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-3.1-flash-lite).",
     ),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:

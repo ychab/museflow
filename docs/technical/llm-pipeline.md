@@ -21,7 +21,7 @@ Each request carries:
 - **Provider preferences**: `require_parameters: true`, so OpenRouter only routes to endpoints that support structured outputs and every tuning parameter the step sends; `zdr: true` (Zero Data Retention, `OPENROUTER_ZDR`, on by default) and `data_collection: deny`, see [Privacy and data](privacy-and-data.md).
 - **Fallback models**, tried in order by OpenRouter when the main model fails. The model that actually answered is logged at DEBUG.
 
-**Fail fast on a misconfigured model.** Before any paid call, each command checks its step models (and their fallbacks) against OpenRouter's public model catalog: an unknown id fails with a "Did you mean" suggestion, and a model that lacks a parameter the step sends (structured outputs, reasoning, temperature, max tokens) fails with the missing list. The check cannot see the routing rules: a model whose only endpoints retain data passes it, then fails at request time with OpenRouter's 503 "no provider" message.
+**Fail fast on a misconfigured model.** Before any paid call, each command checks its step models (and their fallbacks) against OpenRouter's public model catalog: an unknown id fails with a "Did you mean" suggestion, and a model that lacks a parameter the step sends (structured outputs, reasoning, temperature, max tokens) fails with the missing list. With ZDR on, it also reads the public list of Zero Data Retention endpoints (`GET /endpoints/zdr`): a model with no ZDR endpoint, or whose ZDR endpoints lack one of those parameters, fails before any paid call too. Without that check, OpenRouter only refuses it on the first completion, with a 404 "No endpoints found matching your data policy". The check remains a necessary condition: OpenRouter picks the endpoint at request time.
 
 ## Portable response schemas
 
@@ -47,13 +47,13 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 
 | Step | Setting | Default model | Volume | Why this tier |
 |---|---|---|---|---|
-| Profile segment | `PROFILER_SEGMENT` | `google/gemini-2.5-flash-lite` | One call per batch (15 for the default 3,000 seeds in batches of 200) | High volume, narrow task: classify a batch of tracks into tags and weights against a closed vocabulary. A small, cheap model is enough |
+| Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per batch (15 for the default 3,000 seeds in batches of 200) | High volume, narrow task: classify a batch of tracks into tags and weights against a closed vocabulary. A small, cheap model is enough |
 | Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Needs to follow arithmetic and structural rules over a growing JSON document without drifting. A step up from the lite tier |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
-| Advisor | `ADVISOR` | `google/gemini-2.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
-| Enricher | `ENRICHER` | `google/gemini-2.5-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
+| Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
+| Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
 
-The principle is to spend model capability where one call has outsized influence on the result (the single reflection pass, the merge that every later step builds on) and use the cheapest tier where the work is high-volume and constrained. The defaults are the Gemini models MuseFlow used before the gateway, so the switch changed the plumbing only; they were not benchmarked against other vendors, so treat the tiering as a reasoned default, not a measured optimum. Comparing models is now a `--model` flag away.
+The principle is to spend model capability where one call has outsized influence on the result (the single reflection pass, the merge that every later step builds on) and use the cheapest tier where the work is high-volume and constrained. The defaults stay on Gemini, as before the gateway, but on 3.x models: the 2.5 Flash and Flash Lite models MuseFlow used have no Zero Data Retention endpoint, so ZDR routing refuses them. They were not benchmarked against other vendors, so treat the tiering as a reasoned default, not a measured optimum. Comparing models is now a `--model` flag away.
 
 !!! note "Reasoning tokens count against `MAX_TOKENS`"
     On reasoning models, the hidden reasoning is billed and counted as output tokens. A low `MAX_TOKENS` can cut the JSON off (`finish_reason: length`), which fails the call as truncated. The defaults leave `MAX_TOKENS` unset for that reason.

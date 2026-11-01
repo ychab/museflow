@@ -19,7 +19,7 @@ museflow taste build --email <email> --name <name> [OPTIONS]
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000). |
 | `--batch-size` | `200` | Batch sizes for profiles (1 to 1000). |
-| `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-2.5-flash-lite`). |
+| `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-3.1-flash-lite`). |
 | `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
 | `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |
 

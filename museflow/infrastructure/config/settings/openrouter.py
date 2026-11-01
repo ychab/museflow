@@ -44,11 +44,11 @@ class OpenRouterSettings(BaseSettings):
         default=HttpUrl("https://openrouter.ai/api/v1/")
     )
 
-    ADVISOR: LLMSettings = LLMSettings(MODEL="google/gemini-2.5-flash")
+    ADVISOR: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash")
 
-    ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-2.5-flash-lite")
+    ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
 
-    PROFILER_SEGMENT: LLMSettings = LLMSettings(MODEL="google/gemini-2.5-flash-lite")
+    PROFILER_SEGMENT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
     PROFILER_MERGE: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash")
     PROFILER_REFLECT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-pro-preview")
 

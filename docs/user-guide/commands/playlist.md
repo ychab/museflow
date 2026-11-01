@@ -34,7 +34,7 @@ museflow playlist discover --email <email> [OPTIONS]
 | `--playlist-limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 | `--max-attempts` | `3` | Maximum number of advisor calls before stopping (1 to 10). |
 | `--max-tracks-per-artist` | `3` | Maximum tracks per artist in the final playlist (1 to 10). |
-| `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-2.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
+| `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 
 **Focus strategies**
