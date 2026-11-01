@@ -11,6 +11,7 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import EnricherRateLimitExceeded
 from museflow.domain.exceptions import EnricherUnavailableException
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
+from museflow.domain.exceptions import TrackEnrichmentException
 from museflow.domain.value_objects.track import TrackEnrichment
 
 logger = logging.getLogger(__name__)
@@ -56,17 +57,26 @@ class EnrichTracksUseCase:
         enriched_count = 0
         error_count = 0
         consecutive_failures = 0
+        last_failure = ""
 
         for i, batch in enumerate(batches, start=1):
             try:
                 enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)
             except (EnricherRateLimitExceeded, EnricherUnavailableException) as e:
                 raise TrackEnrichmentAbortedException(i, total_batches, enriched_count, reason=str(e)) from e
-            except Exception:
+            except TrackEnrichmentException as e:
+                # An expected batch failure, already explained by its message: no traceback
+                logger.warning(
+                    f"Enrichment batch {i}/{total_batches} failed: {e}", extra={"batch": i, "total": total_batches}
+                )
+                enriched_tracks: list[Track] = []
+                last_failure = str(e)
+            except Exception as e:
                 logger.exception(
                     f"Enrichment batch {i}/{total_batches} failed", extra={"batch": i, "total": total_batches}
                 )
                 enriched_tracks = []
+                last_failure = repr(e)
             else:
                 enriched_tracks = self._apply_enrichments(batch, enrichments, config.fields)
                 if not enriched_tracks:
@@ -74,13 +84,17 @@ class EnrichTracksUseCase:
                         f"Enrichment batch {i}/{total_batches} returned no enrichment",
                         extra={"batch": i, "total": total_batches},
                     )
+                    last_failure = "no enrichment returned"
 
             if not enriched_tracks:
                 error_count += 1
                 consecutive_failures += 1
                 if consecutive_failures >= config.max_consecutive_failures:
                     raise TrackEnrichmentAbortedException(
-                        i, total_batches, enriched_count, reason=f"{consecutive_failures} batches failed in a row"
+                        i,
+                        total_batches,
+                        enriched_count,
+                        reason=f"{consecutive_failures} batches failed in a row (last: {last_failure})",
                     )
                 continue
 

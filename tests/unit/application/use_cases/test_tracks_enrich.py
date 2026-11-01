@@ -144,6 +144,39 @@ class TestEnrichTracksUseCase:
         assert result.enriched_count == 2
 
     @pytest.mark.parametrize(
+        ("error", "expected_message", "expected_traceback"),
+        [
+            pytest.param(
+                TrackEnrichmentException("Invalid enrichment response: LLM response truncated (length)"),
+                "Enrichment batch 1/2 failed: Invalid enrichment response: LLM response truncated (length)",
+                False,
+                id="batch_failure",
+            ),
+            pytest.param(RuntimeError("boom"), "Enrichment batch 1/2 failed", True, id="unexpected"),
+        ],
+    )
+    async def test__enricher_error__logs_traceback_for_unexpected_only(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+        error: Exception,
+        expected_message: str,
+        expected_traceback: bool,
+    ) -> None:
+        tracks = TrackFactory.batch(2)
+        mock_track_repository.get_list.return_value = tracks
+        mock_enricher.enrich_tracks.side_effect = [error, [TrackEnrichmentFactory.build(track_id=tracks[1].id)]]
+
+        with caplog.at_level(logging.WARNING):
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=1))
+
+        record = next(r for r in caplog.records if r.message == expected_message)
+        assert (record.exc_info is not None) is expected_traceback
+
+    @pytest.mark.parametrize(
         "error",
         [
             pytest.param(EnricherUnavailableException("Insufficient credits"), id="unavailable"),
@@ -181,15 +214,42 @@ class TestEnrichTracksUseCase:
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(5)
-        mock_enricher.enrich_tracks.side_effect = [[], TrackEnrichmentException("Flagged"), [], []]
+        mock_enricher.enrich_tracks.side_effect = [[], [], TrackEnrichmentException("Flagged"), []]
 
-        with pytest.raises(TrackEnrichmentAbortedException, match="3 batches failed in a row") as exc_info:
+        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
             await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
                 user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=3)
             )
 
+        assert exc_info.value.reason == "3 batches failed in a row (last: Flagged)"
         assert (exc_info.value.batch_index, exc_info.value.total_batches) == (3, 5)
         assert mock_enricher.enrich_tracks.await_count == 3
+
+    @pytest.mark.parametrize(
+        ("last_outcome", "expected_last"),
+        [
+            pytest.param([], "no enrichment returned", id="empty"),
+            pytest.param(RuntimeError("boom"), "RuntimeError('boom')", id="unexpected"),
+        ],
+    )
+    async def test__consecutive_failures__reason_names_the_last_failure(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        last_outcome: list[TrackEnrichment] | Exception,
+        expected_last: str,
+    ) -> None:
+        mock_track_repository.get_list.return_value = TrackFactory.batch(2)
+        mock_enricher.enrich_tracks.side_effect = [TrackEnrichmentException("Flagged"), last_outcome]
+
+        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+                user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=2)
+            )
+
+        assert exc_info.value.reason == f"2 batches failed in a row (last: {expected_last})"
 
     async def test__consecutive_failures__reset_by_a_successful_batch(
         self,

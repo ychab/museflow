@@ -1,5 +1,4 @@
 import json
-import logging
 
 import httpx
 from httpx import codes
@@ -26,13 +25,11 @@ from museflow.infrastructure.adapters.enrichers.openrouter.schemas import Enrich
 from museflow.infrastructure.adapters.enrichers.openrouter.schemas import build_enrichment_schema
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
-logger = logging.getLogger(__name__)
-
-# Rejections that may depend on the batch content (e.g. a title flagged by a provider's moderation): the next batch can
-# still succeed. Any other rejection (auth, credits, unknown model, no provider, outage) fails every batch alike.
-_BATCH_STATUS_CODES = frozenset(
-    {codes.BAD_REQUEST, codes.FORBIDDEN, codes.REQUEST_ENTITY_TOO_LARGE, codes.UNPROCESSABLE_ENTITY}
-)
+# Rejections that may depend on the batch content: the next batch can still succeed. A 403 is batch-scoped only when
+# moderation flagged the input (`LLMRequestError.moderated`), not for a key limit. Any other rejection fails every batch
+# alike: auth, credits, unknown model, no provider, outage, and 400 too, since `check_models` already validated the
+# model and its parameters, so a 400 means the request shape (e.g. the response schema) was refused.
+_BATCH_STATUS_CODES = frozenset({codes.REQUEST_ENTITY_TOO_LARGE, codes.UNPROCESSABLE_ENTITY})
 
 
 class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
@@ -115,14 +112,13 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         except LLMRateLimitError as e:
             raise EnricherRateLimitExceeded(str(e)) from e
         except LLMRequestError as e:
-            if e.status_code in _BATCH_STATUS_CODES:
+            if e.moderated or e.status_code in _BATCH_STATUS_CODES:
                 raise TrackEnrichmentException(str(e)) from e
             raise EnricherUnavailableException(str(e)) from e
         except httpx.RequestError as e:
             raise EnricherUnavailableException(f"OpenRouter unreachable after retries: {e!r}") from e
         except LLMResponseError as e:
-            logger.exception("Invalid LLM enrichment response", extra={"failure_kind": e.failure_kind.value})
-            return []
+            raise TrackEnrichmentException(f"Invalid enrichment response: {e}") from e
 
         return [
             TrackEnrichment(
