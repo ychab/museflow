@@ -46,9 +46,10 @@ re-run processes the missing tracks), or `No tracks to enrich.`.
 **When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
 succeed:
 
-- at once, when OpenRouter refuses the request for a reason every batch shares: invalid API key, no credits left,
-  unknown model, no provider available, a lasting outage or a rate limit;
-- after 3 failed batches in a row, whatever the cause.
+- at once, when OpenRouter refuses the request for a reason every batch shares: invalid API key, no credits left or
+  key limit reached, unknown model, a request the model refuses (such as its response schema), no provider available,
+  a lasting outage or a rate limit;
+- after 3 failed batches in a row, whatever the cause; the message names the last one.
 
 It prints `Enrichment stopped at batch N/M after X track(s): <reason>` and exits with code 1. The tracks enriched
 before the stop are saved: fix the cause, then run the same command again; tracks already enriched are skipped. With

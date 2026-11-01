@@ -45,14 +45,22 @@ class TestOpenRouterTrackEnricherAdapter:
         retry_controller.sleep = original_sleep
 
     @pytest.mark.parametrize(
-        ("status_code", "expected_exception"),
+        ("status_code", "metadata", "expected_exception"),
         [
-            pytest.param(codes.UNAUTHORIZED, EnricherUnavailableException, id="401_invalid_key"),
-            pytest.param(codes.PAYMENT_REQUIRED, EnricherUnavailableException, id="402_no_credits"),
-            pytest.param(codes.NOT_FOUND, EnricherUnavailableException, id="404_unknown_model"),
-            pytest.param(codes.SERVICE_UNAVAILABLE, EnricherUnavailableException, id="503_no_provider"),
-            pytest.param(codes.BAD_REQUEST, TrackEnrichmentException, id="400_batch_rejected"),
-            pytest.param(codes.FORBIDDEN, TrackEnrichmentException, id="403_moderation"),
+            pytest.param(codes.UNAUTHORIZED, None, EnricherUnavailableException, id="401_invalid_key"),
+            pytest.param(codes.PAYMENT_REQUIRED, None, EnricherUnavailableException, id="402_no_credits"),
+            pytest.param(codes.NOT_FOUND, None, EnricherUnavailableException, id="404_unknown_model"),
+            pytest.param(codes.SERVICE_UNAVAILABLE, None, EnricherUnavailableException, id="503_no_provider"),
+            pytest.param(codes.BAD_REQUEST, None, EnricherUnavailableException, id="400_request_refused"),
+            pytest.param(codes.FORBIDDEN, None, EnricherUnavailableException, id="403_key_limit"),
+            pytest.param(
+                codes.FORBIDDEN,
+                {"reasons": ["violence"], "flagged_input": "a title"},
+                TrackEnrichmentException,
+                id="403_moderation",
+            ),
+            pytest.param(codes.REQUEST_ENTITY_TOO_LARGE, None, TrackEnrichmentException, id="413_batch_too_large"),
+            pytest.param(codes.UNPROCESSABLE_ENTITY, None, TrackEnrichmentException, id="422_batch_rejected"),
         ],
     )
     async def test__enrich_tracks__request_rejected__raises_by_scope(
@@ -60,13 +68,14 @@ class TestOpenRouterTrackEnricherAdapter:
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
         status_code: int,
+        metadata: dict[str, Any] | None,
         expected_exception: type[Exception],
     ) -> None:
         httpx_mock.add_response(
             url=URL,
             method="POST",
             status_code=status_code,
-            json={"error": {"code": status_code, "message": "Rejected"}},
+            json={"error": {"code": status_code, "message": "Rejected", "metadata": metadata}},
         )
 
         with pytest.raises(expected_exception, match="Rejected"):
@@ -98,18 +107,17 @@ class TestOpenRouterTrackEnricherAdapter:
         with pytest.raises(EnricherUnavailableException, match="unreachable"):
             await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
-    async def test__enrich_tracks__no_choices__returns_empty(
+    async def test__enrich_tracks__no_choices__raises_batch_failure(
         self,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(url=URL, method="POST", json={"choices": []})
 
-        result = await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
+        with pytest.raises(TrackEnrichmentException, match="Invalid enrichment response"):
+            await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
-        assert result == []
-
-    async def test__enrich_tracks__invalid_json__returns_empty(
+    async def test__enrich_tracks__invalid_json__raises_batch_failure(
         self,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
         httpx_mock: HTTPXMock,
@@ -121,9 +129,9 @@ class TestOpenRouterTrackEnricherAdapter:
             is_reusable=True,
         )
 
-        result = await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
+        with pytest.raises(TrackEnrichmentException, match="Invalid enrichment response"):
+            await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
-        assert result == []
         assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries
 
     @pytest.mark.parametrize(
