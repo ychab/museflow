@@ -1,4 +1,9 @@
+from typing import Final
+
 from pydantic import BaseModel
+
+# Gemini rejects a response schema with an enum above ~100 values (400 INVALID_ARGUMENT), counting each enum on its own
+MAX_ENUM_VALUES: Final[int] = 100
 
 
 class JsonSchemaProperty(BaseModel):
@@ -7,7 +12,9 @@ class JsonSchemaProperty(BaseModel):
     Strict mode requires every object to list all its properties as required and to forbid extra ones: `object()`
     does both, so an optional field is expressed as a nullable type (`string(nullable=True)`) rather than omitted.
 
-    A nullable enum is `anyOf [enum, null]`: Anthropic rejects `type: [string, null]` with an `enum`.
+    Portability rules, learnt from provider rejections: an enum holds at most `MAX_ENUM_VALUES` values (split a larger
+    vocabulary across fields, since Gemini also sums the values of `anyOf` branches), and a nullable enum is
+    `anyOf [enum, null]` (Anthropic rejects `type: [string, null]` with an `enum`).
     """
 
     type: str | list[str] | None = None
@@ -24,6 +31,9 @@ class JsonSchemaProperty(BaseModel):
 
     @classmethod
     def enum_string(cls, values: list[str], *, nullable: bool = False) -> JsonSchemaProperty:
+        if len(values) > MAX_ENUM_VALUES:
+            raise ValueError(f"An enum holds at most {MAX_ENUM_VALUES} values, got {len(values)}: split it")
+
         enum = cls(type="string", enum=values)
         return cls(anyOf=[enum, cls(type="null")]) if nullable else enum
 
