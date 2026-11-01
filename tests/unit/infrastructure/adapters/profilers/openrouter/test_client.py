@@ -11,6 +11,7 @@ from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import _format_tracks
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.track import TrackFactory
@@ -32,8 +33,8 @@ class TestOpenRouterTasteProfileAdapter:
     def completion(self, profile_data: TasteProfileData) -> dict[str, Any]:
         content = {
             **profile_data,
-            "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
-            "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
+            "core_identity": split_weights(profile_data["core_identity"]),
+            "current_vibe": split_weights(profile_data["current_vibe"]),
             "behavioral_traits": None,
         }
         return {
@@ -107,6 +108,7 @@ class TestOpenRouterTasteProfileAdapter:
         body = json.loads(httpx_mock.get_requests()[0].content)
         assert body["model"] == "google/gemini-2.5-flash"
         assert "reasoning" not in body
+        assert '"genre_meso": [{"key": "indie-rock", "value": 0.8}]' in body["messages"][0]["content"]
 
     async def test__reflect_on_profile__reflect_model(
         self,
@@ -122,6 +124,7 @@ class TestOpenRouterTasteProfileAdapter:
         body = json.loads(httpx_mock.get_requests()[0].content)
         assert body["model"] == "google/gemini-2.5-pro"
         assert body["reasoning"] == {"effort": "high"}
+        assert '"mood": [{"key": "melancholic", "value": 0.4}]' in body["messages"][0]["content"]
 
     async def test__rate_limit__raises_rate_limit_exceeded(
         self,

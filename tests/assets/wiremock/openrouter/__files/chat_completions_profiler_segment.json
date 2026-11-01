@@ -12,7 +12,7 @@
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2023\", \"technical_fingerprint\": {\"energy\": 0.7, \"acousticness\": 0.6, \"rhythmic_complexity\": 0.4, \"atmospheric\": 0.5, \"instrumentalness\": 0.2}, \"dominant_moods\": [\"melancholic\"]}], \"core_identity\": [{\"key\": \"indie-rock\", \"value\": 0.8}], \"current_vibe\": [{\"key\": \"indie-rock\", \"value\": 0.9}], \"personality_archetype\": null, \"life_phase_insights\": [], \"musical_identity_summary\": null, \"behavioral_traits\": null, \"discovery_style\": null}",
+        "content": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2023\", \"technical_fingerprint\": {\"energy\": 0.7, \"acousticness\": 0.6, \"rhythmic_complexity\": 0.4, \"atmospheric\": 0.5, \"instrumentalness\": 0.2}, \"dominant_moods\": [\"melancholic\"]}], \"core_identity\": {\"genre_macro\": [], \"genre_meso\": [{\"key\": \"indie-rock\", \"value\": 0.8}], \"genre_micro\": [], \"mood\": []}, \"current_vibe\": {\"genre_macro\": [], \"genre_meso\": [{\"key\": \"indie-rock\", \"value\": 0.9}], \"genre_micro\": [], \"mood\": []}, \"personality_archetype\": null, \"life_phase_insights\": [], \"musical_identity_summary\": null, \"behavioral_traits\": null, \"discovery_style\": null}",
         "refusal": null,
         "reasoning": null
       }

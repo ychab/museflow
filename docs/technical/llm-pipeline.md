@@ -17,7 +17,7 @@ Every LLM call goes through [OpenRouter](https://openrouter.ai), an OpenAI-compa
 
 Each request carries:
 
-- **A strict JSON schema** (`response_format: json_schema`, `strict: true`), built with `JsonSchemaProperty` ([`common/llm/json_schema.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/json_schema.py)): `additionalProperties: false` on every object, every property required, optional values expressed as nullable types. Strict mode forbids free-form keys, so the profile's `{tag: weight}` maps travel as lists of `{key, value}` pairs.
+- **A strict JSON schema** (`response_format: json_schema`, `strict: true`), built with `JsonSchemaProperty` ([`common/llm/json_schema.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/json_schema.py)): `additionalProperties: false` on every object, every property required, optional values expressed as nullable types. Strict mode forbids free-form keys, so the profile's `{tag: weight}` maps travel as lists of `{key, value}` pairs, one list per vocabulary tier (`genre_macro`, `genre_meso`, `genre_micro`, `mood`); the merge and reflect prompts embed the profile in that same shape, so the model reads what it must write back.
 - **Provider preferences**: `require_parameters: true`, so OpenRouter only routes to endpoints that support structured outputs and every tuning parameter the step sends; `zdr: true` (Zero Data Retention, `OPENROUTER_ZDR`, on by default) and `data_collection: deny`, see [Privacy and data](privacy-and-data.md).
 - **Fallback models**, tried in order by OpenRouter when the main model fails. The model that actually answered is logged at DEBUG.
 

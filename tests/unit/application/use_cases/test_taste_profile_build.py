@@ -20,6 +20,7 @@ from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -58,8 +59,8 @@ class TestBuildTasteProfileUseCase:
     def completion(self, profile_data: TasteProfileData) -> dict[str, Any]:
         serializable = {
             **profile_data,
-            "core_identity": [{"key": k, "value": v} for k, v in profile_data["core_identity"].items()],
-            "current_vibe": [{"key": k, "value": v} for k, v in profile_data["current_vibe"].items()],
+            "core_identity": split_weights(profile_data["core_identity"]),
+            "current_vibe": split_weights(profile_data["current_vibe"]),
         }
 
         return {
