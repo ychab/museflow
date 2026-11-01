@@ -24,6 +24,13 @@ from museflow.infrastructure.adapters.profilers.openrouter.schemas import TasteP
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
+# Without it, labels leak the processing ("2025 Current Batch") or keep dates a later merge makes stale
+_ERA_LABEL_RULE = (
+    'era_label names the music of the era (e.g. "Late-Night French Rap"): never dates, years, or words about the '
+    "data or its processing (batch, segment, current, period). Dates belong in time_range only, as "
+    '"YYYY-MM-DD to YYYY-MM-DD".'
+)
+
 
 def _format_tracks(tracks: list[Track]) -> str:
     lines = []
@@ -126,7 +133,8 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         prompt = (
             f"Analyze these {len(tracks)} tracks from [{date_range}]. Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
-            '- "taste_timeline": one TasteEra for this batch\n'
+            f'- "taste_timeline": one TasteEra covering these tracks, with time_range "{date_range}". '
+            f"{_ERA_LABEL_RULE}\n"
             '- "core_identity": long-term affinity signals, as {"genre_macro": [{"key": tag, "value": weight 0-1}], '
             '"genre_meso": [...], "genre_micro": [...], "mood": [...]}, each tag in the list of its tier\n'
             '- "current_vibe": what this batch reveals right now, same shape as core_identity\n'
@@ -167,10 +175,12 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "1. taste_timeline Logic:\n"
             "   - Compare the New Segment to the last Era in the Foundation.\n"
             "   - If they are >80% similar (moods match and technical_fingerprint values differ by <0.15 on average), "
-            "MERGE them by updating the 'until' date of the last era.\n"
+            "MERGE them: extend the time_range of the last era to the end date of the Segment's era, and rename the "
+            "era if its label no longer fits the merged music.\n"
             "   - If they differ, add the New Segment as a new TasteEra.\n"
-            "   - HARD CONSTRAINT: If the timeline exceeds 15 entries, merge the two oldest consecutive eras "
-            "to keep the total timeline concise and avoid JSON bloat.\n\n"
+            "   - HARD CONSTRAINT: If the timeline exceeds 15 entries, merge the two oldest consecutive eras into one "
+            "whose time_range spans both, to keep the total timeline concise and avoid JSON bloat.\n"
+            f"   - {_ERA_LABEL_RULE}\n\n"
             "2. core_identity (The DNA):\n"
             "   - If the Foundation is empty, initialize it with the Segment values.\n"
             "   - If not empty, calculate a weighted average: (Foundation * 0.7) + (Segment * 0.3).\n"
