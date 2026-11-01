@@ -70,7 +70,7 @@ class BuildTasteProfileUseCase:
 
                 step = i
                 logger.info(
-                    f"About processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
+                    f"Processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
                 )
 
                 segment = await self._profiler.build_profile_segment(list(batch))
@@ -98,10 +98,14 @@ class BuildTasteProfileUseCase:
 
             # The merged profile is already checkpointed: a reflection failure is resumable too.
             step = len(batches)
-            logger.info("About processing psychographic reflection")
+            logger.info("Processing psychographic reflection")
             current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
         except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
-            logger.warning(f"Taste profile build failed at step {step} / {len(batches)}, pausing build: {e}")
+            # The caller reports the pause from the exception: a warning here would print it twice
+            logger.debug(
+                f"Taste profile build failed at step {step} / {len(batches)}, pausing build: {e}",
+                extra={"step": step, "total": len(batches)},
+            )
             raise TasteProfileBuildPausedException(step, len(batches), reason=str(e)) from e
 
         taste_profile = TasteProfile(
