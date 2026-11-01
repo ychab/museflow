@@ -1,5 +1,6 @@
 import asyncio
 import difflib
+import json
 import logging
 from collections import defaultdict
 from collections.abc import Mapping
@@ -11,6 +12,7 @@ from httpx import codes
 
 from pydantic import BaseModel
 from pydantic import HttpUrl
+from pydantic import ValidationError
 
 from tenacity import before_sleep_log
 from tenacity import retry
@@ -22,8 +24,10 @@ from museflow.infrastructure.adapters.common.llm.exceptions import LLMModelError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
+from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionError
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRequest
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.common.llm.schemas import ErrorResponse
 from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ModelCatalogResponse
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
@@ -39,6 +43,9 @@ from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 
 logger = logging.getLogger(__name__)
+
+# The upstream provider's error can be a long JSON document: enough to read the cause
+_RAW_ERROR_MAX_LENGTH = 300
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -68,11 +75,28 @@ def _required_parameters(llm: LLMSettings) -> list[str]:
     return ["structured_outputs", *(name for name, sent in optional.items() if sent)]
 
 
-def _error_message(response: httpx.Response) -> str:
+def _parse_error(response: httpx.Response) -> ChatCompletionError | None:
     try:
-        return str(response.json()["error"]["message"])
-    except KeyError, TypeError, ValueError:
-        return response.text
+        return ErrorResponse.model_validate_json(response.content).error
+    except ValidationError:
+        return None
+
+
+def _error_message(response: httpx.Response, error: ChatCompletionError | None) -> str:
+    if error is None:
+        message = response.text
+    else:
+        # OpenRouter's own message is often generic ("Provider returned error"): the cause is in the provider's error
+        message = error.message
+        metadata = error.metadata
+        if metadata is not None and metadata.raw is not None:
+            raw = metadata.raw if isinstance(metadata.raw, str) else json.dumps(metadata.raw)
+            message += f" ({metadata.provider_name or 'provider'}: {raw[:_RAW_ERROR_MAX_LENGTH]})"
+
+    if response.status_code == codes.UNAUTHORIZED:
+        # OpenRouter answers "Missing Authentication header" to an invalid key too
+        message += " Check OPENROUTER_API_KEY."
+    return message
 
 
 class OpenRouterClient(HttpClientMixin):
@@ -252,16 +276,24 @@ class OpenRouterClient(HttpClientMixin):
             if status_code == codes.TOO_MANY_REQUESTS:
                 raise LLMRateLimitError(f"OpenRouter rate limit exceeded after max retries ({adapter})") from e
 
-            logger.exception(
+            # The message travels in the exception: no traceback for a rejection OpenRouter explains
+            logger.warning(
                 "OpenRouter API error",
                 extra={"status_code": status_code, "adapter": adapter, "model": llm.MODEL},
             )
+            error = _parse_error(e.response)
             raise LLMRequestError(
                 f"OpenRouter rejected the {adapter} request for model '{llm.MODEL}' "
-                f"({status_code}): {_error_message(e.response)}",
+                f"({status_code}): {_error_message(e.response, error)}",
                 adapter=adapter,
                 model=llm.MODEL,
                 status_code=status_code,
+                moderated=(
+                    status_code == codes.FORBIDDEN
+                    and error is not None
+                    and error.metadata is not None
+                    and bool(error.metadata.reasons)
+                ),
             ) from e
 
         return parse_completion(response_data, response_model, adapter)

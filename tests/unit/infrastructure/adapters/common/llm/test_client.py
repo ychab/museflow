@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
 from typing import Any
@@ -270,10 +271,150 @@ class TestOpenRouterClient:
         messages: list[ChatMessage],
         httpx_mock: HTTPXMock,
     ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", status_code=codes.FORBIDDEN, text="Forbidden")
+
+        with pytest.raises(LLMRequestError) as exc_info:
+            await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert str(exc_info.value).endswith("(403): Forbidden")
+        assert exc_info.value.moderated is False
+
+    @pytest.mark.parametrize(
+        ("raw", "expected_cause"),
+        [
+            pytest.param(
+                "Request contains an invalid argument.",
+                "(Google AI Studio: Request contains an invalid argument.)",
+                id="raw_text",
+            ),
+            pytest.param(
+                {"error": {"code": 400, "status": "INVALID_ARGUMENT"}},
+                '(Google AI Studio: {"error": {"code": 400, "status": "INVALID_ARGUMENT"}})',
+                id="raw_json",
+            ),
+            pytest.param("x" * 500, f"(Google AI Studio: {'x' * 300})", id="raw_cut"),
+        ],
+    )
+    async def test__complete__4xx_with_provider_error__adds_the_cause(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+        raw: str | dict[str, Any],
+        expected_cause: str,
+    ) -> None:
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            status_code=codes.BAD_REQUEST,
+            json={
+                "error": {
+                    "code": 400,
+                    "message": "Provider returned error",
+                    "metadata": {"raw": raw, "provider_name": "Google AI Studio"},
+                }
+            },
+        )
+
+        with pytest.raises(LLMRequestError) as exc_info:
+            await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert str(exc_info.value).endswith(f"(400): Provider returned error {expected_cause}")
+
+    async def test__complete__4xx_with_metadata_without_raw__keeps_the_message(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            status_code=codes.BAD_REQUEST,
+            json={"error": {"code": 400, "message": "Invalid request", "metadata": {"provider_name": "Anthropic"}}},
+        )
+
+        with pytest.raises(LLMRequestError) as exc_info:
+            await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert str(exc_info.value).endswith("(400): Invalid request")
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param({"json": {"error": {"code": 401, "message": "Missing Authentication header"}}}, id="json"),
+            pytest.param({"text": "Unauthorized"}, id="no_json"),
+        ],
+    )
+    async def test__complete__401__adds_the_api_key_hint(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+        body: dict[str, Any],
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", status_code=codes.UNAUTHORIZED, **body)
+
+        with pytest.raises(LLMRequestError) as exc_info:
+            await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert str(exc_info.value).endswith(" Check OPENROUTER_API_KEY.")
+
+    @pytest.mark.parametrize(
+        ("error", "expected_moderated"),
+        [
+            pytest.param(
+                {
+                    "code": 403,
+                    "message": "Input was flagged by moderation",
+                    "metadata": {"reasons": ["violence"], "flagged_input": "a track title", "provider_name": "OpenAI"},
+                },
+                True,
+                id="moderation",
+            ),
+            pytest.param(
+                {"code": 403, "message": "Key limit exceeded (total limit). $0.00 of $0.00 used; does not reset."},
+                False,
+                id="key_limit",
+            ),
+        ],
+    )
+    async def test__complete__403__flags_moderation_only(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+        error: dict[str, Any],
+        expected_moderated: bool,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", status_code=codes.FORBIDDEN, json={"error": error})
+
+        with pytest.raises(LLMRequestError) as exc_info:
+            await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert exc_info.value.moderated is expected_moderated
+        assert "a track title" not in str(exc_info.value)
+
+    async def test__complete__4xx__logs_without_traceback(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
         httpx_mock.add_response(url=URL, method="POST", status_code=codes.UNAUTHORIZED, text="Unauthorized")
 
-        with pytest.raises(LLMRequestError, match="Unauthorized"):
+        with caplog.at_level(logging.WARNING), pytest.raises(LLMRequestError):
             await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        record = next(r for r in caplog.records if r.message == "OpenRouter API error")
+        assert record.levelname == "WARNING"
+        assert record.exc_info is None
 
     async def test__complete__5xx__retries_then_succeeds(
         self,
