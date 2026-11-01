@@ -83,7 +83,7 @@ def discover(
     model: str | None = typer.Option(
         None,
         "--model",
-        help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-2.5-flash).",
+        help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
     ),
     dry_run: bool = typer.Option(
         False,

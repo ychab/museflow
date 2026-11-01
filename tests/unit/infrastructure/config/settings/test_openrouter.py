@@ -11,7 +11,7 @@ class TestOpenRouterSettings:
     def test__defaults(self) -> None:
         settings = OpenRouterSettings(_env_file=None)
 
-        assert settings.ENRICHER == LLMSettings(MODEL="google/gemini-2.5-flash-lite")
+        assert settings.ENRICHER == LLMSettings(MODEL="google/gemini-3.1-flash-lite")
         assert settings.ZDR is True
         assert "dummy-api-key" not in repr(settings)  # the key stays masked
 
@@ -22,7 +22,7 @@ class TestOpenRouterSettings:
         settings = OpenRouterSettings(_env_file=None)
 
         assert settings.ADVISOR == LLMSettings(
-            MODEL="google/gemini-2.5-flash",
+            MODEL="google/gemini-3.5-flash",
             REASONING_EFFORT=ReasoningEffort.HIGH,
             FALLBACK_MODELS=["openai/gpt-5-mini"],
         )

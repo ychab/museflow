@@ -45,7 +45,7 @@ def build(
     segment_model: str | None = typer.Option(
         None,
         "--segment-model",
-        help="OpenRouter model id overriding the configured segment step model (e.g. google/gemini-2.5-flash-lite).",
+        help="OpenRouter model id overriding the configured segment step model (e.g. google/gemini-3.1-flash-lite).",
     ),
     merge_model: str | None = typer.Option(
         None,

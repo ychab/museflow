@@ -53,7 +53,7 @@ Requests go to OpenRouter, authenticated with an API key sent in the `Authorizat
 - `zdr: true` (`OPENROUTER_ZDR`, on by default): only route to endpoints with a Zero Data Retention policy, which neither store prompts and completions nor train on them;
 - `data_collection: deny`, always: never route to an endpoint whose provider declares collecting user data (for instance to train on it), even with ZDR turned off.
 
-A model with no compliant endpoint fails with a 503 rather than falling back to a retaining one. No user id, email, IP address or Spotify identifier appears in any prompt builder (`advisors`, `profilers` and `enrichers` under `museflow/infrastructure/adapters/`).
+A model with no compliant endpoint is refused rather than routed to a retaining one: each command checks the public ZDR endpoint list before its first paid call, and OpenRouter answers 404 if a request gets through anyway. No user id, email, IP address or Spotify identifier appears in any prompt builder (`advisors`, `profilers` and `enrichers` under `museflow/infrastructure/adapters/`).
 
 | Call | Content sent |
 |---|---|
