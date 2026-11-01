@@ -77,7 +77,8 @@ See [`blacklist`](commands/blacklist.md).
 
 ## Back up and restore ratings, enrichment and taste profiles
 
-Ratings and LLM results are the only data that cannot be recomputed from the Spotify export for free. Export
+Ratings and LLM results are the only data that cannot be recomputed from the Spotify export for free. Ratings are
+your own work, and the taste profile is the most expensive export: recreating it means a full paid build. Export
 them to YAML:
 
 ```bash
@@ -97,6 +98,14 @@ museflow taste import   --email user@example.com --input backup/my-profile.yaml
 
 Ratings and enrichment are matched by track fingerprint, so tracks missing from the library are reported as
 "not found" and skipped.
+
+!!! warning "Export before upgrading"
+    A new MuseFlow version may require a database reset. Run the exports with the version you have installed,
+    *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
+    dump and prints its path.
+
+The blacklist has no export: keep the output of `museflow blacklist list --email user@example.com` to recreate it by
+hand with `blacklist add-artist` and `blacklist add-track`.
 
 ## Find artists worth exploring
 
