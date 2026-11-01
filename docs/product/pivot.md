@@ -15,6 +15,7 @@ timeline
     Jun : Blacklist, ratings, playlists : Enrichment, genre and mood taxonomy
     Jul : Rediscovery playlists : Language filters
     Oct : Python 3.14 : LLM self-healing
+    Nov : V2.0.0 released : V3, any model through OpenRouter
 ```
 
 ## V1: sync everything through the provider's API
@@ -126,4 +127,4 @@ the time to reread it.
   and each suggestion must be matched to a real catalogue entry before it can go into a playlist. Writing playlists
   and playing a track while rating it are the other remaining calls.
 - The pivot moved the main dependency from the music provider to the **LLM provider**. That is a known trade-off —
-  see [lessons learned](lessons-learned.md).
+  see [lessons learned](lessons-learned.md). [V3](v3.md) loosened it in turn: the models now come from any vendor.

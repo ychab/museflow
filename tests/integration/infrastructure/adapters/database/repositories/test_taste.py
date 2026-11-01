@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.user import User
-from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
@@ -23,7 +22,6 @@ class TestTasteProfileSQLRepository:
     ) -> None:
         profile = TasteProfileFactory.build(
             user_id=user.id,
-            profiler=TasteProfiler.GEMINI,
             name="my-profile",
             tracks_count=100,
             logic_version="1.0",
@@ -33,7 +31,6 @@ class TestTasteProfileSQLRepository:
 
         assert result.id == profile.id
         assert result.user_id == user.id
-        assert result.profiler == TasteProfiler.GEMINI
         assert result.tracks_count == 100
         assert result.logic_version == "1.0"
 
@@ -44,7 +41,6 @@ class TestTasteProfileSQLRepository:
     async def test__upsert__update(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
         profile_v1 = TasteProfileFactory.build(
             user_id=user.id,
-            profiler=TasteProfiler.GEMINI,
             name="my-profile",
             tracks_count=10,
             logic_version="1.0",
@@ -53,7 +49,6 @@ class TestTasteProfileSQLRepository:
 
         profile_v2 = TasteProfileFactory.build(
             user_id=user.id,
-            profiler=TasteProfiler.GEMINI,
             name="my-profile",
             tracks_count=99,
             logic_version="2.0",
@@ -80,10 +75,10 @@ class TestTasteProfileSQLRepository:
         assert result is None
 
     async def test__get_latest__found(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
-        older_db = await TasteProfileModelFactory.create_async(user_id=user.id, profiler=TasteProfiler.GEMINI.value)
-        newer_db = await TasteProfileModelFactory.create_async(user_id=user.id, profiler=TasteProfiler.GEMINI.value)
+        older_db = await TasteProfileModelFactory.create_async(user_id=user.id)
+        newer_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
-        result = await taste_profile_repository.get_latest(user_id=user.id, profiler=TasteProfiler.GEMINI)
+        result = await taste_profile_repository.get_latest(user_id=user.id)
 
         assert result is not None
         assert result.id == newer_db.id
@@ -91,7 +86,7 @@ class TestTasteProfileSQLRepository:
         assert result.created_at >= older_db.created_at
 
     async def test__get_latest__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
-        result = await taste_profile_repository.get_latest(user_id=uuid.uuid4(), profiler=TasteProfiler.GEMINI)
+        result = await taste_profile_repository.get_latest(user_id=uuid.uuid4())
         assert result is None
 
     async def test__save_checkpoint__creates_and_updates(
@@ -105,7 +100,6 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.save_checkpoint(
             user_id=user.id,
             name="my-profile",
-            profiler=TasteProfiler.GEMINI,
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,
@@ -125,7 +119,6 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.save_checkpoint(
             user_id=user.id,
             name="my-profile",
-            profiler=TasteProfiler.GEMINI,
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,
@@ -146,7 +139,6 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.save_checkpoint(
             user_id=user.id,
             name="my-profile",
-            profiler=TasteProfiler.GEMINI,
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=50,
@@ -179,7 +171,6 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.save_checkpoint(
             user_id=user.id,
             name="my-profile",
-            profiler=TasteProfiler.GEMINI,
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,

@@ -54,7 +54,7 @@ def get_unit_of_work() -> UnitOfWorkPort:
 async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
     async with SpotifyOAuthAdapter(
         client_id=spotify_settings.CLIENT_ID,
-        client_secret=spotify_settings.CLIENT_SECRET,
+        client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
         redirect_uri=spotify_settings.REDIRECT_URI,
         base_url=spotify_settings.BASE_URL,
         auth_endpoint=spotify_settings.AUTH_ENDPOINT,

@@ -1,0 +1,27 @@
+{
+  "id": "gen-1761811200-integration",
+  "provider": "Google",
+  "model": "google/gemini-2.5-flash",
+  "object": "chat.completion",
+  "created": 1761811200,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"value\": 42}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 42,
+    "completion_tokens": 7,
+    "total_tokens": 49,
+    "cost": 0.0000154
+  }
+}

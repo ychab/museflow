@@ -1,7 +1,6 @@
 id: f485b597-e908-56b4-a185-f7438379307a
 name: example-pop
 user_id: 18f7348a-edbe-5405-8964-4bfb6f387a7c
-profiler: gemini
 profile:
   current_vibe:
     indie-pop: 0.82
@@ -104,7 +103,7 @@ profile:
     hooks but trades the glitter cannon for a desk lamp.'
 profiler_metadata:
   models:
-    segment: gemini-2.5-flash-lite
+    segment: gemini-3.1-flash-lite
     merge: gemini-3.5-flash
     reflect: gemini-3.1-pro-preview
 tracks_count: 5840

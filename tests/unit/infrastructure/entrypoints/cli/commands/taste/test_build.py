@@ -8,7 +8,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
@@ -63,6 +62,30 @@ class TestTasteBuildParserCommand:
         # fmt: on
         mock_build_logic.assert_called_once()
         assert mock_build_logic.call_args.kwargs["rated_only"] is True
+
+    def test__models__passed_to_logic(
+        self,
+        mock_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        # fmt: off
+        runner.invoke(
+            app,
+            [
+                "taste",
+                "build",
+                "--email", "test@example.com",
+                "--name", "my-profile",
+                "--segment-model", "openai/gpt-5-nano",
+                "--merge-model", "openai/gpt-5-mini",
+                "--reflect-model", "anthropic/claude-sonnet-4.5",
+            ],
+        )
+        # fmt: on
+        mock_build_logic.assert_called_once()
+        assert mock_build_logic.call_args.kwargs["segment_model"] == "openai/gpt-5-nano"
+        assert mock_build_logic.call_args.kwargs["merge_model"] == "openai/gpt-5-mini"
+        assert mock_build_logic.call_args.kwargs["reflect_model"] == "anthropic/claude-sonnet-4.5"
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
@@ -241,6 +264,7 @@ class TestTasteBuildCommand:
 
         output = clean_typer_text(result.stdout)
         assert "Taste profile built:" in output
+        assert "Model (reflect): google/gemini-2.5-pro" in output
         assert "Dark Metal Wanderer" in output
 
     @pytest.mark.parametrize(
@@ -275,7 +299,7 @@ class TestTasteBuildCommand:
     "mock_user_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
-    "mock_gemini_profiler",
+    "mock_get_profiler",
 )
 class TestTasteBuildLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.build"
@@ -286,7 +310,6 @@ class TestTasteBuildLogic:
         with pytest.raises(UserNotFound):
             await build_logic(
                 email="test@example.com",
-                profiler=TasteProfiler.GEMINI,
                 name="my-profile",
                 track_limit=3000,
                 batch_size=200,

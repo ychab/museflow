@@ -3,7 +3,9 @@ import dataclasses
 import tempfile
 import webbrowser
 from enum import StrEnum
+from html import escape
 from pathlib import Path
+from typing import Any
 
 from pydantic import EmailStr
 from pydantic import TypeAdapter
@@ -18,6 +20,17 @@ from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+
+
+def _escape_html(value: Any) -> Any:
+    # The profile holds LLM-written and imported text: escape it before it lands in a page opened in the browser
+    if isinstance(value, str):
+        return escape(value)
+    if isinstance(value, dict):
+        return {escape(str(k)): _escape_html(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_escape_html(item) for item in value]
+    return value
 
 
 class ViewFormat(StrEnum):
@@ -72,6 +85,12 @@ async def view_logic(email: EmailStr, name: str) -> TasteProfile:
 
 
 def generate_profile_html_content(taste_profile: TasteProfile) -> str:
+    taste_profile = dataclasses.replace(
+        taste_profile,
+        name=escape(taste_profile.name),
+        profile=_escape_html(taste_profile.profile),
+        profiler_metadata=_escape_html(taste_profile.profiler_metadata),
+    )
     # fmt: off
     return f"""
     <!DOCTYPE html>
@@ -181,10 +200,9 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
             <footer class="flex flex-col md:flex-row justify-between text-[9px] uppercase tracking-[0.3em] text-slate-600 border-t border-slate-900 pt-8 px-4">
                 <div class="flex gap-6">
                     <span>Logic: {taste_profile.logic_version}</span>
-                    <span>Profiler: {taste_profile.profiler}</span>
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-0">
-                    <span>Reflect Model: {taste_profile.profiler_metadata.get('models', {}).get('reflect', 'N/A')}</span>
+                    <span>Reflect Model: {taste_profile.profiler_metadata.get('steps', {}).get('reflect', {}).get('model', 'N/A')}</span>
                     <span>Updated: {taste_profile.updated_at}</span>
                 </div>
             </footer>

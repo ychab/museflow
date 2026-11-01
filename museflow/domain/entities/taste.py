@@ -8,7 +8,6 @@ from typing import Any
 from typing import Self
 from typing import TypedDict
 
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.utils.taste import era_sort_key
 
 
@@ -53,7 +52,6 @@ class TasteProfile:
 
     name: str
     user_id: uuid.UUID
-    profiler: TasteProfiler
 
     profile: TasteProfileData
 

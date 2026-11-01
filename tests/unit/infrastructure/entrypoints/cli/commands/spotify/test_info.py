@@ -102,8 +102,43 @@ class TestSpotifyInfoCommand:
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
         assert "Spotify Auth Token:" in output
+        assert auth_token.token_access not in output
+        assert auth_token.token_refresh not in output
+        assert f"****{auth_token.token_access[-4:]}" in output
+        assert f"****{auth_token.token_refresh[-4:]}" in output
+
+    def test__token__print__show_tokens(
+        self,
+        runner: CliRunner,
+        mock_info_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        auth_token = OAuthProviderUserTokenFactory.build()
+        mock_info_logic.return_value = auth_token
+        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--show-tokens"], input="y\n")
+
+        output = clean_typer_text(result.stdout)
+        assert result.exit_code == 0
+        assert "This prints the tokens in clear. Continue?" in output
         assert auth_token.token_access in output
         assert auth_token.token_refresh in output
+
+    def test__token__print__show_tokens__aborted(
+        self,
+        runner: CliRunner,
+        mock_info_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        auth_token = OAuthProviderUserTokenFactory.build()
+        mock_info_logic.return_value = auth_token
+        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--show-tokens"], input="n\n")
+
+        output = clean_typer_text(result.output)
+        assert result.exit_code == 1
+        assert "Aborted" in output
+        assert auth_token.token_access not in output
+        assert auth_token.token_refresh not in output
+        mock_info_logic.assert_not_called()
 
     def test__token__print__none(
         self,

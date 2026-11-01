@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.response_format.json_schema[?(@.name == 'DiscoveryStrategyResponse')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "chat_completions_advisor.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -129,19 +129,19 @@ of the project and hands them out on a fresh session. The transaction is the pri
 
 ## Concrete cases
 
-**Reads before a remote call, writes per paid batch** (`tracks_enrich`). The read block closes before the first
-Gemini call. Each batch gets its own block, so a paid batch survives a later failure:
+**Reads before a remote call, writes per paid batch** (`EnrichTracksUseCase`). The read block closes before the first
+LLM call. Each batch gets its own block, so a paid batch survives a later failure:
 
 ```python
-async with uow:
+async with self._uow as uow:
     tracks = await uow.tracks.get_list(user_id=user.id, missing_fields=missing_fields, limit=config.limit)
 
 for i, batch in enumerate(batches, start=1):
-    enrichments = await track_enricher.enrich_tracks(batch, fields=config.fields)  # no block open
+    enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)  # no block open
     ...
 
     # One block per batch: a paid batch survives a later failure.
-    async with uow:
+    async with self._uow as uow:
         await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 ```
 
@@ -208,11 +208,11 @@ Nothing in the code prevents a remote call inside a block. Written by mistake, i
 ```python
 async with uow:
     tracks = await uow.tracks.get_list(user_id=user.id, limit=50)
-    enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ Gemini inside the block
+    enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ LLM call inside the block
     await uow.tracks.bulk_update(enriched_tracks, fields=fields)
 ```
 
-The command succeeds, but during the Gemini call the connection sits idle in transaction, with the locks, the
+The command succeeds, but during the LLM call the connection sits idle in transaction, with the locks, the
 snapshot and the pool slot described above. Nobody notices until load grows: with many such calls in parallel, the
 pool and `max_connections` run out, and a migration waiting for a lock makes every later query wait behind it.
 
@@ -269,7 +269,7 @@ async def enrich_tracks(batch: list[Track], fields: frozenset[EnrichField]) -> l
 
 mock_enricher.enrich_tracks.side_effect = enrich_tracks
 
-await tracks_enrich(user, EnrichTracksConfigInput(batch_size=2), mock_uow, mock_enricher)
+await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
 
 assert blocks_open == [False, False]
 # The read block, then one write block per batch, so each paid batch is saved on its own

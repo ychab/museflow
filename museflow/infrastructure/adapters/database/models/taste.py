@@ -14,7 +14,6 @@ from sqlalchemy.orm import mapped_column
 from museflow.domain.entities.taste import TasteProfile as TasteProfileEntity
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.taste import TasteProfileStatus
-from museflow.domain.enums import TasteProfiler
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
@@ -30,7 +29,6 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         nullable=False,
         index=True,
     )
-    profiler: Mapped[TasteProfiler] = mapped_column(Enum(TasteProfiler), nullable=False)
 
     profile: Mapped[TasteProfileData] = mapped_column(JSONB, nullable=False)
 
@@ -51,7 +49,6 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             id=self.id,
             name=self.name,
             user_id=self.user_id,
-            profiler=self.profiler,
             profile=self.profile,
             profiler_metadata=self.profiler_metadata,
             tracks_count=self.tracks_count,

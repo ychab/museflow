@@ -28,13 +28,15 @@ from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
-from museflow.infrastructure.adapters.advisors.gemini.client import GeminiAdvisorAdapter
-from museflow.infrastructure.adapters.common.gemini.types import GeminiModel
-from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
-from museflow.infrastructure.adapters.profilers.gemini.client import GeminiTasteProfileAdapter
+from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
+from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
+from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.config.settings.openrouter import LLMSettings
+from museflow.infrastructure.types import ReasoningEffort
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -267,31 +269,32 @@ def spotify_library(
 
 
 @pytest.fixture
-async def gemini_advisor() -> AsyncGenerator[GeminiAdvisorAdapter]:
-    async with GeminiAdvisorAdapter(
-        api_key="dummy-api-key",
-        model=GeminiModel.FLASH_2_5,
-        max_retry_wait=5,
-    ) as client:
-        yield client
+async def openrouter_advisor() -> AsyncGenerator[OpenRouterAdvisorAdapter]:
+    async with OpenRouterAdvisorAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+    ) as advisor:
+        yield advisor
 
 
 @pytest.fixture
-async def gemini_profiler() -> AsyncGenerator[GeminiTasteProfileAdapter]:
-    async with GeminiTasteProfileAdapter(
-        api_key="dummy-api-key",
-        segment_model=GeminiModel.FLASH_2_5,
-        merge_model=GeminiModel.FLASH_2_5,
-        reflect_model=GeminiModel.FLASH_2_5,
-        max_retry_wait=5,
-    ) as client:
-        yield client
+async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
+    async with OpenRouterTrackEnricherAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+    ) as enricher:
+        yield enricher
 
 
 @pytest.fixture
-async def gemini_enricher() -> AsyncGenerator[GeminiTrackEnricherAdapter]:
-    async with GeminiTrackEnricherAdapter(api_key="dummy-api-key", model=GeminiModel.FLASH_LITE_2_5) as client:
-        yield client
+async def openrouter_profiler() -> AsyncGenerator[OpenRouterTasteProfileAdapter]:
+    async with OpenRouterTasteProfileAdapter(
+        client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
+        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        reflect_llm=LLMSettings(MODEL="google/gemini-2.5-pro", REASONING_EFFORT=ReasoningEffort.HIGH),
+    ) as profiler:
+        yield profiler
 
 
 # --- Services ---

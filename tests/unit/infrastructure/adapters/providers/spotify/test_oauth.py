@@ -34,6 +34,12 @@ class TestSpotifyOAuthAdapter:
         yield
         retry_controller.sleep = original_sleep
 
+    @pytest.fixture
+    def mock_sleep(self) -> Iterable[mock.AsyncMock]:
+        # Patches asyncio.sleep to check that OUR code called it (tenacity's sleep is handled by mock_tenacity_sleep).
+        with mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as patched:
+            yield patched
+
     def test__get_authorization_url(self, spotify_oauth: SpotifyOAuthAdapter) -> None:
         spotify_token_payload = "dummy-token-payload"
 
@@ -391,6 +397,7 @@ class TestSpotifyOAuthAdapter:
         token_payload: OAuthProviderTokenPayload,
         httpx_mock: HTTPXMock,
         mock_tenacity_sleep: None,
+        mock_sleep: mock.AsyncMock,
     ) -> None:
         retry_after: int = 1
         expected_attempt: int = 2  # One 429 then one 200
@@ -409,13 +416,11 @@ class TestSpotifyOAuthAdapter:
             json={"success": True},
         )
 
-        # We patch asyncio.sleep to check that OUR code called it (no tenacity's sleep handled by fixture).
-        with mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep:
-            response = await spotify_oauth.make_api_call(
-                method="GET",
-                endpoint="/foo/bar",
-                token_payload=token_payload,
-            )
+        response = await spotify_oauth.make_api_call(
+            method="GET",
+            endpoint="/foo/bar",
+            token_payload=token_payload,
+        )
         mock_sleep.assert_any_call(expected_wait)
 
         assert response == {"success": True}

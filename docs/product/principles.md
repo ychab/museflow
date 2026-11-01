@@ -52,8 +52,10 @@ what makes "a playlist of my top-rated melancholic tracks in Spanish" possible.
 ## 5. Independence from any single vendor
 
 The pivot moved MuseFlow off a dependency on one music provider's API. The same reasoning applies to the LLM:
-everything that calls a model sits behind a port (profiler, advisor, enricher), so the vendor can be swapped. Today
-only Gemini is implemented; an LLM gateway such as OpenRouter is the next step.
+everything that calls a model sits behind a port (profiler, advisor, enricher), so the vendor can be swapped. The
+calls now go through the OpenRouter gateway: each step can use any model it lists, from any vendor, with a setting or a
+CLI flag. Thanks to the ports, the switch from direct Gemini calls replaced the adapters and left the use cases
+untouched.
 
 ## 6. The right model for the right job
 
@@ -63,8 +65,10 @@ Not every LLM call deserves the most expensive model:
   "lite" model.
 - **Synthesis tasks** (merging partial profiles, writing the final portrait) use stronger models — but only once.
 
-Gemini was chosen for its **cost-to-context ratio**: a generous free tier and a context window large enough to send
-hundreds of tracks per request. Structured output mattered too, but any serious model supports it nowadays.
+Gemini was the first choice for its **cost-to-context ratio**: a generous free tier and a context window large enough
+to send hundreds of tracks per request. Its models are still the defaults, now reached through OpenRouter, which also
+lets a step move to a cheaper or better model the day one is found. Structured output mattered too, but any serious
+model supports it nowadays.
 
 ## 7. Fail gracefully, resume cheaply
 

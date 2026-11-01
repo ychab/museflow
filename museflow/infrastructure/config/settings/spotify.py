@@ -1,5 +1,6 @@
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -16,7 +17,7 @@ class SpotifySettings(BaseSettings):
     )
 
     CLIENT_ID: str
-    CLIENT_SECRET: str
+    CLIENT_SECRET: SecretStr
 
     BASE_URL: HttpUrl = Field(default=HttpUrl("https://api.spotify.com/v1"))
     AUTH_ENDPOINT: HttpUrl = Field(default=HttpUrl("https://accounts.spotify.com/authorize"))

@@ -5,7 +5,6 @@ from typing import Any
 
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.enums import TasteProfiler
 
 
 class TasteProfileRepository(ABC):
@@ -16,7 +15,7 @@ class TasteProfileRepository(ABC):
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...
 
     @abstractmethod
-    async def get_latest(self, user_id: uuid.UUID, profiler: TasteProfiler) -> TasteProfile | None: ...
+    async def get_latest(self, user_id: uuid.UUID) -> TasteProfile | None: ...
 
     @abstractmethod
     async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
@@ -26,7 +25,6 @@ class TasteProfileRepository(ABC):
         self,
         user_id: uuid.UUID,
         name: str,
-        profiler: TasteProfiler,
         logic_version: str,
         profiler_metadata: dict[str, Any],
         tracks_count: int,

@@ -1,0 +1,27 @@
+{
+  "id": "gen-1761811200-profiler-merge",
+  "provider": "Google",
+  "model": "google/gemini-2.5-flash",
+  "object": "chat.completion",
+  "created": 1761811200,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"taste_timeline\": [{\"era_label\": \"Indie Exploration\", \"time_range\": \"2021-2022\", \"technical_fingerprint\": {\"energy\": 0.7, \"acousticness\": 0.6, \"rhythmic_complexity\": 0.4, \"atmospheric\": 0.5, \"instrumentalness\": 0.2}, \"dominant_moods\": [\"melancholic\"]}, {\"era_label\": \"Electronic Drift\", \"time_range\": \"2022-2023\", \"technical_fingerprint\": {\"energy\": 0.85, \"acousticness\": 0.1, \"rhythmic_complexity\": 0.5, \"atmospheric\": 0.4, \"instrumentalness\": 0.3}, \"dominant_moods\": [\"euphoric\"]}], \"core_identity\": {\"genre_macro\": [{\"key\": \"electronic\", \"value\": 0.4}], \"genre_meso\": [{\"key\": \"indie-rock\", \"value\": 0.75}], \"genre_micro\": [], \"mood\": []}, \"current_vibe\": {\"genre_macro\": [{\"key\": \"electronic\", \"value\": 0.8}], \"genre_meso\": [], \"genre_micro\": [], \"mood\": []}, \"personality_archetype\": null, \"life_phase_insights\": [], \"musical_identity_summary\": null, \"behavioral_traits\": null, \"discovery_style\": null}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2400,
+    "completion_tokens": 180,
+    "total_tokens": 2580,
+    "cost": 0.0012
+  }
+}

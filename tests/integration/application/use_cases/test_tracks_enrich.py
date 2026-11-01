@@ -2,30 +2,28 @@ import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
-from museflow.infrastructure.adapters.enrichers.gemini.client import GeminiTrackEnricherAdapter
+from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-@pytest.mark.wiremock("gemini")
+@pytest.mark.wiremock("openrouter")
 class TestTracksEnrichUseCase:
     async def test__nominal(
         self,
         uow: UnitOfWorkPort,
         user: User,
-        gemini_enricher: GeminiTrackEnricherAdapter,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
 
-        result = await tracks_enrich(
+        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
             user,
             EnrichTracksConfigInput(batch_size=10),
-            uow,
-            gemini_enricher,
         )
 
         assert result.enriched_count == 1
@@ -43,16 +41,14 @@ class TestTracksEnrichUseCase:
         self,
         uow: UnitOfWorkPort,
         user: User,
-        gemini_enricher: GeminiTrackEnricherAdapter,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"], locales=["en"])
         await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
 
-        result = await tracks_enrich(
+        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
             user,
             EnrichTracksConfigInput(),
-            uow,
-            gemini_enricher,
         )
 
         assert result.enriched_count == 1
@@ -61,15 +57,13 @@ class TestTracksEnrichUseCase:
         self,
         uow: UnitOfWorkPort,
         user: User,
-        gemini_enricher: GeminiTrackEnricherAdapter,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"])
 
-        result = await tracks_enrich(
+        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.LOCALE})),
-            uow,
-            gemini_enricher,
         )
 
         assert result.enriched_count == 1
@@ -82,15 +76,13 @@ class TestTracksEnrichUseCase:
         self,
         uow: UnitOfWorkPort,
         user: User,
-        gemini_enricher: GeminiTrackEnricherAdapter,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id)
 
-        result = await tracks_enrich(
+        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.GENRE})),
-            uow,
-            gemini_enricher,
         )
 
         assert result.enriched_count == 1

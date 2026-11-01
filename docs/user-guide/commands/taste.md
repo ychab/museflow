@@ -15,16 +15,22 @@ museflow taste build --email <email> --name <name> [OPTIONS]
 | --- | --- | --- |
 | `--email` | required | User email address. |
 | `--name` | required | Profile name (unique per user). |
-| `--profiler` | `gemini` | The profiler to use for building the taste profile. |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000). |
 | `--batch-size` | `200` | Batch sizes for profiles (1 to 1000). |
+| `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-3.1-flash-lite`). |
+| `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
+| `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |
 
 **Prerequisites**
 
 - Tracks imported with [`tracks history`](tracks.md#tracks-history).
-- A Gemini API key. This command calls the LLM and is the most expensive step of the flow.
+- An OpenRouter API key (`OPENROUTER_API_KEY`). This command calls the LLM and is the most expensive step of the
+  flow.
+
+Each step's model must support structured outputs: the command checks the three models against the OpenRouter catalog
+before any call, and stops with a suggestion on a typo.
 
 Without `--rated-only`, all tracks are candidates and rated ones are annotated with their score. With it, only
 rated tracks seed the profile, which is useful once a significant part of the library has been
@@ -37,10 +43,11 @@ with an error. Run the same command again with `--resume` to continue from the c
 
 ```bash
 museflow taste build --email user@example.com --name my-profile --track-limit 1500
+museflow taste build --email user@example.com --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** `Taste profile built: N tracks processed`, then the profile name, the profiler and its logic
-version, the number of eras, the personality archetype and the life-phase insights.
+**Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
+step (segment, merge, reflect), the number of eras, the personality archetype and the life-phase insights.
 
 ## `taste list`
 
@@ -54,7 +61,7 @@ museflow taste list --email <email>
 | --- | --- | --- |
 | `--email` | required | User email address. |
 
-**Output.** A table with ID, name, profiler, status, tracks and last update, or `No taste profiles found.`.
+**Output.** A table with ID, name, logic version, status, tracks and last update, or `No taste profiles found.`.
 A profile whose build was paused shows an in-progress status and cannot be used for discovery until completed.
 
 ## `taste view`

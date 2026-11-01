@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "name": "Google | google/gemini-3.1-flash-lite",
+      "model_id": "google/gemini-3.1-flash-lite",
+      "provider_name": "Google",
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+    },
+    {
+      "name": "Google | google/gemini-3.5-flash",
+      "model_id": "google/gemini-3.5-flash",
+      "provider_name": "Google",
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+    },
+    {
+      "name": "Google | google/gemini-3.1-pro-preview",
+      "model_id": "google/gemini-3.1-pro-preview",
+      "provider_name": "Google",
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+    }
+  ]
+}

@@ -7,11 +7,12 @@ import typer
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
-from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.enums import EnrichField
+from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_gemini_enricher
+from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -26,7 +27,12 @@ def enrich(
     batch_size: int = typer.Option(
         EnrichTracksConfigInput.batch_size,
         "--batch-size",
-        help="Number of tracks per Gemini request.",
+        help="Number of tracks per LLM request.",
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-3.1-flash-lite).",
     ),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
@@ -39,11 +45,23 @@ def enrich(
                 only_locale=only_locale,
                 force=force,
                 batch_size=batch_size,
+                model=model,
                 limit=limit,
             )
         )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
+    except TrackEnrichmentAbortedException as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        if force:
+            typer.secho("With --force, a new run starts over from the first track.", fg=typer.colors.YELLOW, err=True)
+        else:
+            typer.secho(
+                "Run the command again to continue: tracks already enriched are skipped.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
+        raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -51,6 +69,14 @@ def enrich(
     if result.enriched_count == 0 and result.error_count == 0:
         typer.secho("No tracks to enrich.", fg=typer.colors.YELLOW)
         return
+
+    if result.enriched_count == 0:
+        typer.secho(
+            f"No track enriched: {result.error_count} batch(es) failed — check logs for details.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1)
 
     typer.secho(f"Enriched {result.enriched_count} track(s).", fg=typer.colors.GREEN)
     if result.error_count:
@@ -64,6 +90,7 @@ async def enrich_logic(
     only_locale: bool = False,
     force: bool = False,
     batch_size: int = 200,
+    model: str | None = None,
     limit: int | None = None,
 ) -> EnrichTracksReport:
     selected = {
@@ -80,7 +107,7 @@ async def enrich_logic(
     config = EnrichTracksConfigInput(fields=fields, force=force, batch_size=batch_size, limit=limit)
 
     async with AsyncExitStack() as stack:
-        enricher = await stack.enter_async_context(get_gemini_enricher())
+        enricher = await stack.enter_async_context(get_enricher(model=model))
 
         uow = get_unit_of_work()
         async with uow:
@@ -89,4 +116,5 @@ async def enrich_logic(
         if not user:
             raise UserNotFound()
 
-        return await tracks_enrich(user=user, config=config, uow=uow, track_enricher=enricher)
+        use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher)
+        return await use_case.enrich(user=user, config=config)

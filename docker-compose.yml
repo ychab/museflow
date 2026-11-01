@@ -74,14 +74,14 @@ services:
       - ./tests/assets/wiremock/spotify:/home/wiremock
     command: ["--verbose", "--https-port", "8443", "--global-response-templating"]
 
-  wiremock-gemini:
+  wiremock-openrouter:
     image: wiremock/wiremock:3.13.2
-    container_name: museflow-wiremock-gemini
+    container_name: museflow-wiremock-openrouter
     ports:
       - "8082:8080"
       - "8445:8443"
     volumes:
-      - ./tests/assets/wiremock/gemini:/home/wiremock
+      - ./tests/assets/wiremock/openrouter:/home/wiremock
     command: ["--verbose", "--https-port", "8443", "--global-response-templating"]
 
 volumes:

@@ -1,0 +1,22 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.response_format.json_schema[?(@.name == 'TasteProfileResponse')]"
+      },
+      {
+        "contains": "Analyze these"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "chat_completions_profiler_segment.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

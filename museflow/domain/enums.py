@@ -11,14 +11,6 @@ class MusicProvider(StrEnum):
     SPOTIFY = "spotify"
 
 
-class MusicAdvisor(StrEnum):
-    GEMINI = "gemini"
-
-
-class TasteProfiler(StrEnum):
-    GEMINI = "gemini"
-
-
 class DiscoveryFocus(StrEnum):
     EXPANSION = "expansion"
     ROOTS_REVIVAL = "roots_revival"

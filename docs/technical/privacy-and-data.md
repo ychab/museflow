@@ -6,14 +6,16 @@ MuseFlow handles a sensitive dataset: years of listening behaviour. This page st
 flowchart LR
     EXP["Spotify export files<br/>(JSON on disk)"] -->|"parse: keep 5 fields"| IMP["Import"]
     IMP --> DB[("Local PostgreSQL<br/>tracks, ratings, profiles,<br/>playlists, OAuth tokens")]
-    DB -->|"artist - title, dates, play counts,<br/>ratings, tags, profile, blacklist"| GEM["Google Gemini API"]
-    GEM -->|"profile, suggestions, tags"| DB
+    DB -->|"artist - title, dates, play counts,<br/>ratings, tags, profile, blacklist"| ORT["OpenRouter gateway"]
+    ORT -->|"same prompt, ZDR endpoints only"| LLM["Model provider<br/>(Google, OpenAI, Anthropic...)"]
+    LLM --> ORT
+    ORT -->|"profile, suggestions, tags"| DB
     DB -->|"search queries, playlist writes,<br/>playback control"| SPO["Spotify Web API"]
     SPO -->|"catalogue matches,<br/>playlist id"| DB
     U["User"] -->|"email, password hash,<br/>OAuth consent"| DB
 ```
 
-Everything runs on the user's own machine; the only outbound traffic is to the two APIs above. There is no MuseFlow-operated server and no telemetry.
+Everything runs on the user's own machine; the only outbound traffic is to OpenRouter (which forwards the prompts to one model provider) and to Spotify. There is no MuseFlow-operated server and no telemetry.
 
 ## What is stored locally
 
@@ -44,9 +46,14 @@ IP address, country, device platform and playback behaviour are never read into 
 
 ## What leaves the machine
 
-### To Google Gemini
+### To OpenRouter and the model provider
 
-Requests are authenticated with an API key sent in the `x-goog-api-key` header. No user id, email, IP address or Spotify identifier appears in any prompt builder (`advisors`, `profilers` and `enrichers` under `museflow/infrastructure/adapters/`).
+Requests go to OpenRouter, authenticated with an API key sent in the `Authorization: Bearer` header. OpenRouter forwards each prompt to one provider endpoint serving the requested model, so two parties see it: the gateway and the provider. Every request asks for:
+
+- `zdr: true` (`OPENROUTER_ZDR`, on by default): only route to endpoints with a Zero Data Retention policy, which neither store prompts and completions nor train on them;
+- `data_collection: deny`, always: never route to an endpoint whose provider declares collecting user data (for instance to train on it), even with ZDR turned off.
+
+A model with no compliant endpoint is refused rather than routed to a retaining one: each command checks the public ZDR endpoint list before its first paid call, and OpenRouter answers 404 if a request gets through anyway. No user id, email, IP address or Spotify identifier appears in any prompt builder (`advisors`, `profilers` and `enrichers` under `museflow/infrastructure/adapters/`).
 
 | Call | Content sent |
 |---|---|
@@ -70,9 +77,9 @@ The listening history is **not** read from Spotify's API; it comes only from the
 
 ## Secrets handling
 
-- Configuration comes from environment variables and an optional `.env`, loaded by `pydantic-settings` (`SPOTIFY_*`, `GEMINI_*`, `DATABASE_*`, `MUSEFLOW_*`). `.env` is git-ignored; `.env.example` holds placeholders. `MUSEFLOW_SECRET_KEY` (JWT signing) must be at least 32 characters.
+- Configuration comes from environment variables and an optional `.env`, loaded by `pydantic-settings` (`SPOTIFY_*`, `OPENROUTER_*`, `DATABASE_*`, `MUSEFLOW_*`). `.env` is git-ignored; `.env.example` holds placeholders. `MUSEFLOW_SECRET_KEY` (JWT signing) must be at least 32 characters. The secrets (`OPENROUTER_API_KEY`, `SPOTIFY_CLIENT_SECRET`, `MUSEFLOW_SECRET_KEY`) are `SecretStr`, masked in any `repr` or dump of the settings, and `OPENROUTER_BASE_URL` only accepts `https`, since every request carries the key and the listening history.
 - Passwords are hashed with Argon2. OAuth `state` values come from `random.SystemRandom` and are single-use.
-- Logging policy forbids secrets (tokens, passwords, API keys); logs carry user ids, not emails. A grep of the logging calls finds no token or key being logged. This is enforced by convention and review, not by a redaction layer.
+- Logging policy forbids secrets (tokens, passwords, API keys); logs carry user ids, not emails. A grep of the logging calls finds no token or key being logged. This is enforced by convention and review, not by a redaction layer. When an LLM reply is unusable, the warning carries the failure kind only; the start of the reply, which may quote the user's taste, is logged at DEBUG.
 - The tests use dummy credentials set in `pyproject.toml`; WireMock stands in for both APIs, so the test suite never sends real data anywhere.
 
 ## Known gaps
@@ -80,9 +87,9 @@ The listening history is **not** read from Spotify's API; it comes only from the
 !!! warning "Stated plainly"
     These are real limitations of the current implementation. None is hidden by the design; each is a conscious scope decision for a single-user showcase project, and each would need work before a hosted, multi-user service.
 
-1. **Email is the user identifier.** The CLI selects a user by `--email`, and email is stored in clear in `museflow_user`. It is never sent to Gemini or Spotify, but it is the key people type into shell history. A random handle or the internal UUID would be a better key.
-2. **Gemini free tier.** On Google's free API tier, Google may use submitted prompts to improve its products; the paid tier does not. Because prompts contain listening history and the profile, this is a meaningful difference. Which tier is used is a property of the API key, not of the code, and nothing in MuseFlow detects or warns about it.
-3. **OAuth tokens are stored unencrypted** in `museflow_auth_token` and the database has no application-level encryption. The assumption is a local, single-user database. The `spotify info` command prints the stored token to the terminal.
+1. **Email is the user identifier.** The CLI selects a user by `--email`, and email is stored in clear in `museflow_user`. It is never sent to OpenRouter or Spotify, but it is the key people type into shell history. A random handle or the internal UUID would be a better key.
+2. **Data retention rests on declared policies.** ZDR and `data_collection: deny` are routing filters applied by OpenRouter to the policies providers declare; MuseFlow cannot verify them. OpenRouter's own prompt logging is an account setting, outside the code, and nothing in MuseFlow detects or warns about it. Setting `OPENROUTER_ZDR=false` widens the routing to endpoints without a ZDR policy; `data_collection: deny` still excludes those that declare collecting user data.
+3. **OAuth tokens are stored unencrypted** in `museflow_auth_token` and the database has no application-level encryption. The assumption is a local, single-user database. The `spotify info` command masks the tokens unless `--show-tokens` is passed, which asks for a confirmation first.
 4. **No retention policy.** Data stays until deleted by hand. The CLI provides deletes (`tracks delete`, `playlist delete`, `blacklist remove` / `purge`). Foreign keys cascade from the user row, but no CLI command deletes a user, nothing expires data, and there is no single "erase everything about me" command.
 5. **Commands commit step by step, not as one transaction.** Use cases open one short transaction (a unit of work block) per step, deliberately: most flows (profile build, enrichment, history import, rating import) produce a partial state that is incomplete but valid, and keeping that progress (often paid LLM work) beats rolling it back; a re-run completes it. Remote side effects run first: `playlist discover` creates the Spotify playlist before writing anything locally, so a provider failure leaves no trace. Where a partial state would be wrong, the local writes share one transaction: `discover` saves its tracks and its playlist together, or neither. What remains: a database failure right after a remote call leaves an orphan remote playlist (or, for `playlist delete --remote`, a local row whose remote playlist is gone). A purge of orphans is a possible follow-up.
 6. **Fixtures should be synthetic.** Sample export files under `tests/assets/history/` mirror the real export layout, including `ip_addr`. Some values in them are not obvious placeholders; test data in a public repository should be fully synthetic.

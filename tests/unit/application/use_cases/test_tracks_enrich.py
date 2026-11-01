@@ -5,19 +5,23 @@ import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
-from museflow.application.use_cases.tracks_enrich import tracks_enrich
+from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
+from museflow.domain.exceptions import EnricherRateLimitExceeded
+from museflow.domain.exceptions import EnricherUnavailableException
+from museflow.domain.exceptions import TrackEnrichmentAbortedException
+from museflow.domain.exceptions import TrackEnrichmentException
 from museflow.domain.value_objects.track import TrackEnrichment
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.track import TrackEnrichmentFactory
 
 
-class TestTracksEnrichUseCase:
+class TestEnrichTracksUseCase:
     async def test__no_tracks__returns_zero_counts(
         self,
         mock_uow: mock.AsyncMock,
@@ -27,12 +31,7 @@ class TestTracksEnrichUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(),
-            mock_uow,
-            mock_enricher,
-        )
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=0, error_count=0)
         mock_enricher.enrich_tracks.assert_not_awaited()
@@ -49,12 +48,7 @@ class TestTracksEnrichUseCase:
         enrichments = [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks]
         mock_enricher.enrich_tracks.return_value = enrichments
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(),
-            mock_uow,
-            mock_enricher,
-        )
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=3, error_count=0)
         mock_track_repository.bulk_update.assert_awaited_once()
@@ -71,12 +65,7 @@ class TestTracksEnrichUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(force=True),
-            mock_uow,
-            mock_enricher,
-        )
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(force=True))
 
         mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, missing_fields=None, limit=None)
 
@@ -89,12 +78,7 @@ class TestTracksEnrichUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(limit=50),
-            mock_uow,
-            mock_enricher,
-        )
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(limit=50))
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=user.id, missing_fields=frozenset(EnrichField), limit=50
@@ -116,7 +100,7 @@ class TestTracksEnrichUseCase:
 
         mock_enricher.enrich_tracks.side_effect = enrich_tracks
 
-        await tracks_enrich(user, EnrichTracksConfigInput(batch_size=2), mock_uow, mock_enricher)
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
 
         assert blocks_open == [False, False]
         # The read block, then one write block per batch, so each paid batch is saved on its own
@@ -131,14 +115,11 @@ class TestTracksEnrichUseCase:
     ) -> None:
         tracks = TrackFactory.batch(5)
         mock_track_repository.get_list.return_value = tracks
-        mock_enricher.enrich_tracks.return_value = []
+        mock_enricher.enrich_tracks.side_effect = lambda batch, fields: [
+            TrackEnrichmentFactory.build(track_id=t.id) for t in batch
+        ]
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(batch_size=2),
-            mock_uow,
-            mock_enricher,
-        )
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
 
         assert mock_enricher.enrich_tracks.await_count == 3  # ceil(5/2) = 3
 
@@ -153,19 +134,145 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = tracks
 
         mock_enricher.enrich_tracks.side_effect = [
-            RuntimeError("Gemini 503"),
+            RuntimeError("OpenRouter 503"),
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[2:]],
         ]
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(batch_size=2),
-            mock_uow,
-            mock_enricher,
-        )
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
 
         assert result.error_count == 1
         assert result.enriched_count == 2
+
+    @pytest.mark.parametrize(
+        ("error", "expected_message", "expected_traceback"),
+        [
+            pytest.param(
+                TrackEnrichmentException("Invalid enrichment response: LLM response truncated (length)"),
+                "Enrichment batch 1/2 failed: Invalid enrichment response: LLM response truncated (length)",
+                False,
+                id="batch_failure",
+            ),
+            pytest.param(RuntimeError("boom"), "Enrichment batch 1/2 failed", True, id="unexpected"),
+        ],
+    )
+    async def test__enricher_error__logs_traceback_for_unexpected_only(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+        error: Exception,
+        expected_message: str,
+        expected_traceback: bool,
+    ) -> None:
+        tracks = TrackFactory.batch(2)
+        mock_track_repository.get_list.return_value = tracks
+        mock_enricher.enrich_tracks.side_effect = [error, [TrackEnrichmentFactory.build(track_id=tracks[1].id)]]
+
+        with caplog.at_level(logging.WARNING):
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=1))
+
+        record = next(r for r in caplog.records if r.message == expected_message)
+        assert (record.exc_info is not None) is expected_traceback
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            pytest.param(EnricherUnavailableException("Insufficient credits"), id="unavailable"),
+            pytest.param(EnricherRateLimitExceeded("Insufficient credits"), id="rate_limit"),
+        ],
+    )
+    async def test__enricher_unavailable__aborts_and_keeps_saved_batches(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        error: Exception,
+    ) -> None:
+        tracks = TrackFactory.batch(6)
+        mock_track_repository.get_list.return_value = tracks
+        mock_enricher.enrich_tracks.side_effect = [
+            [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[:2]],
+            error,
+        ]
+
+        with pytest.raises(TrackEnrichmentAbortedException, match="Insufficient credits") as exc_info:
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
+
+        assert (exc_info.value.batch_index, exc_info.value.total_batches) == (2, 3)
+        assert exc_info.value.enriched_count == 2
+        assert mock_enricher.enrich_tracks.await_count == 2
+        mock_track_repository.bulk_update.assert_awaited_once()
+
+    async def test__consecutive_failures__abort_at_threshold(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = TrackFactory.batch(5)
+        mock_enricher.enrich_tracks.side_effect = [[], [], TrackEnrichmentException("Flagged"), []]
+
+        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+                user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=3)
+            )
+
+        assert exc_info.value.reason == "3 batches failed in a row (last: Flagged)"
+        assert (exc_info.value.batch_index, exc_info.value.total_batches) == (3, 5)
+        assert mock_enricher.enrich_tracks.await_count == 3
+
+    @pytest.mark.parametrize(
+        ("last_outcome", "expected_last"),
+        [
+            pytest.param([], "no enrichment returned", id="empty"),
+            pytest.param(RuntimeError("boom"), "RuntimeError('boom')", id="unexpected"),
+        ],
+    )
+    async def test__consecutive_failures__reason_names_the_last_failure(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+        last_outcome: list[TrackEnrichment] | Exception,
+        expected_last: str,
+    ) -> None:
+        mock_track_repository.get_list.return_value = TrackFactory.batch(2)
+        mock_enricher.enrich_tracks.side_effect = [TrackEnrichmentException("Flagged"), last_outcome]
+
+        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
+            await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+                user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=2)
+            )
+
+        assert exc_info.value.reason == f"2 batches failed in a row (last: {expected_last})"
+
+    async def test__consecutive_failures__reset_by_a_successful_batch(
+        self,
+        mock_uow: mock.AsyncMock,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        tracks = TrackFactory.batch(5)
+        mock_track_repository.get_list.return_value = tracks
+        mock_enricher.enrich_tracks.side_effect = [
+            [],
+            TrackEnrichmentException("Flagged"),
+            [TrackEnrichmentFactory.build(track_id=tracks[2].id)],
+            [],
+            [],
+        ]
+
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+            user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=3)
+        )
+
+        assert result == EnrichTracksReport(enriched_count=1, error_count=4)
 
     async def test__empty_enricher_result__counted_as_error_not_enriched(
         self,
@@ -177,12 +284,7 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = TrackFactory.batch(3)
         mock_enricher.enrich_tracks.return_value = []
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(),
-            mock_uow,
-            mock_enricher,
-        )
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=0, error_count=1)
         mock_track_repository.bulk_update.assert_not_awaited()
@@ -198,12 +300,7 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = tracks
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=tracks[0].id)]
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(),
-            mock_uow,
-            mock_enricher,
-        )
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=1, error_count=0)
         mock_track_repository.bulk_update.assert_awaited_once()
@@ -226,12 +323,7 @@ class TestTracksEnrichUseCase:
             )
         ]
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(),
-            mock_uow,
-            mock_enricher,
-        )
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         call_args = mock_track_repository.bulk_update.call_args
         tracks_arg = call_args[0][0]
@@ -252,11 +344,8 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locales=["fr"])]
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
-            mock_uow,
-            mock_enricher,
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+            user, EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE}))
         )
 
         call_args = mock_track_repository.bulk_update.call_args
@@ -275,11 +364,8 @@ class TestTracksEnrichUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
-            mock_uow,
-            mock_enricher,
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+            user, EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE}))
         )
 
         mock_track_repository.get_list.assert_awaited_once_with(
@@ -299,11 +385,8 @@ class TestTracksEnrichUseCase:
             TrackEnrichmentFactory.build(track_id=track.id, genres=[GenreTag.HIP_HOP])
         ]
 
-        await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(fields=frozenset({EnrichField.GENRE})),
-            mock_uow,
-            mock_enricher,
+        await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+            user, EnrichTracksConfigInput(fields=frozenset({EnrichField.GENRE}))
         )
 
         call_args = mock_track_repository.bulk_update.call_args
@@ -324,11 +407,8 @@ class TestTracksEnrichUseCase:
         mock_track_repository.get_list.return_value = [track]
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=track.id, locales=[])]
 
-        result = await tracks_enrich(
-            user,
-            EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE})),
-            mock_uow,
-            mock_enricher,
+        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+            user, EnrichTracksConfigInput(fields=frozenset({EnrichField.LOCALE}))
         )
 
         assert result == EnrichTracksReport(enriched_count=1, error_count=0)
@@ -350,12 +430,7 @@ class TestTracksEnrichUseCase:
         ]
 
         with caplog.at_level(logging.WARNING):
-            result = await tracks_enrich(
-                user,
-                EnrichTracksConfigInput(),
-                mock_uow,
-                mock_enricher,
-            )
+            result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=1, error_count=0)
         tracks_arg = mock_track_repository.bulk_update.call_args[0][0]
@@ -379,11 +454,8 @@ class TestTracksEnrichUseCase:
         ]
 
         with caplog.at_level(logging.WARNING):
-            result = await tracks_enrich(
-                user,
-                EnrichTracksConfigInput(fields=frozenset({EnrichField.MOOD, EnrichField.LOCALE})),
-                mock_uow,
-                mock_enricher,
+            result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
+                user, EnrichTracksConfigInput(fields=frozenset({EnrichField.MOOD, EnrichField.LOCALE}))
             )
 
         assert result == EnrichTracksReport(enriched_count=0, error_count=1)

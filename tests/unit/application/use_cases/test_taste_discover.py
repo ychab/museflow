@@ -11,7 +11,6 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
-from museflow.domain.enums import TasteProfiler
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderRateLimitExceeded
@@ -59,7 +58,6 @@ class TestDiscoverTasteUseCase:
             provider_library=mock_provider_library,
             advisor=mock_advisor,
             reconciler=mock_reconciler,
-            profiler=TasteProfiler.GEMINI,
         )
 
     @pytest.mark.parametrize("discovery_taste_strategy", [{"search_queries": []}], indirect=True)
@@ -160,7 +158,6 @@ class TestDiscoverTasteUseCase:
 
         mock_taste_profile_repository.get_latest.assert_called_once_with(
             user_id=user.id,
-            profiler=TasteProfiler.GEMINI,
         )
         mock_taste_profile_repository.get.assert_not_called()
 

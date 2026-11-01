@@ -23,7 +23,6 @@ museflow playlist discover --email <email> [OPTIONS]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | required | User email address. |
-| `--advisor` | `gemini` | The AI advisor to use. |
 | `--provider` | `spotify` | The music provider to use. |
 | `--focus` | `expansion` | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. |
 | `--name` | latest profile | Taste profile name (defaults to latest). |
@@ -35,6 +34,7 @@ museflow playlist discover --email <email> [OPTIONS]
 | `--playlist-limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 | `--max-attempts` | `3` | Maximum number of advisor calls before stopping (1 to 10). |
 | `--max-tracks-per-artist` | `3` | Maximum tracks per artist in the final playlist (1 to 10). |
+| `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 
 **Focus strategies**
@@ -47,7 +47,7 @@ museflow playlist discover --email <email> [OPTIONS]
 
 - A completed taste profile ([`taste build`](taste.md#taste-build)).
 - A connected Spotify account ([`spotify connect`](spotify.md#spotify-connect)).
-- A Gemini API key.
+- An OpenRouter API key (`OPENROUTER_API_KEY`).
 
 The advisor is called up to `--max-attempts` times until `--playlist-limit` new tracks are found. Tracks
 already in the library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are excluded.
@@ -57,6 +57,7 @@ already in the library, and blacklisted artists and tracks ([`blacklist`](blackl
 ```bash
 museflow playlist discover --email user@example.com --focus expansion --playlist-limit 15
 museflow playlist discover --email user@example.com --genre jazz --mood chill --dry-run
+museflow playlist discover --email user@example.com --dry-run --model anthropic/claude-sonnet-4.5
 ```
 
 **Output.** A report table per attempt (suggested, survived, new tracks), then the table of discovered tracks

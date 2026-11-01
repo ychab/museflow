@@ -74,7 +74,7 @@ up-db:  ## Start database container only
 	docker compose up --detach --wait db
 
 up-wiremock:  ## Start wiremock containers only
-	docker compose up --detach --wait wiremock-spotify wiremock-gemini
+	docker compose up --detach --wait wiremock-spotify wiremock-openrouter
 
 up-test: up-db up-wiremock  ## Start DB and Wiremock containers
 
@@ -124,7 +124,8 @@ db-shell: up-db ## Connect to the database shell
 db-dump: up-db  ## Dump database to external_data/backups/TIMESTAMP.sql
 	@mkdir -p external_data/backups
 	@FILE="external_data/backups/$$(date +%Y%m%d-%H%M%S).sql" && \
-	docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$$FILE"
+	docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$$FILE" && \
+	echo "Database dumped to $$FILE"
 
 db-restore: up-db  ## Restore latest backup (or FILE=path)
 	@FILE=$${FILE:-$$(ls -t external_data/backups/*.sql 2>/dev/null | head -1)} && \

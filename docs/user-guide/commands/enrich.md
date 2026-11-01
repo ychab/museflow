@@ -18,13 +18,14 @@ museflow enrich tracks --email <email> [OPTIONS]
 | `--only-mood` | off | Enrich mood labels only. |
 | `--only-locale` | off | Enrich locales (sung languages) only. |
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
-| `--batch-size` | `200` | Number of tracks per Gemini request. |
+| `--batch-size` | `200` | Number of tracks per LLM request. |
+| `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.1-flash-lite`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--limit` | none | Maximum number of tracks to process. |
 
 Without any `--only-*` flag, all three fields are enriched. The flags can be combined. By default only tracks
 missing a requested field are processed, so the command is safe to re-run after a new import.
 
-**Prerequisites.** Imported tracks and a Gemini API key. This command calls the LLM: use `--limit` to try it
+**Prerequisites.** Imported tracks and an OpenRouter API key (`OPENROUTER_API_KEY`). This command calls the LLM: use `--limit` to try it
 on a small sample first.
 
 Genres follow a three-level taxonomy (macro genre, sub-genre, optional micro tag), moods are picked among 12
@@ -36,10 +37,24 @@ labels, and the locales are the ISO 639-1 codes of every language sung in the tr
 ```bash
 museflow enrich tracks --email user@example.com --limit 200
 museflow enrich tracks --email user@example.com --only-mood --force
+museflow enrich tracks --email user@example.com --limit 20 --model openai/gpt-5-mini
 ```
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
-re-run processes the missing tracks), or `No tracks to enrich.`.
+re-run processes the missing tracks), or `No tracks to enrich.`. When every batch failed, it prints
+`No track enriched: N batch(es) failed` and exits with code 1.
+
+**When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
+succeed:
+
+- at once, when OpenRouter refuses the request for a reason every batch shares: invalid API key, no credits left or
+  key limit reached, unknown model, a request the model refuses (such as its response schema), no provider available,
+  a lasting outage or a rate limit;
+- after 3 failed batches in a row, whatever the cause; the message names the last one.
+
+It prints `Enrichment stopped at batch N/M after X track(s): <reason>` and exits with code 1. The tracks enriched
+before the stop are saved: fix the cause, then run the same command again; tracks already enriched are skipped. With
+`--force`, a new run starts over from the first track.
 
 ## `enrich export`
 

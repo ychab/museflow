@@ -20,7 +20,7 @@ You are a security engineer reviewing MuseFlow code. You report vulnerabilities;
 - **OAuth:** Spotify flow with single-use state tokens, consumed through `uow.auth_states.consume()` in the
   `get_user_from_state` dependency.
 - **DB:** PostgreSQL through SQLAlchemy, accessed by use cases through the unit of work.
-- **External APIs:** Spotify and Gemini through httpx with tenacity retries.
+- **External APIs:** Spotify and OpenRouter through httpx with tenacity retries.
 - **Secrets:** Pydantic `BaseSettings`, from environment variables only.
 
 ## Checklist
