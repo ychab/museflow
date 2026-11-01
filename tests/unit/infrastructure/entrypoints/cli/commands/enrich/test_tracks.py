@@ -91,6 +91,12 @@ class TestEnrichTracksCommand:
         assert result.exit_code == 0
         assert "2 batch(es) failed" in result.output
 
+    def test__no_batch_succeeded__exits_with_error(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        mock_enrich_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=1)
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert result.exit_code == 1
+        assert "No track enriched: 1 batch(es) failed" in result.output
+
     def test__user_not_found(
         self,
         runner: CliRunner,
