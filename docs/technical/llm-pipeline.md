@@ -23,6 +23,16 @@ Each request carries:
 
 **Fail fast on a misconfigured model.** Before any paid call, each command checks its step models (and their fallbacks) against OpenRouter's public model catalog: an unknown id fails with a "Did you mean" suggestion, and a model that lacks a parameter the step sends (structured outputs, reasoning, temperature, max tokens) fails with the missing list. The check cannot see the routing rules: a model whose only endpoints retain data passes it, then fails at request time with OpenRouter's 503 "no provider" message.
 
+## Portable response schemas
+
+Any step can run on any model, so a response schema must be accepted by every provider behind OpenRouter, not only by the default one. Provider rejections taught three rules, which `JsonSchemaProperty` enforces and a unit test (`test_schema_portability.py`) checks on every real schema:
+
+- **An enum holds at most 100 values.** Gemini rejects a larger one with a bare `400 INVALID_ARGUMENT`. A larger vocabulary is split across fields, which is why genres travel as one field (or one weight list) per tier.
+- **`anyOf` does not get around the limit:** Gemini adds up the values of every branch.
+- **A nullable enum is `anyOf [enum, null]`.** The OpenAI shape, `type: ["string", "null"]` with an `enum`, is rejected by Anthropic.
+
+The live suite (`tests/integration/live/openrouter`) sends the real schemas to a few model families before a release.
+
 ## Model choice per step
 
 Each step has its own `LLMSettings` ([`museflow/infrastructure/config/settings/openrouter.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/config/settings/openrouter.py)): `MODEL`, `MAX_TOKENS`, `REASONING_EFFORT`, `TEMPERATURE` and `FALLBACK_MODELS`. Only the model has a default; the others are left to the provider. A field is overridden with a nested environment variable, and the step keeps its other defaults:
