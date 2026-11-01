@@ -21,6 +21,9 @@ _WEIGHT_TIERS: dict[str, list[str]] = {
 
 _MOOD_ENUM: list[str] = _WEIGHT_TIERS["mood"]
 
+# Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
+_WEIGHT_DECIMALS = 3
+
 # Built in reverse so the first tier wins for a tag listed in two ("romantic" is a meso genre and a mood)
 _TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in reversed(_WEIGHT_TIERS.items()) for tag in tags}
 
@@ -87,9 +90,13 @@ class TasteProfileResponse(BaseModel):
     def _from_weighted_tiers(cls, v: object) -> dict[str, float]:
         if not isinstance(v, dict) or not all(isinstance(items, list) for items in v.values()):
             raise ValueError(f"expected an object of {{key, value}} lists per tier, got {type(v).__name__}")
-        return {
-            item["key"]: item["value"] for items in v.values() for item in items if item["key"] in _VALID_IDENTITY_KEYS
+        weights = {
+            item["key"]: round(item["value"], _WEIGHT_DECIMALS)
+            for items in v.values()
+            for item in items
+            if item["key"] in _VALID_IDENTITY_KEYS
         }
+        return {key: weight for key, weight in weights.items() if weight}  # a zero weight carries no signal
 
     @field_validator("behavioral_traits", mode="before")
     @classmethod
