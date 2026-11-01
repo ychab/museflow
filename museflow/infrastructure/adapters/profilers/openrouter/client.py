@@ -21,6 +21,7 @@ from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseEr
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import TASTE_PROFILE_SCHEMA
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import TasteProfileResponse
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
 
@@ -37,6 +38,18 @@ def _format_tracks(tracks: list[Track]) -> str:
         )
 
     return "\n".join(lines)
+
+
+def _profile_json(profile: TasteProfileData) -> str:
+    """Dumps a profile in the shape the response schema asks for, so the model reads what it must write back."""
+    return json.dumps(
+        {
+            **profile,
+            "core_identity": split_weights(profile["core_identity"]),
+            "current_vibe": split_weights(profile["current_vibe"]),
+        },
+        ensure_ascii=False,
+    )
 
 
 def _step_metadata(llm: LLMSettings) -> dict[str, Any]:
@@ -114,8 +127,9 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             f"Analyze these {len(tracks)} tracks from [{date_range}]. Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
             '- "taste_timeline": one TasteEra for this batch\n'
-            '- "core_identity": [{"key": tag, "value": weight 0-1}] long-term affinity signals\n'
-            '- "current_vibe": [{"key": tag, "value": weight 0-1}] what this batch reveals right now\n'
+            '- "core_identity": long-term affinity signals, as {"genre_macro": [{"key": tag, "value": weight 0-1}], '
+            '"genre_meso": [...], "genre_micro": [...], "mood": [...]}, each tag in the list of its tier\n'
+            '- "current_vibe": what this batch reveals right now, same shape as core_identity\n'
             '- "personality_archetype": null\n'
             '- "life_phase_insights": []\n'
             '- "musical_identity_summary", "behavioral_traits", "discovery_style": null\n'
@@ -142,8 +156,8 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         return await self._complete(prompt, self._segment_llm)
 
     async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
-        foundation_json = json.dumps(foundation, ensure_ascii=False)
-        segment_json = json.dumps(new_segment, ensure_ascii=False)
+        foundation_json = _profile_json(foundation)
+        segment_json = _profile_json(new_segment)
 
         prompt = (
             "You are a precise data architect evolving a Master Taste Profile.\n\n"
@@ -160,7 +174,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "2. core_identity (The DNA):\n"
             "   - If the Foundation is empty, initialize it with the Segment values.\n"
             "   - If not empty, calculate a weighted average: (Foundation * 0.7) + (Segment * 0.3).\n"
-            "   - Ensure all keys from both Foundation and Segment are preserved or merged.\n"
+            "   - Ensure all keys from both Foundation and Segment are preserved or merged, each in the list of its tier.\n"
             "   - Example: Foundation 'French Rap': 0.8 + Segment 'French Rap': 0.2 = 0.62.\n"
             "3. current_vibe:\n"
             "   - DISCARD foundation values. REPLACE entirely with the New Segment's vibe to reflect the current trajectory.\n\n"
@@ -181,7 +195,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         return await self._complete(prompt, self._merge_llm)
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
-        profile_json = json.dumps(profile, ensure_ascii=False)
+        profile_json = _profile_json(profile)
 
         # Filter Triad for future playlist engine:
         # current_vibe + technical_fingerprint (from latest era) + behavioral_traits

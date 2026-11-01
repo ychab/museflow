@@ -11,22 +11,41 @@ from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaPr
 
 _VALID_IDENTITY_KEYS: frozenset[str] = frozenset(t.value for t in GenreTag) | frozenset(m.value for m in MoodTag)
 
-_ALL_GENRE_ENUM: list[str] = (
-    [t.value for t in GENRE_MACRO_TAGS] + [t.value for t in GENRE_MESO_TAGS] + [t.value for t in GENRE_MICRO_TAGS]
-)
-_ALL_MOOD_ENUM: list[str] = [m.value for m in MoodTag]
+# One weight list per vocabulary tier: a single enum of every tag (178) is too large for some providers (Gemini)
+_WEIGHT_TIERS: dict[str, list[str]] = {
+    "genre_macro": [t.value for t in GENRE_MACRO_TAGS],
+    "genre_meso": [t.value for t in GENRE_MESO_TAGS],
+    "genre_micro": [t.value for t in GENRE_MICRO_TAGS],
+    "mood": [m.value for m in MoodTag],
+}
+
+_MOOD_ENUM: list[str] = _WEIGHT_TIERS["mood"]
+
+# Built in reverse so the first tier wins for a tag listed in two ("romantic" is a meso genre and a mood)
+_TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in reversed(_WEIGHT_TIERS.items()) for tag in tags}
 
 
 def _weighted_tags() -> JsonSchemaProperty:
-    """A `{tag: weight}` map, expressed as a list of `{key, value}` since strict mode forbids free-form keys."""
-    return JsonSchemaProperty.array(
-        JsonSchemaProperty.object(
-            {
-                "key": JsonSchemaProperty.enum_string(_ALL_GENRE_ENUM + _ALL_MOOD_ENUM),
-                "value": JsonSchemaProperty.number(),
-            }
-        )
+    """A `{tag: weight}` map, as one list of `{key, value}` per tier since strict mode forbids free-form keys."""
+    return JsonSchemaProperty.object(
+        {
+            tier: JsonSchemaProperty.array(
+                JsonSchemaProperty.object(
+                    {"key": JsonSchemaProperty.enum_string(tags), "value": JsonSchemaProperty.number()}
+                )
+            )
+            for tier, tags in _WEIGHT_TIERS.items()
+        }
     )
+
+
+def split_weights(weights: dict[str, float]) -> dict[str, list[dict[str, str | float]]]:
+    """Groups a `{tag: weight}` map by tier, the shape the response schema asks the model to write."""
+    tiers: dict[str, list[dict[str, str | float]]] = {tier: [] for tier in _WEIGHT_TIERS}
+    for key, value in weights.items():
+        if key in _TIER_BY_TAG:
+            tiers[_TIER_BY_TAG[key]].append({"key": key, "value": value})
+    return tiers
 
 
 class TechnicalFingerprint(BaseModel):
@@ -65,10 +84,12 @@ class TasteProfileResponse(BaseModel):
 
     @field_validator("core_identity", "current_vibe", mode="before")
     @classmethod
-    def _from_key_value_list(cls, v: object) -> dict[str, float]:
-        if not isinstance(v, list):
-            raise ValueError(f"expected a list of {{key, value}} objects, got {type(v).__name__}")
-        return {item["key"]: item["value"] for item in v if item["key"] in _VALID_IDENTITY_KEYS}
+    def _from_weighted_tiers(cls, v: object) -> dict[str, float]:
+        if not isinstance(v, dict) or not all(isinstance(items, list) for items in v.values()):
+            raise ValueError(f"expected an object of {{key, value}} lists per tier, got {type(v).__name__}")
+        return {
+            item["key"]: item["value"] for items in v.values() for item in items if item["key"] in _VALID_IDENTITY_KEYS
+        }
 
     @field_validator("behavioral_traits", mode="before")
     @classmethod
@@ -92,7 +113,7 @@ TASTE_PROFILE_SCHEMA = JsonSchemaProperty.object(
                             "instrumentalness": JsonSchemaProperty.number(),
                         }
                     ),
-                    "dominant_moods": JsonSchemaProperty.array(JsonSchemaProperty.enum_string(_ALL_MOOD_ENUM)),
+                    "dominant_moods": JsonSchemaProperty.array(JsonSchemaProperty.enum_string(_MOOD_ENUM)),
                 }
             )
         ),
