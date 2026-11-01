@@ -162,7 +162,7 @@ class ImportStreamingHistoryUseCase:
                     batch_size=config.batch_size,
                 )
             tracks_created += created
-            logger.info(f"... upserted {min(offset + config.batch_size, len(unknown_fps))} / {len(unknown_fps)}...")
+            logger.debug(f"... upserted {min(offset + config.batch_size, len(unknown_fps))} / {len(unknown_fps)}...")
 
         return ImportStreamingHistoryReport(
             items_read=items_read,
