@@ -41,7 +41,8 @@ museflow enrich tracks --email user@example.com --limit 20 --model openai/gpt-5-
 ```
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
-re-run processes the missing tracks), or `No tracks to enrich.`.
+re-run processes the missing tracks), or `No tracks to enrich.`. When every batch failed, it prints
+`No track enriched: N batch(es) failed` and exits with code 1.
 
 **When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
 succeed:

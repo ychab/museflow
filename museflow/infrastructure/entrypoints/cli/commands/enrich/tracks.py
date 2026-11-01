@@ -70,6 +70,14 @@ def enrich(
         typer.secho("No tracks to enrich.", fg=typer.colors.YELLOW)
         return
 
+    if result.enriched_count == 0:
+        typer.secho(
+            f"No track enriched: {result.error_count} batch(es) failed — check logs for details.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
     typer.secho(f"Enriched {result.enriched_count} track(s).", fg=typer.colors.GREEN)
     if result.error_count:
         typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
