@@ -90,6 +90,25 @@ class TestTasteProfileResponse:
         )
         assert content.core_identity == {"rock": 0.8}
 
+    @pytest.mark.parametrize(
+        ("weight", "expected"),
+        [
+            pytest.param(0.26573195606172, {"rock": 0.266}, id="rounded"),
+            pytest.param(0.8, {"rock": 0.8}, id="unchanged"),
+            pytest.param(0.0003391115364245, {}, id="zero_after_rounding"),
+        ],
+    )
+    def test__weights__rounded(self, weight: float, expected: dict[str, float]) -> None:
+        content = TasteProfileResponse.model_validate(
+            {
+                **_BASE_PROFILE,
+                "core_identity": {"genre_macro": [{"key": "rock", "value": weight}]},
+                "current_vibe": {"genre_macro": [{"key": "rock", "value": weight}]},
+            }
+        )
+        assert content.core_identity == expected
+        assert content.current_vibe == expected
+
     def test__current_vibe__accepts_valid_mood_key(self) -> None:
         content = TasteProfileResponse.model_validate(
             {**_BASE_PROFILE, "current_vibe": {"mood": [{"key": "melancholic", "value": 0.7}]}}
