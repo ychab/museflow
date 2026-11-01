@@ -43,11 +43,12 @@ class LLMResponseError(Exception):
 class LLMRequestError(Exception):
     """OpenRouter rejected the request (bad parameters, auth, credits, or no provider matching the routing rules)."""
 
-    def __init__(self, message: str, *, adapter: str, model: str, status_code: int) -> None:
+    def __init__(self, message: str, *, adapter: str, model: str, status_code: int, moderated: bool = False) -> None:
         super().__init__(message)
         self.adapter = adapter
         self.model = model
         self.status_code = status_code
+        self.moderated = moderated  # a moderation flag on the input: another input may pass
 
 
 class LLMModelError(Exception):

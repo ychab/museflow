@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import JsonValue
 
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.types import ReasoningEffort
@@ -60,15 +61,26 @@ class ChatChoice(BaseModel):
     finish_reason: str | None = None
 
 
+class ErrorMetadata(BaseModel):
+    provider_name: str | None = None
+    raw: JsonValue = None  # the upstream provider's own error, as it sent it
+    reasons: list[str] | None = None  # set by moderation only, next to `flagged_input` (never surfaced: user content)
+
+
 class ChatCompletionError(BaseModel):
     code: int | str | None = None
     message: str = ""
+    metadata: ErrorMetadata | None = None
 
 
 class ChatCompletionResponse(BaseModel):
     model: str | None = None  # the model actually used, which differs from the requested one on fallback
     choices: list[ChatChoice] = Field(default_factory=list)
     error: ChatCompletionError | None = None
+
+
+class ErrorResponse(BaseModel):
+    error: ChatCompletionError
 
 
 # --- Model catalog ---
