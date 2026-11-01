@@ -51,11 +51,11 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         if EnrichField.GENRE in fields:
             parts.append(
                 "### GENRE RULES\n"
-                "Return 2 to 3 genre tags per track, ordered from broadest to most specific.\n"
+                "Classify each track on three genre tiers, from broadest to most specific.\n"
                 "Use ONLY values from the lists below — no synonyms, no paraphrases.\n\n"
-                f"genres[0] — macro (pick ONE): {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n\n"
-                f"genres[1] — meso (pick ONE that fits the macro): {', '.join(t.value for t in GENRE_MESO_TAGS)}\n\n"
-                f"genres[2] — micro (pick ONE or omit if none applies): {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n\n"
+                f"genre_macro (pick ONE): {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n\n"
+                f"genre_meso (pick ONE that fits the macro): {', '.join(t.value for t in GENRE_MESO_TAGS)}\n\n"
+                f"genre_micro (pick ONE, or null if none applies): {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n\n"
                 "Do NOT include artist names or track names as genres.\n"
             )
 
