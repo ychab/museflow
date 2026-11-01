@@ -95,7 +95,7 @@ def _error_message(response: httpx.Response, error: ChatCompletionError | None) 
 
     if response.status_code == codes.UNAUTHORIZED:
         # OpenRouter answers "Missing Authentication header" to an invalid key too
-        message += " Check OPENROUTER_API_KEY."
+        message = f"{message.rstrip('.')}. Check OPENROUTER_API_KEY."
     return message
 
 

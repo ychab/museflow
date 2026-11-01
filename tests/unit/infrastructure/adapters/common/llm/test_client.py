@@ -342,10 +342,19 @@ class TestOpenRouterClient:
         assert str(exc_info.value).endswith("(400): Invalid request")
 
     @pytest.mark.parametrize(
-        "body",
+        ("body", "expected_end"),
         [
-            pytest.param({"json": {"error": {"code": 401, "message": "Missing Authentication header"}}}, id="json"),
-            pytest.param({"text": "Unauthorized"}, id="no_json"),
+            pytest.param(
+                {"json": {"error": {"code": 401, "message": "Missing Authentication header"}}},
+                "(401): Missing Authentication header. Check OPENROUTER_API_KEY.",
+                id="json",
+            ),
+            pytest.param(
+                {"json": {"error": {"code": 401, "message": "Invalid key."}}},
+                "(401): Invalid key. Check OPENROUTER_API_KEY.",
+                id="json_with_period",
+            ),
+            pytest.param({"text": "Unauthorized"}, "(401): Unauthorized. Check OPENROUTER_API_KEY.", id="no_json"),
         ],
     )
     async def test__complete__401__adds_the_api_key_hint(
@@ -355,13 +364,14 @@ class TestOpenRouterClient:
         messages: list[ChatMessage],
         httpx_mock: HTTPXMock,
         body: dict[str, Any],
+        expected_end: str,
     ) -> None:
         httpx_mock.add_response(url=URL, method="POST", status_code=codes.UNAUTHORIZED, **body)
 
         with pytest.raises(LLMRequestError) as exc_info:
             await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        assert str(exc_info.value).endswith(" Check OPENROUTER_API_KEY.")
+        assert str(exc_info.value).endswith(expected_end)
 
     @pytest.mark.parametrize(
         ("error", "expected_moderated"),
