@@ -26,6 +26,7 @@ from museflow.infrastructure.types import ReasoningEffort
 
 URL = "https://openrouter.test/api/v1/chat/completions"
 MODELS_URL = "https://openrouter.test/api/v1/models"
+ZDR_URL = "https://openrouter.test/api/v1/endpoints/zdr"
 
 VALID_RESPONSE: dict[str, Any] = {
     "model": "google/gemini-2.5-flash",
@@ -40,7 +41,16 @@ CATALOG: dict[str, Any] = {
         {"id": "google/gemini-2.5-flash", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
         {"id": "openai/gpt-5-mini", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
         {"id": "mistralai/mistral-small", "supported_parameters": ["structured_outputs"]},
+        {"id": "anthropic/claude-sonnet-4.5", "supported_parameters": ["structured_outputs"]},
         {"id": "meta-llama/llama-3-8b-instruct"},
+    ]
+}
+ZDR_ENDPOINTS: dict[str, Any] = {
+    "data": [
+        {"model_id": "google/gemini-2.5-flash", "supported_parameters": ["structured_outputs", "reasoning"]},
+        {"model_id": "google/gemini-2.5-flash", "supported_parameters": ["temperature"]},
+        {"model_id": "openai/gpt-5-mini", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
+        {"model_id": "mistralai/mistral-small", "supported_parameters": ["max_tokens"]},
     ]
 }
 SCHEMA = JsonSchemaProperty.object({"value": JsonSchemaProperty.integer()})
@@ -57,6 +67,15 @@ class TestOpenRouterClient:
             api_key="dummy-api-key",
             base_url=HttpUrl("https://openrouter.test/api/v1/"),
             max_retry_wait=5,
+        ) as client:
+            yield client
+
+    @pytest.fixture
+    async def client_without_zdr(self) -> AsyncGenerator[OpenRouterClient]:
+        async with OpenRouterClient(
+            api_key="dummy-api-key",
+            base_url=HttpUrl("https://openrouter.test/api/v1/"),
+            zdr=False,
         ) as client:
             yield client
 
@@ -273,6 +292,7 @@ class TestOpenRouterClient:
 
     async def test__check_models__nominal(self, client: OpenRouterClient, httpx_mock: HTTPXMock) -> None:
         httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
+        httpx_mock.add_response(url=ZDR_URL, method="GET", json=ZDR_ENDPOINTS)
         llm = LLMSettings(
             MODEL="google/gemini-2.5-flash",
             REASONING_EFFORT=ReasoningEffort.LOW,
@@ -282,8 +302,57 @@ class TestOpenRouterClient:
 
         await client.check_models({"enricher": llm, "advisor": LLMSettings(MODEL="openai/gpt-5-mini")})
 
-        assert len(httpx_mock.get_requests()) == 1
-        assert "Authorization" not in httpx_mock.get_requests()[0].headers
+        assert len(httpx_mock.get_requests()) == 2
+        assert all("Authorization" not in request.headers for request in httpx_mock.get_requests())
+
+    async def test__check_models__zdr_off__skips_zdr_endpoints(
+        self,
+        client_without_zdr: OpenRouterClient,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
+
+        await client_without_zdr.check_models({"enricher": LLMSettings(MODEL="anthropic/claude-sonnet-4.5")})
+
+        assert [request.url for request in httpx_mock.get_requests()] == [MODELS_URL]
+
+    @pytest.mark.parametrize(
+        ("llm", "expected_model", "expected_message"),
+        [
+            pytest.param(
+                LLMSettings(MODEL="google/gemini-2.5-flash", FALLBACK_MODELS=["anthropic/claude-sonnet-4.5"]),
+                "anthropic/claude-sonnet-4.5",
+                "OpenRouter model 'anthropic/claude-sonnet-4.5' for the enricher step has no Zero Data Retention "
+                "endpoint. Pick another model (GET https://openrouter.test/api/v1/endpoints/zdr lists them) "
+                "or set OPENROUTER_ZDR=false.",
+                id="no_zdr_endpoint",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="mistralai/mistral-small"),
+                "mistralai/mistral-small",
+                "OpenRouter model 'mistralai/mistral-small' for the enricher step does not support on its Zero Data "
+                "Retention endpoints: structured_outputs.",
+                id="zdr_endpoint_missing_parameter",
+            ),
+        ],
+    )
+    async def test__check_models__zdr_invalid(
+        self,
+        client: OpenRouterClient,
+        llm: LLMSettings,
+        expected_model: str,
+        expected_message: str,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
+        httpx_mock.add_response(url=ZDR_URL, method="GET", json=ZDR_ENDPOINTS)
+
+        with pytest.raises(LLMModelError) as exc_info:
+            await client.check_models({"enricher": llm})
+
+        assert str(exc_info.value) == expected_message
+        assert exc_info.value.step == "enricher"
+        assert exc_info.value.model == expected_model
 
     @pytest.mark.parametrize(
         ("llm", "expected_model", "expected_message"),
