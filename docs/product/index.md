@@ -13,6 +13,9 @@ This section is about the *why* and the *what*. The *how* lives in the [technica
   lot of effort heading straight into a wall, and far from the provider-agnostic product I wanted. The suggestions
   were poor too. V2 is built on the one thing a provider cannot withhold: your own data, exported under the GDPR.
   → [The V1 → V2 pivot](pivot.md)
+- **V3.** One AI vendor was the next single point of failure. MuseFlow now reaches most models on the market through
+  one gateway: no vendor lock-in, a profile per model to compare, and a model chosen per step to control the cost.
+  → [V3: any model](v3.md)
 - **The principles.** Quality over quantity, the user as the judge, a constrained LLM, no single vendor.
   → [Product principles](principles.md)
 - **The surprise.** Dogfooding showed that what I play most is not what I love most, and that rediscovering forgotten

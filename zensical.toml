@@ -16,6 +16,7 @@ nav = [
     { "Overview" = "product/index.md" },
     { "Why MuseFlow" = "product/why.md" },
     { "The V1 → V2 pivot" = "product/pivot.md" },
+    { "V3: any model" = "product/v3.md" },
     { "Product principles" = "product/principles.md" },
     { "What my data taught me" = "product/insights.md" },
     { "Business model sketch" = "product/business-model.md" },
