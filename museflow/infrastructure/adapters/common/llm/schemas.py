@@ -81,3 +81,12 @@ class CatalogModel(BaseModel):
 
 class ModelCatalogResponse(BaseModel):
     data: list[CatalogModel]
+
+
+class ZdrEndpoint(BaseModel):
+    model_id: str
+    supported_parameters: list[str] = Field(default_factory=list)
+
+
+class ZdrEndpointsResponse(BaseModel):
+    data: list[ZdrEndpoint]

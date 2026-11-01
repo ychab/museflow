@@ -1,6 +1,7 @@
 import asyncio
 import difflib
 import logging
+from collections import defaultdict
 from collections.abc import Mapping
 from typing import Any
 from typing import cast
@@ -28,6 +29,7 @@ from museflow.infrastructure.adapters.common.llm.schemas import ModelCatalogResp
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
 from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
 from museflow.infrastructure.adapters.common.llm.schemas import ResponseFormat
+from museflow.infrastructure.adapters.common.llm.schemas import ZdrEndpointsResponse
 from museflow.infrastructure.adapters.common.llm.self_heal import self_heal
 from museflow.infrastructure.adapters.common.llm.utils import parse_retry_after
 from museflow.infrastructure.adapters.common.llm.validation import parse_completion
@@ -142,13 +144,14 @@ class OpenRouterClient(HttpClientMixin):
         return cast(dict[str, Any], response.json())
 
     async def check_models(self, steps: Mapping[str, LLMSettings]) -> None:
-        """Fails fast on a misconfigured model, before any paid call, against OpenRouter's public model catalog.
+        """Fails fast on a misconfigured model, before any paid call, against OpenRouter's public listings.
 
-        Each step's model and fallbacks must exist and support the parameters the step sends. This is a necessary
-        condition only: the routing rules (ZDR, data collection) are applied per provider endpoint at request time.
+        Each step's model and fallbacks must exist and support the parameters the step sends; with ZDR on, they must
+        also have a Zero Data Retention endpoint supporting them. This is a necessary condition only: OpenRouter picks
+        the provider endpoint at request time.
 
         Raises:
-            LLMModelError: If a model is unknown or lacks a required parameter.
+            LLMModelError: If a model is unknown, lacks a required parameter or, with ZDR on, a ZDR endpoint.
         """
         response_data = await self.make_api_call(method="GET", endpoint="/models")
         catalog = {model.id: model for model in ModelCatalogResponse.model_validate(response_data).data}
@@ -174,7 +177,37 @@ class OpenRouterClient(HttpClientMixin):
                         model=model_id,
                     )
 
+        if self._zdr:
+            await self._check_zdr_endpoints(steps)
+
         logger.debug(f"OpenRouter models checked for steps: {', '.join(steps)}")
+
+    async def _check_zdr_endpoints(self, steps: Mapping[str, LLMSettings]) -> None:
+        response_data = await self.make_api_call(method="GET", endpoint="/endpoints/zdr")
+        zdr_parameters: dict[str, set[str]] = defaultdict(set)
+        for endpoint in ZdrEndpointsResponse.model_validate(response_data).data:
+            zdr_parameters[endpoint.model_id].update(endpoint.supported_parameters)
+
+        for step, llm in steps.items():
+            for model_id in [llm.MODEL, *llm.FALLBACK_MODELS]:
+                listed_id = model_id if model_id in zdr_parameters else model_id.partition(":")[0]
+                if listed_id not in zdr_parameters:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step has no Zero Data Retention endpoint. "
+                        f"Pick another model (GET {str(self._base_url).rstrip('/')}/endpoints/zdr lists them) "
+                        "or set OPENROUTER_ZDR=false.",
+                        step=step,
+                        model=model_id,
+                    )
+
+                missing = [param for param in _required_parameters(llm) if param not in zdr_parameters[listed_id]]
+                if missing:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step does not support on its Zero Data "
+                        f"Retention endpoints: {', '.join(missing)}.",
+                        step=step,
+                        model=model_id,
+                    )
 
     @self_heal()
     async def complete[T: BaseModel](
