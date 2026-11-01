@@ -2,13 +2,16 @@ from pydantic import BaseModel
 
 
 class JsonSchemaProperty(BaseModel):
-    """A JSON Schema node, built to satisfy strict structured outputs.
+    """A JSON Schema node, built to satisfy strict structured outputs on every model family.
 
     Strict mode requires every object to list all its properties as required and to forbid extra ones: `object()`
     does both, so an optional field is expressed as a nullable type (`string(nullable=True)`) rather than omitted.
+
+    A nullable enum is `anyOf [enum, null]`: Anthropic rejects `type: [string, null]` with an `enum`.
     """
 
-    type: str | list[str]
+    type: str | list[str] | None = None
+    anyOf: list[JsonSchemaProperty] | None = None
     items: JsonSchemaProperty | None = None
     properties: dict[str, JsonSchemaProperty] | None = None
     required: list[str] | None = None
@@ -20,8 +23,9 @@ class JsonSchemaProperty(BaseModel):
         return cls(type=["string", "null"] if nullable else "string")
 
     @classmethod
-    def enum_string(cls, values: list[str]) -> JsonSchemaProperty:
-        return cls(type="string", enum=values)
+    def enum_string(cls, values: list[str], *, nullable: bool = False) -> JsonSchemaProperty:
+        enum = cls(type="string", enum=values)
+        return cls(anyOf=[enum, cls(type="null")]) if nullable else enum
 
     @classmethod
     def number(cls) -> JsonSchemaProperty:

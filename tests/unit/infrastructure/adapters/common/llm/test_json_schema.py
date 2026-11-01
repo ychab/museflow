@@ -14,6 +14,11 @@ class TestJsonSchemaProperty:
             "enum": ["a", "b"],
         }
 
+    def test__enum_string__nullable__any_of_null(self) -> None:
+        assert JsonSchemaProperty.enum_string(["a", "b"], nullable=True).model_dump(exclude_none=True) == {
+            "anyOf": [{"type": "string", "enum": ["a", "b"]}, {"type": "null"}],
+        }
+
     def test__number_and_integer(self) -> None:
         assert JsonSchemaProperty.number().type == "number"
         assert JsonSchemaProperty.integer().type == "integer"
