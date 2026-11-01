@@ -128,7 +128,17 @@ class TestOpenRouterTrackEnricherAdapter:
 
     @pytest.mark.parametrize(
         "completion",
-        [[{"track_index": 0, "genres": ["hip-hop", "NOT_A_GENRE", "afro rap"], "moods": ["chill", "NOT_A_MOOD"]}]],
+        [
+            [
+                {
+                    "track_index": 0,
+                    "genre_macro": "hip-hop",
+                    "genre_meso": "NOT_A_GENRE",
+                    "genre_micro": "afro rap",
+                    "moods": ["chill", "NOT_A_MOOD"],
+                }
+            ]
+        ],
         indirect=True,
     )
     async def test__enrich_tracks__unknown_tags__silently_dropped(
@@ -147,7 +157,7 @@ class TestOpenRouterTrackEnricherAdapter:
 
     @pytest.mark.parametrize(
         "completion",
-        [[{"track_index": 0, "genres": ["hip-hop"]}, {"track_index": 5, "genres": ["rap"]}]],
+        [[{"track_index": 0, "genre_macro": "hip-hop"}, {"track_index": 5, "genre_macro": "hip-hop"}]],
         indirect=True,
     )
     async def test__enrich_tracks__out_of_range_index__dropped(
@@ -217,7 +227,11 @@ class TestOpenRouterTrackEnricherAdapter:
         assert body["model"] == "google/gemini-2.5-flash-lite"
         assert body["response_format"]["json_schema"]["name"] == "EnrichmentResponse"
 
-    @pytest.mark.parametrize("completion", [[{"track_index": 0, "genres": ["hip-hop", "rap"]}]], indirect=True)
+    @pytest.mark.parametrize(
+        "completion",
+        [[{"track_index": 0, "genre_macro": "hip-hop", "genre_meso": "rap", "genre_micro": None}]],
+        indirect=True,
+    )
     async def test__enrich_tracks__genre_only__prompt_omits_locale_and_mood(
         self,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
@@ -233,5 +247,6 @@ class TestOpenRouterTrackEnricherAdapter:
         assert result[0].locales is None
         system_content = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
         assert "GENRE" in system_content
+        assert "genre_micro (pick ONE, or null if none applies)" in system_content
         assert "MOOD" not in system_content
         assert "LOCALE" not in system_content

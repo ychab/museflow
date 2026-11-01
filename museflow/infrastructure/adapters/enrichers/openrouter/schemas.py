@@ -2,8 +2,10 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
+from museflow.domain.const import GENRE_MACRO_TAGS
+from museflow.domain.const import GENRE_MESO_TAGS
+from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.enums import EnrichField
-from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
 from museflow.domain.utils.text import validate_locales
@@ -14,9 +16,10 @@ def build_enrichment_schema(fields: frozenset[EnrichField]) -> JsonSchemaPropert
     properties: dict[str, JsonSchemaProperty] = {"track_index": JsonSchemaProperty.integer()}
 
     if EnrichField.GENRE in fields:
-        properties["genres"] = JsonSchemaProperty.array(
-            items=JsonSchemaProperty.enum_string([g.value for g in GenreTag])
-        )
+        # One field per tier: the whole vocabulary in a single enum is too large for some providers (Gemini)
+        properties["genre_macro"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MACRO_TAGS])
+        properties["genre_meso"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MESO_TAGS])
+        properties["genre_micro"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MICRO_TAGS], nullable=True)
     if EnrichField.MOOD in fields:
         properties["moods"] = JsonSchemaProperty.array(
             items=JsonSchemaProperty.enum_string([m.value for m in MoodTag])
@@ -31,7 +34,9 @@ def build_enrichment_schema(fields: frozenset[EnrichField]) -> JsonSchemaPropert
 
 class EnrichedTrack(BaseModel):
     track_index: int
-    genres: list[str] = Field(default_factory=list)
+    genre_macro: str | None = None
+    genre_meso: str | None = None
+    genre_micro: str | None = None
     moods: list[str] = Field(default_factory=list)
     locales: list[LocaleCode] | None = None
 
@@ -39,6 +44,10 @@ class EnrichedTrack(BaseModel):
     @classmethod
     def _filter_locales(cls, v: object) -> list[str] | None:
         return validate_locales(v)
+
+    @property
+    def genres(self) -> list[str]:
+        return [g for g in (self.genre_macro, self.genre_meso, self.genre_micro) if g]
 
 
 class EnrichmentResponse(BaseModel):

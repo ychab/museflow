@@ -12,7 +12,7 @@
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "{\"enriched_tracks\": [{\"track_index\": 0, \"genres\": [\"folk\", \"indie-folk\"], \"moods\": [\"chill\"], \"locales\": [\"fr\"]}]}",
+        "content": "{\"enriched_tracks\": [{\"track_index\": 0, \"genre_macro\": \"folk\", \"genre_meso\": \"indie-folk\", \"genre_micro\": null, \"moods\": [\"chill\"], \"locales\": [\"fr\"]}]}",
         "refusal": null,
         "reasoning": null
       }
