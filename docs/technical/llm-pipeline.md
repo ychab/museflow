@@ -97,7 +97,7 @@ Design decisions:
 
 ## Advisor: guided discovery
 
-`get_discovery_strategy` returns a `DiscoveryTasteStrategy`: a reasoning paragraph, a strategy label, a list of recommended tracks each with a confidence score, 2 to 3 free-text search queries, and a playlist name. The prompt is assembled in [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py), as a system message (the role and rules) and a user message (the session's focus and hints), from:
+`get_discovery_strategy` returns a `DiscoveryTasteStrategy`: a reasoning paragraph, a strategy label, a list of recommended tracks each with a confidence score, and a playlist name. The prompt is assembled in [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py), as a system message (the role and rules) and a user message (the session's focus and hints), from:
 
 | Input | Source | Purpose |
 |---|---|---|
@@ -113,7 +113,7 @@ Design decisions:
 
 ## Reconciler: from suggestion to catalogue track
 
-An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider (`--reconciler-limit` candidates) and asks the `Reconciler` to pick the best candidate:
+An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`--reconciler-limit` candidates) and asks the `Reconciler` to pick the best candidate:
 
 1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes).
 2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz).

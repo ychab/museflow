@@ -49,7 +49,6 @@ class TestDiscoverTasteUseCase:
         assert len(result.playlist.tracks) == len(result.tracks)
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
-        assert result.strategy.search_queries == ["post-rock instrumental", "math rock progressive"]
         assert len(result.tracks) >= 1
 
     async def test__dry_run(
@@ -71,4 +70,3 @@ class TestDiscoverTasteUseCase:
         assert result.playlist is None
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
-        assert result.strategy.search_queries == ["post-rock instrumental", "math rock progressive"]

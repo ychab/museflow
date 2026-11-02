@@ -14,7 +14,6 @@ class DiscoveryStrategyResponse(BaseModel):
     reasoning: str
     strategy_label: str
     recommended_tracks: list[SuggestedTrack]
-    search_queries: list[str]
     suggested_playlist_name: str
 
 
@@ -31,7 +30,6 @@ DISCOVERY_STRATEGY_SCHEMA = JsonSchemaProperty.object(
                 }
             )
         ),
-        "search_queries": JsonSchemaProperty.array(JsonSchemaProperty.string()),
         "suggested_playlist_name": JsonSchemaProperty.string(),
     }
 )

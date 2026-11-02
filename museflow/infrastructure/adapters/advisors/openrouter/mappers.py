@@ -18,6 +18,5 @@ def to_discovery_strategy(content: DiscoveryStrategyResponse) -> DiscoveryTasteS
         reasoning=content.reasoning,
         strategy_label=content.strategy_label,
         recommended_tracks=[to_track_suggested(t) for t in content.recommended_tracks],
-        search_queries=content.search_queries,
         suggested_playlist_name=content.suggested_playlist_name,
     )

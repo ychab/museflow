@@ -31,7 +31,6 @@ class TestOpenRouterAdvisorAdapter:
             "reasoning": "good fit",
             "strategy_label": "Horizon",
             "recommended_tracks": [{"name": "Song A", "artists": ["Artist X"], "score": 0.9}],
-            "search_queries": ["post-rock"],
             "suggested_playlist_name": "My Mix",
         }
         return {

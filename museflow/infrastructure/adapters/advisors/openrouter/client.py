@@ -135,7 +135,6 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "- Quality over quantity: only include a track if your confidence score would be ≥ 0.7.\n"
             "  If you only have 5 high-confidence picks, return 5 — do not pad with uncertain ones.\n"
             "  Score interpretation: 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
-            "- Provide 2-3 specific search_queries to widen the discovery surface.\n"
             "- Keep suggested_playlist_name creative and thematic.\n"
         )
 
