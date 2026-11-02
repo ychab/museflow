@@ -28,14 +28,13 @@ class TestSpotifySearchTrackQuery:
             artists=['Artist "1"'],
         ).get_query()
         assert 'artist:"Artist \\"1\\""' in q
-        assert "(" not in q
 
-    def test__field__artists__multiple(self) -> None:
+    def test__field__artists__multiple__primary_only(self) -> None:
         q = SpotifySearchTrackQuery(
             track="Track",
             artists=["Artist 1", "Artist 2", "Artist 3"],
         ).get_query()
-        assert '(artist:"Artist 1" OR artist:"Artist 2" OR artist:"Artist 3")' in q
+        assert q == 'track:"Track" artist:"Artist 1"'
 
     def test__full_query(self) -> None:
         q = SpotifySearchTrackQuery(
@@ -47,7 +46,7 @@ class TestSpotifySearchTrackQuery:
 
         expected_parts = [
             'track:"My Track"',
-            '(artist:"Artist A" OR artist:"Artist B")',
+            'artist:"Artist A"',
             "tag:new",
             "tag:hipster",
         ]
