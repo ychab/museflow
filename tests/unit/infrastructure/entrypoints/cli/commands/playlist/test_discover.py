@@ -291,7 +291,7 @@ class TestDiscoverCommand:
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
-        assert result.output.index("dry-run mode") < result.output.index("LLM usage")
+        assert result.output.index("dry-run mode") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__no_new_track__usage_printed(
@@ -307,7 +307,7 @@ class TestDiscoverCommand:
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
         assert result.exit_code == 1
-        assert result.output.index("No new tracks found") < result.output.index("LLM usage")
+        assert result.output.index("No new tracks found") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__taste_profile_not_found(

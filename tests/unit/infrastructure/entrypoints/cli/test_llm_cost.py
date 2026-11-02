@@ -4,12 +4,12 @@ import pytest
 
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.llm_cost import print_llm_cost
 
 
-class TestPrintLLMUsage:
+class TestPrintLLMCost:
     def test__no_call__prints_nothing(self, capsys: pytest.CaptureFixture[str]) -> None:
-        print_llm_usage(LLMUsageMeter())
+        print_llm_cost(LLMUsageMeter())
 
         assert capsys.readouterr().out == ""
 
@@ -18,7 +18,7 @@ class TestPrintLLMUsage:
         meter.record("advisor", "openai/gpt-5-mini", ChatUsage(prompt_tokens=12000, cost=Decimal("0.1234")))
         meter.record("advisor", "openai/gpt-5-mini", ChatUsage(prompt_tokens=1000, cost=Decimal("0.0100")))
 
-        print_llm_usage(meter)
+        print_llm_cost(meter)
 
         output = capsys.readouterr().out
         assert "advisor" in output
