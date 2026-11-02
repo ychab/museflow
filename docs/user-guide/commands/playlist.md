@@ -62,7 +62,7 @@ museflow playlist discover --email user@example.com --dry-run --model anthropic/
 
 **Output.** A report table per attempt (suggested, survived, new tracks), then the table of discovered tracks
 (artist, track, album). Unless `--dry-run` is set, the playlist is created and the command prints its ID and
-follow-up commands to view and rate it. Last, an `LLM cost` table gives the advisor calls, tokens and cost, then the
+follow-up commands to view and rate it. Last, an `LLM usage` table gives the advisor calls, tokens and cost, then the
 total, even when no new track was found.
 
 ## `playlist history`
