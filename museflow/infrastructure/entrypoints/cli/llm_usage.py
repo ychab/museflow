@@ -12,7 +12,7 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
     if not usages:
         return
 
-    table = Table(title="LLM usage (tokens)", show_footer=True)
+    table = Table(title="LLM usage", show_footer=True)
     table.add_column("Step", footer="Total")
     table.add_column("Model")
     table.add_column("Calls", justify="right", footer=str(sum(usage.calls for usage in usages)))
