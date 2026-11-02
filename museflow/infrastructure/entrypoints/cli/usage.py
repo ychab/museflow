@@ -6,13 +6,13 @@ from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 console = Console()
 
 
-def print_llm_cost(meter: LLMUsageMeter) -> None:
+def print_llm_usage(meter: LLMUsageMeter) -> None:
     """Prints what the command spent on LLM calls, per step and model: nothing when no call was made."""
     usages = meter.usages
     if not usages:
         return
 
-    table = Table(title="LLM cost", show_footer=True)
+    table = Table(title="LLM usage (tokens)", show_footer=True)
     table.add_column("Step", footer="Total")
     table.add_column("Model")
     table.add_column("Calls", justify="right", footer=str(sum(usage.calls for usage in usages)))
