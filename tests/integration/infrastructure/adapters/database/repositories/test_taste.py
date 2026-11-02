@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.user import User
+from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
+from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -88,6 +90,29 @@ class TestTasteProfileSQLRepository:
     async def test__get_latest__not_found(self, taste_profile_repository: TasteProfileRepository) -> None:
         result = await taste_profile_repository.get_latest(user_id=uuid.uuid4())
         assert result is None
+
+    async def test__delete__found(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
+        other_db = await TasteProfileModelFactory.create_async(name="my-profile")  # Another user
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, profile_id=profile_db.id)
+
+        deleted = await taste_profile_repository.delete(user_id=user.id, name="my-profile")
+
+        assert deleted is True
+        assert await taste_profile_repository.get(user_id=user.id, name="my-profile") is None
+        assert await taste_profile_repository.get(user_id=other_db.user_id, name="my-profile") is not None
+        # The playlist is kept, only its link to the profile is cleared
+        stmt = select(PlaylistModel.profile_id).where(PlaylistModel.id == playlist_db.id)
+        assert (await async_session_db.execute(stmt)).scalar_one() is None
+
+    async def test__delete__not_found(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
+        deleted = await taste_profile_repository.delete(user_id=user.id, name="my-profile")
+        assert deleted is False
 
     async def test__save_checkpoint__creates_and_updates(
         self,
