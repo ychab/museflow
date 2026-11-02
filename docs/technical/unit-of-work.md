@@ -66,8 +66,9 @@ Both treated the symptom. The cause was the scope: **a session shared by a whole
 
 The use case owns its transactions. Each `async with uow:` block opens a session from the pool, commits on a clean
 exit, rolls back on an exception, and always closes the session, so the connection goes back to the pool and no
-transaction outlives the block. Repositories never commit; they flush, so SQL and integrity errors still surface
-inside the method.
+transaction outlives the block. Repositories never commit. Most of them run SQL statements (`insert`, `update`,
+`delete`, upserts), which reach the database at once, so SQL and integrity errors surface inside the method; the few
+that stage ORM objects with `session.add` flush them for the same reason.
 
 The port gives the use cases access to every repository:
 

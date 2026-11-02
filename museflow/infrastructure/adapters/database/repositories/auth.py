@@ -49,7 +49,6 @@ class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
         result = await self.session.execute(stmt)
 
         auth_state_db, created = result.one()
-        await self.session.flush()
 
         return auth_state_db.to_entity(), created
 
@@ -71,7 +70,6 @@ class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
         )
         result = await self.session.execute(stmt)
         auth_state_db = result.scalar_one_or_none()
-        await self.session.flush()
         return auth_state_db.to_entity() if auth_state_db else None
 
 
@@ -124,7 +122,6 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         )
         result = await self.session.execute(stmt)
         auth_token_db = result.scalar_one()
-        await self.session.flush()
 
         await self.session.refresh(auth_token_db)
         return auth_token_db.to_entity()
@@ -136,4 +133,3 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         )
 
         await self.session.execute(stmt)
-        await self.session.flush()
