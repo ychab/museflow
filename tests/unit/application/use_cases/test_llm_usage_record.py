@@ -1,0 +1,64 @@
+import uuid
+from unittest import mock
+
+from museflow.application.use_cases.llm_usage_record import record_llm_usage
+from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
+
+from tests.unit.factories.value_objects.llm import LLMUsageFactory
+
+
+class TestRecordLLMUsage:
+    async def test__no_usage__nothing_recorded(
+        self,
+        user: User,
+        mock_uow: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
+    ) -> None:
+        await record_llm_usage(user_id=user.id, operation=LLMOperation.ENRICH, usages=[], uow=mock_uow)
+
+        mock_uow.__aenter__.assert_not_awaited()
+        mock_llm_usage_repository.add_many.assert_not_awaited()
+
+    async def test__profile_not_found__recorded_without_profile(
+        self,
+        user: User,
+        mock_uow: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
+    ) -> None:
+        # A build paused before its first checkpoint left no profile behind.
+        mock_taste_profile_repository.get.return_value = None
+
+        await record_llm_usage(
+            user_id=user.id,
+            operation=LLMOperation.TASTE_BUILD,
+            usages=[LLMUsageFactory.build()],
+            uow=mock_uow,
+            profile_name="my-profile",
+        )
+
+        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        assert record.profile_id is None
+
+    async def test__playlist_not_found__recorded_without_profile(
+        self,
+        user: User,
+        mock_uow: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
+    ) -> None:
+        playlist_id = uuid.uuid4()
+        mock_playlist_repository.get.return_value = None
+
+        await record_llm_usage(
+            user_id=user.id,
+            operation=LLMOperation.DISCOVER,
+            usages=[LLMUsageFactory.build()],
+            uow=mock_uow,
+            playlist_id=playlist_id,
+        )
+
+        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        assert record.profile_id is None
+        assert record.playlist_id == playlist_id
