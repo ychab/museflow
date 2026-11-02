@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Any
 
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -42,9 +41,7 @@ def _invalid_response(
     )
 
 
-def _parse[T: BaseModel](response_data: dict[str, Any], response_model: type[T], adapter: str) -> T:
-    envelope = ChatCompletionResponse.model_validate(response_data)
-
+def _parse[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[T], adapter: str) -> T:
     if envelope.error is not None:
         raise LLMResponseError(
             f"LLM provider error: {envelope.error.message}",
@@ -59,7 +56,6 @@ def _parse[T: BaseModel](response_data: dict[str, Any], response_model: type[T],
     choice = envelope.choices[0]
     finish_reason = choice.finish_reason
     message = choice.message
-    logger.debug(f"LLM {adapter} reply from {envelope.model}", extra={"adapter": adapter, "model": envelope.model})
 
     if finish_reason == _REFUSAL_FINISH_REASON or (message is not None and message.refusal):
         raise LLMResponseError(
@@ -97,8 +93,8 @@ def _parse[T: BaseModel](response_data: dict[str, Any], response_model: type[T],
         ) from e
 
 
-def parse_completion[T: BaseModel](response_data: dict[str, Any], response_model: type[T], adapter: str) -> T:
-    """Turns the raw JSON body of a chat completion into `response_model`.
+def parse_completion[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[T], adapter: str) -> T:
+    """Turns the reply of a chat completion into `response_model`.
 
     Fails early and explicitly on provider errors, empty, refused, truncated (`length`), non-JSON or schema-violating
     replies. Every failure is logged as a WARNING; the start of the reply only at DEBUG, since it may quote the user's
@@ -108,7 +104,7 @@ def parse_completion[T: BaseModel](response_data: dict[str, Any], response_model
         LLMResponseError: If the reply is unusable.
     """
     try:
-        return _parse(response_data, response_model, adapter)
+        return _parse(envelope, response_model, adapter)
     except LLMResponseError as e:
         extra = {"adapter": adapter, "failure_kind": e.failure_kind.value, "finish_reason": e.finish_reason}
         logger.warning(f"LLM {adapter} response unusable ({e.failure_kind})", extra=extra)

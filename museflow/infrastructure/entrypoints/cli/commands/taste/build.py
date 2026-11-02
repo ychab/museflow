@@ -11,11 +11,13 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -58,6 +60,7 @@ def build(
         help="OpenRouter model id overriding the configured reflect step model.",
     ),
 ) -> None:
+    meter = LLMUsageMeter()
     try:
         profile = asyncio.run(
             build_logic(
@@ -70,6 +73,7 @@ def build(
                 segment_model=segment_model,
                 merge_model=merge_model,
                 reflect_model=reflect_model,
+                meter=meter,
             )
         )
     except UserNotFound as e:
@@ -87,17 +91,19 @@ def build(
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-
-    typer.secho(f"\nTaste profile built: {profile.tracks_count} tracks processed", fg=typer.colors.GREEN)
-    typer.echo(f"Name: {profile.name}")
-    typer.echo(f"Logic version: {profile.logic_version}")
-    for step, step_metadata in profile.profiler_metadata["steps"].items():
-        typer.echo(f"Model ({step}): {step_metadata['model']}")
-    typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
-    if profile.profile["personality_archetype"]:
-        typer.secho(f"Archetype: {profile.profile['personality_archetype']}", fg=typer.colors.CYAN)
-    for insight in profile.profile["life_phase_insights"]:
-        typer.echo(f"  - {insight}")
+    else:
+        typer.secho(f"\nTaste profile built: {profile.tracks_count} tracks processed", fg=typer.colors.GREEN)
+        typer.echo(f"Name: {profile.name}")
+        typer.echo(f"Logic version: {profile.logic_version}")
+        for step, step_metadata in profile.profiler_metadata["steps"].items():
+            typer.echo(f"Model ({step}): {step_metadata['model']}")
+        typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
+        if profile.profile["personality_archetype"]:
+            typer.secho(f"Archetype: {profile.profile['personality_archetype']}", fg=typer.colors.CYAN)
+        for insight in profile.profile["life_phase_insights"]:
+            typer.echo(f"  - {insight}")
+    finally:
+        print_llm_usage(meter)
 
 
 async def build_logic(
@@ -110,9 +116,12 @@ async def build_logic(
     segment_model: str | None = None,
     merge_model: str | None = None,
     reflect_model: str | None = None,
+    meter: LLMUsageMeter | None = None,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
-        profiler_adapter = await stack.enter_async_context(get_profiler(segment_model, merge_model, reflect_model))
+        profiler_adapter = await stack.enter_async_context(
+            get_profiler(segment_model, merge_model, reflect_model, meter=meter)
+        )
 
         uow = get_unit_of_work()
         async with uow:

@@ -103,14 +103,14 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             },
         }
 
-    async def _complete(self, prompt: str, llm: LLMSettings) -> TasteProfileData:
+    async def _complete(self, prompt: str, llm: LLMSettings, step: str) -> TasteProfileData:
         try:
             content = await self._client.complete(
                 [ChatMessage(role="user", content=prompt)],
                 response_model=TasteProfileResponse,
                 schema=TASTE_PROFILE_SCHEMA,
                 llm=llm,
-                adapter="profiler",
+                adapter=f"profiler {step}",
             )
         except LLMRateLimitError as e:
             raise TasteProfilerRateLimitExceeded(str(e)) from e
@@ -161,7 +161,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )
-        return await self._complete(prompt, self._segment_llm)
+        return await self._complete(prompt, self._segment_llm, "segment")
 
     async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
         foundation_json = _profile_json(foundation)
@@ -204,7 +204,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "Return the full merged JSON. Be mathematically precise and preserve all keys."
         )
 
-        return await self._complete(prompt, self._merge_llm)
+        return await self._complete(prompt, self._merge_llm, "merge")
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
         profile_json = _profile_json(profile)
@@ -233,4 +233,4 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "Return the full profile JSON with all five fields populated. Keep all other fields unchanged."
         )
 
-        return await self._complete(prompt, self._reflect_llm)
+        return await self._complete(prompt, self._reflect_llm, "reflect")
