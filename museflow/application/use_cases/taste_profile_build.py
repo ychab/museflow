@@ -8,9 +8,11 @@ from typing import cast
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.utils.llm_usage import record_llm_usage
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import TasteProfileBuildException
@@ -31,6 +33,20 @@ class BuildTasteProfileUseCase:
         self._profiler = profiler
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
+        # What the profiler spent is saved whatever the outcome: a paused build was billed too.
+        try:
+            profile = await self._build_profile(user, config)
+        finally:
+            await record_llm_usage(
+                user_id=user.id,
+                operation=LLMOperation.TASTE_BUILD,
+                usages=self._profiler.usages,
+                uow=self._uow,
+                profile_name=config.name,
+            )
+        return profile
+
+    async def _build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # Select the most-listened tracks as seeds (best signal quality)
         async with self._uow as uow:
             tracks = await uow.tracks.get_list(

@@ -4,6 +4,7 @@ from typing import Any
 
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
+from museflow.domain.value_objects.llm import LLMUsage
 
 
 class TasteProfilerPort(ABC):
@@ -18,6 +19,12 @@ class TasteProfilerPort(ABC):
     @property
     @abstractmethod
     def profiler_metadata(self) -> dict[str, Any]: ...
+
+    @property
+    @abstractmethod
+    def usages(self) -> list[LLMUsage]:
+        """Tokens and cost of the calls made since the adapter was created, per step and model."""
+        ...
 
     @abstractmethod
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:

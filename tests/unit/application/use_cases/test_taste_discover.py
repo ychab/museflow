@@ -11,6 +11,7 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
 from museflow.domain.exceptions import ProviderRateLimitExceeded
@@ -26,6 +27,7 @@ from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.track import TrackSuggestedFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
+from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 
 class TestDiscoverTasteUseCase:
@@ -195,14 +197,18 @@ class TestDiscoverTasteUseCase:
         user: User,
         use_case: DiscoverTasteUseCase,
         mock_taste_profile_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
-        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        profile = TasteProfileFactory.build(user_id=user.id)
+        mock_taste_profile_repository.get_latest.return_value = profile
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
+        # The advisor calls billed before the failure.
+        mock_advisor.usages = [LLMUsageFactory.build()]
 
         mock_provider_library.search_tracks.return_value = []
         mock_reconciler.reconcile.return_value = None
@@ -213,6 +219,10 @@ class TestDiscoverTasteUseCase:
                 user=user,
                 config=DiscoverTasteConfigInput(max_attempts=1),
             )
+
+        mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=profile.name)
+        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        assert (record.operation, record.playlist_id) == (LLMOperation.DISCOVER, None)
 
     async def test__dry_run(
         self,

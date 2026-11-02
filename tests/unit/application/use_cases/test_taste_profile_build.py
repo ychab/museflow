@@ -11,10 +11,12 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
+from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import TasteProfileBuildException
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
@@ -26,6 +28,7 @@ from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
+from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -225,8 +228,8 @@ class TestBuildTasteProfileUseCase:
 
         # 3 segments + 2 merges + 1 reflection
         assert blocks_open == [False] * 6
-        # The seeds read, one checkpoint per batch, then the final upsert
-        assert mock_uow.__aenter__.await_count == 5
+        # The seeds read, one checkpoint per batch, the final upsert, then the LLM usage
+        assert mock_uow.__aenter__.await_count == 6
 
     @pytest.mark.parametrize("tracks", [2], indirect=True)
     async def test__nominal__single_batch(
@@ -449,6 +452,29 @@ class TestBuildTasteProfileUseCase:
         assert exc_info.value.reason == reason
         mock_taste_profile_repository.save_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
+
+    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    async def test__paused__usage_recorded(
+        self,
+        user: User,
+        config: BuildTasteProfileConfigInput,
+        tracks: list[Track],
+        mock_uow: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
+    ) -> None:
+        usage = LLMUsageFactory.build()
+        profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
+        profiler.build_profile_segment.side_effect = TasteProfileBuildException("bad response")
+        mock_track_repository.get_list.return_value = tracks
+
+        with pytest.raises(TasteProfileBuildPausedException):
+            await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler).build_profile(user=user, config=config)
+
+        mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=config.name)
+        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        assert (record.operation, record.usage) == (LLMOperation.TASTE_BUILD, usage)
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__batch_fail__pauses__checkpoint_preserved(
