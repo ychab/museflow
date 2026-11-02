@@ -83,11 +83,10 @@ sequenceDiagram
     UC->>UoW: block: taste profile (named or latest), blacklist, liked tracks
     loop up to max_attempts, stop once playlist_limit reached
         UC->>Adv: get_discovery_strategy(profile, focus, exclusions, liked tracks)
-        Adv-->>UC: DiscoveryTasteStrategy (suggested tracks with scores, search queries)
+        Adv-->>UC: DiscoveryTasteStrategy (suggested tracks with scores)
         UC->>Lib: search_tracks per suggestion
         UC->>Rec: reconcile(suggestion, candidates)
         Rec-->>UC: best match and confidence, or nothing
-        UC->>Lib: search_tracks per strategy query
         UC->>UoW: block: drop tracks the user already knows (by fingerprint)
     end
     UC->>UC: sort by advisor score band then match confidence, cap per artist, trim
@@ -101,7 +100,7 @@ What the diagram encodes, with the reasoning behind each step:
 
 1. **Composition happens in the entrypoint.** `discover_logic` gets a unit of work and opens each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
 2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `--max-attempts`, passing everything suggested so far as an exclusion list. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while the model thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule. Why this design, and what came before it: [Why a unit of work](unit-of-work.md).
-3. **Two sources of candidates.** Suggestions are reconciled against the catalogue; the strategy's free-text search queries are also run, with a fixed advisor score of 0.8 and reconciler score of 1.0 (a constant in the use case, see [`taste_discover.py`](https://github.com/ychab/museflow/blob/main/museflow/application/use_cases/taste_discover.py)).
+3. **Every candidate is a reconciled suggestion.** The catalogue is searched for each suggestion by title and primary artist only: Spotify ignores `OR` in a query, and several artist filters must all match, so the reconciler checks the other artists. The strategy used to return free-text search queries too. They were dropped: Spotify matches their words against track titles, so they brought back compilations and type beats that skipped reconciliation and outranked real suggestions.
 4. **"Known" is decided by fingerprint**, not by provider id, so a re-release or a different catalogue entry of a track the user already played is still excluded (see [Data model](data-model.md)).
 5. **Ordering is banded.** Tracks are sorted by advisor score rounded down to a band (`DISCOVERY_SCORE_BAND_WIDTH`, default 0.05), then by reconciliation confidence within the band. Banding stops tiny, meaningless score differences from outranking a more certain catalogue match.
 6. **Side effects come last, remote first.** The remote playlist is created first; only then are the discovery tracks upserted (so they are excluded from future sessions) and the local playlist row saved. A provider failure therefore leaves nothing behind locally. The tracks upsert and the playlist save then run in one block of the unit of work: a database failure keeps neither. Elsewhere, flows open one block per step, so paid LLM batches and checkpoints are kept when a later step fails. See [Known gaps](privacy-and-data.md#known-gaps).

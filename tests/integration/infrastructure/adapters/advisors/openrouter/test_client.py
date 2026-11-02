@@ -22,7 +22,6 @@ class TestOpenRouterAdvisorAdapter:
 
         assert strategy.strategy_label == "Progressive Horizons"
         assert strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
-        assert strategy.search_queries == ["post-rock instrumental", "math rock progressive"]
         assert len(strategy.recommended_tracks) == 1
         assert strategy.recommended_tracks[0].name == "Mi Pueblo"
         assert strategy.recommended_tracks[0].artists == ["Grupo Niche"]

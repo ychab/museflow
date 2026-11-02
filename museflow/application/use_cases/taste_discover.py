@@ -144,13 +144,8 @@ class DiscoverTasteUseCase:
             )
             logger.info(f"Reconciled recommended tracks: {len(tracks_reconciled)}")
 
-            # Search tracks from strategy's queries
-            logger.debug("--- Search queries provider ---")
-            tracks_searched = await self._search_query_tracks(search_queries=strategy.search_queries)
-            logger.info(f"Tracks from search queries: {len(tracks_searched)}")
-
-            # Merge and intra-attempt dedup
-            tracks_all = self._dedup_by_identity(tracks_reconciled + tracks_searched)
+            # Intra-attempt dedup: two suggestions can reconcile to the same track
+            tracks_all = self._dedup_by_identity(tracks_reconciled)
 
             # Remove blacklisted artists and tracks (safety net in case the advisor ignored instructions)
             if not blacklist.is_empty:
@@ -263,22 +258,6 @@ class DiscoverTasteUseCase:
         if track.fingerprint in blacklist.track_fingerprints:
             return True
         return bool({normalize_text(a) for a in track.artists} & blacklist.artist_fingerprints)
-
-    async def _search_query_tracks(self, search_queries: list[str]) -> list[TrackScored]:
-        tracks_scored: list[TrackScored] = []
-
-        for query in search_queries:
-            results = await self._provider_library.search_tracks(
-                track=query,
-                artists=[],
-                page_size=5,
-                log_enabled=False,
-            )
-            tracks_scored.extend(
-                TrackScored(track=track, advisor_score=0.8, reconciler_score=1.0) for track in results
-            )
-
-        return tracks_scored
 
     @staticmethod
     def _dedup_by_identity(tracks_scored: list[TrackScored]) -> list[TrackScored]:

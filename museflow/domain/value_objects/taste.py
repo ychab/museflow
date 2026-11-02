@@ -8,5 +8,4 @@ class DiscoveryTasteStrategy:
     reasoning: str
     strategy_label: str
     recommended_tracks: list[TrackSuggested]
-    search_queries: list[str]
     suggested_playlist_name: str

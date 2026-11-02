@@ -60,8 +60,7 @@ class TestDiscoverTasteUseCase:
             reconciler=mock_reconciler,
         )
 
-    @pytest.mark.parametrize("discovery_taste_strategy", [{"search_queries": []}], indirect=True)
-    async def test__nominal_with_seeds_and_queries(
+    async def test__nominal(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -246,37 +245,6 @@ class TestDiscoverTasteUseCase:
         assert result.playlist is None
         mock_provider_library.create_playlist.assert_not_called()
 
-    async def test__search_queries_contribute_tracks(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_taste_profile_repository: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-        mock_reconciler: mock.Mock,
-    ) -> None:
-        """Tracks from search_queries path are included with advisor_score=0.8."""
-        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
-
-        query_track = TrackFactory.build()
-        strategy = DiscoveryTasteStrategyFactory.build(
-            recommended_tracks=[],
-            search_queries=["post-rock instrumental"],
-        )
-        mock_advisor.get_discovery_strategy.return_value = strategy
-        mock_provider_library.search_tracks.return_value = [query_track]
-        mock_reconciler.reconcile.return_value = None
-        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
-        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
-
-        result = await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5),
-        )
-
-        assert len(result.tracks) == 1
-
     async def test__dedup_removes_duplicate_fingerprint(
         self,
         user: User,
@@ -287,18 +255,17 @@ class TestDiscoverTasteUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_reconciler: mock.Mock,
     ) -> None:
-        """The same track returned by both recommended_tracks and search_queries is deduplicated."""
+        """Two suggestions reconciled to the same track are deduplicated."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
         shared_track = TrackFactory.build()
 
         strategy = DiscoveryTasteStrategyFactory.build(
-            recommended_tracks=[TrackSuggestedFactory.build(score=1.0)],
-            search_queries=["some query"],
+            recommended_tracks=TrackSuggestedFactory.batch(2, score=1.0),
         )
         mock_advisor.get_discovery_strategy.return_value = strategy
 
-        # Both paths resolve to the same fingerprint
+        # Both suggestions resolve to the same fingerprint
         mock_reconciler.reconcile.return_value = (shared_track, 0.9)
         mock_provider_library.search_tracks.return_value = [shared_track]
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
@@ -309,7 +276,7 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_limit=10, advisor_limit=5),
         )
 
-        # Only 1 unique track despite 2 paths
+        # Only 1 unique track despite 2 suggestions
         assert len(result.tracks) == 1
 
     async def test__known_tracks_partially_filtered(
@@ -330,7 +297,6 @@ class TestDiscoverTasteUseCase:
 
         strategy = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=TrackSuggestedFactory.batch(2, score=0.9),
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.return_value = strategy
 
@@ -368,7 +334,6 @@ class TestDiscoverTasteUseCase:
 
         strategy = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=TrackSuggestedFactory.batch(3, score=0.9),  # 3 suggestions for the same artist
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.return_value = strategy
 
@@ -446,11 +411,9 @@ class TestDiscoverTasteUseCase:
 
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-            search_queries=[],
         )
         strategy_2 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
         mock_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
@@ -482,7 +445,6 @@ class TestDiscoverTasteUseCase:
         strategies = iter(
             DiscoveryTasteStrategyFactory.build(
                 recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-                search_queries=["query"],
             )
             for _ in range(2)
         )
@@ -510,8 +472,8 @@ class TestDiscoverTasteUseCase:
             config=DiscoverTasteConfigInput(playlist_limit=2, advisor_limit=5, max_attempts=2),
         )
 
-        # 2 attempts x (advisor + reconcile search + query search), then the playlist creation
-        assert blocks_open == [False] * 7
+        # 2 attempts x (advisor + reconcile search), then the playlist creation
+        assert blocks_open == [False] * 5
         # Initial reads, the known-tracks filter of each attempt, then the final writes
         assert mock_uow.__aenter__.await_count == 4
 
@@ -534,11 +496,9 @@ class TestDiscoverTasteUseCase:
 
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[suggested_track],
-            search_queries=[],
         )
         strategy_2 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
         mock_reconciler.reconcile.side_effect = [(track_attempt_1, 0.9), (track_attempt_2, 0.9)]
@@ -576,11 +536,9 @@ class TestDiscoverTasteUseCase:
         many_suggestions = TrackSuggestedFactory.batch(60, score=0.9)
         strategy_1 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=many_suggestions,
-            search_queries=[],
         )
         strategy_2 = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.side_effect = [strategy_1, strategy_2]
 
@@ -689,7 +647,6 @@ class TestDiscoverTasteUseCase:
 
         strategy = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=TrackSuggestedFactory.batch(2, score=0.9),
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.return_value = strategy
         mock_reconciler.reconcile.side_effect = [(blacklisted_track, 0.9), (clean_track, 0.9)]
@@ -725,7 +682,6 @@ class TestDiscoverTasteUseCase:
 
         strategy = DiscoveryTasteStrategyFactory.build(
             recommended_tracks=[TrackSuggestedFactory.build(score=0.9)],
-            search_queries=[],
         )
         mock_advisor.get_discovery_strategy.return_value = strategy
         mock_reconciler.reconcile.return_value = (blacklisted_track, 0.9)
