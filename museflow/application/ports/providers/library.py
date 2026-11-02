@@ -27,7 +27,7 @@ class ProviderLibraryPort(ABC):
 
         Args:
             track: The name of the track to search for.
-            artists: A list of artist names to filter by.
+            artists: The track's artists, primary first. A provider may filter on the primary one only.
             is_new: Whether to include only new tracks (periodicity depends on the provider).
             is_underground: Whether to include underground tracks (depends on the provider).
             page_size: An optional maximum number of tracks per page.

@@ -14,20 +14,13 @@ class SpotifySearchTrackQuery(BaseModel):
     def _escape(self, val: str) -> str:
         return val.replace('"', '\\"')
 
-    def _build_multiple_params(self, key: str, values: list[str]) -> str | None:
-        if not values:
-            return None
-
-        query = " OR ".join([f'{key}:"{self._escape(v)}"' for v in values])
-
-        # Spotify bug if a single value has parenthesis but are required for multiple values.
-        return f"({query})" if len(values) > 1 else query
-
     def get_query(self) -> str:
         parts = [f'track:"{self._escape(self.track)}"']
 
-        if artist_part := self._build_multiple_params("artist", self.artists):
-            parts.append(artist_part)
+        # Spotify ignores OR (a query with it returns nothing) and several artist filters must all match:
+        # filter on the primary artist only, the reconciler checks the others.
+        if self.artists:
+            parts.append(f'artist:"{self._escape(self.artists[0])}"')
 
         if self.is_new:
             parts.append("tag:new")
