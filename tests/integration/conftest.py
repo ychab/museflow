@@ -24,6 +24,7 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
@@ -46,6 +47,7 @@ from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
+from museflow.infrastructure.adapters.database.repositories.llm import LLMUsageSQLRepository
 from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
@@ -266,6 +268,11 @@ def blacklist_repository(async_session_db: AsyncSession) -> BlacklistRepository:
 @pytest.fixture
 def playlist_repository(async_session_db: AsyncSession) -> PlaylistRepository:
     return PlaylistSQLRepository(async_session_db)
+
+
+@pytest.fixture
+def llm_usage_repository(async_session_db: AsyncSession) -> LLMUsageRepository:
+    return LLMUsageSQLRepository(async_session_db)
 
 
 @pytest.fixture

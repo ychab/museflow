@@ -6,6 +6,7 @@ from typing import Self
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
@@ -27,6 +28,7 @@ class UnitOfWorkPort(ABC):
     taste_profiles: TasteProfileRepository
     blacklist: BlacklistRepository
     playlists: PlaylistRepository
+    llm_usage: LLMUsageRepository
 
     @abstractmethod
     async def __aenter__(self) -> Self:
