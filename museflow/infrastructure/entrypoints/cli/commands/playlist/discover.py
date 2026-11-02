@@ -28,8 +28,8 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_li
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.llm_cost import print_llm_cost
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 console = Console()
 
@@ -197,7 +197,7 @@ def discover(
                 fg=typer.colors.CYAN,
             )
     finally:
-        print_llm_usage(meter)
+        print_llm_cost(meter)
 
 
 async def discover_logic(

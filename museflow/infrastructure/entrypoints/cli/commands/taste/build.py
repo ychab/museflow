@@ -16,8 +16,8 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.llm_cost import print_llm_cost
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -103,7 +103,7 @@ def build(
         for insight in profile.profile["life_phase_insights"]:
             typer.echo(f"  - {insight}")
     finally:
-        print_llm_usage(meter)
+        print_llm_cost(meter)
 
 
 async def build_logic(
