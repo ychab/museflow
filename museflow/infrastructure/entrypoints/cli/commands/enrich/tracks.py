@@ -15,8 +15,8 @@ from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.llm_cost import print_llm_cost
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -86,7 +86,7 @@ def enrich(
         if result.error_count:
             typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
     finally:
-        print_llm_cost(meter)
+        print_llm_usage(meter)
 
 
 async def enrich_logic(
