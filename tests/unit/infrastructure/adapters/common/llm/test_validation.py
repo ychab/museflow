@@ -7,6 +7,7 @@ import pytest
 
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMFailureKind
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
+from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionResponse
 from museflow.infrastructure.adapters.common.llm.validation import parse_completion
 
 
@@ -21,14 +22,10 @@ VALID_RESPONSE: dict[str, Any] = {
 
 
 class TestParseCompletion:
-    def test__valid_reply__returns_model_and_logs_used_model(self, caplog: pytest.LogCaptureFixture) -> None:
-        with caplog.at_level(logging.DEBUG):
-            result = parse_completion(VALID_RESPONSE, Answer, "test")
+    def test__valid_reply__returns_model(self) -> None:
+        result = parse_completion(ChatCompletionResponse.model_validate(VALID_RESPONSE), Answer, "test")
 
         assert result == Answer(value=42)
-        (record,) = caplog.records
-        assert record.levelno == logging.DEBUG
-        assert record.__dict__["model"] == "google/gemini-2.5-flash"
 
     @pytest.mark.parametrize(
         ("response_data", "expected_kind", "expected_finish_reason", "expected_detail"),
@@ -91,7 +88,7 @@ class TestParseCompletion:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         with caplog.at_level(logging.WARNING), pytest.raises(LLMResponseError) as exc_info:
-            parse_completion(response_data, Answer, "test")
+            parse_completion(ChatCompletionResponse.model_validate(response_data), Answer, "test")
 
         assert exc_info.value.adapter == "test"
         assert exc_info.value.failure_kind == expected_kind
@@ -132,7 +129,7 @@ class TestParseCompletion:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         with caplog.at_level(logging.DEBUG), pytest.raises(LLMResponseError) as exc_info:
-            parse_completion(response_data, Answer, "test")
+            parse_completion(ChatCompletionResponse.model_validate(response_data), Answer, "test")
 
         assert exc_info.value.failure_kind == expected_kind
         assert exc_info.value.finish_reason == "stop"

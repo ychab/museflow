@@ -12,6 +12,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
@@ -39,13 +40,14 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 # --- LLM ---
 
 
-def get_openrouter_client() -> OpenRouterClient:
+def get_openrouter_client(meter: LLMUsageMeter | None = None) -> OpenRouterClient:
     return OpenRouterClient(
         api_key=openrouter_settings.API_KEY.get_secret_value(),
         base_url=openrouter_settings.BASE_URL,
         timeout=openrouter_settings.HTTP_TIMEOUT,
         max_retry_wait=openrouter_settings.HTTP_MAX_RETRY_WAIT,
         zdr=openrouter_settings.ZDR,
+        meter=meter,
     )
 
 
@@ -69,8 +71,8 @@ async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
 
 
 @asynccontextmanager
-async def get_advisor(model: str | None = None) -> AsyncGenerator[AdvisorPort]:
-    client = get_openrouter_client()
+async def get_advisor(model: str | None = None, meter: LLMUsageMeter | None = None) -> AsyncGenerator[AdvisorPort]:
+    client = get_openrouter_client(meter)
     llm = openrouter_settings.ADVISOR.with_model(model)
 
     async with OpenRouterAdvisorAdapter(client=client, llm=llm) as advisor:
@@ -79,8 +81,11 @@ async def get_advisor(model: str | None = None) -> AsyncGenerator[AdvisorPort]:
 
 
 @asynccontextmanager
-async def get_enricher(model: str | None = None) -> AsyncGenerator[TrackEnricherPort]:
-    client = get_openrouter_client()
+async def get_enricher(
+    model: str | None = None,
+    meter: LLMUsageMeter | None = None,
+) -> AsyncGenerator[TrackEnricherPort]:
+    client = get_openrouter_client(meter)
     llm = openrouter_settings.ENRICHER.with_model(model)
 
     async with OpenRouterTrackEnricherAdapter(client=client, llm=llm) as enricher:
@@ -93,8 +98,9 @@ async def get_profiler(
     segment_model: str | None = None,
     merge_model: str | None = None,
     reflect_model: str | None = None,
+    meter: LLMUsageMeter | None = None,
 ) -> AsyncGenerator[TasteProfilerPort]:
-    client = get_openrouter_client()
+    client = get_openrouter_client(meter)
     segment_llm = openrouter_settings.PROFILER_SEGMENT.with_model(segment_model)
     merge_llm = openrouter_settings.PROFILER_MERGE.with_model(merge_model)
     reflect_llm = openrouter_settings.PROFILER_REFLECT.with_model(reflect_model)

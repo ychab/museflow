@@ -25,6 +25,7 @@ from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
+from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
 
@@ -274,6 +275,40 @@ class TestDiscoverCommand:
 
         output = clean_typer_text(result.stderr)
         assert "Auth token not found with email: test@example.com. Did you forget to connect?" in output
+
+    def test__usage__printed_after_the_tracks(
+        self,
+        mock_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        strategy = DiscoveryTasteStrategyFactory.build()
+
+        async def discover(**kwargs: Any) -> DiscoverTasteResult:
+            spend(kwargs["meter"])
+            return DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
+
+        mock_discover_logic.side_effect = discover
+
+        result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--dry-run"])
+        assert result.exit_code == 0
+        assert result.output.index("dry-run mode") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
+
+    def test__no_new_track__usage_printed(
+        self,
+        mock_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        async def discover(**kwargs: Any) -> DiscoverTasteResult:
+            spend(kwargs["meter"])
+            raise DiscoveryTrackNoNew()
+
+        mock_discover_logic.side_effect = discover
+
+        result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
+        assert result.exit_code == 1
+        assert result.output.index("No new tracks found") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
 
     def test__taste_profile_not_found(
         self,
