@@ -167,7 +167,7 @@ def mock_get_profiler(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    profiler = mock.AsyncMock(spec=TasteProfilerPort)
+    profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[])
     with mock_async_context_dependency_factory(f"{target_path}.get_profiler", profiler) as mock_profiler:
         yield mock_profiler
 
@@ -177,7 +177,7 @@ def mock_get_enricher(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
-    enricher = mock.AsyncMock(spec=TrackEnricherPort)
+    enricher = mock.AsyncMock(spec=TrackEnricherPort, usages=[])
     with mock_async_context_dependency_factory(f"{target_path}.get_enricher", enricher) as mock_enricher:
         yield mock_enricher
 

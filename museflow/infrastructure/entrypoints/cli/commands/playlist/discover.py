@@ -1,5 +1,4 @@
 import asyncio
-import uuid
 from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
@@ -14,7 +13,6 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import GenreTag
-from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -31,7 +29,6 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oa
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.llm_usage import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.llm_usage import save_llm_usage
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 console = Console()
@@ -217,7 +214,7 @@ async def discover_logic(
         provider: The music provider to use for search and playlist creation.
         config: The configuration for the discovery process.
         model: An OpenRouter model id overriding the configured advisor model.
-        meter: Collects the tokens and cost of the advisor calls, saved to the history even on a failure.
+        meter: Collects the tokens and cost of the advisor calls.
 
     Returns:
         A DiscoverTasteResult with the playlist, strategy, reports, and final tracks.
@@ -254,17 +251,4 @@ async def discover_logic(
             reconciler=reconciler,
         )
 
-        playlist_id: uuid.UUID | None = None
-        try:
-            result = await use_case.create_suggestions_playlist(user=user, config=config)
-            playlist_id = result.playlist.id if result.playlist else None
-            return result
-        finally:
-            await save_llm_usage(
-                user_id=user.id,
-                operation=LLMOperation.DISCOVER,
-                meter=meter,
-                uow=uow,
-                profile_name=config.profile_name,
-                playlist_id=playlist_id,
-            )
+        return await use_case.create_suggestions_playlist(user=user, config=config)

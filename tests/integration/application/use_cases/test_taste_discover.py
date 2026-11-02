@@ -1,3 +1,6 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
@@ -5,8 +8,10 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
+from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
@@ -30,10 +35,11 @@ class TestDiscoverTasteUseCase:
 
     async def test__nominal(
         self,
+        async_session_db: AsyncSession,
         use_case: DiscoverTasteUseCase,
         user: User,
     ) -> None:
-        await TasteProfileModelFactory.create_async(user_id=user.id)
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
         result = await use_case.create_suggestions_playlist(
             user=user,
@@ -51,12 +57,20 @@ class TestDiscoverTasteUseCase:
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
         assert len(result.tracks) >= 1
 
+        row = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalar_one()
+        assert (row.operation, row.step) == (LLMOperation.DISCOVER, "advisor")
+        assert row.profile_id == profile_db.id
+        assert row.playlist_id == result.playlist.id
+
     async def test__dry_run(
         self,
+        async_session_db: AsyncSession,
         use_case: DiscoverTasteUseCase,
         user: User,
     ) -> None:
-        await TasteProfileModelFactory.create_async(user_id=user.id)
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
         result = await use_case.create_suggestions_playlist(
             user=user,
@@ -70,3 +84,9 @@ class TestDiscoverTasteUseCase:
         assert result.playlist is None
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
+
+        row = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalar_one()
+        assert row.profile_id == profile_db.id
+        assert row.playlist_id is None

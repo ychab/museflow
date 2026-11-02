@@ -7,6 +7,7 @@ from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
+from museflow.domain.value_objects.llm import LLMUsage
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
 
@@ -17,6 +18,12 @@ class AdvisorPort(ABC):
     @abstractmethod
     def display_name(self) -> str:
         """The display name of the advisor."""
+        ...
+
+    @property
+    @abstractmethod
+    def usages(self) -> list[LLMUsage]:
+        """Tokens and cost of the calls made since the adapter was created, per step and model."""
         ...
 
     @abstractmethod

@@ -20,6 +20,7 @@ from tenacity import retry_if_exception
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
+from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMModelError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
@@ -123,7 +124,12 @@ class OpenRouterClient(HttpClientMixin):
         self._api_key = api_key
         self._max_retry_wait = max_retry_wait
         self._zdr = zdr
-        self._meter = meter
+        # The caller passes its own meter to read it even after the adapter is gone.
+        self._meter = meter or LLMUsageMeter()
+
+    @property
+    def usages(self) -> list[LLMUsage]:
+        return self._meter.usages
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),
@@ -309,7 +315,6 @@ class OpenRouterClient(HttpClientMixin):
             extra={"adapter": adapter, "model": model, "cost": usage.cost},
         )
         # Recorded before parsing: an unusable reply is billed too
-        if self._meter is not None:
-            self._meter.record(adapter, model, usage)
+        self._meter.record(adapter, model, usage)
 
         return parse_completion(envelope, response_model, adapter)

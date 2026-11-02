@@ -8,6 +8,8 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
+from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
@@ -67,6 +69,15 @@ class TestBuildTasteProfileUseCase:
         stmt = select(func.count()).where(TasteProfileModel.user_id == user.id)
         count = (await async_session_db.execute(stmt)).scalar_one()
         assert count == 1
+
+        rows = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalars()
+        assert {(row.operation, row.step, row.profile_id) for row in rows} == {
+            (LLMOperation.TASTE_BUILD, "profiler segment", profile.id),
+            (LLMOperation.TASTE_BUILD, "profiler merge", profile.id),
+            (LLMOperation.TASTE_BUILD, "profiler reflect", profile.id),
+        }
 
     async def test__upsert(
         self,

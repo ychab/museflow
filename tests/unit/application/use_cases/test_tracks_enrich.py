@@ -10,6 +10,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import EnricherRateLimitExceeded
 from museflow.domain.exceptions import EnricherUnavailableException
@@ -18,6 +19,7 @@ from museflow.domain.exceptions import TrackEnrichmentException
 from museflow.domain.value_objects.track import TrackEnrichment
 
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.llm import LLMUsageFactory
 from tests.unit.factories.value_objects.track import TrackEnrichmentFactory
 
 
@@ -188,11 +190,14 @@ class TestEnrichTracksUseCase:
         mock_uow: mock.AsyncMock,
         user: User,
         mock_track_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
         error: Exception,
     ) -> None:
         tracks = TrackFactory.batch(6)
         mock_track_repository.get_list.return_value = tracks
+        # The batches billed before the abort.
+        mock_enricher.usages = [LLMUsageFactory.build()]
         mock_enricher.enrich_tracks.side_effect = [
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[:2]],
             error,
@@ -205,6 +210,8 @@ class TestEnrichTracksUseCase:
         assert exc_info.value.enriched_count == 2
         assert mock_enricher.enrich_tracks.await_count == 2
         mock_track_repository.bulk_update.assert_awaited_once()
+        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        assert (record.operation, record.usage) == (LLMOperation.ENRICH, mock_enricher.usages[0])
 
     async def test__consecutive_failures__abort_at_threshold(
         self,
