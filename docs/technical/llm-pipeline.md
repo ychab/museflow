@@ -109,7 +109,7 @@ Design decisions:
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
 | Liked tracks | Tracks rated 7 or more, at most 200 | Concrete taste anchors beyond statistics |
 
-**Quality over quantity** is stated in the prompt: only return a track if confidence would be at least 0.7, and return fewer than the requested limit rather than pad. This is an instruction to the model, not a post-filter in code; the confidence values are used afterwards for ranking. The strategy response is constrained by a strict JSON schema and validated into Pydantic models.
+**Quality over quantity** is stated in the prompt: only return a track if confidence would be at least 0.7, and return fewer than the requested limit rather than pad. This is an instruction to the model, not a post-filter in code; the confidence values are used afterwards for ranking. The prompt also asks for real, released recordings only, with their exact title and the primary artist first: the catalogue search filters on that artist, and an invented title finds no candidate, so the suggestion is lost. The strategy response is constrained by a strict JSON schema and validated into Pydantic models.
 
 ## Reconciler: from suggestion to catalogue track
 
