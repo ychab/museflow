@@ -1,5 +1,6 @@
 import logging
 import math
+import uuid
 from dataclasses import dataclass
 from dataclasses import replace
 from datetime import UTC
@@ -13,11 +14,14 @@ from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
 from museflow.application.utils.discovery import reconcile_tracks
+from museflow.application.utils.llm_usage import record_llm_usage
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -104,6 +108,30 @@ class DiscoverTasteUseCase:
                 limit=config.liked_tracks_limit,
             )
 
+        # What the advisor spent is saved whatever the outcome: a failed discovery was billed too.
+        playlist_id: uuid.UUID | None = None
+        try:
+            result = await self._discover(user, config, profile, blacklist, liked_tracks)
+            playlist_id = result.playlist.id if result.playlist else None
+        finally:
+            await record_llm_usage(
+                user_id=user.id,
+                operation=LLMOperation.DISCOVER,
+                usages=self._advisor.usages,
+                uow=self._uow,
+                profile_name=profile.name,
+                playlist_id=playlist_id,
+            )
+        return result
+
+    async def _discover(
+        self,
+        user: User,
+        config: DiscoverTasteConfigInput,
+        profile: TasteProfile,
+        blacklist: UserBlacklist,
+        liked_tracks: list[Track],
+    ) -> DiscoverTasteResult:
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
 

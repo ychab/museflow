@@ -8,7 +8,6 @@ import typer
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
@@ -18,7 +17,6 @@ from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.llm_usage import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.llm_usage import save_llm_usage
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -141,13 +139,4 @@ async def build_logic(
             throttling_sleep_seconds=app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS,
         )
 
-        try:
-            return await use_case.build_profile(user=user, config=config)
-        finally:
-            await save_llm_usage(
-                user_id=user.id,
-                operation=LLMOperation.TASTE_BUILD,
-                meter=meter,
-                uow=uow,
-                profile_name=name,
-            )
+        return await use_case.build_profile(user=user, config=config)

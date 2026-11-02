@@ -1,3 +1,6 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
@@ -6,6 +9,8 @@ from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.domain.enums import LLMOperation
+from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -15,6 +20,7 @@ from tests.integration.factories.models.track import TrackModelFactory
 class TestTracksEnrichUseCase:
     async def test__nominal(
         self,
+        async_session_db: AsyncSession,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
@@ -36,6 +42,11 @@ class TestTracksEnrichUseCase:
         assert enriched.id == track_db.id
         assert enriched.genres == [GenreTag.FOLK, GenreTag.INDIE_FOLK]
         assert enriched.moods == ["chill"]
+
+        row = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalar_one()
+        assert (row.operation, row.step, row.calls) == (LLMOperation.ENRICH, "enricher", 1)
 
     async def test__unenriched_only__skips_already_enriched(
         self,

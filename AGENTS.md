@@ -112,6 +112,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   a new port goes next to the others, never at the end.
 - No single-letter names, except in comprehensions, lambdas, loop indexes and `except ... as e`.
 - Group module members by kind (private functions, then classes); never class/function/class.
+- No `return` inside a `try` block that has a `finally:`: assign the result in the `try`, then return it after the
+  statement, so the exit point stays visible.
 - No duplicated inner functions: a closure repeated in several places becomes a decorator or shared helper
   (e.g. `@self_heal`).
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
