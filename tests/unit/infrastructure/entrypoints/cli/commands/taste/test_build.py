@@ -241,7 +241,7 @@ class TestTasteBuildCommand:
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
-        assert result.output.index("Taste profile built") < result.output.index("LLM usage")
+        assert result.output.index("Taste profile built") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__paused__usage_printed(
@@ -257,7 +257,7 @@ class TestTasteBuildCommand:
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
-        assert result.output.index("Build paused") < result.output.index("LLM usage")
+        assert result.output.index("Build paused") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__generic_exception(

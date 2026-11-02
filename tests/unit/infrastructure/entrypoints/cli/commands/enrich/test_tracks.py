@@ -91,7 +91,7 @@ class TestEnrichTracksCommand:
 
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
-        assert result.output.index("Enriched 5 track(s)") < result.output.index("LLM usage")
+        assert result.output.index("Enriched 5 track(s)") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__aborted__usage_printed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
@@ -103,7 +103,7 @@ class TestEnrichTracksCommand:
 
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 1
-        assert result.output.index("Enrichment stopped") < result.output.index("LLM usage")
+        assert result.output.index("Enrichment stopped") < result.output.index("LLM cost")
         assert "$0.0123" in result.output
 
     def test__no_tracks(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
