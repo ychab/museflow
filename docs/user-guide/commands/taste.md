@@ -86,6 +86,26 @@ museflow taste view --email user@example.com --name my-profile --format html
 
 `html` writes a report to a file and opens it in the default browser.
 
+## `taste delete`
+
+Deletes one profile.
+
+```bash
+museflow taste delete --email <email> --name <name> [--yes]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | required | User email address. |
+| `--name` | required | Profile name (unique per user). |
+| `--yes`, `-y` | `false` | Skip the confirmation prompt. |
+
+**Output.** `Taste profile '<name>' deleted.`, or an error if no profile has that name. Discovery playlists built from
+the profile are kept; they only lose their link to it. A paused build is deleted with its checkpoint.
+
+!!! warning
+    Recreating a profile takes a full LLM build. Run [`taste export`](#taste-export) first if you may need it again.
+
 ## `taste export`
 
 Exports a profile to a YAML file, for backup or transfer.

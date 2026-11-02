@@ -21,6 +21,9 @@ class TasteProfileRepository(ABC):
     async def upsert(self, profile: TasteProfile) -> TasteProfile: ...
 
     @abstractmethod
+    async def delete(self, user_id: uuid.UUID, name: str) -> bool: ...
+
+    @abstractmethod
     async def save_checkpoint(
         self,
         user_id: uuid.UUID,

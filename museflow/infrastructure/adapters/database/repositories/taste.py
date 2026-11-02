@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -74,6 +75,17 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         await self.session.flush()
 
         return profile_db.to_entity()
+
+    async def delete(self, user_id: uuid.UUID, name: str) -> bool:
+        stmt = (
+            delete(TasteProfileModel)
+            .where(TasteProfileModel.user_id == user_id, TasteProfileModel.name == name)
+            .returning(TasteProfileModel.id)
+        )
+        result = await self.session.execute(stmt)
+        deleted = result.scalar_one_or_none() is not None
+        await self.session.flush()
+        return deleted
 
     async def save_checkpoint(
         self,
