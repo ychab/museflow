@@ -1,7 +1,10 @@
+from decimal import Decimal
+
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRequest
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionResponse
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
 from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
@@ -81,3 +84,4 @@ class TestChatCompletionResponse:
         assert response.choices[0].message is not None
         assert response.choices[0].message.content == "{}"
         assert response.choices[0].finish_reason == "stop"
+        assert response.usage == ChatUsage(cost=Decimal("0.0001"))

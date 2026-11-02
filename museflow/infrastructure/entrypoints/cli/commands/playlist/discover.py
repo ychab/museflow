@@ -20,6 +20,7 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import TasteProfileStatusNotReadyException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
@@ -28,6 +29,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oa
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 console = Console()
 
@@ -92,6 +94,7 @@ def discover(
     ),
 ) -> None:
     """Discover new tracks guided by your AI taste profile."""
+    meter = LLMUsageMeter()
     try:
         result = asyncio.run(
             discover_logic(
@@ -114,6 +117,7 @@ def discover(
                     max_tracks_per_artist=max_tracks_per_artist,
                     dry_run=dry_run,
                 ),
+                meter=meter,
             ),
         )
     except UserNotFound as e:
@@ -139,59 +143,61 @@ def discover(
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-
-    console.print(
-        Panel(
-            result.strategy.reasoning,
-            title=result.strategy.strategy_label,
-            border_style="blue",
-        )
-    )
-
-    report_table = Table(title="Discovery Report")
-    report_table.add_column("Attempt", justify="right")
-    report_table.add_column("Suggested", justify="right")
-    report_table.add_column("Survived", justify="right")
-    report_table.add_column("New", justify="right")
-    for report in result.reports:
-        report_table.add_row(
-            str(report.attempt),
-            str(report.tracks_suggested),
-            str(report.tracks_survived),
-            str(report.tracks_new),
-        )
-    console.print(report_table)
-
-    track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
-    track_table.add_column("#", justify="right", style="dim")
-    track_table.add_column("Artist(s)")
-    track_table.add_column("Track")
-    track_table.add_column("Album", style="dim")
-    for i, track in enumerate(result.tracks, start=1):
-        artists = ", ".join(track.artists)
-        album_name = track.album_name or ""
-        track_table.add_row(str(i), artists, track.name, album_name)
-    console.print(track_table)
-
-    if result.playlist is None:
-        typer.secho(
-            "\n\nTracks discovered but playlist not created (dry-run mode) ⚠️",
-            fg=typer.colors.YELLOW,
-        )
     else:
-        typer.secho(
-            f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
-            fg=typer.colors.GREEN,
+        console.print(
+            Panel(
+                result.strategy.reasoning,
+                title=result.strategy.strategy_label,
+                border_style="blue",
+            )
         )
-        typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
-        typer.secho(
-            f"  View it: museflow playlist view {result.playlist.id} --email {email}",
-            fg=typer.colors.CYAN,
-        )
-        typer.secho(
-            f"  Rate tracks: museflow rate playlist --email {email} --play",
-            fg=typer.colors.CYAN,
-        )
+
+        report_table = Table(title="Discovery Report")
+        report_table.add_column("Attempt", justify="right")
+        report_table.add_column("Suggested", justify="right")
+        report_table.add_column("Survived", justify="right")
+        report_table.add_column("New", justify="right")
+        for report in result.reports:
+            report_table.add_row(
+                str(report.attempt),
+                str(report.tracks_suggested),
+                str(report.tracks_survived),
+                str(report.tracks_new),
+            )
+        console.print(report_table)
+
+        track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
+        track_table.add_column("#", justify="right", style="dim")
+        track_table.add_column("Artist(s)")
+        track_table.add_column("Track")
+        track_table.add_column("Album", style="dim")
+        for i, track in enumerate(result.tracks, start=1):
+            artists = ", ".join(track.artists)
+            album_name = track.album_name or ""
+            track_table.add_row(str(i), artists, track.name, album_name)
+        console.print(track_table)
+
+        if result.playlist is None:
+            typer.secho(
+                "\n\nTracks discovered but playlist not created (dry-run mode) ⚠️",
+                fg=typer.colors.YELLOW,
+            )
+        else:
+            typer.secho(
+                f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
+                fg=typer.colors.GREEN,
+            )
+            typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
+            typer.secho(
+                f"  View it: museflow playlist view {result.playlist.id} --email {email}",
+                fg=typer.colors.CYAN,
+            )
+            typer.secho(
+                f"  Rate tracks: museflow rate playlist --email {email} --play",
+                fg=typer.colors.CYAN,
+            )
+    finally:
+        print_llm_usage(meter)
 
 
 async def discover_logic(
@@ -199,6 +205,7 @@ async def discover_logic(
     provider: MusicProvider,
     config: DiscoverTasteConfigInput,
     model: str | None = None,
+    meter: LLMUsageMeter | None = None,
 ) -> DiscoverTasteResult:
     """Discovers new music guided by the user's taste profile and creates a playlist.
 
@@ -207,6 +214,7 @@ async def discover_logic(
         provider: The music provider to use for search and playlist creation.
         config: The configuration for the discovery process.
         model: An OpenRouter model id overriding the configured advisor model.
+        meter: Collects the tokens and cost of the advisor calls.
 
     Returns:
         A DiscoverTasteResult with the playlist, strategy, reports, and final tracks.
@@ -233,7 +241,7 @@ async def discover_logic(
         provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
         provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
-        advisor = await stack.enter_async_context(get_advisor(model))
+        advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
         reconciler = get_reconciler()
 
         use_case = DiscoverTasteUseCase(

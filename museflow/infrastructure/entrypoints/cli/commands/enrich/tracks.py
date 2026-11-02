@@ -11,10 +11,12 @@ from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.usage import print_llm_usage
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -36,6 +38,7 @@ def enrich(
     ),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
+    meter = LLMUsageMeter()
     try:
         result = asyncio.run(
             enrich_logic(
@@ -47,6 +50,7 @@ def enrich(
                 batch_size=batch_size,
                 model=model,
                 limit=limit,
+                meter=meter,
             )
         )
     except UserNotFound as e:
@@ -65,22 +69,24 @@ def enrich(
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
+    else:
+        if result.enriched_count == 0 and result.error_count == 0:
+            typer.secho("No tracks to enrich.", fg=typer.colors.YELLOW)
+            return
 
-    if result.enriched_count == 0 and result.error_count == 0:
-        typer.secho("No tracks to enrich.", fg=typer.colors.YELLOW)
-        return
+        if result.enriched_count == 0:
+            typer.secho(
+                f"No track enriched: {result.error_count} batch(es) failed — check logs for details.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=1)
 
-    if result.enriched_count == 0:
-        typer.secho(
-            f"No track enriched: {result.error_count} batch(es) failed — check logs for details.",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
-    typer.secho(f"Enriched {result.enriched_count} track(s).", fg=typer.colors.GREEN)
-    if result.error_count:
-        typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
+        typer.secho(f"Enriched {result.enriched_count} track(s).", fg=typer.colors.GREEN)
+        if result.error_count:
+            typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
+    finally:
+        print_llm_usage(meter)
 
 
 async def enrich_logic(
@@ -92,6 +98,7 @@ async def enrich_logic(
     batch_size: int = 200,
     model: str | None = None,
     limit: int | None = None,
+    meter: LLMUsageMeter | None = None,
 ) -> EnrichTracksReport:
     selected = {
         f
@@ -107,7 +114,7 @@ async def enrich_logic(
     config = EnrichTracksConfigInput(fields=fields, force=force, batch_size=batch_size, limit=limit)
 
     async with AsyncExitStack() as stack:
-        enricher = await stack.enter_async_context(get_enricher(model=model))
+        enricher = await stack.enter_async_context(get_enricher(model=model, meter=meter))
 
         uow = get_unit_of_work()
         async with uow:

@@ -17,6 +17,7 @@ from museflow.infrastructure.entrypoints.cli.main import app
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
+from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 
 class TestTasteBuildParserCommand:
@@ -225,6 +226,39 @@ class TestTasteBuildCommand:
         assert "Build paused at batch 4/25" in output
         assert "rate limit exceeded" in output
         assert "--resume" in output
+
+    def test__usage__printed_after_the_profile(
+        self,
+        mock_build_logic: mock.AsyncMock,
+        taste_profile: TasteProfile,
+        runner: CliRunner,
+    ) -> None:
+        async def build(**kwargs: Any) -> TasteProfile:
+            spend(kwargs["meter"])
+            return taste_profile
+
+        mock_build_logic.side_effect = build
+
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        assert result.exit_code == 0
+        assert result.output.index("Taste profile built") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
+
+    def test__paused__usage_printed(
+        self,
+        mock_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+    ) -> None:
+        async def build(**kwargs: Any) -> TasteProfile:
+            spend(kwargs["meter"])
+            raise TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
+
+        mock_build_logic.side_effect = build
+
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        assert result.exit_code == 1
+        assert result.output.index("Build paused") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
 
     def test__generic_exception(
         self,

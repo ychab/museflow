@@ -26,7 +26,9 @@ from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestErr
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionError
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRequest
+from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionResponse
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.schemas import ErrorResponse
 from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ModelCatalogResponse
@@ -35,6 +37,7 @@ from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
 from museflow.infrastructure.adapters.common.llm.schemas import ResponseFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ZdrEndpointsResponse
 from museflow.infrastructure.adapters.common.llm.self_heal import self_heal
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.common.llm.utils import parse_retry_after
 from museflow.infrastructure.adapters.common.llm.validation import parse_completion
 from museflow.infrastructure.adapters.http import HttpClientMixin
@@ -110,6 +113,7 @@ class OpenRouterClient(HttpClientMixin):
         verify_ssl: bool = True,
         max_retry_wait: int = 60,
         zdr: bool = True,
+        meter: LLMUsageMeter | None = None,
     ) -> None:
         super().__init__(
             base_url=base_url or openrouter_settings.BASE_URL,
@@ -119,6 +123,7 @@ class OpenRouterClient(HttpClientMixin):
         self._api_key = api_key
         self._max_retry_wait = max_retry_wait
         self._zdr = zdr
+        self._meter = meter
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),
@@ -296,4 +301,15 @@ class OpenRouterClient(HttpClientMixin):
                 ),
             ) from e
 
-        return parse_completion(response_data, response_model, adapter)
+        envelope = ChatCompletionResponse.model_validate(response_data)
+        model = envelope.model or llm.MODEL
+        usage = envelope.usage or ChatUsage()
+        logger.debug(
+            f"LLM {adapter} reply from {model} (cost: {usage.cost})",
+            extra={"adapter": adapter, "model": model, "cost": usage.cost},
+        )
+        # Recorded before parsing: an unusable reply is billed too
+        if self._meter is not None:
+            self._meter.record(adapter, model, usage)
+
+        return parse_completion(envelope, response_model, adapter)

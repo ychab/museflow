@@ -147,10 +147,10 @@ Three independent layers, each handling a different failure class:
 @self_heal()
 async def complete[T: BaseModel](self, messages, /, *, response_model, schema, llm, adapter) -> T:
     ...
-    return parse_completion(response_data, response_model, adapter)
+    return parse_completion(envelope, response_model, adapter)
 ```
 
-`parse_completion` turns the raw HTTP body into the response model or raises `LLMResponseError` with a failure kind. `@self_heal` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/self_heal.py)) wraps the call: on a self-healable failure it appends two turns to the conversation, the model's own invalid text (role `assistant`) and a user message `Your previous response is invalid: <detail>. Return only the corrected JSON conforming to the schema.`, and calls again, for at most `OPENROUTER_VALIDATION_MAX_RETRIES` extra attempts (default 2, so up to 3 calls). Exhaustion logs an error and re-raises. A recovery logs a warning so the rate of invalid replies stays observable. With strict schemas enforced by the provider, these failures should become rare; the logs will tell whether the decorator still earns its place.
+`parse_completion` turns the reply into the response model or raises `LLMResponseError` with a failure kind. `@self_heal` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/self_heal.py)) wraps the call: on a self-healable failure it appends two turns to the conversation, the model's own invalid text (role `assistant`) and a user message `Your previous response is invalid: <detail>. Return only the corrected JSON conforming to the schema.`, and calls again, for at most `OPENROUTER_VALIDATION_MAX_RETRIES` extra attempts (default 2, so up to 3 calls). Exhaustion logs an error and re-raises. A recovery logs a warning so the rate of invalid replies stays observable. With strict schemas enforced by the provider, these failures should become rare; the logs will tell whether the decorator still earns its place.
 
 It is a decorator, in the spirit of tenacity's `@retry`, so it can be removed with no other change, and it sits on the one method the three adapters share. It was introduced in commit `a8ad2dc`, on the Gemini adapters, and moved to the OpenRouter client unchanged.
 
@@ -163,3 +163,24 @@ Failure surfaces differ by component, on purpose: the advisor and profiler trans
 Whatever the component, an OpenRouter rejection is logged as a warning, without traceback, and its message carries the cause: OpenRouter's message, followed by the upstream provider's own error (`error.metadata.raw`, cut to 300 characters) when there is one, since OpenRouter's message alone is often a generic "Provider returned error". A 401 adds a hint to check `OPENROUTER_API_KEY`. The input flagged by moderation (`metadata.flagged_input`) is never surfaced.
 
 Either stop raises `TrackEnrichmentAbortedException` with the batch reached and the tracks enriched so far. Every batch enriched before the stop is already saved, so a re-run picks up the tracks still missing a field.
+
+## Cost tracking
+
+OpenRouter returns a `usage` object with every non-streaming completion, with no request parameter needed:
+`prompt_tokens`, `completion_tokens` (reasoning included), `completion_tokens_details.reasoning_tokens` and `cost`, in
+OpenRouter credits (1 credit is 1 USD).
+
+`OpenRouterClient.complete` reads it from each reply and adds it to an `LLMUsageMeter`
+([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/usage.py)). The meter
+sums the calls, tokens and cost per step and model:
+
+- **Step**: `advisor`, `enricher`, or `profiler segment`, `profiler merge`, `profiler reflect`, so a build shows what
+  each phase costs.
+- **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
+- **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
+  since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
+
+The CLI creates the meter and passes it down to the client through the dependency factories. `taste build`,
+`playlist discover` and `enrich tracks` print it as a last table: one row per step and model, then the total. They
+print it whatever the outcome, including after a paused build, an aborted enrichment or a failed discovery, because
+those calls were paid too. The table is skipped when no call was made.

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from typing import Any
 from typing import Final
 from unittest import mock
 
@@ -9,10 +10,12 @@ from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
+from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.enrich.tracks"
 
@@ -78,6 +81,30 @@ class TestEnrichTracksCommand:
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "Enriched 5 track(s)" in result.output
+
+    def test__usage__printed_after_the_report(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        async def enrich(**kwargs: Any) -> EnrichTracksReport:
+            spend(kwargs["meter"])
+            return EnrichTracksReport(enriched_count=5, error_count=0)
+
+        mock_enrich_logic.side_effect = enrich
+
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        assert result.output.index("Enriched 5 track(s)") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
+
+    def test__aborted__usage_printed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+        async def enrich(**kwargs: Any) -> EnrichTracksReport:
+            spend(kwargs["meter"])
+            raise TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
+
+        mock_enrich_logic.side_effect = enrich
+
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert result.exit_code == 1
+        assert result.output.index("Enrichment stopped") < result.output.index("LLM usage")
+        assert "$0.0123" in result.output
 
     def test__no_tracks(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
         mock_enrich_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=0)
@@ -157,16 +184,17 @@ class TestEnrichTracksLogic:
         with pytest.raises(UserNotFound):
             await enrich_logic(email="unknown@example.com")
 
-    async def test__model__forwarded_to_enricher(
+    async def test__model_and_meter__forwarded_to_enricher(
         self,
         mock_track_repository: mock.AsyncMock,
         spy_get_enricher: mock.MagicMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
+        meter = LLMUsageMeter()
 
-        await enrich_logic(email="test@example.com", model="openai/gpt-5-mini")
+        await enrich_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
 
-        spy_get_enricher.assert_called_once_with(model="openai/gpt-5-mini")
+        spy_get_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
 
     async def test__passes_config_to_use_case(
         self,
