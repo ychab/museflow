@@ -9,7 +9,6 @@ from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.enums import EnrichField
-from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -17,7 +16,6 @@ from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.llm_usage import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.llm_usage import save_llm_usage
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -126,7 +124,4 @@ async def enrich_logic(
             raise UserNotFound()
 
         use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher)
-        try:
-            return await use_case.enrich(user=user, config=config)
-        finally:
-            await save_llm_usage(user_id=user.id, operation=LLMOperation.ENRICH, meter=meter, uow=uow)
+        return await use_case.enrich(user=user, config=config)

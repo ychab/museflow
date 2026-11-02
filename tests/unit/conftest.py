@@ -220,7 +220,7 @@ def mock_streaming_history() -> mock.AsyncMock:
 
 @pytest.fixture
 def mock_advisor() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=AdvisorPort)
+    return mock.AsyncMock(spec=AdvisorPort, usages=[])
 
 
 # --- Service Mocks ---
@@ -233,7 +233,7 @@ def mock_reconciler() -> mock.Mock:
 
 @pytest.fixture
 def mock_enricher() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=TrackEnricherPort)
+    return mock.AsyncMock(spec=TrackEnricherPort, usages=[])
 
 
 # --- Adapters ---

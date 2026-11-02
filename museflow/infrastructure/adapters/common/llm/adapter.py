@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Self
 
+from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 
 
@@ -9,6 +10,10 @@ class OpenRouterAdapterMixin:
 
     def __init__(self, client: OpenRouterClient) -> None:
         self._client = client
+
+    @property
+    def usages(self) -> list[LLMUsage]:
+        return self._client.usages
 
     async def close(self) -> None:
         await self._client.close()

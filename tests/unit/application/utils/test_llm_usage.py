@@ -1,7 +1,9 @@
-import uuid
+import logging
 from unittest import mock
 
-from museflow.application.use_cases.llm_usage_record import record_llm_usage
+import pytest
+
+from museflow.application.utils.llm_usage import record_llm_usage
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 
@@ -41,24 +43,25 @@ class TestRecordLLMUsage:
         (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
         assert record.profile_id is None
 
-    async def test__playlist_not_found__recorded_without_profile(
+    async def test__failure__logged_not_raised(
         self,
         user: User,
         mock_uow: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
         mock_llm_usage_repository: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        playlist_id = uuid.uuid4()
-        mock_playlist_repository.get.return_value = None
+        mock_llm_usage_repository.add_many.side_effect = RuntimeError("database down")
 
-        await record_llm_usage(
-            user_id=user.id,
-            operation=LLMOperation.DISCOVER,
-            usages=[LLMUsageFactory.build()],
-            uow=mock_uow,
-            playlist_id=playlist_id,
-        )
+        with caplog.at_level(logging.ERROR):
+            await record_llm_usage(
+                user_id=user.id,
+                operation=LLMOperation.ENRICH,
+                usages=[LLMUsageFactory.build()],
+                uow=mock_uow,
+            )
 
-        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
-        assert record.profile_id is None
-        assert record.playlist_id == playlist_id
+        (record,) = caplog.records
+        assert record.getMessage() == "Failed to save the LLM usage"
+        assert record.__dict__["user_id"] == str(user.id)
+        assert record.__dict__["operation"] == "enrich"
+        assert record.exc_info is not None

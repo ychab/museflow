@@ -1,15 +1,7 @@
-import logging
-import uuid
-
 from rich.console import Console
 from rich.table import Table
 
-from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.llm_usage_record import record_llm_usage
-from museflow.domain.enums import LLMOperation
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-
-logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -39,28 +31,3 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
             f"${usage.cost:.4f}",
         )
     console.print(table)
-
-
-async def save_llm_usage(
-    user_id: uuid.UUID,
-    operation: LLMOperation,
-    meter: LLMUsageMeter | None,
-    uow: UnitOfWorkPort,
-    profile_name: str | None = None,
-    playlist_id: uuid.UUID | None = None,
-) -> None:
-    """Saves what the command spent; a failure is only logged, so it never hides the command's own outcome."""
-    if meter is None:
-        return
-
-    try:
-        await record_llm_usage(
-            user_id=user_id,
-            operation=operation,
-            usages=meter.usages,
-            uow=uow,
-            profile_name=profile_name,
-            playlist_id=playlist_id,
-        )
-    except Exception:
-        logger.exception("Failed to save the LLM usage", extra={"user_id": str(user_id), "operation": operation.value})

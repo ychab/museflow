@@ -186,13 +186,12 @@ print it whatever the outcome, including after a paused build, an aborted enrich
 those calls were paid too. The table is skipped when no call was made.
 
 The same totals are saved to `museflow_llm_usage`, one row per step and model, under a `run_id` shared by the rows of
-the run ([Data model](data-model.md#llm-usage)). Each `*_logic` saves them in a `finally:` block, through
-`record_llm_usage`, in a transaction of its own:
+the run ([Data model](data-model.md#llm-usage)). The advisor, profiler and enricher ports expose them as `usages`, and
+each use case saves them in a `finally:` block, through `record_llm_usage`, in a transaction of its own:
 
-- `taste build` links the rows to the profile, when a checkpoint or the finished profile exists;
-- `playlist discover` links them to the playlist it created, and to the profile named by `--name` or else the
-  playlist's;
-- `enrich tracks` links them to nothing.
+- `BuildTasteProfileUseCase` links the rows to the profile, once a checkpoint or the finished profile exists;
+- `DiscoverTasteUseCase` links them to the profile it used, and to the playlist it created (none on a dry run or a
+  failure);
+- `EnrichTracksUseCase` links them to nothing.
 
-Saving them never hides the command's outcome: a failure is logged and the command goes on with its own result or
-error.
+Saving them never hides the outcome: a failure is logged and the use case goes on with its own result or error.

@@ -5,9 +5,11 @@ from dataclasses import dataclass
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.utils.llm_usage import record_llm_usage
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
+from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import EnricherRateLimitExceeded
 from museflow.domain.exceptions import EnricherUnavailableException
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
@@ -40,6 +42,19 @@ class EnrichTracksUseCase:
                 limit), or after `max_consecutive_failures` failed batches in a row, since a failed batch may still be
                 billed.
         """
+        # What the enricher spent is saved whatever the outcome: an aborted run was billed too.
+        try:
+            report = await self._enrich(user, config)
+        finally:
+            await record_llm_usage(
+                user_id=user.id,
+                operation=LLMOperation.ENRICH,
+                usages=self._track_enricher.usages,
+                uow=self._uow,
+            )
+        return report
+
+    async def _enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
         missing_fields = None if config.force else config.fields
 
         async with self._uow as uow:
