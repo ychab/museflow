@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel
@@ -73,10 +74,22 @@ class ChatCompletionError(BaseModel):
     metadata: ErrorMetadata | None = None
 
 
+class CompletionTokensDetails(BaseModel):
+    reasoning_tokens: int | None = None
+
+
+class ChatUsage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0  # reasoning tokens included
+    completion_tokens_details: CompletionTokensDetails | None = None
+    cost: Decimal | None = None  # in OpenRouter credits, i.e. USD
+
+
 class ChatCompletionResponse(BaseModel):
     model: str | None = None  # the model actually used, which differs from the requested one on fallback
     choices: list[ChatChoice] = Field(default_factory=list)
     error: ChatCompletionError | None = None
+    usage: ChatUsage | None = None  # always sent by OpenRouter for non-streaming completions
 
 
 class ErrorResponse(BaseModel):

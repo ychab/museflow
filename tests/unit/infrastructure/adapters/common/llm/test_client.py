@@ -2,6 +2,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import Any
 from unittest import mock
 
@@ -14,6 +15,7 @@ from pydantic import HttpUrl
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.client import _is_retryable_error
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMModelError
@@ -21,6 +23,7 @@ from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitE
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.types import ReasoningEffort
@@ -77,6 +80,19 @@ class TestOpenRouterClient:
             api_key="dummy-api-key",
             base_url=HttpUrl("https://openrouter.test/api/v1/"),
             zdr=False,
+        ) as client:
+            yield client
+
+    @pytest.fixture
+    def meter(self) -> LLMUsageMeter:
+        return LLMUsageMeter()
+
+    @pytest.fixture
+    async def metered_client(self, meter: LLMUsageMeter) -> AsyncGenerator[OpenRouterClient]:
+        async with OpenRouterClient(
+            api_key="dummy-api-key",
+            base_url=HttpUrl("https://openrouter.test/api/v1/"),
+            meter=meter,
         ) as client:
             yield client
 
@@ -182,6 +198,75 @@ class TestOpenRouterClient:
         assert result == Answer(value=42)
         retried = json.loads(httpx_mock.get_requests()[1].content)
         assert [message["role"] for message in retried["messages"]] == ["user", "assistant", "user"]
+
+    async def test__complete__records_usage_of_every_reply(
+        self,
+        metered_client: OpenRouterClient,
+        meter: LLMUsageMeter,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        usage = {
+            "prompt_tokens": 100,
+            "completion_tokens": 40,
+            "completion_tokens_details": {"reasoning_tokens": 30},
+            "cost": 0.0015,
+        }
+        httpx_mock.add_response(url=URL, method="POST", json={**INVALID_RESPONSE, "usage": usage})
+        httpx_mock.add_response(url=URL, method="POST", json={**VALID_RESPONSE, "usage": usage})
+
+        with caplog.at_level(logging.DEBUG):
+            await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert meter.usages == [
+            LLMUsage(
+                step="test",
+                model="google/gemini-2.5-flash",
+                calls=2,
+                prompt_tokens=200,
+                completion_tokens=80,
+                reasoning_tokens=60,
+                cost=Decimal("0.0030"),
+            )
+        ]
+        costs = [record.__dict__["cost"] for record in caplog.records if "cost" in record.__dict__]
+        assert costs == [Decimal("0.0015"), Decimal("0.0015")]
+
+    async def test__complete__reply_without_model_nor_usage__records_a_free_call(
+        self,
+        metered_client: OpenRouterClient,
+        meter: LLMUsageMeter,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json={"choices": VALID_RESPONSE["choices"]})
+
+        await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert meter.usages == [LLMUsage(step="test", model="google/gemini-2.5-flash", calls=1)]
+
+    async def test__complete__rejected__records_nothing(
+        self,
+        metered_client: OpenRouterClient,
+        meter: LLMUsageMeter,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            status_code=codes.PAYMENT_REQUIRED,
+            json={"error": {"code": 402, "message": "Insufficient credits"}},
+        )
+
+        with pytest.raises(LLMRequestError):
+            await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
+
+        assert meter.usages == []
 
     async def test__complete__429_with_retry_after__sleeps_and_retries(
         self,

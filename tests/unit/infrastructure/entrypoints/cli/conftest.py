@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
+from decimal import Decimal
 from typing import Any
 from unittest import mock
 
@@ -15,6 +16,8 @@ from typer.testing import CliRunner
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
+from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 
 type ContextPatcher = AbstractContextManager[mock.Mock]
 
@@ -22,6 +25,11 @@ type DependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
 type AsyncDependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
 
 type TextCleaner = Callable[[str], str]
+
+
+def spend(meter: LLMUsageMeter) -> None:
+    """Records one paid reply, as the OpenRouter client does: the CLI tests mock the logic that would call it."""
+    meter.record("advisor", "google/gemini-2.5-flash", ChatUsage(prompt_tokens=1000, cost=Decimal("0.0123")))
 
 
 @pytest.fixture(autouse=True)
