@@ -48,7 +48,7 @@ museflow taste build --email user@example.com --name test --track-limit 200 --re
 
 **Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
 step (segment, merge, reflect), the number of eras, the personality archetype and the life-phase insights. Last, an
-`LLM usage` table gives the calls, tokens and cost per step and model, then the total. It is printed after a pause too,
+`LLM cost` table gives the calls, tokens and cost per step and model, then the total. It is printed after a pause too,
 since those calls were paid.
 
 ## `taste list`
