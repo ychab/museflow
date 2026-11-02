@@ -72,7 +72,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         ).returning(TasteProfileModel)
 
         profile_db = (await self.session.execute(upsert_stmt)).scalar_one()
-        await self.session.flush()
 
         return profile_db.to_entity()
 
@@ -84,7 +83,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         )
         result = await self.session.execute(stmt)
         deleted = result.scalar_one_or_none() is not None
-        await self.session.flush()
         return deleted
 
     async def save_checkpoint(
@@ -122,7 +120,6 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             },
         )
         await self.session.execute(upsert_stmt)
-        await self.session.flush()
 
     async def get_checkpoint(self, user_id: uuid.UUID, name: str) -> tuple[TasteProfileData, int] | None:
         stmt = select(TasteProfileModel).where(

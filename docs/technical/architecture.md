@@ -55,7 +55,7 @@ Two points are easy to miss:
 | `TasteProfilerPort` | `OpenRouterTasteProfileAdapter` |
 | `TrackEnricherPort` | `OpenRouterTrackEnricherAdapter` |
 | `UnitOfWorkPort` (one short transaction per `async with` block, gives access to the repositories) | `SQLUnitOfWork`, a new session per block |
-| `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over the block's `AsyncSession`; they flush, the unit of work commits |
+| `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over the block's `AsyncSession`; they never commit, the unit of work does |
 | `PasswordHasherPort`, `StateTokenGeneratorPort`, `AccessTokenManagerPort` | Argon2, a `random.SystemRandom` state-token generator, PyJWT |
 
 Where the vendor is an enum (`MusicProvider`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package. The LLM side needs no such switch: OpenRouter is the single adapter, and the vendor choice became a model setting per step ([LLM pipeline](llm-pipeline.md#model-choice-per-step)). The move from direct Gemini calls to the gateway replaced the adapters and the settings; the ports and the use cases did not change, apart from dropping the vendor enums.

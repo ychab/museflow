@@ -81,7 +81,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - `JSONB` and `ARRAY(String)` from `sqlalchemy.dialects.postgresql`; `@declared_attr` for dynamic `__table_args__`.
 - **Repositories** (canonical: `database/repositories/users.py`):
   - Take an `AsyncSession`; SQLAlchemy 2.0 `select/update/delete`; `.scalar_one_or_none()` / `.scalar_one()`.
-  - **Never commit**: `flush()` after mutations (then `refresh()` if needed). The unit of work commits.
+  - **Never commit**: the unit of work commits. The session has `autoflush=False`: `flush()` after ORM changes
+    (`session.add`, attribute changes) so constraints fail inside the method, then `refresh()` if needed. Statements
+    run with `session.execute(insert/update/delete)` hit the database at once and need no flush.
   - `.returning()` instead of an extra SELECT; key returned rows by a column (e.g. fingerprint), never by position.
   - Upserts with `pg_insert(...).on_conflict_do_update(...)`.
   - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.

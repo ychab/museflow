@@ -70,7 +70,6 @@ class PlaylistSQLRepository(PlaylistRepository):
         )
         result = await self.session.execute(stmt)
         deleted = result.scalar_one_or_none() is not None
-        await self.session.flush()
         return deleted
 
     async def purge(
@@ -87,5 +86,4 @@ class PlaylistSQLRepository(PlaylistRepository):
 
         result = await self.session.execute(stmt.returning(PlaylistDB.id))
         deleted_ids = result.scalars().all()
-        await self.session.flush()
         return len(deleted_ids)
