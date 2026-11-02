@@ -1,14 +1,22 @@
 from collections.abc import Iterable
 from unittest import mock
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
+
+from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 
 class TestEnrichTracksLogic:
@@ -40,3 +48,21 @@ class TestEnrichTracksLogic:
     async def test__user_not_found(self, mock_use_case: mock.Mock) -> None:
         with pytest.raises(UserNotFound):
             await enrich_logic(email="nobody@example.com")
+
+    async def test__usage_saved(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        mock_use_case: mock.Mock,
+    ) -> None:
+        meter = LLMUsageMeter()
+        spend(meter)
+
+        await enrich_logic(email=user.email, meter=meter)
+
+        row = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalar_one()
+        assert row.operation == LLMOperation.ENRICH
+        assert row.profile_id is None
+        assert row.playlist_id is None

@@ -25,6 +25,7 @@ Everything runs on the user's own machine; the only outbound traffic is to OpenR
 | Taste profiles | `museflow_taste_profile` | LLM-generated JSON, including a narrative summary of the listener |
 | Playlists and membership | `museflow_playlist`, `museflow_playlist_track` | Includes the reasoning and custom instructions used |
 | Blacklist | `museflow_blacklisted_*` | Artists and tracks the user excluded |
+| LLM usage | `museflow_llm_usage` | Calls, tokens and cost per command run, step and model; no prompt or reply content |
 | User | `museflow_user` | Email and Argon2 password hash |
 | Spotify OAuth tokens | `museflow_auth_token` | Access and refresh token |
 | Raw export files | Wherever the user keeps them | MuseFlow reads them, never copies or modifies them |
