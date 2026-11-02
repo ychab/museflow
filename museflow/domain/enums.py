@@ -58,6 +58,12 @@ class TrackOrderBy(StrEnum):
         return self in (TrackOrderBy.PLAYED_AT_LAST, TrackOrderBy.PLAYED_AT_FIRST, TrackOrderBy.SCORE)
 
 
+class LLMOperation(StrEnum):
+    TASTE_BUILD = "taste_build"  # `taste build`: segment, merge and reflect steps
+    DISCOVER = "discover"  # `playlist discover`: advisor calls
+    ENRICH = "enrich"  # `enrich tracks`: enricher batches
+
+
 class PlaylistHistoryOrderBy(StrEnum):
     PLAYED_COUNT = "played_count"  # Sort by how many times the track was played
     SCORE = "score"  # Sort by the track's rating score

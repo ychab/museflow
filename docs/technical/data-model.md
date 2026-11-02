@@ -11,9 +11,12 @@ erDiagram
     USER ||--o{ BLACKLISTED_TRACK : owns
     USER ||--o{ AUTH_TOKEN : owns
     USER ||--o{ AUTH_STATE : owns
+    USER ||--o{ LLM_USAGE : spent
     PLAYLIST ||--o{ PLAYLIST_TRACK : contains
     TRACK ||--o{ PLAYLIST_TRACK : appears_in
     TASTE_PROFILE |o--o{ PLAYLIST : guided
+    TASTE_PROFILE |o--o{ LLM_USAGE : cost
+    PLAYLIST |o--o{ LLM_USAGE : cost
 
     USER {
         uuid id PK
@@ -87,6 +90,21 @@ erDiagram
         int id PK
         string provider
         string state UK
+    }
+    LLM_USAGE {
+        uuid id PK
+        uuid user_id FK
+        uuid run_id
+        string operation
+        uuid profile_id FK
+        uuid playlist_id FK
+        string step
+        string model
+        int calls
+        int prompt_tokens
+        int completion_tokens
+        int reasoning_tokens
+        numeric cost
     }
 ```
 
@@ -176,6 +194,18 @@ A track's `genres` list is ordered `[macro, meso, micro?]`, so the first element
 Document storage fits because the profile is read and written as a whole, never queried by section, and its shape is owned by a prompt that will keep evolving. `logic_version` and `profiler_metadata` (the gateway and the model settings of each step) are stored beside it so a profile can be traced to the code and models that produced it.
 
 **Checkpointing** reuses the same row. While a build runs, each completed batch upserts the partial profile into `profile`, sets `status = BUILDING`, and records `checkpoint_profile` and `checkpoint_batch_index`. `--resume` reads the checkpoint and continues from the next batch. On completion the row becomes `FINISHED` and the checkpoint columns are cleared. `discover` refuses a profile that is still `BUILDING`.
+
+## LLM usage
+
+`museflow_llm_usage` keeps what the LLM calls cost: one row per command run, step and model, with the calls, tokens and
+cost (`NUMERIC(12, 6)`, in USD). `run_id` groups the rows of one run and `operation` (`LLMOperation`) names the command:
+`taste_build`, `discover` or `enrich`. Rows are written at the end of the command, whatever its outcome (see
+[Cost tracking](llm-pipeline.md#cost-tracking)).
+
+It is a table of its own rather than a `cost` column on the profile and the playlist, because some spending has no
+entity to carry it: an enrichment, a dry-run discovery, a failed one, a build paused before its first checkpoint.
+`profile_id` and `playlist_id` are nullable and use `ON DELETE SET NULL`, so deleting a profile or a playlist keeps
+its cost history. An index on `(user_id, created_at)` serves the per-user overview.
 
 ## Blacklist and authentication
 

@@ -1,14 +1,23 @@
 from collections.abc import Iterable
 from unittest import mock
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import pytest
 
 from museflow.domain.entities.user import User
+from museflow.domain.enums import LLMOperation
+from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
 
+from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
+from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 
 class TestTasteBuildLogic:
@@ -53,3 +62,33 @@ class TestTasteBuildLogic:
         steps: dict[str, LLMSettings] = mock_check_models.call_args.args[0]
         assert list(steps) == ["profiler segment", "profiler merge", "profiler reflect"]
         assert steps["profiler reflect"].MODEL == "anthropic/claude-sonnet-4.5"
+
+    async def test__paused__usage_saved(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        mock_use_case: mock.Mock,
+    ) -> None:
+        # The checkpoint of the paused build.
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
+        meter = LLMUsageMeter()
+        spend(meter)
+        mock_use_case.build_profile.side_effect = TasteProfileBuildPausedException(2, 5, "rate limited")
+
+        with pytest.raises(TasteProfileBuildPausedException):
+            await build_logic(
+                email=user.email,
+                name="my-profile",
+                resume=False,
+                rated_only=False,
+                track_limit=3000,
+                batch_size=200,
+                meter=meter,
+            )
+
+        row = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalar_one()
+        assert row.operation == LLMOperation.TASTE_BUILD
+        assert row.profile_id == profile_db.id
+        assert row.to_entity().usage == meter.usages[0]
