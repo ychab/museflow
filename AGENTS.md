@@ -39,6 +39,8 @@ museflow/
 │   └── types.py     # type aliases only
 ├── application/     # Orchestration — depends ONLY on domain
 │   ├── use_cases/
+│   ├── services/    # application services, shared by use cases (e.g., record_llm_usage)
+│   ├── utils/       # pure helpers shared by use cases
 │   ├── inputs/      # command/input schemas
 │   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security)
 └── infrastructure/  # Implements ports
@@ -62,6 +64,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   `<Feature>ConfigInput`.
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
   only when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`).
+- **Application services** (`services/`) hold orchestration shared by several use cases, ports included
+  (`services/llm_usage.py`). Only use cases call them, never an entrypoint; a use case never calls another use case.
+  Pure helpers without ports go in `utils/`.
 - Ports come in as parameters (DI). Never instantiate a repository in a use case: reach it through the unit of work
   (`uow.tracks`, `uow.playlists`, …).
 - **The use case owns the transactions.** Each `async with uow:` block is one short transaction: a clean exit commits,

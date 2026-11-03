@@ -14,6 +14,7 @@ flowchart TB
     subgraph APP["application (orchestration)"]
         direction TB
         UC["use_cases"]
+        ASVC["services: record_llm_usage"]
         PORTS["ports (ABCs)<br/>repositories, providers,<br/>advisors, profilers, enrichers, security"]
         INP["inputs (command schemas)"]
     end
@@ -25,6 +26,8 @@ flowchart TB
     end
     EP --> UC
     UC --> PORTS
+    UC --> ASVC
+    ASVC --> PORTS
     UC --> ENT
     UC --> SVC
     AD -.implements.-> PORTS
@@ -36,7 +39,7 @@ flowchart TB
 | Layer | Path | May import | Contains |
 |---|---|---|---|
 | Domain | `museflow/domain/` | the standard library and a few pure helpers (`rapidfuzz`, `unidecode`) | Frozen-dataclass entities, value objects, the `Reconciler` service, enums, constants, exceptions |
-| Application | `museflow/application/` | domain only | Use cases, input schemas, port interfaces (`abc.ABC`) |
+| Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, port interfaces (`abc.ABC`) |
 | Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
 
 Two points are easy to miss:
