@@ -13,8 +13,7 @@ from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
+from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -92,20 +91,11 @@ async def delete_logic(
             if not user:
                 raise UserNotFound()
 
-            auth_token = (
-                await uow.auth_tokens.get(user_id=user.id, provider=MusicProvider.SPOTIFY) if include_remote else None
-            )
-
         provider_library = None
         if include_remote:
-            if auth_token is None:
-                raise ProviderAuthTokenNotFoundError()
-            provider_client = await stack.enter_async_context(get_provider_oauth(MusicProvider.SPOTIFY))
-            provider_library_factory = get_provider_library_factory(
-                provider=MusicProvider.SPOTIFY,
-                oauth_client=provider_client,
+            provider_library = await stack.enter_async_context(
+                get_provider_library(MusicProvider.SPOTIFY, user=user, uow=uow)
             )
-            provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
 
         use_case = PlaylistDeleteUseCase(uow=uow, provider_library=provider_library)
 

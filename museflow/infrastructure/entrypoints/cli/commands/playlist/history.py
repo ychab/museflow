@@ -23,8 +23,7 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
+from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -216,16 +215,9 @@ async def playlist_history_logic(
             if not user:
                 raise UserNotFound()
 
-            auth_token = None if config.dry_run else await uow.auth_tokens.get(user_id=user.id, provider=provider)
-
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
-            if auth_token is None:
-                raise ProviderAuthTokenNotFoundError()
-
-            provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-            provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
-            provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
+            provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 
         return await playlist_history_use_case(
             user=user,

@@ -141,25 +141,15 @@ def mock_spotify_client(
 
 
 @pytest.fixture
-def mock_provider_oauth(
+def mock_get_provider_library(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
-    client = mock.AsyncMock(spec=ProviderOAuthPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_provider_oauth", client) as mock_client:
-        yield mock_client
-
-
-@pytest.fixture
-def mock_provider_library_factory(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
     mock_provider_library: mock.AsyncMock,
-) -> Iterable[mock.Mock]:
-    factory = mock.Mock()
-    factory.create.return_value = mock_provider_library
-    with mock_dependency_factory(f"{target_path}.get_provider_library_factory", factory):
-        yield factory
+) -> Iterable[mock.AsyncMock]:
+    with mock_async_context_dependency_factory(
+        f"{target_path}.get_provider_library", mock_provider_library
+    ) as library:
+        yield library
 
 
 @pytest.fixture

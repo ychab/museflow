@@ -5,10 +5,13 @@ from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
+from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
@@ -141,6 +144,30 @@ def get_provider_library_factory(provider: MusicProvider, oauth_client: SpotifyO
             return get_spotify_library_factory(spotify_client=oauth_client)
         case _:
             raise ValueError(f"Unknown provider: {provider}")
+
+
+@asynccontextmanager
+async def get_provider_library(
+    provider: MusicProvider,
+    user: User,
+    uow: UnitOfWorkPort,
+) -> AsyncGenerator[ProviderLibraryPort]:
+    """Builds the user's provider library from their stored token: call it outside any `uow` block.
+
+    Raises:
+        ProviderAuthTokenNotFoundError: If the user never connected the provider.
+    """
+    async with uow:
+        auth_token = await uow.auth_tokens.get(user_id=user.id, provider=provider)
+
+    if auth_token is None:
+        raise ProviderAuthTokenNotFoundError(
+            f"No {provider} auth token found — run 'museflow {provider} connect' first."
+        )
+
+    async with get_provider_oauth(provider) as oauth_client:
+        provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=oauth_client)
+        yield provider_library_factory.create(user=user, auth_token=auth_token)
 
 
 def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPort:

@@ -9,7 +9,6 @@ from typer.testing import CliRunner
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptReport
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
-from museflow.domain.entities.user import User
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNew
@@ -431,12 +430,11 @@ class TestDiscoverCommand:
 @pytest.mark.usefixtures(
     "mock_get_unit_of_work",
     "mock_user_repository",
-    "mock_auth_token_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
     "mock_blacklist_repository",
     "mock_playlist_repository",
-    "mock_provider_oauth",
+    "mock_get_provider_library",
 )
 class TestDiscoverLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
@@ -456,22 +454,6 @@ class TestDiscoverLogic:
         with pytest.raises(UserNotFound):
             await discover_logic(
                 "test@example.com",
-                provider=MusicProvider.SPOTIFY,
-                config=DiscoverTasteConfigInput(),
-            )
-
-    async def test__auth_token__not_found(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await discover_logic(
-                user.email,
                 provider=MusicProvider.SPOTIFY,
                 config=DiscoverTasteConfigInput(),
             )

@@ -181,9 +181,7 @@ class TestDeleteCommand:
     "mock_get_unit_of_work",
     "mock_user_repository",
     "mock_playlist_repository",
-    "mock_provider_oauth",
-    "mock_provider_library_factory",
-    "mock_auth_token_repository",
+    "mock_get_provider_library",
 )
 class TestDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
@@ -261,7 +259,7 @@ class TestDeleteLogic:
     async def test__include_remote__success(
         self,
         mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library_factory: mock.Mock,
+        mock_provider_library: mock.AsyncMock,
     ) -> None:
         mock_playlist_repository.delete.return_value = True
         playlist_id = uuid.uuid4()
@@ -276,20 +274,4 @@ class TestDeleteLogic:
         )
 
         assert count == 1
-        mock_provider_library_factory.create.assert_called_once()
-
-    async def test__include_remote__auth_token_missing__raises(
-        self,
-        mock_auth_token_repository: mock.AsyncMock,
-    ) -> None:
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await delete_logic(
-                email="test@example.com",
-                playlist_id=uuid.uuid4(),
-                purge=False,
-                type=None,
-                provider=None,
-                include_remote=True,
-            )
+        mock_provider_library.delete_playlist.assert_awaited_once()

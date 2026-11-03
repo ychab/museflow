@@ -23,8 +23,7 @@ from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library_factory
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
+from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -102,19 +101,9 @@ async def rate_playlist_logic(
             if not user:
                 raise UserNotFound()
 
-            auth_token = (
-                await uow.auth_tokens.get(user_id=user.id, provider=provider) if provider is not None else None
-            )
-
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
-            provider_client = await stack.enter_async_context(get_provider_oauth(provider))
-            provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=provider_client)
-            if auth_token is None:
-                raise ProviderAuthTokenNotFoundError(
-                    f"No {provider} auth token found — run 'museflow {provider} connect' first."
-                )
-            provider_library = provider_library_factory.create(user=user, auth_token=auth_token)
+            provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 
         tracks: list[Track]
         if playlist_id is not None:
