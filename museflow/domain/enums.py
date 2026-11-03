@@ -64,6 +64,14 @@ class LLMOperation(StrEnum):
     ENRICH = "enrich"  # `enrich tracks`: enricher batches
 
 
+class LLMUsageGroupBy(StrEnum):
+    OPERATION = "operation"  # the command that paid: taste build, discover, enrich
+    MODEL = "model"  # the model OpenRouter actually served, fallbacks included
+    STEP = "step"  # the pipeline step: advisor, enricher, profiler segment / merge / reflect
+    MONTH = "month"  # the calendar month of the run, in UTC
+    PROFILE = "profile"  # the taste profile the run built or used
+
+
 class PlaylistHistoryOrderBy(StrEnum):
     PLAYED_COUNT = "played_count"  # Sort by how many times the track was played
     SCORE = "score"  # Sort by the track's rating score

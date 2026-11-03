@@ -1,8 +1,26 @@
+import uuid
+from datetime import UTC
+from datetime import date
+from datetime import datetime
+from datetime import time
+from decimal import Decimal
+
+from sqlalchemy import Row
+from sqlalchemy import Select
+from sqlalchemy import SQLColumnExpression
+from sqlalchemy import distinct
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.domain.entities.llm import LLMUsageRecord
+from museflow.domain.enums import LLMUsageGroupBy
+from museflow.domain.value_objects.llm import LLMUsageGroup
+from museflow.domain.value_objects.llm import LLMUsageSummary
+from museflow.domain.value_objects.llm import LLMUsageTotals
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
+from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 
 class LLMUsageSQLRepository(LLMUsageRepository):
@@ -12,3 +30,66 @@ class LLMUsageSQLRepository(LLMUsageRepository):
     async def add_many(self, records: list[LLMUsageRecord]) -> None:
         self.session.add_all([LLMUsageModel.from_entity(record) for record in records])
         await self.session.flush()
+
+    async def summarize(
+        self,
+        user_id: uuid.UUID,
+        group_by: LLMUsageGroupBy,
+        since: date | None = None,
+    ) -> LLMUsageSummary:
+        group = self._group_expression(group_by)
+        cost = func.coalesce(func.sum(LLMUsageModel.cost), 0)
+
+        # ROLLUP appends the grand total row, sorted last by GROUPING(): it counts the distinct runs over all groups.
+        stmt: Select[object, int, int, int, int, int, Decimal] = (
+            select(
+                group.label("name"),
+                func.count(distinct(LLMUsageModel.run_id)).label("runs"),
+                func.coalesce(func.sum(LLMUsageModel.calls), 0).label("calls"),
+                func.coalesce(func.sum(LLMUsageModel.prompt_tokens), 0).label("prompt_tokens"),
+                func.coalesce(func.sum(LLMUsageModel.completion_tokens), 0).label("completion_tokens"),
+                func.coalesce(func.sum(LLMUsageModel.reasoning_tokens), 0).label("reasoning_tokens"),
+                cost.label("cost"),
+            )
+            .select_from(LLMUsageModel)
+            .outerjoin(TasteProfileModel, TasteProfileModel.id == LLMUsageModel.profile_id)
+            .where(LLMUsageModel.user_id == user_id)
+            .group_by(func.rollup(group))
+            .order_by(
+                func.grouping(group),
+                group if group_by == LLMUsageGroupBy.MONTH else cost.desc(),
+                group,
+            )
+        )
+        if since is not None:
+            stmt = stmt.where(LLMUsageModel.created_at >= datetime.combine(since, time.min, tzinfo=UTC))
+
+        rows = (await self.session.execute(stmt)).all()
+        # The total row comes last, and always exists: ROLLUP returns it even without any usage.
+        return LLMUsageSummary(
+            groups=[
+                LLMUsageGroup(name=None if row.name is None else str(row.name), totals=self._totals(row))
+                for row in rows[:-1]
+            ],
+            total=self._totals(rows[-1]),
+        )
+
+    def _group_expression(self, group_by: LLMUsageGroupBy) -> SQLColumnExpression[object]:
+        expressions: dict[LLMUsageGroupBy, SQLColumnExpression[object]] = {
+            LLMUsageGroupBy.OPERATION: LLMUsageModel.operation,
+            LLMUsageGroupBy.MODEL: LLMUsageModel.model,
+            LLMUsageGroupBy.STEP: LLMUsageModel.step,
+            LLMUsageGroupBy.MONTH: func.to_char(func.timezone("UTC", LLMUsageModel.created_at), "YYYY-MM"),
+            LLMUsageGroupBy.PROFILE: TasteProfileModel.name,
+        }
+        return expressions[group_by]
+
+    def _totals(self, row: Row[object, int, int, int, int, int, Decimal]) -> LLMUsageTotals:
+        return LLMUsageTotals(
+            runs=row.runs,
+            calls=row.calls,
+            prompt_tokens=row.prompt_tokens,
+            completion_tokens=row.completion_tokens,
+            reasoning_tokens=row.reasoning_tokens,
+            cost=Decimal(row.cost),
+        )

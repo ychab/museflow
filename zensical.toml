@@ -35,6 +35,7 @@ nav = [
       { "`rate`" = "user-guide/commands/rate.md" },
       { "`blacklist`" = "user-guide/commands/blacklist.md" },
       { "`enrich`" = "user-guide/commands/enrich.md" },
+      { "`llm`" = "user-guide/commands/llm.md" },
       { "`stats`" = "user-guide/commands/stats.md" }
     ] },
     { "Recipes" = "user-guide/recipes.md" }

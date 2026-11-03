@@ -118,7 +118,9 @@ This needs only steps 1 to 3 (a connected Spotify account is required to create 
 | `enrich tracks` | Yes | One request per batch of tracks (`--batch-size`). Use `--limit` to cap it. |
 | `taste build` | Yes | The most expensive step: processes up to `--track-limit` tracks in batches. Use `--resume` after an interruption. |
 | `playlist discover` | Yes | A few small advisor calls (`--max-attempts`). Use `--dry-run` to avoid creating a playlist. |
-| everything else | No | `playlist history`, `rate`, `stats`, `blacklist`, exports and imports run locally. |
+| everything else | No | `playlist history`, `rate`, `stats`, `blacklist`, `llm usage`, exports and imports run locally. |
+
+Each of them prints what it spent at the end; [`llm usage`](commands/llm.md) sums it over time.
 
 !!! tip
     `enrich export` / `taste export` / `rate export` save LLM results and ratings to YAML, so a database reset
