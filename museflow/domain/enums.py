@@ -84,6 +84,32 @@ class SortOrder(StrEnum):
     DESC = "desc"
 
 
+class SourceFilter(StrEnum):
+    ALL = "all"  # every track, whatever its source
+    HISTORY = "history"  # tracks from the imported listening history
+    DISCOVERY = "discovery"  # tracks suggested by a discovery playlist
+
+    def to_track_source(self) -> TrackSource | None:
+        if self == SourceFilter.HISTORY:
+            return TrackSource.HISTORY
+        if self == SourceFilter.DISCOVERY:
+            return TrackSource.DISCOVERY
+        return None
+
+
+class ArtistSortBy(StrEnum):
+    TRACK_COUNT = "track_count"  # Raw breadth: distinct tracks by the artist
+    PLAYS_COUNT = "plays_count"  # Raw depth: total plays across the artist's tracks
+    RATE_AVG = "rate_avg"  # Raw quality: simple average of the artist's track ratings
+    QUALITY = "quality"  # Smoothed quality: confidence-weighted average, small samples pulled toward the mean
+    OVERALL = "overall"  # Blended ranking: breadth x depth x smoothed quality (default sort)
+
+
+class TrackSortBy(StrEnum):
+    SCORE = "score"  # the track's rating, highest first
+    PLAYED_COUNT = "played_count"  # how many times the track was played, most first
+
+
 class GenreTag(StrEnum):
     # Convention: genres list is ordered [macro, meso, micro?]
     # ── L1 Macro (broad umbrella) ────────────────────────────────────────────

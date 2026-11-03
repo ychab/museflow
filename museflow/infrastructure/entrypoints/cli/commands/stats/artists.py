@@ -1,37 +1,23 @@
 import asyncio
-import math
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import cast
 
 from pydantic import EmailStr
 
 import typer
 from rich.table import Table
 
+from museflow.application.use_cases.stats_artists import top_artists
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
-from museflow.domain.entities.track import Track
+from museflow.domain.enums import ArtistSortBy
+from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFound
+from museflow.domain.value_objects.stats import ArtistStats
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
-from museflow.infrastructure.entrypoints.cli.types import ArtistSortBy
-from museflow.infrastructure.entrypoints.cli.types import SourceFilter
-
-
-@dataclass(frozen=True, kw_only=True)
-class ArtistRow:
-    artist: str
-    quality_score: float | None  # None for artists with no rated tracks
-    overall_score: float
-    rate_avg: float | None  # None for artists with no rated tracks
-    rated_count: int
-    track_count: int
-    plays_count: int
 
 
 @app.command("artists", help="Show top artists ranked by overall score (breadth x depth x quality).")
@@ -113,16 +99,6 @@ def stats_artists(
     console.print(table)
 
 
-def _is_in_score_range(score: int | None, score_min: int | None, score_max: int | None) -> bool:
-    if score is None:
-        return False
-    if score_min is not None and score < score_min:
-        return False
-    if score_max is not None and score > score_max:
-        return False
-    return True
-
-
 async def artists_logic(
     email: EmailStr,
     limit: int,
@@ -131,67 +107,22 @@ async def artists_logic(
     score_max: int | None,
     confidence: int,
     sort: ArtistSortBy,
-) -> list[ArtistRow]:
-    async with get_unit_of_work() as uow:
+) -> list[ArtistStats]:
+    uow = get_unit_of_work()
+
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFound()
 
-        all_tracks = await uow.tracks.get_list(
-            user_id=user.id,
-            source=source.to_track_source(),
-            limit=None,
-        )
+    if not user:
+        raise UserNotFound()
 
-    artist_tracks: dict[str, list[Track]] = defaultdict(list)
-    for track in all_tracks:
-        artist_tracks[track.primary_artist].append(track)
-
-    all_rated_scores = [cast(int, t.score) for t in all_tracks if _is_in_score_range(t.score, score_min, score_max)]
-    global_mean = sum(all_rated_scores) / len(all_rated_scores) if all_rated_scores else 0.0
-
-    rows: list[ArtistRow] = []
-    for artist, tracks in artist_tracks.items():
-        rated_scores = [cast(int, t.score) for t in tracks if _is_in_score_range(t.score, score_min, score_max)]
-        rated_count = len(rated_scores)
-        track_count = len(tracks)
-        plays_count = sum(t.played_count for t in tracks)
-
-        rate_avg: float | None
-        quality_score: float | None
-        if rated_count > 0:
-            rate_avg = sum(rated_scores) / rated_count
-            quality = (confidence * global_mean + rated_count * rate_avg) / (confidence + rated_count)
-            quality_score = quality
-        else:
-            rate_avg = None
-            quality = global_mean
-            quality_score = None
-
-        quality_ratio = quality / global_mean if global_mean > 0 else 1.0
-        overall_score = math.log(1 + track_count) * math.log(1 + plays_count) * quality_ratio
-
-        rows.append(
-            ArtistRow(
-                artist=artist,
-                quality_score=quality_score,
-                overall_score=overall_score,
-                rate_avg=rate_avg,
-                rated_count=rated_count,
-                track_count=track_count,
-                plays_count=plays_count,
-            )
-        )
-
-    if sort == ArtistSortBy.TRACK_COUNT:
-        rows.sort(key=lambda r: (-r.track_count, r.artist))
-    elif sort == ArtistSortBy.PLAYS_COUNT:
-        rows.sort(key=lambda r: (-r.plays_count, r.artist))
-    elif sort == ArtistSortBy.RATE_AVG:
-        rows.sort(key=lambda r: (-(r.rate_avg or 0.0), r.artist))
-    elif sort == ArtistSortBy.QUALITY:
-        rows.sort(key=lambda r: (-(r.quality_score or 0.0), r.artist))
-    else:
-        rows.sort(key=lambda r: (-r.overall_score, r.artist))
-
-    return rows[:limit]
+    return await top_artists(
+        user_id=user.id,
+        source=source,
+        score_min=score_min,
+        score_max=score_max,
+        confidence=confidence,
+        sort=sort,
+        limit=limit,
+        uow=uow,
+    )

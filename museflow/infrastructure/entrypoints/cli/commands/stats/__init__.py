@@ -1,9 +1,6 @@
 import typer
 from rich.console import Console
 
-from museflow.infrastructure.entrypoints.cli.types import ArtistSortBy as ArtistSortBy
-from museflow.infrastructure.entrypoints.cli.types import SourceFilter as SourceFilter
-
 app = typer.Typer()
 console = Console()
 

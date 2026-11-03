@@ -1,27 +1,18 @@
 import asyncio
-from collections import defaultdict
-from dataclasses import dataclass
 
 from pydantic import EmailStr
 
 import typer
 from rich.table import Table
 
-from museflow.domain.entities.track import Track
+from museflow.application.use_cases.stats_candidates import artist_candidates
+from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
+from museflow.domain.value_objects.stats import ArtistCandidate
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-
-
-@dataclass(frozen=True, kw_only=True)
-class CandidateRow:
-    artist: str
-    avg_score: float
-    rated_count: int
-    total_count: int
 
 
 @app.command("candidates", help="Show artists to explore: few total tracks but high average score.")
@@ -75,45 +66,20 @@ async def candidates_logic(
     source: SourceFilter,
     max_tracks: int,
     min_avg: float,
-) -> list[CandidateRow]:
-    async with get_unit_of_work() as uow:
+) -> list[ArtistCandidate]:
+    uow = get_unit_of_work()
+
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFound()
 
-        all_tracks = await uow.tracks.get_list(
-            user_id=user.id,
-            source=source.to_track_source(),
-            limit=None,
-        )
+    if not user:
+        raise UserNotFound()
 
-    artist_tracks: dict[str, list[Track]] = defaultdict(list)
-    for track in all_tracks:
-        artist_tracks[track.primary_artist].append(track)
-
-    rows: list[CandidateRow] = []
-    for artist, tracks in artist_tracks.items():
-        total_count = len(tracks)
-        if total_count > max_tracks:
-            continue
-
-        rated_scores = [t.score for t in tracks if t.score is not None]
-        rated_count = len(rated_scores)
-        if rated_count == 0:
-            continue
-
-        avg_score = sum(rated_scores) / rated_count
-        if avg_score < min_avg:
-            continue
-
-        rows.append(
-            CandidateRow(
-                artist=artist,
-                avg_score=avg_score,
-                rated_count=rated_count,
-                total_count=total_count,
-            )
-        )
-
-    rows.sort(key=lambda r: (-r.avg_score, r.artist))
-    return rows[:limit]
+    return await artist_candidates(
+        user_id=user.id,
+        source=source,
+        max_tracks=max_tracks,
+        min_avg=min_avg,
+        limit=limit,
+        uow=uow,
+    )
