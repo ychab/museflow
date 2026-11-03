@@ -187,9 +187,7 @@ class TestRatePlaylistCommand:
     "mock_playlist_repository",
     "mock_track_repository",
     "mock_blacklist_repository",
-    "mock_provider_oauth",
-    "mock_auth_token_repository",
-    "mock_provider_library_factory",
+    "mock_get_provider_library",
 )
 class TestRatePlaylistLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.playlist"
@@ -376,7 +374,6 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_typer_prompt: mock.Mock,
         mock_typer_confirm: mock.Mock,
@@ -392,28 +389,12 @@ class TestRatePlaylistLogic:
 
         mock_provider_library.play_track.assert_awaited_once_with(track.get_provider_id(MusicProvider.SPOTIFY))
 
-    async def test__play__no_auth_token__aborts(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await rate_playlist_logic(email=user.email, playlist_id=uuid.uuid4(), provider=MusicProvider.SPOTIFY)
-
-        mock_provider_library.play_track.assert_not_awaited()
-
     async def test__play__premium_required__raises(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
@@ -433,7 +414,6 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_builtin_input: mock.Mock,
         mock_typer_prompt: mock.Mock,
@@ -458,7 +438,6 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_builtin_input: mock.Mock,
     ) -> None:
@@ -482,7 +461,6 @@ class TestRatePlaylistLogic:
         mock_user_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_typer_prompt: mock.Mock,
     ) -> None:

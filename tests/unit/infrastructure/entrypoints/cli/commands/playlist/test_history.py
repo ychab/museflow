@@ -384,10 +384,9 @@ class TestHistoryCommand:
 @pytest.mark.usefixtures(
     "mock_get_unit_of_work",
     "mock_user_repository",
-    "mock_auth_token_repository",
     "mock_track_repository",
     "mock_playlist_repository",
-    "mock_provider_oauth",
+    "mock_get_provider_library",
 )
 class TestHistoryLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
@@ -407,32 +406,13 @@ class TestHistoryLogic:
                 config=PlaylistHistoryConfigInput(),
             )
 
-    async def test__auth_token__not_found(
+    async def test__dry_run__no_provider_library(
         self,
         user: User,
         mock_user_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await playlist_history_logic(
-                email=user.email,
-                provider=MusicProvider.SPOTIFY,
-                config=PlaylistHistoryConfigInput(),
-            )
-
-    async def test__dry_run__no_token_required(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-        mock_provider_oauth: mock.Mock,
         mock_history_use_case: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_auth_token_repository.get.return_value = None
         expected = PlaylistHistoryResult(playlist=None, tracks=[TrackFactory.build()])
         mock_history_use_case.return_value = expected
 
@@ -443,6 +423,4 @@ class TestHistoryLogic:
         )
 
         assert result == expected
-        mock_auth_token_repository.get.assert_not_awaited()
-        mock_provider_oauth.assert_not_called()
         assert mock_history_use_case.call_args.kwargs["provider_library"] is None
