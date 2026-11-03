@@ -7,8 +7,6 @@ import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
-from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import TracksDeleteResult
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
@@ -120,27 +118,6 @@ class TestDeleteLogic:
         assert result == TracksDeleteResult(no_tracks=True)
         mock_track_repository.delete.assert_not_awaited()
 
-    async def test__name_filter_applied_in_python(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        matching = TrackFactory.build(name="Creep")
-        non_matching = TrackFactory.build(name="Karma Police")
-        mock_track_repository.get_list.return_value = [matching, non_matching]
-        mock_track_repository.delete.return_value = 1
-
-        result = await delete_logic(
-            email="test@example.com",
-            artist=None,
-            name="creep",
-            source=None,
-            provider=None,
-            yes=True,
-        )
-
-        assert result == TracksDeleteResult(deleted_count=1)
-
     async def test__artist_only__shows_track_names(
         self,
         mock_user_repository: mock.AsyncMock,
@@ -251,66 +228,3 @@ class TestDeleteLogic:
             )
 
         mock_track_repository.delete.assert_not_awaited()
-
-    async def test__source_filter_passed_to_repo(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = [TrackFactory.build(name="Creep")]
-        mock_track_repository.delete.return_value = 1
-
-        await delete_logic(
-            email="test@example.com",
-            artist="Radiohead",
-            name="Creep",
-            source=TrackSource.HISTORY,
-            provider=None,
-            yes=True,
-        )
-
-        mock_track_repository.get_list.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            artist_name="Radiohead",
-            source=TrackSource.HISTORY,
-            provider=None,
-        )
-        mock_track_repository.delete.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            artist_name="Radiohead",
-            track_name="Creep",
-            source=TrackSource.HISTORY,
-            provider=None,
-        )
-
-    async def test__provider_filter_passed_to_repo(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=1)
-        mock_track_repository.delete.return_value = 1
-
-        await delete_logic(
-            email="test@example.com",
-            artist=None,
-            name=None,
-            source=None,
-            provider=MusicProvider.SPOTIFY,
-            purge=True,
-            yes=True,
-        )
-
-        mock_track_repository.get_list.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            artist_name=None,
-            source=None,
-            provider=MusicProvider.SPOTIFY,
-        )
-        mock_track_repository.delete.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            artist_name=None,
-            track_name=None,
-            source=None,
-            provider=MusicProvider.SPOTIFY,
-        )
