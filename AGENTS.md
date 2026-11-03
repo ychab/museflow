@@ -64,6 +64,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   `<Feature>ConfigInput`.
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
   only when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`).
+- **Every entrypoint action goes through a use case**, even a thin one that only reads a repository
+  (`use_cases/taste_profile_list.py`): the use cases list what the application does, and an API reuses them as is.
+  The entrypoint keeps only its own concerns (parsing, finding the user, output).
 - **Application services** (`services/`) hold orchestration shared by several use cases, ports included
   (`services/llm_usage.py`). Only use cases call them, never an entrypoint; a use case never calls another use case.
   Pure helpers without ports go in `utils/`.
