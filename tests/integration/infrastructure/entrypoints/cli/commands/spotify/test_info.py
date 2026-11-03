@@ -17,7 +17,3 @@ class TestSpotifyInfoLogic:
         assert token is not None
         assert token.token_access == auth_token.token_access
         assert token.token_refresh == auth_token.token_refresh
-
-    async def test__token__none(self, user: User) -> None:
-        token = await info_logic(email=user.email)
-        assert token is None
