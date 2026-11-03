@@ -8,7 +8,7 @@ from typing import cast
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.utils.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import record_llm_usage
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
