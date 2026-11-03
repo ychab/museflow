@@ -5,6 +5,8 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.application.use_cases.tracks_delete import delete_tracks
+from museflow.application.use_cases.tracks_delete import find_tracks_to_delete
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
@@ -71,18 +73,18 @@ async def delete_logic(
 
     async with uow:
         user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFound()
 
-        tracks = await uow.tracks.get_list(
-            user_id=user.id,
-            artist_name=artist,
-            source=source,
-            provider=provider,
-        )
+    if not user:
+        raise UserNotFound()
 
-    if name is not None:
-        tracks = [t for t in tracks if t.name.lower() == name.lower()]
+    tracks = await find_tracks_to_delete(
+        user_id=user.id,
+        artist=artist,
+        name=name,
+        source=source,
+        provider=provider,
+        uow=uow,
+    )
 
     count = len(tracks)
     if count == 0:
@@ -96,13 +98,12 @@ async def delete_logic(
     if not yes:
         typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
 
-    async with uow:
-        deleted = await uow.tracks.delete(
-            user_id=user.id,
-            artist_name=artist,
-            track_name=name,
-            source=source,
-            provider=provider,
-        )
-
+    deleted = await delete_tracks(
+        user_id=user.id,
+        artist=artist,
+        name=name,
+        source=source,
+        provider=provider,
+        uow=uow,
+    )
     return TracksDeleteResult(deleted_count=deleted)
