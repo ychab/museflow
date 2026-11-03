@@ -15,8 +15,6 @@ from tests.integration.factories.models.user import UserModelFactory
 class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderState]):
     __model__ = AuthProviderState
 
-    state = Use(BaseModelFactory.__faker__.uuid4)
-
     @classmethod
     async def create_async(cls, **kwargs: Any) -> AuthProviderState:
         if "user_id" not in kwargs:
@@ -30,8 +28,6 @@ class AuthProviderTokenFactory(BaseModelFactory[AuthProviderToken]):
     __model__ = AuthProviderToken
 
     token_type = "bearer"
-    token_access = Use(BaseModelFactory.__faker__.pystr, min_chars=20, max_chars=40)
-    token_refresh = Use(BaseModelFactory.__faker__.pystr, min_chars=20, max_chars=40)
     token_expires_at = Use(lambda: datetime.now(UTC) + timedelta(days=5))
 
     @classmethod
