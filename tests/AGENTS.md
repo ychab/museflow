@@ -55,6 +55,9 @@ Each command has 3 unit classes (`TestXParserCommand`, `TestXCommand`, `TestXLog
   input factories.
 - Don't override what polyfactory generates (UUIDs, fields with defaults); set only realistic values (names, emails)
   or values the test depends on.
+- Never bound a field to fit its column: `SQLAlchemyFactory` already reads the column limits (`String` length,
+  `Numeric` precision). A `DataclassFactory` knows no column: bound only a field whose generated value breaks a save
+  (an unbounded `Decimal`), with a comment saying why.
 
 ## Markers
 - `@pytest.mark.slow`: skipped by default, run with `--slow`.
