@@ -13,13 +13,16 @@
 
 MuseFlow turns your own streaming history (exported through your GDPR right of access) into an AI taste profile, then generates **discovery** playlists of music you don't know yet, and **rediscovery** playlists of forgotten favourites from your own past. You rate tracks in a feedback loop instead of an algorithm guessing for you.
 
+The AI steps run on the model of your choice through [OpenRouter](https://openrouter.ai/), and every paid command
+shows what it cost.
+
 It is a personal project and a showcase, built with Python, FastAPI and Typer. For now, **only [Spotify](https://open.spotify.com/) is supported**.
 
 ## Documentation
 
 Full documentation: **<https://ychab.github.io/museflow/>**
 
-*   [Product](https://ychab.github.io/museflow/product/): why MuseFlow exists, the V1 → V2 pivot, lessons learned.
+*   [Product](https://ychab.github.io/museflow/product/): why MuseFlow exists, the V1 → V2 pivot, V3 (any model), lessons learned.
 *   [User guide](https://ychab.github.io/museflow/user-guide/): install, import your history, generate playlists. See [Getting started](https://ychab.github.io/museflow/user-guide/) for the "first playlist" flow.
 *   [Technical](https://ychab.github.io/museflow/technical/): hexagonal architecture, LLM pipeline, testing.
 

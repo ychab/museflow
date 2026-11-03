@@ -26,7 +26,7 @@ Discovery asks an LLM for new tracks based on your taste profile. Rediscovery us
 
     ---
 
-    Why it exists, the V1 → V2 pivot, lessons learned.
+    Why it exists, the V1 → V2 pivot, V3 (any model), lessons learned.
 
     [:octicons-arrow-right-24: Read the product story](product/index.md)
 

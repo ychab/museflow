@@ -59,7 +59,7 @@ What I would instrument first:
 |---|---|
 | Discovery keep rate (tracks rated ≥ 7 / tracks suggested) | The product's north star |
 | Rating coverage of the history | Strength of the explicit signal behind each profile |
-| Cost per profile build and per playlist | Validates (or kills) the [business model sketch](business-model.md) |
+| Cost per profile build and per playlist | Validates (or kills) the [business model sketch](business-model.md); done in V3 (`museflow llm usage`) |
 | Self-healing trigger rate on LLM answers | Tells whether the retry mechanism earns its complexity |
 | Rediscovery playlists created vs discovery playlists | Confirms or refutes the usage drift I observed |
 
