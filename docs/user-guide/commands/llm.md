@@ -10,7 +10,7 @@ Sums the saved LLM usage, one row per group, then the total. It reads the local 
 Without `--email`, it sums all the users: the overview of an instance.
 
 ```bash
-museflow llm usage [--email <email>] [--by operation|model|step|month|profile|user] [--since YYYY-MM-DD]
+museflow llm usage [--email <email>] [--by operation|model|step|month|profile|user|run] [--since YYYY-MM-DD]
 ```
 
 | Option | Default | Description |
@@ -27,12 +27,14 @@ museflow llm usage [--email <email>] [--by operation|model|step|month|profile|us
 | `month` | calendar month, in UTC | chronological |
 | `profile` | taste profile the run built or used; `(none)` for an enrichment or a deleted profile. Without `--email`, prefixed with the user's email (`user@example.com / evening`), since profile names are unique per user only | most expensive first |
 | `user` | user's email; only without `--email` | most expensive first |
+| `run` | command run: its start (UTC), operation and profile, then the user's email without `--email`, e.g. `2026-11-03 10:20:51 discover evening` | chronological |
 
 **Examples**
 
 ```bash
 museflow llm usage --email user@example.com --by month --since 2026-01-01
 museflow llm usage --by user
+museflow llm usage --email user@example.com --by run --since 2026-11-01
 ```
 
 **Output.** A `LLM usage` table with the group, the runs (command executions), the calls, the prompt, completion and

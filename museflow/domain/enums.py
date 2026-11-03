@@ -71,6 +71,7 @@ class LLMUsageGroupBy(StrEnum):
     MONTH = "month"  # the calendar month of the run, in UTC
     PROFILE = "profile"  # the taste profile the run built or used; across users, prefixed with the user's email
     USER = "user"  # the user's email: the overview across users
+    RUN = "run"  # one command run: its start, operation and profile, oldest first
 
 
 class PlaylistHistoryOrderBy(StrEnum):
