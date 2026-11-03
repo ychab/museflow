@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.utils.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import record_llm_usage
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.utils.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import record_llm_usage
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
