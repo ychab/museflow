@@ -8,9 +8,12 @@ from decimal import Decimal
 from sqlalchemy import Row
 from sqlalchemy import Select
 from sqlalchemy import SQLColumnExpression
+from sqlalchemy import String
+from sqlalchemy import cast
 from sqlalchemy import distinct
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy import tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.llm import LLMUsageRepository
@@ -38,8 +41,12 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         group_by: LLMUsageGroupBy,
         since: date | None = None,
     ) -> LLMUsageSummary:
-        group = self._group_expression(group_by, all_users=user_id is None)
+        keys, group = self._grouping(group_by, all_users=user_id is None)
         cost = func.coalesce(func.sum(LLMUsageModel.cost), 0)
+        orders: dict[LLMUsageGroupBy, SQLColumnExpression[object]] = {
+            LLMUsageGroupBy.MONTH: group,
+            LLMUsageGroupBy.RUN: func.min(LLMUsageModel.created_at),
+        }
 
         # ROLLUP appends the grand total row, sorted last by GROUPING(): it counts the distinct runs over all groups.
         stmt: Select[object, int, int, int, int, int, Decimal] = (
@@ -55,10 +62,10 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             .select_from(LLMUsageModel)
             .join(UserModel, UserModel.id == LLMUsageModel.user_id)
             .outerjoin(TasteProfileModel, TasteProfileModel.id == LLMUsageModel.profile_id)
-            .group_by(func.rollup(group))
+            .group_by(func.rollup(tuple_(*keys)))
             .order_by(
-                func.grouping(group),
-                group if group_by == LLMUsageGroupBy.MONTH else cost.desc(),
+                func.grouping(keys[0]),
+                orders.get(group_by, cost.desc()),
                 group,
             )
         )
@@ -77,7 +84,24 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             total=self._totals(rows[-1]),
         )
 
-    def _group_expression(self, group_by: LLMUsageGroupBy, all_users: bool) -> SQLColumnExpression[object]:
+    def _grouping(
+        self,
+        group_by: LLMUsageGroupBy,
+        all_users: bool,
+    ) -> tuple[list[SQLColumnExpression[object]], SQLColumnExpression[object]]:
+        """Returns the columns to group on, and the group name built from them."""
+        if group_by == LLMUsageGroupBy.RUN:
+            # The operation, the profile and the user are the same on every row of a run: grouping on them too makes
+            # them usable in the name. The rows of a run are saved together, so the first one dates it.
+            started_at = func.to_char(
+                func.timezone("UTC", func.min(LLMUsageModel.created_at)), "YYYY-MM-DD HH24:MI:SS"
+            )
+            # The column holds the enum names: lowercased, they are the values.
+            operation = func.lower(cast(LLMUsageModel.operation, String))
+            user = "(" + UserModel.email + ")" if all_users else None
+            name = func.concat_ws(" ", started_at, operation, TasteProfileModel.name, user)
+            return [LLMUsageModel.run_id, LLMUsageModel.operation, TasteProfileModel.name, UserModel.email], name
+
         # Profile names are unique per user only: across users, the email tells two "evening" profiles apart.
         # `||` gives NULL without a profile, so these runs still fall in the "no profile" group.
         profile = UserModel.email + " / " + TasteProfileModel.name if all_users else TasteProfileModel.name
@@ -89,7 +113,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             LLMUsageGroupBy.PROFILE: profile,
             LLMUsageGroupBy.USER: UserModel.email,
         }
-        return expressions[group_by]
+        return [expressions[group_by]], expressions[group_by]
 
     def _totals(self, row: Row[object, int, int, int, int, int, Decimal]) -> LLMUsageTotals:
         return LLMUsageTotals(
