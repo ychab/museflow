@@ -32,6 +32,22 @@ class TestUsageParserCommand:
         assert result.exit_code == 0
         mock_logic.assert_awaited_once_with(email="test@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None)
 
+    def test__all_users(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+        result = runner.invoke(app, ["llm", "usage", "--by", "user"])
+        assert result.exit_code == 0
+        mock_logic.assert_awaited_once_with(email=None, group_by=LLMUsageGroupBy.USER, since=None)
+
+    def test__by_user__with_email(
+        self,
+        runner: CliRunner,
+        mock_logic: mock.AsyncMock,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com", "--by", "user"])
+        assert result.exit_code != 0
+        assert "--by user sums all the users: drop --email" in clean_typer_text(result.output)
+        mock_logic.assert_not_awaited()
+
     def test__options(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
         result = runner.invoke(
             app, ["llm", "usage", "--email", "test@example.com", "--by", "month", "--since", "2026-11-01"]

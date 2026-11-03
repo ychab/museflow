@@ -69,7 +69,8 @@ class LLMUsageGroupBy(StrEnum):
     MODEL = "model"  # the model OpenRouter actually served, fallbacks included
     STEP = "step"  # the pipeline step: advisor, enricher, profiler segment / merge / reflect
     MONTH = "month"  # the calendar month of the run, in UTC
-    PROFILE = "profile"  # the taste profile the run built or used
+    PROFILE = "profile"  # the taste profile the run built or used; across users, prefixed with the user's email
+    USER = "user"  # the user's email: the overview across users
 
 
 class PlaylistHistoryOrderBy(StrEnum):

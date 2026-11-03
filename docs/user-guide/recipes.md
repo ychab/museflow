@@ -121,9 +121,11 @@ See [`stats`](commands/stats.md).
 ```bash
 museflow llm usage --email user@example.com --by month
 museflow llm usage --email user@example.com --by step --since 2026-11-01
+museflow llm usage --by user
 ```
 
-`--by step` shows which phase of a build is worth moving to a cheaper model. See [`llm`](commands/llm.md).
+`--by step` shows which phase of a build is worth moving to a cheaper model. Without `--email`, the command sums all
+the users; `--by user` shows who spends what. See [`llm`](commands/llm.md).
 
 ## Clean up after experiments
 
