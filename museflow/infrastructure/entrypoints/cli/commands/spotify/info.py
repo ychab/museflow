@@ -7,6 +7,7 @@ from pydantic import EmailStr
 import typer
 from rich.pretty import Pretty
 
+from museflow.application.use_cases.provider_token_view import view_provider_token
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
@@ -45,9 +46,12 @@ def info(
 
 
 async def info_logic(email: EmailStr) -> OAuthProviderUserToken | None:
-    async with get_unit_of_work() as uow:
-        user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound(f"User with email '{email}' not found.")
+    uow = get_unit_of_work()
 
-        return await uow.auth_tokens.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
+    async with uow:
+        user = await uow.users.get_by_email(email)
+
+    if user is None:
+        raise UserNotFound(f"User with email '{email}' not found.")
+
+    return await view_provider_token(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
