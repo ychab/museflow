@@ -18,9 +18,12 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 console = Console()
 
 
-@app.command("usage", help="Show what your LLM calls cost, grouped by operation, model, step, month or profile.")
+@app.command(
+    "usage",
+    help="Show what the LLM calls cost, grouped by operation, model, step, month, profile or user.",
+)
 def usage(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str | None = typer.Option(None, help="User email address (all the users when omitted)", parser=parse_email),
     group_by: LLMUsageGroupBy = typer.Option(LLMUsageGroupBy.OPERATION, "--by", help="Group the usage by"),
     since: date | None = typer.Option(
         None,
@@ -29,6 +32,9 @@ def usage(
         parser=parse_date,
     ),
 ) -> None:
+    if email is not None and group_by == LLMUsageGroupBy.USER:
+        raise typer.BadParameter("--by user sums all the users: drop --email")
+
     try:
         summary = asyncio.run(usage_logic(email=email, group_by=group_by, since=since))
     except UserNotFound as e:
@@ -64,10 +70,13 @@ def usage(
     console.print(table)
 
 
-async def usage_logic(email: EmailStr, group_by: LLMUsageGroupBy, since: date | None) -> LLMUsageSummary:
+async def usage_logic(email: EmailStr | None, group_by: LLMUsageGroupBy, since: date | None) -> LLMUsageSummary:
     async with get_unit_of_work() as uow:
-        user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFound()
+        user_id = None
+        if email is not None:
+            user = await uow.users.get_by_email(email)
+            if not user:
+                raise UserNotFound()
+            user_id = user.id
 
-        return await uow.llm_usage.summarize(user_id=user.id, group_by=group_by, since=since)
+        return await uow.llm_usage.summarize(user_id=user_id, group_by=group_by, since=since)

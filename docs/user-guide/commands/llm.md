@@ -7,14 +7,15 @@ its tokens and cost when it ends, whatever the outcome: a paused build or a fail
 ## `llm usage`
 
 Sums the saved LLM usage, one row per group, then the total. It reads the local database only and costs nothing.
+Without `--email`, it sums all the users: the overview of an instance.
 
 ```bash
-museflow llm usage --email <email> [--by operation|model|step|month|profile] [--since YYYY-MM-DD]
+museflow llm usage [--email <email>] [--by operation|model|step|month|profile|user] [--since YYYY-MM-DD]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | all the users | User email address. |
 | `--by` | `operation` | How to group the rows (see below). |
 | `--since` | none | Only the runs from this date on, in UTC. |
 
@@ -24,12 +25,14 @@ museflow llm usage --email <email> [--by operation|model|step|month|profile] [--
 | `model` | model OpenRouter actually served, fallbacks included | most expensive first |
 | `step` | pipeline step: `advisor`, `enricher`, `profiler segment`, `profiler merge`, `profiler reflect` | most expensive first |
 | `month` | calendar month, in UTC | chronological |
-| `profile` | taste profile the run built or used; `(none)` for an enrichment or a deleted profile | most expensive first |
+| `profile` | taste profile the run built or used; `(none)` for an enrichment or a deleted profile. Without `--email`, prefixed with the user's email (`user@example.com / evening`), since profile names are unique per user only | most expensive first |
+| `user` | user's email; only without `--email` | most expensive first |
 
-**Example**
+**Examples**
 
 ```bash
 museflow llm usage --email user@example.com --by month --since 2026-01-01
+museflow llm usage --by user
 ```
 
 **Output.** A `LLM usage` table with the group, the runs (command executions), the calls, the prompt, completion and

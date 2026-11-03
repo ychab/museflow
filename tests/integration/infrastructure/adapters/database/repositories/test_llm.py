@@ -24,6 +24,7 @@ from museflow.infrastructure.adapters.database.models.taste import TasteProfileM
 from tests.integration.factories.models.llm import LLMUsageModelFactory
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 from tests.unit.factories.entities.llm import LLMUsageRecordFactory
 
 
@@ -212,3 +213,36 @@ class TestLLMUsageSQLRepository:
 
         assert [group.name for group in summary.groups] == ["2026-11"]
         assert summary.total.cost == Decimal(2)
+
+    async def test__summarize__all_users__by_user(self, llm_usage_repository: LLMUsageRepository) -> None:
+        alice_db = await UserModelFactory.create_async(email="alice@example.com")
+        bob_db = await UserModelFactory.create_async(email="bob@example.com")
+        await LLMUsageModelFactory.create_async(user_id=alice_db.id, cost=Decimal(1))
+        await LLMUsageModelFactory.create_async(user_id=bob_db.id, cost=Decimal(2))
+        await LLMUsageModelFactory.create_async(user_id=bob_db.id, cost=Decimal(3))
+
+        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.USER)
+
+        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            ("bob@example.com", 2, Decimal(5)),
+            ("alice@example.com", 1, Decimal(1)),
+        ]
+        assert summary.total.runs == 3
+        assert summary.total.cost == Decimal(6)
+
+    async def test__summarize__all_users__by_profile(self, llm_usage_repository: LLMUsageRepository) -> None:
+        alice_db = await UserModelFactory.create_async(email="alice@example.com")
+        bob_db = await UserModelFactory.create_async(email="bob@example.com")
+        # Same profile name for both users: the email keeps them apart.
+        for user_db, cost in ((alice_db, 3), (bob_db, 2)):
+            profile_db = await TasteProfileModelFactory.create_async(user_id=user_db.id, name="evening")
+            await LLMUsageModelFactory.create_async(user_id=user_db.id, profile_id=profile_db.id, cost=Decimal(cost))
+        await LLMUsageModelFactory.create_async(user_id=bob_db.id, profile_id=None, cost=Decimal(1))
+
+        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.PROFILE)
+
+        assert [group.name for group in summary.groups] == [
+            "alice@example.com / evening",
+            "bob@example.com / evening",
+            None,
+        ]
