@@ -6,12 +6,12 @@ from pydantic import EmailStr
 import typer
 
 from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-from museflow.infrastructure.entrypoints.cli.types import SourceFilter
 
 
 @dataclass(frozen=True, kw_only=True)

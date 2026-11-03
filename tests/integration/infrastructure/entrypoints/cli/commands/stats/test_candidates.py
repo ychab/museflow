@@ -1,5 +1,5 @@
 from museflow.domain.entities.user import User
-from museflow.infrastructure.entrypoints.cli.commands.stats import SourceFilter
+from museflow.domain.enums import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import candidates_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
