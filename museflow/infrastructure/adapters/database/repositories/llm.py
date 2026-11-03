@@ -19,6 +19,7 @@ from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
+from museflow.infrastructure.adapters.database.models import User as UserModel
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
@@ -33,11 +34,11 @@ class LLMUsageSQLRepository(LLMUsageRepository):
 
     async def summarize(
         self,
-        user_id: uuid.UUID,
+        user_id: uuid.UUID | None,
         group_by: LLMUsageGroupBy,
         since: date | None = None,
     ) -> LLMUsageSummary:
-        group = self._group_expression(group_by)
+        group = self._group_expression(group_by, all_users=user_id is None)
         cost = func.coalesce(func.sum(LLMUsageModel.cost), 0)
 
         # ROLLUP appends the grand total row, sorted last by GROUPING(): it counts the distinct runs over all groups.
@@ -52,8 +53,8 @@ class LLMUsageSQLRepository(LLMUsageRepository):
                 cost.label("cost"),
             )
             .select_from(LLMUsageModel)
+            .join(UserModel, UserModel.id == LLMUsageModel.user_id)
             .outerjoin(TasteProfileModel, TasteProfileModel.id == LLMUsageModel.profile_id)
-            .where(LLMUsageModel.user_id == user_id)
             .group_by(func.rollup(group))
             .order_by(
                 func.grouping(group),
@@ -61,6 +62,8 @@ class LLMUsageSQLRepository(LLMUsageRepository):
                 group,
             )
         )
+        if user_id is not None:
+            stmt = stmt.where(LLMUsageModel.user_id == user_id)
         if since is not None:
             stmt = stmt.where(LLMUsageModel.created_at >= datetime.combine(since, time.min, tzinfo=UTC))
 
@@ -74,13 +77,17 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             total=self._totals(rows[-1]),
         )
 
-    def _group_expression(self, group_by: LLMUsageGroupBy) -> SQLColumnExpression[object]:
+    def _group_expression(self, group_by: LLMUsageGroupBy, all_users: bool) -> SQLColumnExpression[object]:
+        # Profile names are unique per user only: across users, the email tells two "evening" profiles apart.
+        # `||` gives NULL without a profile, so these runs still fall in the "no profile" group.
+        profile = UserModel.email + " / " + TasteProfileModel.name if all_users else TasteProfileModel.name
         expressions: dict[LLMUsageGroupBy, SQLColumnExpression[object]] = {
             LLMUsageGroupBy.OPERATION: LLMUsageModel.operation,
             LLMUsageGroupBy.MODEL: LLMUsageModel.model,
             LLMUsageGroupBy.STEP: LLMUsageModel.step,
             LLMUsageGroupBy.MONTH: func.to_char(func.timezone("UTC", LLMUsageModel.created_at), "YYYY-MM"),
-            LLMUsageGroupBy.PROFILE: TasteProfileModel.name,
+            LLMUsageGroupBy.PROFILE: profile,
+            LLMUsageGroupBy.USER: UserModel.email,
         }
         return expressions[group_by]
 

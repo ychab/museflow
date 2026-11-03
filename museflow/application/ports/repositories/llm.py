@@ -17,14 +17,14 @@ class LLMUsageRepository(ABC):
     @abstractmethod
     async def summarize(
         self,
-        user_id: uuid.UUID,
+        user_id: uuid.UUID | None,
         group_by: LLMUsageGroupBy,
         since: date | None = None,
     ) -> LLMUsageSummary:
-        """Sums the user's LLM usage per group, months in chronological order, other groups by decreasing cost.
+        """Sums the LLM usage per group, months in chronological order, other groups by decreasing cost.
 
         Args:
-            user_id: The user whose usage is summed.
+            user_id: The user whose usage is summed, or None for all the users.
             group_by: The grouping of the rows.
             since: Only the runs from this day on (UTC), when given.
         """
