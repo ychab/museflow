@@ -10,11 +10,11 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
 from museflow.application.utils.discovery import reconcile_tracks
-from museflow.application.utils.llm_usage import record_llm_usage
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileStatus
