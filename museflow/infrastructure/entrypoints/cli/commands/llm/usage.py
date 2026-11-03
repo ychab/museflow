@@ -7,6 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from museflow.application.use_cases.llm_usage_summary import summarize_llm_usage
 from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.llm import LLMUsageSummary
@@ -71,12 +72,14 @@ def usage(
 
 
 async def usage_logic(email: EmailStr | None, group_by: LLMUsageGroupBy, since: date | None) -> LLMUsageSummary:
-    async with get_unit_of_work() as uow:
-        user_id = None
-        if email is not None:
-            user = await uow.users.get_by_email(email)
-            if not user:
-                raise UserNotFound()
-            user_id = user.id
+    uow = get_unit_of_work()
 
-        return await uow.llm_usage.summarize(user_id=user_id, group_by=group_by, since=since)
+    user_id = None
+    if email is not None:
+        async with uow:
+            user = await uow.users.get_by_email(email)
+        if not user:
+            raise UserNotFound()
+        user_id = user.id
+
+    return await summarize_llm_usage(user_id=user_id, group_by=group_by, since=since, uow=uow)
