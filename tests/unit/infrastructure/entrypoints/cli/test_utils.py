@@ -4,7 +4,7 @@ import pytest
 
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.entrypoints.cli.llm_usage import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
 
 
 class TestPrintLLMUsage:
