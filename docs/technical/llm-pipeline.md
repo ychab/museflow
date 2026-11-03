@@ -196,3 +196,7 @@ each use case saves them in a `finally:` block, through the application service 
 - `EnrichTracksUseCase` links them to nothing.
 
 Saving them never hides the outcome: a failure is logged and the use case goes on with its own result or error.
+
+`museflow llm usage` reads them back ([`llm`](../user-guide/commands/llm.md)): one `GROUP BY ROLLUP` per call, by
+operation, model, step, month or profile. The `ROLLUP` row gives the total, where a run spread over several groups
+counts once.
