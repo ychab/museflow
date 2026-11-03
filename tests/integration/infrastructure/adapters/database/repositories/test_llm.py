@@ -246,3 +246,43 @@ class TestLLMUsageSQLRepository:
             "bob@example.com / evening",
             None,
         ]
+
+    async def test__summarize__by_run(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="evening")
+        build_id = uuid.uuid4()
+        # A build saves one row per step: they make one run, dated by its first row.
+        for second, cost in ((1, 2), (2, 1)):
+            await LLMUsageModelFactory.create_async(
+                user_id=user.id,
+                run_id=build_id,
+                operation=LLMOperation.TASTE_BUILD,
+                profile_id=profile_db.id,
+                created_at=datetime(2026, 11, 3, 10, 0, second, tzinfo=UTC),
+                cost=Decimal(cost),
+            )
+        await LLMUsageModelFactory.create_async(
+            user_id=user.id,
+            operation=LLMOperation.ENRICH,
+            created_at=datetime(2026, 11, 2, 9, 30, tzinfo=UTC),
+            cost=Decimal(5),
+        )
+
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.RUN)
+
+        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            ("2026-11-02 09:30:00 enrich", 1, Decimal(5)),
+            ("2026-11-03 10:00:01 taste_build evening", 1, Decimal(3)),
+        ]
+        assert summary.total.runs == 2
+
+    async def test__summarize__all_users__by_run(self, llm_usage_repository: LLMUsageRepository) -> None:
+        alice_db = await UserModelFactory.create_async(email="alice@example.com")
+        await LLMUsageModelFactory.create_async(
+            user_id=alice_db.id,
+            operation=LLMOperation.DISCOVER,
+            created_at=datetime(2026, 11, 3, 10, 0, tzinfo=UTC),
+        )
+
+        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.RUN)
+
+        assert [group.name for group in summary.groups] == ["2026-11-03 10:00:00 discover (alice@example.com)"]
