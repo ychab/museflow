@@ -8,9 +8,5 @@ class LLMUsageFactory(DataclassFactory[LLMUsage]):
     __model__ = LLMUsage
     __set_as_default_factory_for_type__ = True
 
-    # Bounded to fit the columns: 4-byte integers and Numeric(12, 6).
-    calls = Use(DataclassFactory.__faker__.pyint, min_value=1, max_value=10)
-    prompt_tokens = Use(DataclassFactory.__faker__.pyint, max_value=100_000)
-    completion_tokens = Use(DataclassFactory.__faker__.pyint, max_value=100_000)
-    reasoning_tokens = Use(DataclassFactory.__faker__.pyint, max_value=100_000)
+    # The domain sets no limit, unlike the Numeric(12, 6) column: an unbounded decimal would not fit on save.
     cost = Use(DataclassFactory.__faker__.pydecimal, left_digits=1, right_digits=6, positive=True)
