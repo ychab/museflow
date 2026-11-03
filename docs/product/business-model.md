@@ -16,11 +16,13 @@ usage**, and it is very unevenly distributed:
 | Generate a discovery playlist | Often | One or a few requests using the profile | **Low** |
 | Rediscovery playlist | Often | None — a database query | Nil |
 
-I have not measured costs rigorously (see [lessons learned](lessons-learned.md)). From memory, a full profile build
-over a large history cost me **a few euros**, varying a lot with the models chosen and the number of seed tracks —
-I managed to bring it down by moving the high-volume steps to cheaper models. A playlist costs a fraction of that.
+Measured with `museflow llm usage` (see [V3](v3.md)): a profile build from about 1,000 rated tracks costs
+**$0.22**, a discovery playlist about **$0.07**, and tagging a library of 10,000 tracks about $0.80, once. The build
+grows with the number of seed tracks and the models chosen; moving the high-volume steps to cheaper models brought it
+down.
 
-The one thing I am sure of: **the profile is expensive; playlists are cheap.**
+So **the profile costs more than a playlist**, but by less than I assumed: a discovery is about a third of a small
+build. The asymmetry holds; it is narrower than I thought.
 
 ## A pricing idea that follows the cost
 
