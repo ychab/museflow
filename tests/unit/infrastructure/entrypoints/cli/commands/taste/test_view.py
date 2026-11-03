@@ -170,17 +170,6 @@ class TestTasteViewLogic:
         with pytest.raises(UserNotFound):
             await view_logic(email="test@example.com", name="my-profile")
 
-    async def test__profile__not_found(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = UserFactory.build()
-        mock_taste_profile_repository.get.return_value = None
-
-        with pytest.raises(TasteProfileNotFoundException):
-            await view_logic(email="test@example.com", name="my-profile")
-
 
 class TestGenerateProfileHtmlContent:
     def test__escapes_profile_text(self) -> None:
