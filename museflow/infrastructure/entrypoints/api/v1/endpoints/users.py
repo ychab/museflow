@@ -11,6 +11,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_authenticate import user_authenticate
 from museflow.application.use_cases.user_create import user_create
+from museflow.application.use_cases.user_delete import user_delete
 from museflow.application.use_cases.user_update import user_update
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
@@ -107,6 +108,5 @@ async def delete_current_user(
     current_user: User = Depends(get_current_user),
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
 ) -> None:
-    async with uow:
-        await uow.users.delete(current_user.id)
+    await user_delete(user_id=current_user.id, uow=uow)
     return None
