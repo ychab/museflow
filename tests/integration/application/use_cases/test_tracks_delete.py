@@ -25,18 +25,11 @@ class TestFindTracksToDeleteUseCase:
 
 
 class TestDeleteTracksUseCase:
-    async def test__by_artist_and_name(self, uow: UnitOfWorkPort, user: User) -> None:
-        await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
+    async def test__by_ids(self, uow: UnitOfWorkPort, user: User) -> None:
+        creep_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
 
-        deleted = await delete_tracks(
-            user_id=user.id,
-            artist="Radiohead",
-            name="Creep",
-            source=None,
-            provider=None,
-            uow=uow,
-        )
+        deleted = await delete_tracks(user_id=user.id, track_ids=[creep_db.id], provider=None, uow=uow)
 
         assert deleted == 1
         remaining = await find_tracks_to_delete(
@@ -49,23 +42,32 @@ class TestDeleteTracksUseCase:
         )
         assert [track.name for track in remaining] == ["Karma Police"]
 
-    async def test__purge(self, uow: UnitOfWorkPort, user: User) -> None:
-        await TrackModelFactory.create_batch_async(size=5, user_id=user.id)
-
-        deleted = await delete_tracks(user_id=user.id, artist=None, name=None, source=None, provider=None, uow=uow)
-
-        assert deleted == 5
-
-    async def test__by_provider(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__by_provider__keeps_the_other_filters(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
-
-        deleted = await delete_tracks(
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"])
+        tracks = await find_tracks_to_delete(
             user_id=user.id,
-            artist=None,
+            artist="Radiohead",
             name=None,
             source=None,
             provider=MusicProvider.SPOTIFY,
             uow=uow,
         )
 
+        deleted = await delete_tracks(
+            user_id=user.id,
+            track_ids=[track.id for track in tracks],
+            provider=MusicProvider.SPOTIFY,
+            uow=uow,
+        )
+
         assert deleted == 1
+        remaining = await find_tracks_to_delete(
+            user_id=user.id,
+            artist=None,
+            name=None,
+            source=None,
+            provider=None,
+            uow=uow,
+        )
+        assert [track.artists for track in remaining] == [["Portishead"]]

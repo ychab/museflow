@@ -28,7 +28,9 @@ def delete(
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name (case-insensitive)"),
     name: str | None = typer.Option(None, "--name", help="Filter by track name (case-insensitive)"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Filter by track source"),
-    provider: MusicProvider | None = typer.Option(None, "--provider", help="Filter by music provider"),
+    provider: MusicProvider | None = typer.Option(
+        None, "--provider", help="Filter by music provider: unlink it, delete tracks left with none"
+    ),
     purge: bool = typer.Option(False, "--purge", help="Delete all tracks without artist/name filter"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
@@ -100,9 +102,7 @@ async def delete_logic(
 
     deleted = await delete_tracks(
         user_id=user.id,
-        artist=artist,
-        name=name,
-        source=source,
+        track_ids=[track.id for track in tracks],
         provider=provider,
         uow=uow,
     )
