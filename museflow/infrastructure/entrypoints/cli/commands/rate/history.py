@@ -8,16 +8,15 @@ import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.track_rate import TrackRateUseCase
-from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
-from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
+from museflow.infrastructure.entrypoints.cli.commands.rate.utils import RateAnswer
+from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_track
+from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -109,25 +108,12 @@ async def rate_history_logic(
         if not tracks:
             return RateHistoryResult(no_tracks=True)
 
-        threshold = app_settings.DISCOVERY_BLACKLIST_SCORE_THRESHOLD
         total = len(tracks)
-        rated_count = 0
-        skipped_count = 0
-        blacklist_track_count = 0
-        blacklist_artist_count = 0
+        answers: list[RateAnswer] = []
 
         for i, track in enumerate(tracks):
-            if provider is not None:
-                try:
-                    await use_case.play(track)
-                except ProviderNoActiveDeviceException:
-                    typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
-                    input("Start playback on your device and press Enter to retry...")
-                    try:
-                        await use_case.play(track)
-                    except ProviderNoActiveDeviceException:
-                        typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
-                        break
+            if provider is not None and not await play_track(use_case, track, provider):
+                break
 
             artists_display = ", ".join(track.artists)
             playing_indicator = " ▶ Playing..." if provider is not None else ""
@@ -135,46 +121,11 @@ async def rate_history_logic(
                 f"\n[{i + 1}/{total}] {artists_display} — {track.name} [played: {track.played_count}x]{playing_indicator}"
             )
 
-            while True:
-                raw = typer.prompt(
-                    f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, s=skip, u=permanently skip)",
-                    default="s",
-                )
-                if raw.strip().lower() == "s":
-                    break
-                if raw.strip().lower() == "u":
-                    await use_case.skip(track_id=track.id)
-                    skipped_count += 1
-                    break
-
-                try:
-                    score_int = int(raw)
-                except ValueError:
-                    typer.secho("  Invalid input, try again.", fg=typer.colors.YELLOW)
-                    continue
-
-                if not DISCOVERY_TRACK_SCORE_MIN <= score_int <= DISCOVERY_TRACK_SCORE_MAX:
-                    typer.secho(
-                        f"  Score must be between {DISCOVERY_TRACK_SCORE_MIN} and {DISCOVERY_TRACK_SCORE_MAX}, try again.",
-                        fg=typer.colors.YELLOW,
-                    )
-                    continue
-
-                await use_case.rate(track_id=track.id, score=score_int)
-                rated_count += 1
-
-                if score_int <= threshold:
-                    if typer.confirm("  ↳ Blacklist this track?", default=False):
-                        await use_case.blacklist_track(name=track.name, artist_name=track.primary_artist)
-                        blacklist_track_count += 1
-                    if typer.confirm(f'  ↳ Blacklist artist "{track.primary_artist}"?', default=False):
-                        await use_case.blacklist_artist(artist_name=track.primary_artist)
-                        blacklist_artist_count += 1
-                break
+            answers.append(await rate_track(use_case, track, allow_permanent_skip=True))
 
     return RateHistoryResult(
-        rated_count=rated_count,
-        blacklist_track_count=blacklist_track_count,
-        blacklist_artist_count=blacklist_artist_count,
-        skipped_count=skipped_count,
+        rated_count=sum(answer.rated for answer in answers),
+        blacklist_track_count=sum(answer.track_blacklisted for answer in answers),
+        blacklist_artist_count=sum(answer.artist_blacklisted for answer in answers),
+        skipped_count=sum(answer.skipped_forever for answer in answers),
     )
