@@ -291,7 +291,3 @@ class TrackSQLRepository(TrackRepository):
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
-
-    async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        orphan_ids = await self.unlink_provider(user_id=user_id, provider=provider)
-        return await self.delete(user_id=user_id, track_ids=orphan_ids)

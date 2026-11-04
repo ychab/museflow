@@ -5,7 +5,6 @@ import uuid
 from datetime import UTC
 from datetime import datetime
 
-from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -548,25 +547,6 @@ class TestTrackSQLRepository:
 
     async def test__bulk_update__empty_list__is_noop(self, track_repository: TrackRepository) -> None:
         await track_repository.bulk_update([], frozenset({EnrichField.GENRE}))
-
-    async def test__purge(
-        self,
-        async_session_db: AsyncSession,
-        user: User,
-        tracks: list[Track],
-        tracks_other: list[Track],
-        track_repository: TrackRepository,
-    ) -> None:
-        count = await track_repository.purge(user.id, provider=MusicProvider.SPOTIFY)
-        assert count == len(tracks)
-
-        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
-        results = await async_session_db.execute(stmt)
-        assert results.scalar() == 0
-
-        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
-        results = await async_session_db.execute(stmt)
-        assert results.scalar() == 2
 
     async def test__rate__updates_score(
         self,

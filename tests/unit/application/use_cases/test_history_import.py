@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -69,7 +70,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             tracks_created=2,
             tracks_purged=0,
         )
-        assert mock_track_repository.purge.call_count == 0
+        mock_track_repository.unlink_provider.assert_not_awaited()
 
     async def test__tracks_built_from_file_metadata(
         self,
@@ -137,14 +138,16 @@ class TestImportStreamingHistorySpotifyUseCase:
         get_known_call = mock_track_repository.get_known_identifiers.call_args
         assert set(get_known_call.kwargs["fingerprints"]) == {fp1, fp2}
 
-    async def test__purge__calls_repository(
+    async def test__purge__deletes_the_unlinked_tracks(
         self,
         user: User,
         history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.purge.return_value = 5
+        orphan_ids = [uuid.uuid4() for _ in range(5)]
+        mock_track_repository.unlink_provider.return_value = orphan_ids
+        mock_track_repository.delete.return_value = 5
         mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
 
         report = await use_case.import_history(
@@ -152,7 +155,8 @@ class TestImportStreamingHistorySpotifyUseCase:
             config=StreamingHistoryImportConfigInput(directory=history_dir, purge=True),
         )
 
-        mock_track_repository.purge.assert_called_once()
+        mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        mock_track_repository.delete.assert_awaited_once_with(user_id=user.id, track_ids=orphan_ids)
         assert report.tracks_purged == 5
 
     async def test__no_tracks_parsed__skips_known_ids_lookup(

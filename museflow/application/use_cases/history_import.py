@@ -66,10 +66,8 @@ class ImportStreamingHistoryUseCase:
         tracks_purged = 0
         if config.purge:
             async with self._uow as uow:
-                tracks_purged = await uow.tracks.purge(
-                    user_id=user.id,
-                    provider=MusicProvider.SPOTIFY,
-                )
+                orphan_ids = await uow.tracks.unlink_provider(user_id=user.id, provider=MusicProvider.SPOTIFY)
+                tracks_purged = await uow.tracks.delete(user_id=user.id, track_ids=orphan_ids)
             logger.info("History tracks purged.\n")
 
         # Collect all play events per track across all files, keyed by fingerprint.
