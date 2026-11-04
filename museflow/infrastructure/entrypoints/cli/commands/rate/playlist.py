@@ -111,9 +111,9 @@ async def rate_playlist_logic(
 
         threshold = app_settings.DISCOVERY_BLACKLIST_SCORE_THRESHOLD
         total = len(tracks)
-        tracks_rated: list[tuple[uuid.UUID, int]] = []
-        blacklist_track_pairs: list[tuple[str, str]] = []
-        blacklist_artist_names: list[str] = []
+        rated_count = 0
+        blacklist_track_count = 0
+        blacklist_artist_count = 0
 
         for i, track in enumerate(tracks):
             if provider is not None:
@@ -155,26 +155,20 @@ async def rate_playlist_logic(
                     )
                     continue
 
-                tracks_rated.append((track.id, score_int))
+                await use_case.rate(track_id=track.id, score=score_int)
+                rated_count += 1
 
                 if score_int <= threshold:
                     if typer.confirm("  ↳ Blacklist this track?", default=False):
-                        blacklist_track_pairs.append((track.name, track.primary_artist))
+                        await use_case.blacklist_track(name=track.name, artist_name=track.primary_artist)
+                        blacklist_track_count += 1
                     if typer.confirm(f'  ↳ Blacklist artist "{track.primary_artist}"?', default=False):
-                        blacklist_artist_names.append(track.primary_artist)
+                        await use_case.blacklist_artist(artist_name=track.primary_artist)
+                        blacklist_artist_count += 1
                 break
 
-        for track_id, track_score in tracks_rated:
-            await use_case.rate(track_id=track_id, score=track_score)
-
-        for track_name, artist_name in blacklist_track_pairs:
-            await use_case.blacklist_track(name=track_name, artist_name=artist_name)
-
-        for artist_name in blacklist_artist_names:
-            await use_case.blacklist_artist(artist_name=artist_name)
-
     return RatePlaylistResult(
-        rated_count=len(tracks_rated),
-        blacklist_track_count=len(blacklist_track_pairs),
-        blacklist_artist_count=len(blacklist_artist_names),
+        rated_count=rated_count,
+        blacklist_track_count=blacklist_track_count,
+        blacklist_artist_count=blacklist_artist_count,
     )

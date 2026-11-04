@@ -15,11 +15,12 @@ Both interactive commands (`history` and `playlist`) behave the same way. For ea
 | --- | --- |
 | `0` to `10` | Saves the score. |
 | `s` (default, or Enter) | Skips the track for now; it will be proposed again later. |
-| `u` | Permanently skips the track: it will not be proposed again. |
+| `u` (`rate history` only) | Permanently skips the track: it will not be proposed again. |
 
 When the score is at or below the blacklist threshold (setting `DISCOVERY_BLACKLIST_SCORE_THRESHOLD`, default
 `3`), two follow-up questions offer to blacklist the track and its artist (see
-[`blacklist`](blacklist.md)). Ratings and blacklist entries are saved when the session ends.
+[`blacklist`](blacklist.md)). Each answer is saved as soon as it is given: stopping the session (Ctrl+C) keeps
+what was already rated.
 
 ## `rate history`
 

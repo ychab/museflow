@@ -4,6 +4,7 @@ from typing import Final
 from unittest import mock
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
@@ -215,6 +216,24 @@ class TestRateHistoryLogic:
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
         assert result.rated_count == 1
+
+    async def test__saves_each_answer_before_the_next_prompt(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+    ) -> None:
+        first, second, third = TrackFactory.batch(3)
+        mock_user_repository.get_by_email.return_value = user
+        mock_track_repository.get_list.return_value = [first, second, third]
+        mock_typer_prompt.side_effect = ["8", "u", typer.Abort()]
+
+        with pytest.raises(typer.Abort):
+            await rate_history_logic(email=user.email, limit=10, reset=False)
+
+        mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=first.id, score=8)
+        mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=second.id)
 
     async def test__skips_track_on_s_input(
         self,
