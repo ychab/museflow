@@ -158,29 +158,30 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def delete(
+    async def unlink_provider(
         self,
         user_id: uuid.UUID,
-        artist_name: str | None = None,
-        track_name: str | None = None,
-        source: TrackSource | None = None,
-        provider: MusicProvider | None = None,
-    ) -> int:
-        """Deletes tracks matching the given filters for a user.
-
-        All filter parameters are optional and combined with AND logic.
-        At least one filter should be provided by the caller.
+        provider: MusicProvider,
+        track_ids: list[uuid.UUID] | None = None,
+    ) -> list[uuid.UUID]:
+        """Removes the provider link from a user's tracks, keeping their other links.
 
         Args:
-            user_id: The ID of the user whose tracks are to be deleted.
-            artist_name: When set, only tracks whose primary artist matches (case-insensitive) are deleted.
-            track_name: When set, only tracks whose name matches (case-insensitive) are deleted.
-            source: When set, only tracks whose source bit includes this flag are deleted.
-            provider: When set, removes the provider link from matching tracks. Tracks with no
-                      remaining provider links are fully deleted; others keep their other links.
+            user_id: Scopes the change to this user.
+            provider: The provider whose link to remove.
+            track_ids: When set, only these tracks are unlinked; otherwise all the user's tracks are.
 
         Returns:
-            The number of fully deleted tracks.
+            The ids of the unlinked tracks left with no provider link, for the caller to delete.
+        """
+        ...
+
+    @abstractmethod
+    async def delete(self, user_id: uuid.UUID, track_ids: list[uuid.UUID]) -> int:
+        """Deletes the given tracks of a user; the ids of another user's tracks are ignored.
+
+        Returns:
+            The number of deleted tracks.
         """
         ...
 

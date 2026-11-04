@@ -14,7 +14,7 @@ async def find_tracks_to_delete(
     provider: MusicProvider | None,
     uow: UnitOfWorkPort,
 ) -> list[Track]:
-    """Lists what `delete_tracks` would delete with the same filters, so the caller can confirm first."""
+    """Lists the tracks matching the filters, so the caller can confirm before passing them to `delete_tracks`."""
     async with uow:
         tracks = await uow.tracks.get_list(
             user_id=user_id,
@@ -31,17 +31,14 @@ async def find_tracks_to_delete(
 
 async def delete_tracks(
     user_id: uuid.UUID,
-    artist: str | None,
-    name: str | None,
-    source: TrackSource | None,
+    track_ids: list[uuid.UUID],
     provider: MusicProvider | None,
     uow: UnitOfWorkPort,
 ) -> int:
+    """Deletes the given tracks; with a provider, unlinks it and deletes only the tracks left with no link."""
     async with uow:
-        return await uow.tracks.delete(
-            user_id=user_id,
-            artist_name=artist,
-            track_name=name,
-            source=source,
-            provider=provider,
-        )
+        if provider is not None:
+            orphan_ids = await uow.tracks.unlink_provider(user_id=user_id, provider=provider, track_ids=track_ids)
+            return await uow.tracks.delete(user_id=user_id, track_ids=orphan_ids)
+
+        return await uow.tracks.delete(user_id=user_id, track_ids=track_ids)

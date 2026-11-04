@@ -55,28 +55,39 @@ class TestFindTracksToDeleteUseCase:
 
 
 class TestDeleteTracksUseCase:
-    async def test__filters_passed_to_repository(
+    async def test__no_provider__deletes_the_ids(
         self,
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         user_id = uuid.uuid4()
+        track_ids = [uuid.uuid4(), uuid.uuid4()]
+        mock_track_repository.delete.return_value = 2
+
+        deleted = await delete_tracks(user_id=user_id, track_ids=track_ids, provider=None, uow=mock_uow)
+
+        assert deleted == 2
+        mock_track_repository.unlink_provider.assert_not_awaited()
+        mock_track_repository.delete.assert_awaited_once_with(user_id=user_id, track_ids=track_ids)
+
+    async def test__provider__deletes_the_orphans_only(
+        self,
+        mock_uow: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user_id = uuid.uuid4()
+        track_ids = [uuid.uuid4(), uuid.uuid4()]
+        mock_track_repository.unlink_provider.return_value = track_ids[:1]
         mock_track_repository.delete.return_value = 1
 
         deleted = await delete_tracks(
-            user_id=user_id,
-            artist="Radiohead",
-            name="Creep",
-            source=TrackSource.HISTORY,
-            provider=MusicProvider.SPOTIFY,
-            uow=mock_uow,
+            user_id=user_id, track_ids=track_ids, provider=MusicProvider.SPOTIFY, uow=mock_uow
         )
 
         assert deleted == 1
-        mock_track_repository.delete.assert_awaited_once_with(
+        mock_track_repository.unlink_provider.assert_awaited_once_with(
             user_id=user_id,
-            artist_name="Radiohead",
-            track_name="Creep",
-            source=TrackSource.HISTORY,
             provider=MusicProvider.SPOTIFY,
+            track_ids=track_ids,
         )
+        mock_track_repository.delete.assert_awaited_once_with(user_id=user_id, track_ids=track_ids[:1])

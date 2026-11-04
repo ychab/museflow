@@ -256,55 +256,42 @@ class TrackSQLRepository(TrackRepository):
 
         return len(result.scalars().all())
 
-    async def delete(
+    async def unlink_provider(
         self,
         user_id: uuid.UUID,
-        artist_name: str | None = None,
-        track_name: str | None = None,
-        source: TrackSource | None = None,
-        provider: MusicProvider | None = None,
-    ) -> int:
-        if provider is not None:
-            return await self._strip_provider_and_delete_empty(user_id=user_id, provider=provider)
+        provider: MusicProvider,
+        track_ids: list[uuid.UUID] | None = None,
+    ) -> list[uuid.UUID]:
+        stmt = (
+            update(TrackModel)
+            .where(
+                TrackModel.user_id == user_id,
+                text(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+                    "WHERE elem->>'provider' = :provider)"
+                ).bindparams(provider=provider.value),
+            )
+            .values(
+                provider_links=text(
+                    "(SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb) "
+                    "FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+                    "WHERE elem->>'provider' != :provider)"
+                ).bindparams(provider=provider.value)
+            )
+            .returning(TrackModel.id, func.jsonb_array_length(TrackModel.provider_links).label("links_left"))
+        )
+        if track_ids is not None:
+            stmt = stmt.where(TrackModel.id.in_(track_ids))
 
-        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+        result = await self.session.execute(stmt)
+        return [row.id for row in result if row.links_left == 0]
 
-        if artist_name is not None:
-            stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
-        if track_name is not None:
-            stmt = stmt.where(func.lower(TrackModel.name) == track_name.lower())
-        if source is not None:
-            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+    async def delete(self, user_id: uuid.UUID, track_ids: list[uuid.UUID]) -> int:
+        stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.id.in_(track_ids))
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
     async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        return await self._strip_provider_and_delete_empty(user_id=user_id, provider=provider)
-
-    async def _strip_provider_and_delete_empty(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        # Step 1: Remove provider link from all tracks that have it
-        await self.session.execute(
-            text("""
-                UPDATE museflow_track
-                SET provider_links = (
-                    SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
-                    FROM jsonb_array_elements(provider_links) AS elem
-                    WHERE elem->>'provider' != :provider
-                )
-                WHERE user_id = :user_id
-                  AND EXISTS (
-                      SELECT 1 FROM jsonb_array_elements(provider_links) AS elem
-                      WHERE elem->>'provider' = :provider
-                  )
-            """).bindparams(user_id=user_id, provider=provider.value)
-        )
-
-        # Step 2: Delete tracks now left with no provider links
-        delete_stmt = delete(TrackModel).where(
-            TrackModel.user_id == user_id,
-            func.jsonb_array_length(TrackModel.provider_links) == 0,
-        )
-        result = await self.session.execute(delete_stmt)
-
-        return int(result.rowcount)  # type: ignore
+        orphan_ids = await self.unlink_provider(user_id=user_id, provider=provider)
+        return await self.delete(user_id=user_id, track_ids=orphan_ids)

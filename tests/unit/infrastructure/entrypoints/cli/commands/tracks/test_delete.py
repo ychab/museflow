@@ -194,7 +194,9 @@ class TestDeleteLogic:
         mock_track_repository: mock.AsyncMock,
         mock_typer_confirm: mock.Mock,
     ) -> None:
-        mock_track_repository.get_list.return_value = TrackFactory.batch(size=2)
+        user = mock_user_repository.get_by_email.return_value
+        tracks = TrackFactory.batch(size=2)
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 2
         mock_typer_confirm.return_value = True
 
@@ -208,6 +210,10 @@ class TestDeleteLogic:
 
         assert result == TracksDeleteResult(deleted_count=2)
         mock_typer_confirm.assert_called_once()
+        mock_track_repository.delete.assert_awaited_once_with(
+            user_id=user.id,
+            track_ids=[track.id for track in tracks],
+        )
 
     async def test__confirmation_declined__aborts(
         self,
