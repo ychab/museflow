@@ -7,6 +7,7 @@ import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import TracksDeleteResult
@@ -201,6 +202,29 @@ class TestDeleteLogic:
         output = capsys.readouterr().out
         for track in tracks:
             assert track.name not in output
+
+    async def test__purge__with_provider__unlinks_the_whole_library(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user = mock_user_repository.get_by_email.return_value
+        mock_track_repository.get_list.return_value = TrackFactory.batch(size=2)
+        mock_track_repository.unlink_provider.return_value = []
+        mock_track_repository.delete.return_value = 0
+
+        await delete_logic(
+            email="test@example.com",
+            artist=None,
+            name=None,
+            source=None,
+            provider=MusicProvider.SPOTIFY,
+            purge=True,
+            yes=True,
+        )
+
+        mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        mock_track_repository.delete_all.assert_not_awaited()
 
     async def test__purge__with_source__deletes_the_ids(
         self,
