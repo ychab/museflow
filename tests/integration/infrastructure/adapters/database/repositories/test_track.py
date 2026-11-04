@@ -642,6 +642,15 @@ class TestTrackSQLRepository:
             await async_session_db.execute(select(TrackModel).where(TrackModel.id == other.id))
         ).scalar_one_or_none() is not None
 
+    async def test__delete__more_ids_than_bind_params(self, user: User, track_repository: TrackRepository) -> None:
+        # asyncpg caps a query at 32767 bind parameters: a whole library must fit in one.
+        track_db = await TrackModelFactory.create_async(user_id=user.id)
+        track_ids = [track_db.id, *(uuid.uuid4() for _ in range(40_000))]
+
+        count = await track_repository.delete(user_id=user.id, track_ids=track_ids)
+
+        assert count == 1
+
     async def test__delete__scoped_to_user(
         self,
         async_session_db: AsyncSession,
