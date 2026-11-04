@@ -4,6 +4,7 @@ from typing import Final
 from unittest import mock
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
@@ -234,6 +235,25 @@ class TestRatePlaylistLogic:
         await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
+
+    async def test__saves_each_answer_before_the_next_prompt(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_typer_prompt: mock.Mock,
+    ) -> None:
+        first, second = TrackFactory.batch(2)
+        playlist = PlaylistFactory.build(user_id=user.id, tracks=[first, second])
+        mock_user_repository.get_by_email.return_value = user
+        mock_playlist_repository.get.return_value = playlist
+        mock_typer_prompt.side_effect = ["8", typer.Abort()]
+
+        with pytest.raises(typer.Abort):
+            await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+
+        mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=first.id, score=8)
 
     async def test__skips_track_on_s_input(
         self,
