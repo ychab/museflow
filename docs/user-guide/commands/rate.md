@@ -41,7 +41,8 @@ museflow rate history --email <email> [OPTIONS]
 
 **Prerequisites.** Imported history. For `--play`, a connected Spotify account and an **active Spotify device**
 (the desktop or mobile app open, or a web player). When no device is found, the command warns and retries; if
-the device is still unavailable it stops the session.
+the device is still unavailable it stops the session. The Spotify Android app (seen with 9.1.94) may stop the current
+song without starting the track; the web player and the desktop app play it.
 
 **Example**
 
