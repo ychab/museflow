@@ -1,85 +1,79 @@
+import pytest
+
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.tracks_delete import delete_all_tracks
-from museflow.application.use_cases.tracks_delete import delete_tracks
-from museflow.application.use_cases.tracks_delete import find_tracks_to_delete
+from museflow.application.use_cases.tracks_delete import TracksDeleteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestFindTracksToDeleteUseCase:
-    async def test__by_artist_and_name(self, uow: UnitOfWorkPort, user: User) -> None:
+class TestTracksDeleteUseCase:
+    @pytest.fixture
+    def use_case(self, uow: UnitOfWorkPort) -> TracksDeleteUseCase:
+        return TracksDeleteUseCase(uow=uow)
+
+    async def test__find__by_artist_and_name(
+        self,
+        use_case: TracksDeleteUseCase,
+        user: User,
+    ) -> None:
         creep_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
 
-        tracks = await find_tracks_to_delete(
-            user_id=user.id,
-            artist="Radiohead",
-            name="Creep",
-            source=None,
-            provider=None,
-            uow=uow,
-        )
+        tracks = await use_case.find(user_id=user.id, artist="Radiohead", name="Creep", source=None, provider=None)
 
         assert [track.id for track in tracks] == [creep_db.id]
 
-
-class TestDeleteTracksUseCase:
-    async def test__by_ids(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__delete__by_ids(
+        self,
+        use_case: TracksDeleteUseCase,
+        user: User,
+    ) -> None:
         creep_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
 
-        deleted = await delete_tracks(user_id=user.id, track_ids=[creep_db.id], provider=None, uow=uow)
+        deleted = await use_case.delete(user_id=user.id, track_ids=[creep_db.id], provider=None)
 
         assert deleted == 1
-        remaining = await find_tracks_to_delete(
-            user_id=user.id,
-            artist=None,
-            name=None,
-            source=None,
-            provider=None,
-            uow=uow,
-        )
+        remaining = await use_case.find(user_id=user.id, artist=None, name=None, source=None, provider=None)
         assert [track.name for track in remaining] == ["Karma Police"]
 
-    async def test__by_provider__keeps_the_other_filters(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__delete__by_provider__keeps_the_other_filters(
+        self,
+        use_case: TracksDeleteUseCase,
+        user: User,
+    ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
         await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"])
-        tracks = await find_tracks_to_delete(
+        tracks = await use_case.find(
             user_id=user.id,
             artist="Radiohead",
             name=None,
             source=None,
             provider=MusicProvider.SPOTIFY,
-            uow=uow,
         )
 
-        deleted = await delete_tracks(
+        deleted = await use_case.delete(
             user_id=user.id,
             track_ids=[track.id for track in tracks],
             provider=MusicProvider.SPOTIFY,
-            uow=uow,
         )
 
         assert deleted == 1
-        remaining = await find_tracks_to_delete(
-            user_id=user.id,
-            artist=None,
-            name=None,
-            source=None,
-            provider=None,
-            uow=uow,
-        )
+        remaining = await use_case.find(user_id=user.id, artist=None, name=None, source=None, provider=None)
         assert [track.artists for track in remaining] == [["Portishead"]]
 
-
-class TestDeleteAllTracksUseCase:
-    async def test__nominal(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__delete_all__nominal(
+        self,
+        use_case: TracksDeleteUseCase,
+        uow: UnitOfWorkPort,
+        user: User,
+    ) -> None:
         await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
         other_track_db = await TrackModelFactory.create_async()
 
-        deleted = await delete_all_tracks(user_id=user.id, uow=uow)
+        deleted = await use_case.delete_all(user_id=user.id)
 
         assert deleted == 3
         async with uow:

@@ -5,9 +5,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.tracks_delete import delete_all_tracks
-from museflow.application.use_cases.tracks_delete import delete_tracks
-from museflow.application.use_cases.tracks_delete import find_tracks_to_delete
+from museflow.application.use_cases.tracks_delete import TracksDeleteUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
@@ -82,14 +80,8 @@ async def delete_logic(
     if not user:
         raise UserNotFound()
 
-    tracks = await find_tracks_to_delete(
-        user_id=user.id,
-        artist=artist,
-        name=name,
-        source=source,
-        provider=provider,
-        uow=uow,
-    )
+    use_case = TracksDeleteUseCase(uow=uow)
+    tracks = await use_case.find(user_id=user.id, artist=artist, name=name, source=source, provider=provider)
 
     count = len(tracks)
     if count == 0:
@@ -104,12 +96,7 @@ async def delete_logic(
         typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
 
     if purge and source is None and provider is None:
-        deleted = await delete_all_tracks(user_id=user.id, uow=uow)
+        deleted = await use_case.delete_all(user_id=user.id)
     else:
-        deleted = await delete_tracks(
-            user_id=user.id,
-            track_ids=[track.id for track in tracks],
-            provider=provider,
-            uow=uow,
-        )
+        deleted = await use_case.delete(user_id=user.id, track_ids=[track.id for track in tracks], provider=provider)
     return TracksDeleteResult(deleted_count=deleted)
