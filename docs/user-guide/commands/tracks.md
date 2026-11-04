@@ -53,10 +53,10 @@ museflow tracks delete --email <email> (--artist <name> | --name <name> | --purg
 | `--name` | none | Filter by track name (case-insensitive). |
 | `--source` | `all` | Filter by track source: `all`, `history` or `discovery`. |
 | `--provider` | none | Filter by music provider (`spotify`): removes only its link from the matching tracks, and deletes the ones left with no provider link. |
-| `--purge` | off | Delete all tracks without artist/name filter. |
+| `--purge` | off | Delete all tracks, or only those matching `--source` and `--provider`. Can't be combined with `--artist` or `--name`. |
 | `--yes`, `-y` | off | Skip confirmation prompt. |
 
-At least one of `--artist`, `--name` or `--purge` is required.
+Give `--artist` and/or `--name`, or `--purge`.
 
 **Example**
 

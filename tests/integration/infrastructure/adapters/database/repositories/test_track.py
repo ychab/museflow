@@ -5,6 +5,7 @@ import uuid
 from datetime import UTC
 from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -666,6 +667,22 @@ class TestTrackSQLRepository:
         assert (
             await async_session_db.execute(select(TrackModel).where(TrackModel.id == other_track.id))
         ).scalar_one_or_none() is not None
+
+    async def test__delete_all(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        tracks: list[Track],
+        tracks_other: list[Track],
+        track_repository: TrackRepository,
+    ) -> None:
+        count = await track_repository.delete_all(user_id=user.id)
+
+        assert count == len(tracks)
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user.id)
+        assert (await async_session_db.execute(stmt)).scalar() == 0
+        stmt = select(func.count()).select_from(TrackModel).where(TrackModel.user_id != user.id)
+        assert (await async_session_db.execute(stmt)).scalar() == len(tracks_other)
 
     async def test__unlink_provider__given_ids(
         self,

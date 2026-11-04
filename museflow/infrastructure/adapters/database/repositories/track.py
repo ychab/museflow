@@ -297,3 +297,9 @@ class TrackSQLRepository(TrackRepository):
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
+
+    async def delete_all(self, user_id: uuid.UUID) -> int:
+        stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
+
+        result = await self.session.execute(stmt)
+        return int(result.rowcount)  # type: ignore
