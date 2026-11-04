@@ -8,14 +8,10 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.rate import track_rate
+from museflow.application.use_cases.track_rate import TrackRateUseCase
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
-from museflow.domain.entities.track import Track
 from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import SortOrder
-from museflow.domain.enums import TrackOrderBy
-from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
@@ -104,23 +100,12 @@ async def rate_playlist_logic(
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
+        use_case = TrackRateUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
-        tracks: list[Track]
         if playlist_id is not None:
-            async with uow:
-                playlist = await uow.playlists.get(user.id, playlist_id)
-            if playlist is None:
-                raise PlaylistNotFoundError()
-            tracks = playlist.tracks
+            tracks = await use_case.find_playlist(playlist_id=playlist_id)
         else:
-            async with uow:
-                tracks = await uow.tracks.get_list(
-                    user_id=user.id,
-                    source=TrackSource.DISCOVERY,
-                    unrated_only=True,
-                    order=[(TrackOrderBy.CREATED_AT, SortOrder.DESC)],
-                    limit=limit,
-                )
+            tracks = await use_case.find_discovery(limit=limit)
             if not tracks:
                 return RatePlaylistResult(no_tracks=True)
 
@@ -131,19 +116,17 @@ async def rate_playlist_logic(
         blacklist_artist_names: list[str] = []
 
         for i, track in enumerate(tracks):
-            if provider_library is not None and provider is not None:
-                track_provider_id = track.get_provider_id(provider)
-                if track_provider_id is not None:
+            if provider is not None:
+                try:
+                    await use_case.play(track)
+                except ProviderNoActiveDeviceException:
+                    typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
+                    input("Start playback on your device and press Enter to retry...")
                     try:
-                        await provider_library.play_track(track_provider_id)
+                        await use_case.play(track)
                     except ProviderNoActiveDeviceException:
-                        typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
-                        input("Start playback on your device and press Enter to retry...")
-                        try:
-                            await provider_library.play_track(track_provider_id)
-                        except ProviderNoActiveDeviceException:
-                            typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
-                            break
+                        typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
+                        break
 
             artists_display = ", ".join(track.artists)
             score_display = f"{track.score}/10" if track.score is not None else "unrated"
@@ -182,19 +165,13 @@ async def rate_playlist_logic(
                 break
 
         for track_id, track_score in tracks_rated:
-            await track_rate(
-                track_id=track_id,
-                score=track_score,
-                user_id=user.id,
-                uow=uow,
-            )
+            await use_case.rate(track_id=track_id, score=track_score)
 
-        async with uow:
-            for track_name, artist_name in blacklist_track_pairs:
-                await uow.blacklist.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
+        for track_name, artist_name in blacklist_track_pairs:
+            await use_case.blacklist_track(name=track_name, artist_name=artist_name)
 
-            for artist_name in blacklist_artist_names:
-                await uow.blacklist.add_artist(user_id=user.id, artist_name=artist_name)
+        for artist_name in blacklist_artist_names:
+            await use_case.blacklist_artist(artist_name=artist_name)
 
     return RatePlaylistResult(
         rated_count=len(tracks_rated),
