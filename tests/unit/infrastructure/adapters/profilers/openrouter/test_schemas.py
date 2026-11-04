@@ -135,9 +135,13 @@ class TestSplitWeights:
             "mood": [{"key": "melancholic", "value": 0.4}],
         }
 
-    def test__tag_in_two_tiers__first_tier_wins(self) -> None:
-        assert split_weights({"romantic": 0.6})["genre_meso"] == [{"key": "romantic", "value": 0.6}]
-        assert split_weights({"romantic": 0.6})["mood"] == []
+    def test__romantic__mood_not_genre(self) -> None:
+        assert split_weights({"romantic": 0.6, "romantic-era": 0.4}) == {
+            "genre_macro": [],
+            "genre_meso": [{"key": "romantic-era", "value": 0.4}],
+            "genre_micro": [],
+            "mood": [{"key": "romantic", "value": 0.6}],
+        }
 
     def test__unknown_tag__dropped(self) -> None:
         assert all(items == [] for items in split_weights({"made up genre": 0.9}).values())

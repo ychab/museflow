@@ -119,7 +119,7 @@ class GenreTag(StrEnum):
     POP = "pop"  # synth-pop, electro-pop, dance-pop, k-pop
     RNB = "r-n-b"  # contemporary r&b, neo-soul, funk, trap-soul
     JAZZ = "jazz"  # fusion, bebop, nu-jazz, smooth
-    CLASSICAL = "classical"  # baroque, romantic, contemporary classical
+    CLASSICAL = "classical"  # baroque, romantic era, contemporary classical
     REGGAE = "reggae"  # roots, dancehall, dub
     COUNTRY = "country"  # outlaw, bluegrass, americana
     LATIN = "latin"  # reggaeton, salsa, cumbia, bossa-nova
@@ -167,7 +167,7 @@ class GenreTag(StrEnum):
     NU_JAZZ = "nu-jazz"
     # classical
     BAROQUE = "baroque"
-    ROMANTIC = "romantic"
+    ROMANTIC_ERA = "romantic-era"  # not "romantic", the mood
     CONTEMPORARY_CLASSICAL = "contemporary-classical"
     # reggae
     ROOTS_REGGAE = "roots-reggae"
