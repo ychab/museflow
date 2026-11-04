@@ -24,8 +24,8 @@ _MOOD_ENUM: list[str] = _WEIGHT_TIERS["mood"]
 # Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
 _WEIGHT_DECIMALS = 3
 
-# Built in reverse so the first tier wins for a tag listed in two ("romantic" is a meso genre and a mood)
-_TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in reversed(_WEIGHT_TIERS.items()) for tag in tags}
+# Every tag sits in one tier only: `core_identity` keys the weights by tag alone
+_TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in _WEIGHT_TIERS.items() for tag in tags}
 
 
 def _weighted_tags() -> JsonSchemaProperty:

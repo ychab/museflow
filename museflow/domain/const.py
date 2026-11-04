@@ -60,7 +60,7 @@ GENRE_MESO_TAGS: tuple[GenreTag, ...] = (
     GenreTag.NU_JAZZ,
     # classical
     GenreTag.BAROQUE,
-    GenreTag.ROMANTIC,
+    GenreTag.ROMANTIC_ERA,
     GenreTag.CONTEMPORARY_CLASSICAL,
     # reggae
     GenreTag.ROOTS_REGGAE,

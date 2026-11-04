@@ -133,7 +133,7 @@ micro tags, see `museflow playlist history --help` for the complete list). Macro
 | `pop` | `synth-pop`, `electro-pop`, `dance-pop`, `indie-pop`, `k-pop` |
 | `r-n-b` | `contemporary-r-n-b`, `neo-soul`, `funk`, `trap-soul` |
 | `jazz` | `jazz-fusion`, `smooth-jazz`, `bebop`, `nu-jazz` |
-| `classical` | `baroque`, `romantic`, `contemporary-classical` |
+| `classical` | `baroque`, `romantic-era`, `contemporary-classical` |
 | `reggae` | `roots-reggae`, `dancehall`, `dub` |
 | `country` | `outlaw-country`, `folk-country`, `bluegrass` |
 | `latin` | `reggaeton`, `salsa`, `cumbia`, `bossa-nova`, `latin-pop`, `flamenco` |
