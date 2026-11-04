@@ -80,8 +80,8 @@ async def delete_logic(
     if not user:
         raise UserNotFound()
 
-    use_case = TracksDeleteUseCase(uow=uow)
-    tracks = await use_case.find(user_id=user.id, artist=artist, name=name, source=source, provider=provider)
+    use_case = TracksDeleteUseCase(user_id=user.id, provider=provider, uow=uow)
+    tracks = await use_case.find(artist=artist, name=name, source=source)
 
     count = len(tracks)
     if count == 0:
@@ -95,8 +95,8 @@ async def delete_logic(
     if not yes:
         typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
 
-    if purge and source is None and provider is None:
-        deleted = await use_case.delete_all(user_id=user.id)
+    if purge and source is None:
+        deleted = await use_case.delete_all()
     else:
-        deleted = await use_case.delete(user_id=user.id, track_ids=[track.id for track in tracks], provider=provider)
+        deleted = await use_case.delete(track_ids=[track.id for track in tracks])
     return TracksDeleteResult(deleted_count=deleted)
