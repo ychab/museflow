@@ -4,6 +4,9 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import Boolean
+from sqlalchemy import Uuid
+from sqlalchemy import any_
+from sqlalchemy import bindparam
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import literal_column
@@ -11,6 +14,7 @@ from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
 from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -281,13 +285,15 @@ class TrackSQLRepository(TrackRepository):
             .returning(TrackModel.id, func.jsonb_array_length(TrackModel.provider_links).label("links_left"))
         )
         if track_ids is not None:
-            stmt = stmt.where(TrackModel.id.in_(track_ids))
+            stmt = stmt.where(TrackModel.id == any_(bindparam("track_ids", track_ids, type_=ARRAY(Uuid))))
 
         result = await self.session.execute(stmt)
         return [row.id for row in result if row.links_left == 0]
 
     async def delete(self, user_id: uuid.UUID, track_ids: list[uuid.UUID]) -> int:
-        stmt = delete(TrackModel).where(TrackModel.user_id == user_id, TrackModel.id.in_(track_ids))
+        stmt = delete(TrackModel).where(
+            TrackModel.user_id == user_id, TrackModel.id == any_(bindparam("track_ids", track_ids, type_=ARRAY(Uuid)))
+        )
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
