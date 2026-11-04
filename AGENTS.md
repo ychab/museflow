@@ -63,7 +63,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named `<Entity><Action>Input` or
   `<Feature>ConfigInput`.
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
-  only when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`).
+  when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`), and a
+  class with one method per step when the entrypoint calls several steps of one flow, e.g. find, confirm, then delete
+  (`use_cases/tracks_delete.py`).
 - **Every entrypoint action goes through a use case**, even a thin one that only reads a repository
   (`use_cases/taste_profile_list.py`): the use cases list what the application does, and an API reuses them as is.
   The entrypoint keeps only its own concerns (parsing, finding the user, output).
