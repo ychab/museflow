@@ -184,19 +184,3 @@ class TrackRepository(ABC):
             The number of deleted tracks.
         """
         ...
-
-    @abstractmethod
-    async def purge(self, user_id: uuid.UUID, provider: MusicProvider) -> int:
-        """Removes all provider links for the given provider from a user's tracks.
-
-        Tracks whose provider_links becomes empty after removal are fully deleted.
-        Tracks that still have other provider links are kept.
-
-        Args:
-            user_id: The ID of the user whose tracks are to be purged.
-            provider: The provider whose links to remove.
-
-        Returns:
-            The number of fully deleted tracks.
-        """
-        ...
