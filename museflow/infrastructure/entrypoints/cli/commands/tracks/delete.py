@@ -5,6 +5,7 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.application.use_cases.tracks_delete import delete_all_tracks
 from museflow.application.use_cases.tracks_delete import delete_tracks
 from museflow.application.use_cases.tracks_delete import find_tracks_to_delete
 from museflow.domain.enums import MusicProvider
@@ -31,11 +32,13 @@ def delete(
     provider: MusicProvider | None = typer.Option(
         None, "--provider", help="Filter by music provider: unlink it, delete tracks left with none"
     ),
-    purge: bool = typer.Option(False, "--purge", help="Delete all tracks without artist/name filter"),
+    purge: bool = typer.Option(False, "--purge", help="Delete all tracks, or only those matching --source/--provider"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
     if not purge and not artist and not name:
         raise typer.BadParameter("Provide at least --artist or --name, or use --purge to delete all tracks.")
+    if purge and (artist or name):
+        raise typer.BadParameter("--purge deletes all tracks: it can't be combined with --artist or --name.")
 
     try:
         result = asyncio.run(
@@ -92,7 +95,7 @@ async def delete_logic(
     if count == 0:
         return TracksDeleteResult(no_tracks=True)
 
-    if artist and not name and not purge:
+    if artist and not name:
         for track in sorted(tracks, key=lambda t: t.name):
             typer.echo(f"  {track.name}")
 
@@ -100,10 +103,13 @@ async def delete_logic(
     if not yes:
         typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
 
-    deleted = await delete_tracks(
-        user_id=user.id,
-        track_ids=[track.id for track in tracks],
-        provider=provider,
-        uow=uow,
-    )
+    if purge and source is None and provider is None:
+        deleted = await delete_all_tracks(user_id=user.id, uow=uow)
+    else:
+        deleted = await delete_tracks(
+            user_id=user.id,
+            track_ids=[track.id for track in tracks],
+            provider=provider,
+            uow=uow,
+        )
     return TracksDeleteResult(deleted_count=deleted)

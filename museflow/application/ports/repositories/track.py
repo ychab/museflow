@@ -184,3 +184,12 @@ class TrackRepository(ABC):
             The number of deleted tracks.
         """
         ...
+
+    @abstractmethod
+    async def delete_all(self, user_id: uuid.UUID) -> int:
+        """Deletes every track of a user.
+
+        Returns:
+            The number of deleted tracks.
+        """
+        ...

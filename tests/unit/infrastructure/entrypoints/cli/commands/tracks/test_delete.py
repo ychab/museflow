@@ -7,6 +7,7 @@ import typer
 from typer.testing import CliRunner
 
 from museflow.domain.entities.track import Track
+from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import TracksDeleteResult
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
@@ -34,6 +35,17 @@ class TestDeleteParserCommand:
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "--artist or --name" in clean_typer_text(result.output)
+
+    @pytest.mark.parametrize("option", ["--artist", "--name"])
+    def test__purge__with_artist_or_name__fails(
+        self,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+        option: str,
+    ) -> None:
+        result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--purge", option, "X"])
+        assert result.exit_code != 0
+        assert "can't be combined with --artist or --name" in clean_typer_text(result.output)
 
     def test__source__invalid(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -172,9 +184,9 @@ class TestDeleteLogic:
     ) -> None:
         tracks: list[Track] = TrackFactory.batch(size=3)
         mock_track_repository.get_list.return_value = tracks
-        mock_track_repository.delete.return_value = 3
+        mock_track_repository.delete_all.return_value = 3
 
-        await delete_logic(
+        result = await delete_logic(
             email="test@example.com",
             artist=None,
             name=None,
@@ -184,9 +196,38 @@ class TestDeleteLogic:
             yes=True,
         )
 
+        assert result == TracksDeleteResult(deleted_count=3)
+        mock_track_repository.delete.assert_not_awaited()
         output = capsys.readouterr().out
         for track in tracks:
             assert track.name not in output
+
+    async def test__purge__with_source__deletes_the_ids(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        user = mock_user_repository.get_by_email.return_value
+        tracks = TrackFactory.batch(size=2)
+        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.delete.return_value = 2
+
+        result = await delete_logic(
+            email="test@example.com",
+            artist=None,
+            name=None,
+            source=TrackSource.HISTORY,
+            provider=None,
+            purge=True,
+            yes=True,
+        )
+
+        assert result == TracksDeleteResult(deleted_count=2)
+        mock_track_repository.delete_all.assert_not_awaited()
+        mock_track_repository.delete.assert_awaited_once_with(
+            user_id=user.id,
+            track_ids=[track.id for track in tracks],
+        )
 
     async def test__confirmation_accepted(
         self,

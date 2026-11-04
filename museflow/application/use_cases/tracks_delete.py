@@ -42,3 +42,8 @@ async def delete_tracks(
             return await uow.tracks.delete(user_id=user_id, track_ids=orphan_ids)
 
         return await uow.tracks.delete(user_id=user_id, track_ids=track_ids)
+
+
+async def delete_all_tracks(user_id: uuid.UUID, uow: UnitOfWorkPort) -> int:
+    async with uow:
+        return await uow.tracks.delete_all(user_id=user_id)

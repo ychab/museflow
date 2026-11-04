@@ -1,4 +1,5 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.use_cases.tracks_delete import delete_all_tracks
 from museflow.application.use_cases.tracks_delete import delete_tracks
 from museflow.application.use_cases.tracks_delete import find_tracks_to_delete
 from museflow.domain.entities.user import User
@@ -71,3 +72,15 @@ class TestDeleteTracksUseCase:
             uow=uow,
         )
         assert [track.artists for track in remaining] == [["Portishead"]]
+
+
+class TestDeleteAllTracksUseCase:
+    async def test__nominal(self, uow: UnitOfWorkPort, user: User) -> None:
+        await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
+        other_track_db = await TrackModelFactory.create_async()
+
+        deleted = await delete_all_tracks(user_id=user.id, uow=uow)
+
+        assert deleted == 3
+        async with uow:
+            assert await uow.tracks.get_list(user_id=other_track_db.user_id) != []
