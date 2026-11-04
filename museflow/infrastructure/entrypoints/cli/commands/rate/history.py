@@ -8,13 +8,10 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.rate import track_rate
-from museflow.application.use_cases.rate import track_skip
+from museflow.application.use_cases.track_rate import TrackRateUseCase
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import SortOrder
-from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderNoActiveDeviceException
@@ -102,23 +99,14 @@ async def rate_history_logic(
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
+        use_case = TrackRateUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         if reset:
             typer.confirm("This will clear all history track scores. Continue?", abort=True)
-            async with uow:
-                count = await uow.tracks.reset_score(user_id=user.id, source=TrackSource.HISTORY)
+            count = await use_case.reset_scores(source=TrackSource.HISTORY)
             typer.secho(f"Reset {count} score(s).", fg=typer.colors.YELLOW)
 
-        async with uow:
-            tracks = await uow.tracks.get_list(
-                user_id=user.id,
-                source=TrackSource.HISTORY,
-                unrated_only=True,
-                exclude_skipped=True,
-                order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-                limit=limit,
-                artist_name=artist,
-            )
+        tracks = await use_case.find_history(limit=limit, artist=artist)
         if not tracks:
             return RateHistoryResult(no_tracks=True)
 
@@ -130,19 +118,17 @@ async def rate_history_logic(
         blacklist_artist_names: list[str] = []
 
         for i, track in enumerate(tracks):
-            if provider_library is not None and provider is not None:
-                track_provider_id = track.get_provider_id(provider)
-                if track_provider_id is not None:
+            if provider is not None:
+                try:
+                    await use_case.play(track)
+                except ProviderNoActiveDeviceException:
+                    typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
+                    input("Start playback on your device and press Enter to retry...")
                     try:
-                        await provider_library.play_track(track_provider_id)
+                        await use_case.play(track)
                     except ProviderNoActiveDeviceException:
-                        typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
-                        input("Start playback on your device and press Enter to retry...")
-                        try:
-                            await provider_library.play_track(track_provider_id)
-                        except ProviderNoActiveDeviceException:
-                            typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
-                            break
+                        typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
+                        break
 
             artists_display = ", ".join(track.artists)
             playing_indicator = " ▶ Playing..." if provider is not None else ""
@@ -184,26 +170,16 @@ async def rate_history_logic(
                 break
 
         for track_id, track_score in tracks_rated:
-            await track_rate(
-                track_id=track_id,
-                score=track_score,
-                user_id=user.id,
-                uow=uow,
-            )
+            await use_case.rate(track_id=track_id, score=track_score)
 
         for track_id in tracks_perm_skipped:
-            await track_skip(
-                track_id=track_id,
-                user_id=user.id,
-                uow=uow,
-            )
+            await use_case.skip(track_id=track_id)
 
-        async with uow:
-            for track_name, artist_name in blacklist_track_pairs:
-                await uow.blacklist.add_track(user_id=user.id, name=track_name, artist_name=artist_name)
+        for track_name, artist_name in blacklist_track_pairs:
+            await use_case.blacklist_track(name=track_name, artist_name=artist_name)
 
-            for artist_name in blacklist_artist_names:
-                await uow.blacklist.add_artist(user_id=user.id, artist_name=artist_name)
+        for artist_name in blacklist_artist_names:
+            await use_case.blacklist_artist(artist_name=artist_name)
 
     return RateHistoryResult(
         rated_count=len(tracks_rated),
