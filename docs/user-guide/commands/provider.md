@@ -30,7 +30,7 @@ museflow provider connect --email <email> [OPTIONS]
 museflow provider connect --email user@example.com --timeout 120
 ```
 
-**Output.** The authorisation URL is printed and opened in the browser, then dots are printed while waiting,
+**Output.** The authorisation URL is printed and opened in the browser, then a spinner shows while waiting,
 and finally `Authentication successful!` once a new token is stored. Otherwise the command times out with an error
 asking whether the browser was opened and the consent accepted: a refused consent or a failed code exchange ends there
 too, and the browser page shows the API's error. If the browser cannot be opened automatically, copy the printed URL.
