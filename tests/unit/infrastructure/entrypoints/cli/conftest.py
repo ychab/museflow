@@ -131,12 +131,12 @@ def mock_get_unit_of_work(
 
 
 @pytest.fixture
-def mock_spotify_client(
+def mock_provider_oauth(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     client = mock.AsyncMock(spec=ProviderOAuthPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_spotify_oauth", client) as mock_client:
+    with mock_async_context_dependency_factory(f"{target_path}.get_provider_oauth", client) as mock_client:
         yield mock_client
 
 

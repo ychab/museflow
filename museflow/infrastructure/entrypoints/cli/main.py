@@ -9,8 +9,8 @@ from museflow.infrastructure.entrypoints.cli.commands import blacklist
 from museflow.infrastructure.entrypoints.cli.commands import enrich
 from museflow.infrastructure.entrypoints.cli.commands import llm
 from museflow.infrastructure.entrypoints.cli.commands import playlist
+from museflow.infrastructure.entrypoints.cli.commands import provider
 from museflow.infrastructure.entrypoints.cli.commands import rate
-from museflow.infrastructure.entrypoints.cli.commands import spotify
 from museflow.infrastructure.entrypoints.cli.commands import stats
 from museflow.infrastructure.entrypoints.cli.commands import taste
 from museflow.infrastructure.entrypoints.cli.commands import tracks
@@ -29,8 +29,8 @@ app.add_typer(blacklist.app, name="blacklist", help="Manage your music blacklist
 app.add_typer(enrich.app, name="enrich", help="Enrich tracks with AI metadata")
 app.add_typer(llm.app, name="llm", help="LLM usage and cost commands")
 app.add_typer(playlist.app, name="playlist", help="Generate and manage playlists")
+app.add_typer(provider.app, name="provider", help="Connect a music provider account")
 app.add_typer(rate.app, name="rate", help="Rate a track")
-app.add_typer(spotify.app, name="spotify", help="Spotify interaction commands")
 app.add_typer(stats.app, name="stats", help="Stats commands")
 app.add_typer(taste.app, name="taste", help="Taste profile commands")
 app.add_typer(tracks.app, name="tracks", help="Manage tracks")

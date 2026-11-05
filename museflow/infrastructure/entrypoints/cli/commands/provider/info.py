@@ -11,8 +11,8 @@ from museflow.application.use_cases.provider_token_view import view_provider_tok
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.spotify import app
-from museflow.infrastructure.entrypoints.cli.commands.spotify import console
+from museflow.infrastructure.entrypoints.cli.commands.provider import app
+from museflow.infrastructure.entrypoints.cli.commands.provider import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
@@ -22,16 +22,17 @@ def _mask(secret: str) -> str:
     return f"****{secret[-4:]}"
 
 
-@app.command("info", help="Show the stored Spotify auth token of a user.")
+@app.command("info", help="Show the stored provider auth token of a user.")
 def info(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
+    provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider of the token"),
     show_tokens: bool = typer.Option(False, "--show-tokens", help="Print the tokens in clear, after a confirmation"),
 ) -> None:
     if show_tokens:
         typer.confirm("This prints the tokens in clear. Continue?", abort=True)
 
     try:
-        token = asyncio.run(info_logic(email=email))
+        token = asyncio.run(info_logic(email=email, provider=provider))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -41,11 +42,11 @@ def info(
     if token:
         if not show_tokens:
             token = replace(token, token_access=_mask(token.token_access), token_refresh=_mask(token.token_refresh))
-        console.print("Spotify Auth Token:")
+        console.print(f"{provider.title()} Auth Token:")
         console.print(Pretty(asdict(token)), soft_wrap=True)
 
 
-async def info_logic(email: EmailStr) -> OAuthProviderUserToken | None:
+async def info_logic(email: EmailStr, provider: MusicProvider) -> OAuthProviderUserToken | None:
     uow = get_unit_of_work()
 
     async with uow:
@@ -54,4 +55,4 @@ async def info_logic(email: EmailStr) -> OAuthProviderUserToken | None:
     if user is None:
         raise UserNotFound(f"User with email '{email}' not found.")
 
-    return await view_provider_token(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
+    return await view_provider_token(user_id=user.id, provider=provider, uow=uow)
