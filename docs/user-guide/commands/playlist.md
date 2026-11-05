@@ -46,7 +46,7 @@ museflow playlist discover --email <email> [OPTIONS]
 **Prerequisites**
 
 - A completed taste profile ([`taste build`](taste.md#taste-build)).
-- A connected Spotify account ([`spotify connect`](spotify.md#spotify-connect)).
+- A connected Spotify account ([`provider connect`](provider.md#provider-connect)).
 - An OpenRouter API key (`OPENROUTER_API_KEY`).
 
 The advisor is called up to `--max-attempts` times until `--playlist-limit` new tracks are found. Tracks
@@ -118,7 +118,7 @@ museflow playlist history --email user@example.com --genre electronic --genre po
 **Output.** A table of matched tracks (artist, track, play count, score). With `--dry-run`, the command stops
 with a notice that the playlist was not created. Otherwise it prints the saved playlist name and ID. If nothing
 matches, it suggests trying `--duplicate`. `--dry-run` needs no provider connection, so it works even if you
-have not run `museflow spotify connect`.
+have not run `museflow provider connect`.
 
 ### Genre and mood values
 
