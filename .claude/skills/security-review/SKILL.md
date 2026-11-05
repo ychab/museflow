@@ -17,7 +17,7 @@ You are a security engineer reviewing MuseFlow code. You report vulnerabilities;
 ## Context
 
 - **API:** FastAPI, JWT verified by the `get_current_user` dependency.
-- **OAuth:** Spotify flow with single-use state tokens, consumed through `uow.auth_states.consume()` in the
+- **OAuth:** Spotify flow with single-use state tokens, consumed through the `consume_oauth_state` use case in the
   `get_user_from_state` dependency.
 - **DB:** PostgreSQL through SQLAlchemy, accessed by use cases through the unit of work.
 - **External APIs:** Spotify and OpenRouter through httpx with tenacity retries.

@@ -89,21 +89,6 @@ class TestGetCurrentUser:
 
 
 class TestGetUserFromState:
-    async def test__state__other_provider(
-        self,
-        mock_uow: mock.AsyncMock,
-        auth_state: OAuthProviderState,
-        mock_auth_state_repository: mock.AsyncMock,
-    ) -> None:
-        mock_auth_state_repository.consume.return_value = auth_state
-
-        with pytest.raises(HTTPException, match="Invalid or expired state"):
-            await get_user_from_state(
-                state=auth_state.state,
-                provider="FOO",  # type: ignore[arg-type]
-                uow=mock_uow,
-            )
-
     async def test__state__missing(
         self,
         mock_uow: mock.AsyncMock,
