@@ -204,7 +204,7 @@ museflow playlist delete --email user@example.com --purge --type history --inclu
 ```
 
 **Output.** Unless `--yes` is given, `--purge` asks for confirmation. Then `Deleted N playlist(s).`.
-Using `--include-remote` requires a connected Spotify account.
+Using `--include-remote` requires a connected account on the provider of each playlist deleted.
 
 !!! note
     Deleting history playlists makes their tracks eligible again for the next `playlist history` run.

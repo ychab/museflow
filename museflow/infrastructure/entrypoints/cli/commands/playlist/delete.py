@@ -83,24 +83,37 @@ async def delete_logic(
     provider: MusicProvider | None,
     include_remote: bool = False,
 ) -> int:
+    uow = get_unit_of_work()
+
+    async with uow:
+        user = await uow.users.get_by_email(email)
+        if not user:
+            raise UserNotFound()
+
+    use_case = PlaylistDeleteUseCase(user_id=user.id, uow=uow)
+
+    if not include_remote:
+        if purge:
+            return await use_case.purge(type=type, provider=provider)
+
+        await use_case.delete(playlist_id=playlist_id)  # type: ignore[arg-type]
+        return 1
+
+    if purge:
+        playlists = await use_case.find_matching(type=type, provider=provider)
+    else:
+        playlists = [await use_case.find(playlist_id=playlist_id)]  # type: ignore[arg-type]
+
     async with AsyncExitStack() as stack:
-        uow = get_unit_of_work()
-
-        async with uow:
-            user = await uow.users.get_by_email(email)
-            if not user:
-                raise UserNotFound()
-
-        provider_library = None
-        if include_remote:
-            provider_library = await stack.enter_async_context(
-                get_provider_library(MusicProvider.SPOTIFY, user=user, uow=uow)
+        provider_libraries = {
+            playlist_provider: await stack.enter_async_context(
+                get_provider_library(playlist_provider, user=user, uow=uow)
             )
-
-        use_case = PlaylistDeleteUseCase(uow=uow, provider_library=provider_library)
+            for playlist_provider in {playlist.provider for playlist in playlists}
+        }
 
         if purge:
-            return await use_case.purge(user=user, type=type, provider=provider, include_remote=include_remote)
+            return await use_case.purge_remote(playlists=playlists, provider_libraries=provider_libraries)
 
-        await use_case.delete(user=user, playlist_id=playlist_id, include_remote=include_remote)  # type: ignore[arg-type]
+        await use_case.delete_remote(playlist=playlists[0], provider_libraries=provider_libraries)
         return 1
