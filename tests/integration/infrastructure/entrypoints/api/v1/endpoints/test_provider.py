@@ -17,14 +17,15 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.config.settings.spotify import spotify_settings
 from museflow.infrastructure.entrypoints.api.main import app
 
 from tests.integration.utils.wiremock import WireMockContext
 
 
-class TestSpotifyConnect:
+class TestProviderConnect:
     async def test_not_authenticated(self, async_client: AsyncClient) -> None:
-        url = app.url_path_for("spotify_connect")
+        url = app.url_path_for("provider_connect", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -39,7 +40,7 @@ class TestSpotifyConnect:
         auth_state = await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
         assert auth_state is None
 
-        url = app.url_path_for("spotify_connect")
+        url = app.url_path_for("provider_connect", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, follow_redirects=False)
 
         assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
@@ -48,9 +49,24 @@ class TestSpotifyConnect:
         auth_state = await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
         assert auth_state is not None
 
+    async def test__provider__unknown(self, access_token: str, async_client: AsyncClient) -> None:
+        url = app.url_path_for("provider_connect", provider="foo")
+        response = await async_client.get(url, follow_redirects=False)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
 
 @pytest.mark.wiremock("spotify")
-class TestSpotifyCallback:
+class TestProviderCallback:
+    def test__url__matches_spotify_redirect_uri(self) -> None:
+        # This URL is registered in the Spotify dashboard.
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
+        assert url == spotify_settings.REDIRECT_URI.path
+
+    async def test__provider__unknown(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
+        url = app.url_path_for("provider_callback", provider="foo")
+        response = await async_client.get(url, params={"state": auth_state.state, "code": "my_secret_code"})
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
     async def test__nominal__create_auth_token(
         self,
         async_session_db: AsyncSession,
@@ -73,7 +89,7 @@ class TestSpotifyCallback:
             },
         )
 
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(
             url,
             params={
@@ -130,7 +146,7 @@ class TestSpotifyCallback:
             },
         )
 
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(
             url,
             params={
@@ -164,7 +180,7 @@ class TestSpotifyCallback:
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__state__missing(self, async_client: AsyncClient) -> None:
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": ""})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -172,15 +188,15 @@ class TestSpotifyCallback:
         assert response_data["detail"] == "Missing state parameter"
 
     async def test__state__invalid(self, async_client: AsyncClient) -> None:
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": "dummy"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         response_data = response.json()
         assert response_data["detail"] == "Invalid or expired state"
 
-    async def test__spotify_error(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
-        url = app.url_path_for("spotify_callback")
+    async def test__provider_error(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": auth_state.state, "error": "dummy error"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -188,7 +204,7 @@ class TestSpotifyCallback:
         assert response_data["detail"] == "OAuth authorisation failed"
 
     async def test__no_code(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": auth_state.state})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -209,7 +225,7 @@ class TestSpotifyCallback:
             status=500,
         )
 
-        url = app.url_path_for("spotify_callback")
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": auth_state.state, "code": "my_secret_code"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 

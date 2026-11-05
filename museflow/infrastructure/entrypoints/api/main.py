@@ -15,7 +15,7 @@ from museflow.infrastructure.config.loggers import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
-from museflow.infrastructure.entrypoints.api.v1.endpoints.spotify import router as spotify_router
+from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,9 @@ app.add_middleware(
 )
 
 api_v1_router = APIRouter()
-api_v1_router.include_router(spotify_router, prefix="/spotify", tags=["spotify"])
+# Static prefixes first: "/{provider}" would otherwise shadow any of their "/connect" or "/callback" routes.
 api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
+api_v1_router.include_router(provider_router, prefix="/{provider}", tags=["provider"])
 
 app.include_router(api_v1_router, prefix=app_settings.API_V1_PREFIX)
 
