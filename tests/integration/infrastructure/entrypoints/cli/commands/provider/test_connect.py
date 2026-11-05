@@ -1,7 +1,5 @@
 import asyncio
 from collections.abc import Callable
-from collections.abc import Iterable
-from unittest import mock
 
 from sqlalchemy import delete
 from sqlalchemy import insert
@@ -15,16 +13,11 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_start_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_wait_logic
 
 
 class TestProviderConnectLogic:
-    @pytest.fixture(autouse=True)
-    def mock_typer_launch(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.connect.typer.launch"
-        with mock.patch(target_path) as patched:
-            yield patched
-
     @pytest.fixture
     def simulate_oauth_callback(
         self,
@@ -73,12 +66,14 @@ class TestProviderConnectLogic:
         auth_token_create: OAuthProviderUserTokenCreateInput,
         simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
         async_session_db: AsyncSession,
-        capsys: pytest.CaptureFixture[str],
     ) -> None:
+        start = await connect_start_logic(user.email, MusicProvider.SPOTIFY)
+        assert start.previous_token is None
+
         # Start the "callback" simulator in the background
         task = simulate_oauth_callback(0.2)
 
-        await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=2.0, poll_interval=0.1)
+        await connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
         # Ensure the background task completed without error
         await task
 

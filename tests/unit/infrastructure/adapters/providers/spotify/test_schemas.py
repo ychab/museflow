@@ -81,6 +81,34 @@ class TestSpotifyToken:
         assert "1 validation error for SpotifyToken" in str(exc_info.value)
         assert "expires_in\n  Input should be greater than or equal to 0" in str(exc_info.value)
 
+    @pytest.mark.parametrize(
+        ("payload", "field"),
+        [
+            # A missing field makes the error show the whole response.
+            (
+                {"token_type": "bearer", "access_token": "dummy-access-token", "refresh_token": "dummy-refresh-token"},
+                "expires_in",
+            ),
+            ({"token_type": "bearer", "access_token": ["dummy-access-token"], "expires_in": 3600}, "access_token"),
+            (
+                {
+                    "token_type": "bearer",
+                    "access_token": "dummy-access-token",
+                    "refresh_token": ["dummy-refresh-token"],
+                    "expires_in": 3600,
+                },
+                "refresh_token",
+            ),
+        ],
+    )
+    def test__validation_error__hides_tokens(self, payload: dict[str, Any], field: str) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            SpotifyToken(**payload)
+
+        assert f"1 validation error for SpotifyToken\n{field}" in str(exc_info.value)
+        assert "dummy-access-token" not in str(exc_info.value)
+        assert "dummy-refresh-token" not in str(exc_info.value)
+
     def test_expires_at__nominal(self, frozen_time: datetime) -> None:
         expires_in = 3600
         spotify_token = SpotifyToken(

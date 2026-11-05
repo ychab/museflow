@@ -4,6 +4,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 
+from museflow.domain.const import OAUTH_STATE_TTL_SECONDS
 from museflow.domain.enums import MusicProvider
 
 
@@ -23,6 +24,10 @@ class OAuthProviderState:
 
     created_at: datetime
     updated_at: datetime
+
+    def is_expired(self) -> bool:
+        # `updated_at` rather than `created_at`: a new flow replaces the state of the previous one in the same row.
+        return datetime.now(UTC) >= self.updated_at + timedelta(seconds=OAUTH_STATE_TTL_SECONDS)
 
 
 @dataclass(frozen=True, kw_only=True)

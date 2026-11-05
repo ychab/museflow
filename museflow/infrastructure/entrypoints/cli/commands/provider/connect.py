@@ -1,14 +1,17 @@
 import asyncio
 import time
 import uuid
-from contextlib import AsyncExitStack
+from dataclasses import dataclass
 
 from pydantic import EmailStr
 
 import typer
+from rich import get_console
 
-from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
+from museflow.application.use_cases.provider_token_view import view_provider_token
+from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
@@ -16,6 +19,14 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oa
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+
+
+@dataclass(frozen=True, kw_only=True)
+class ConnectStart:
+    user_id: uuid.UUID
+    provider: MusicProvider
+    previous_token: OAuthProviderUserToken | None
+    authorization_url: str
 
 
 @app.command("connect", help="Connect a user account to a music provider via OAuth.")
@@ -32,12 +43,20 @@ def connect(
     define with the provider's redirect URI setting (e.g. SPOTIFY_REDIRECT_URI).
     """
     try:
-        asyncio.run(connect_logic(email, provider, timeout, poll_interval))
+        # One event loop for both steps: the pooled database connections are bound to it.
+        with asyncio.Runner() as runner:
+            start = runner.run(connect_start_logic(email, provider))
+
+            typer.echo(f"Opening browser for authentication: {start.authorization_url}")
+            typer.launch(start.authorization_url)
+
+            with get_console().status("Waiting for authentication completion..."):
+                runner.run(connect_wait_logic(start, timeout, poll_interval))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TimeoutError as e:
         typer.secho(
-            f"\n\nUnable to connect after {timeout} seconds. Did you open your browser and accept?",
+            f"Unable to connect after {timeout} seconds. Did you open your browser and accept?",
             fg=typer.colors.RED,
             err=True,
         )
@@ -46,60 +65,47 @@ def connect(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho("\n\nAuthentication successful! \u2705", fg=typer.colors.GREEN)
+    typer.secho("Authentication successful! \u2705", fg=typer.colors.GREEN)
 
 
-async def connect_logic(email: EmailStr, provider: MusicProvider, timeout: float, poll_interval: float) -> None:
-    async with AsyncExitStack() as stack:
-        provider_oauth = await stack.enter_async_context(get_provider_oauth(provider))
-        state_token_generator = get_state_token_generator()
+async def connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
+    uow = get_unit_of_work()
+    async with uow:
+        user = await uow.users.get_by_email(email)
+    if not user:
+        raise UserNotFound()
 
-        uow = get_unit_of_work()
-        async with uow:
-            user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFound()
+    previous_token = await view_provider_token(user_id=user.id, provider=provider, uow=uow)
 
+    async with get_provider_oauth(provider) as provider_oauth:
         authorization_url = await oauth_redirect(
             user=user,
             uow=uow,
             provider=provider,
             provider_oauth=provider_oauth,
-            state_token_generator=state_token_generator,
+            state_token_generator=get_state_token_generator(),
         )
 
-        # Then launch a browser.
-        typer.echo(f"Opening browser for authentication: {authorization_url}")
-        typer.launch(str(authorization_url))
-
-        await _wait_for_authentication(
-            user_id=user.id,
-            provider=provider,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            uow=uow,
-        )
+    return ConnectStart(
+        user_id=user.id,
+        provider=provider,
+        previous_token=previous_token,
+        authorization_url=authorization_url,
+    )
 
 
-async def _wait_for_authentication(
-    user_id: uuid.UUID,
-    provider: MusicProvider,
-    timeout: float,
-    poll_interval: float,
-    uow: UnitOfWorkPort,
-) -> None:
-    typer.echo("Waiting for authentication completion", nl=False)
+async def connect_wait_logic(start: ConnectStart, timeout: float, poll_interval: float) -> None:
+    uow = get_unit_of_work()
     start_time = time.time()
 
     while time.time() - start_time < timeout:
         await asyncio.sleep(poll_interval)
-        typer.echo(".", nl=False)  # Visual feedback
 
-        # A new block per poll: a fresh session sees the state consumed by the API callback.
-        async with uow:
-            auth_state = await uow.auth_states.get(user_id=user_id, provider=provider)
-
-        if auth_state is None:
+        # Only a new token proves success: the API callback consumes the state even when the flow then fails.
+        token = await view_provider_token(user_id=start.user_id, provider=start.provider, uow=uow)
+        if token != start.previous_token:
             return
 
+    # The command gives up: a late consent must not link the account behind its back.
+    await discard_oauth_state(user_id=start.user_id, provider=start.provider, uow=uow)
     raise TimeoutError()

@@ -1,3 +1,4 @@
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from unittest import mock
@@ -9,8 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
+from time_machine import TimeMachineFixture
 
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.domain.const import OAUTH_STATE_TTL_SECONDS
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
@@ -195,13 +199,42 @@ class TestProviderCallback:
         response_data = response.json()
         assert response_data["detail"] == "Invalid or expired state"
 
-    async def test__provider_error(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
+    async def test__state__expired(
+        self,
+        user: User,
+        auth_state: OAuthProviderState,
+        auth_state_repository: OAuthProviderStateRepository,
+        time_machine: TimeMachineFixture,
+        async_client: AsyncClient,
+    ) -> None:
+        time_machine.move_to(datetime.now(UTC) + timedelta(seconds=OAUTH_STATE_TTL_SECONDS), tick=False)
+
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
+        response = await async_client.get(url, params={"state": auth_state.state, "code": "my_secret_code"})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        response_data = response.json()
+        assert response_data["detail"] == "Invalid or expired state"
+        assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
+
+    async def test__provider_error(
+        self,
+        user: User,
+        auth_state: OAuthProviderState,
+        auth_state_repository: OAuthProviderStateRepository,
+        auth_token_repository: OAuthProviderTokenRepository,
+        async_client: AsyncClient,
+    ) -> None:
         url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url, params={"state": auth_state.state, "error": "dummy error"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         response_data = response.json()
         assert response_data["detail"] == "OAuth authorisation failed"
+
+        # `provider connect` relies on this: the state is gone, only the token tells the flow failed.
+        assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
+        assert await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
 
     async def test__no_code(self, auth_state: OAuthProviderState, async_client: AsyncClient) -> None:
         url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
@@ -215,6 +248,8 @@ class TestProviderCallback:
         self,
         user: User,
         auth_state: OAuthProviderState,
+        auth_state_repository: OAuthProviderStateRepository,
+        auth_token_repository: OAuthProviderTokenRepository,
         spotify_oauth: mock.AsyncMock,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
@@ -231,3 +266,7 @@ class TestProviderCallback:
 
         response_data = response.json()
         assert response_data["detail"] == "Failed to exchange code"
+
+        # `provider connect` relies on this: the state is gone, only the token tells the flow failed.
+        assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
+        assert await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
