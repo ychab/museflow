@@ -243,6 +243,7 @@ class TestProviderConnectLogic:
     async def test__wait__failed_flow__no_token(
         self,
         mock_auth_token_repository: mock.AsyncMock,
+        mock_auth_state_repository: mock.AsyncMock,
         connect_start: ConnectStart,
     ) -> None:
         # The callback consumes the state, even when the consent is refused or the code exchange fails.
@@ -250,6 +251,11 @@ class TestProviderConnectLogic:
 
         with pytest.raises(TimeoutError):
             await connect_wait_logic(connect_start, timeout=0.1, poll_interval=0.05)
+
+        mock_auth_state_repository.delete.assert_awaited_once_with(
+            user_id=connect_start.user_id,
+            provider=connect_start.provider,
+        )
 
     async def test__wait__failed_flow__token_unchanged(
         self,
@@ -269,6 +275,7 @@ class TestProviderConnectLogic:
     async def test__wait__token_renewed(
         self,
         mock_auth_token_repository: mock.AsyncMock,
+        mock_auth_state_repository: mock.AsyncMock,
         connect_start: ConnectStart,
         auth_token: OAuthProviderUserToken,
     ) -> None:
@@ -281,3 +288,4 @@ class TestProviderConnectLogic:
         )
 
         mock_auth_token_repository.get.assert_awaited_once()
+        mock_auth_state_repository.delete.assert_not_awaited()

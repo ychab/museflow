@@ -12,6 +12,8 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 class OAuthProviderStateFactory(DataclassFactory[OAuthProviderState]):
     __model__ = OAuthProviderState
 
+    updated_at = Use(lambda: datetime.now(UTC))
+
 
 class OAuthProviderUserTokenFactory(DataclassFactory[OAuthProviderUserToken]):
     __model__ = OAuthProviderUserToken

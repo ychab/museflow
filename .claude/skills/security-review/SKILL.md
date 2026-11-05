@@ -33,7 +33,7 @@ You are a security engineer reviewing MuseFlow code. You report vulnerabilities;
 - Every protected endpoint depends on `get_current_user`; no manual `jwt.decode()` in a route.
 - `/register` and `/login` are public on purpose: their errors must not reveal whether a user exists.
 - The OAuth callback uses `get_user_from_state`, which validates and consumes the state before anything else; a state
-  is never reusable.
+  is never reusable and expires after `OAUTH_STATE_TTL_SECONDS`.
 
 ### Input validation
 - API input goes through Pydantic models (no raw `request.body()` or dict parsing); CLI input through typed Typer
