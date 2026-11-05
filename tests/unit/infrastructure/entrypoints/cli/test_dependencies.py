@@ -25,7 +25,9 @@ class TestDependencies:
     ) -> None:
         mock_auth_token_repository.get.return_value = None
 
-        with pytest.raises(ProviderAuthTokenNotFoundError, match="run 'museflow spotify connect' first"):
+        with pytest.raises(
+            ProviderAuthTokenNotFoundError, match="run 'museflow provider connect --provider spotify' first"
+        ):
             async with get_provider_library(MusicProvider.SPOTIFY, user=user, uow=mock_uow):
                 pass
 

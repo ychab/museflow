@@ -4,6 +4,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -11,20 +12,26 @@ from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestSpotifyInfoParserCommand:
+class TestProviderInfoParserCommand:
     @pytest.fixture(autouse=True)
     def mock_info_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.info.info_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.info_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             patched.return_value = None
             yield patched
 
-    def test__nominal(self, runner: CliRunner) -> None:
+    def test__nominal(self, mock_info_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "info", "--email", "test@example.com"],
+            ["provider", "info", "--email", "test@example.com", "--provider", "spotify"],
         )
         assert result.exit_code == 0
+        mock_info_logic.assert_awaited_once_with(email="test@example.com", provider=MusicProvider.SPOTIFY)
+
+    def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--provider", "foo"])
+        assert result.exit_code != 0
+        assert "Invalid value for '--provider'" in clean_typer_text(result.output)
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
@@ -48,17 +55,17 @@ class TestSpotifyInfoParserCommand:
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["spotify", "info", "--email", email])
+        result = runner.invoke(app, ["provider", "info", "--email", email])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
         assert f"Invalid value for '--email': value is not a valid email address: {expected_msg}" in output
 
 
-class TestSpotifyInfoCommand:
+class TestProviderInfoCommand:
     @pytest.fixture(autouse=True)
     def mock_info_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.info.info_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.info_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -69,7 +76,7 @@ class TestSpotifyInfoCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         mock_info_logic.side_effect = UserNotFound()
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stderr)
         assert result.exit_code != 0
@@ -83,7 +90,7 @@ class TestSpotifyInfoCommand:
     ) -> None:
         mock_info_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -97,7 +104,7 @@ class TestSpotifyInfoCommand:
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
         mock_info_logic.return_value = auth_token
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
@@ -115,7 +122,7 @@ class TestSpotifyInfoCommand:
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
         mock_info_logic.return_value = auth_token
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--show-tokens"], input="y\n")
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--show-tokens"], input="y\n")
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
@@ -131,7 +138,7 @@ class TestSpotifyInfoCommand:
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
         mock_info_logic.return_value = auth_token
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com", "--show-tokens"], input="n\n")
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--show-tokens"], input="n\n")
 
         output = clean_typer_text(result.output)
         assert result.exit_code == 1
@@ -147,7 +154,7 @@ class TestSpotifyInfoCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         mock_info_logic.return_value = None
-        result = runner.invoke(app, ["spotify", "info", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0

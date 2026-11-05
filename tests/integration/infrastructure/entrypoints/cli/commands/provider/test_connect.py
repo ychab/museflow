@@ -15,13 +15,13 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_logic
 
 
-class TestSpotifyConnectLogic:
+class TestProviderConnectLogic:
     @pytest.fixture(autouse=True)
     def mock_typer_launch(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect.typer.launch"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.connect.typer.launch"
         with mock.patch(target_path) as patched:
             yield patched
 
@@ -78,7 +78,7 @@ class TestSpotifyConnectLogic:
         # Start the "callback" simulator in the background
         task = simulate_oauth_callback(0.2)
 
-        await connect_logic(user.email, timeout=2.0, poll_interval=0.1)
+        await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=2.0, poll_interval=0.1)
         # Ensure the background task completed without error
         await task
 

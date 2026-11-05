@@ -8,26 +8,44 @@ from typer.testing import CliRunner
 
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.spotify.connect import connect_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestSpotifyConnectParserCommand:
+class TestProviderConnectParserCommand:
     @pytest.fixture(autouse=True)
     def mock_connect_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect.connect_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.connect.connect_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__nominal(self, runner: CliRunner) -> None:
+    def test__nominal(self, mock_connect_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "connect", "--email", "test@example.com", "--timeout", "30.0", "--poll-interval", "0.5"],
+            [
+                "provider",
+                "connect",
+                "--email",
+                "test@example.com",
+                "--provider",
+                "spotify",
+                "--timeout",
+                "30.0",
+                "--poll-interval",
+                "0.5",
+            ],
         )
         assert result.exit_code == 0
+        mock_connect_logic.assert_awaited_once_with("test@example.com", MusicProvider.SPOTIFY, 30.0, 0.5)
+
+    def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com", "--provider", "foo"])
+        assert result.exit_code != 0
+        assert "Invalid value for '--provider'" in clean_typer_text(result.output)
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
@@ -53,7 +71,7 @@ class TestSpotifyConnectParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "connect", "--email", email],
+            ["provider", "connect", "--email", email],
         )
         assert result.exit_code != 0
 
@@ -77,7 +95,7 @@ class TestSpotifyConnectParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "connect", "--email", "test@example.com", "--timeout", timeout],
+            ["provider", "connect", "--email", "test@example.com", "--timeout", timeout],
         )
         assert result.exit_code != 0
 
@@ -101,7 +119,7 @@ class TestSpotifyConnectParserCommand:
     ) -> None:
         result = runner.invoke(
             app,
-            ["spotify", "connect", "--email", "test@example.com", "--poll-interval", poll_interval],
+            ["provider", "connect", "--email", "test@example.com", "--poll-interval", poll_interval],
         )
         assert result.exit_code != 0
 
@@ -109,10 +127,10 @@ class TestSpotifyConnectParserCommand:
         assert expected_msg in output
 
 
-class TestSpotifyConnectCommand:
+class TestProviderConnectCommand:
     @pytest.fixture(autouse=True)
     def mock_connect_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect.connect_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.connect.connect_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -122,7 +140,7 @@ class TestSpotifyConnectCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["spotify", "connect", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -136,7 +154,7 @@ class TestSpotifyConnectCommand:
     ) -> None:
         mock_connect_logic.side_effect = UserNotFound()
 
-        result = runner.invoke(app, ["spotify", "connect", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -150,7 +168,7 @@ class TestSpotifyConnectCommand:
     ) -> None:
         mock_connect_logic.side_effect = TimeoutError()
 
-        result = runner.invoke(app, ["spotify", "connect", "--email", "test@example.com", "--timeout", "10"])
+        result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com", "--timeout", "10"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -164,7 +182,7 @@ class TestSpotifyConnectCommand:
     ) -> None:
         mock_connect_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["spotify", "connect", "--email", "test@example.com"])
+        result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -172,10 +190,10 @@ class TestSpotifyConnectCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work", "mock_user_repository", "mock_auth_state_repository", "mock_spotify_client"
+    "mock_get_unit_of_work", "mock_user_repository", "mock_auth_state_repository", "mock_provider_oauth"
 )
-class TestSpotifyConnectLogic:
-    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.spotify.connect"
+class TestProviderConnectLogic:
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.provider.connect"
 
     @pytest.fixture(autouse=True)
     def mock_typer_launch(self) -> Iterable[mock.Mock]:
@@ -187,20 +205,20 @@ class TestSpotifyConnectLogic:
 
         email = "test@example.com"
         with pytest.raises(UserNotFound):
-            await connect_logic(email, 10, 2)
+            await connect_logic(email, MusicProvider.SPOTIFY, 10, 2)
 
     async def test__timeout__exceed(
         self,
         mock_user_repository: mock.AsyncMock,
         mock_auth_state_repository: mock.AsyncMock,
-        mock_spotify_client: mock.Mock,
+        mock_provider_oauth: mock.Mock,
         user: User,
         auth_state: OAuthProviderState,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
         mock_auth_state_repository.get.return_value = auth_state
-        mock_spotify_client.get_authorization_url.return_value = "http://example.com", "dummy-token-state"
+        mock_provider_oauth.get_authorization_url.return_value = "http://example.com", "dummy-token-state"
 
         timeout = 0.1
         with pytest.raises(TimeoutError):
-            await connect_logic(user.email, timeout=timeout, poll_interval=0.05)
+            await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=timeout, poll_interval=0.05)

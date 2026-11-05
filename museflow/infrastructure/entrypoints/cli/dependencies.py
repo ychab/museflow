@@ -58,22 +58,6 @@ def get_openrouter_client(meter: LLMUsageMeter | None = None) -> OpenRouterClien
 
 
 @asynccontextmanager
-async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
-    async with SpotifyOAuthAdapter(
-        client_id=spotify_settings.CLIENT_ID,
-        client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
-        redirect_uri=spotify_settings.REDIRECT_URI,
-        base_url=spotify_settings.BASE_URL,
-        auth_endpoint=spotify_settings.AUTH_ENDPOINT,
-        token_endpoint=spotify_settings.TOKEN_ENDPOINT,
-        timeout=spotify_settings.HTTP_TIMEOUT,
-        token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
-        max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
-    ) as client:
-        yield client
-
-
-@asynccontextmanager
 async def get_advisor(model: str | None = None, meter: LLMUsageMeter | None = None) -> AsyncGenerator[AdvisorPort]:
     client = get_openrouter_client(meter)
     llm = openrouter_settings.ADVISOR.with_model(model)
@@ -124,7 +108,17 @@ async def get_profiler(
 async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyOAuthAdapter]:
     match provider:
         case MusicProvider.SPOTIFY:
-            async with get_spotify_oauth() as client:
+            async with SpotifyOAuthAdapter(
+                client_id=spotify_settings.CLIENT_ID,
+                client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
+                redirect_uri=spotify_settings.REDIRECT_URI,
+                base_url=spotify_settings.BASE_URL,
+                auth_endpoint=spotify_settings.AUTH_ENDPOINT,
+                token_endpoint=spotify_settings.TOKEN_ENDPOINT,
+                timeout=spotify_settings.HTTP_TIMEOUT,
+                token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
+                max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
+            ) as client:
                 yield client
         case _:
             raise ValueError(f"Unknown provider: {provider}")
@@ -162,7 +156,7 @@ async def get_provider_library(
 
     if auth_token is None:
         raise ProviderAuthTokenNotFoundError(
-            f"No {provider} auth token found — run 'museflow {provider} connect' first."
+            f"No {provider} auth token found — run 'museflow provider connect --provider {provider}' first."
         )
 
     async with get_provider_oauth(provider) as oauth_client:
