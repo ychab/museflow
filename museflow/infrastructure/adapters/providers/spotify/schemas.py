@@ -6,6 +6,7 @@ from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import NonNegativeInt
@@ -18,6 +19,9 @@ from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupp
 
 
 class SpotifyToken(BaseModel):
+    # A validation error would otherwise show the tokens, and the callback logs it.
+    model_config = ConfigDict(hide_input_in_errors=True)
+
     token_type: str
     access_token: str
     refresh_token: str | None = None  # Sometimes refresh token isn't returned on refresh
