@@ -22,7 +22,7 @@ Before considering a task done, run `make lint` and the relevant tests.
 
 ## Language
 Everything written for the repo is in English, whatever the conversation language: code, comments, docstrings, logs,
-CLI help, tests, commit messages, PR descriptions, plans and docs.
+CLI help, tests, commit messages, issues, PR descriptions, plans and docs.
 
 ## Architecture: Clean / Hexagonal
 
@@ -140,6 +140,13 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - In tenacity adapters, `_is_retryable_error()` explicitly returns `False` for every non-retryable exception.
 - No `assert` in production code (Ruff S101): raise `ValueError` at the top of the function for contract violations;
   where mypy can't narrow after the guard, use `# type: ignore[union-attr]` at the call site.
+
+## Issues and PRs
+- The backlog lives in GitHub issues; a PR closes its issue with `Closes #N`.
+- An issue is short: a context paragraph, **Plan**, then **Done when** (or **Next time it fails** for a bug not yet
+  reproduced, e.g. #85). Labels come from the repo's list.
+- Issues, PRs and docs are public: never real user data (genres, artists, taste profiles, listening history), only
+  counts, costs and fictional examples.
 
 ## Testing
 100% branch coverage; integration tests first, unit tests for error paths. Full rules: `tests/AGENTS.md`.
