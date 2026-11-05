@@ -39,7 +39,9 @@ museflow = "museflow.infrastructure.entrypoints.cli.main:app"
 
 [dependency-groups]
 test = [
-    "pytest>=9.2.0",
+    # Capped: pytest 9.2 silently breaks `--dist=loadgroup`, so WireMock tests race across xdist workers.
+    # Remove the cap once pytest-xdist > 3.8.0 is released (https://github.com/pytest-dev/pytest-xdist/issues/1407).
+    "pytest>=9.1.1,<9.2",
     "pytest-cov>=7.1.0",
     "pytest-env>=1.8.4",
     "pytest-httpx>=0.36.2",

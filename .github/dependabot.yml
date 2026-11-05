@@ -8,6 +8,9 @@ updates:
     ignore:
       # pydantic-core is version-locked to pydantic internals; bump it via pydantic, not independently
       - dependency-name: "pydantic-core"
+      # pytest 9.2 silently breaks `--dist=loadgroup`; see the cap in pyproject.toml
+      - dependency-name: "pytest"
+        versions: [">=9.2"]
     # Grouping keeps your PR list clean by putting all "chore" updates in one PR
     groups:
       python-dependencies:
