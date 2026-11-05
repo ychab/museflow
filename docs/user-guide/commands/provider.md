@@ -1,32 +1,33 @@
-# `spotify` commands
+# `provider` commands
 
-Link a user to a Spotify account and inspect the link.
+Link a user to a music provider account and inspect the link. Spotify is the only provider for now.
 
-## `spotify connect`
+## `provider connect`
 
-Connects a user account to Spotify through OAuth. A browser window opens on the Spotify consent page; the
+Connects a user account to a provider through OAuth. A browser window opens on the provider's consent page; the
 command then polls until the authorisation has been completed.
 
 ```bash
-museflow spotify connect --email <email> [OPTIONS]
+museflow provider connect --email <email> [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | required | User email address. |
+| `--provider` | `spotify` | The music provider to connect. |
 | `--timeout` | `60.0` | Seconds to wait for authentication (minimum 10). |
 | `--poll-interval` | `2.0` | Seconds between status checks (minimum 0.5). |
 
 **Prerequisites**
 
 - The user exists ([`users create`](users.md#users-create)).
-- The API server is running and reachable at the redirect URI configured in the `SPOTIFY_REDIRECT_URI`
-  setting. It receives the Spotify callback.
+- The API server is running and reachable at the provider's redirect URI (the `SPOTIFY_REDIRECT_URI`
+  setting for Spotify). It receives the provider's callback.
 
 **Example**
 
 ```bash
-museflow spotify connect --email user@example.com --timeout 120
+museflow provider connect --email user@example.com --timeout 120
 ```
 
 **Output.** The authorisation URL is printed and opened in the browser, then dots are printed while waiting,
@@ -34,21 +35,22 @@ and finally `Authentication successful!`. On timeout the command exits with an e
 was opened and the consent accepted. If the browser cannot be opened automatically, copy the printed URL.
 
 !!! note
-    A connected account is needed by the commands that talk to Spotify: [`playlist discover`](playlist.md#playlist-discover),
+    A connected account is needed by the commands that talk to the provider: [`playlist discover`](playlist.md#playlist-discover),
     [`playlist history`](playlist.md#playlist-history), playback with `--play` in [`rate`](rate.md), and
     `playlist delete --include-remote`.
 
-## `spotify info`
+## `provider info`
 
-Prints the stored Spotify OAuth token of a user, for diagnostics.
+Prints the stored OAuth token of a user for a provider, for diagnostics.
 
 ```bash
-museflow spotify info --email <email>
+museflow provider info --email <email>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | required | User email address. |
+| `--provider` | `spotify` | The music provider of the token. |
 | `--show-tokens` | off | Print the access and refresh tokens in clear, after a confirmation. |
 
 **Output.** A `Spotify Auth Token:` header followed by the token record. Nothing is printed when the user has no

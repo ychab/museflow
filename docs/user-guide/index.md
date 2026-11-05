@@ -22,7 +22,7 @@ repository. Every command takes `--email` to select the user. Run `museflow --he
 
 ```mermaid
 flowchart TD
-    A["users create"] --> B["spotify connect"]
+    A["users create"] --> B["provider connect"]
     B --> C["tracks history<br/>(import the Spotify export)"]
     C --> D["rate history<br/>(optional)"]
     C --> E["enrich tracks<br/>(optional, LLM)"]
@@ -46,11 +46,11 @@ The password is prompted for (hidden, with confirmation). See [`users`](commands
 ### 2. Connect Spotify
 
 ```bash
-museflow spotify connect --email user@example.com
+museflow provider connect --email user@example.com
 ```
 
 A browser window opens on the Spotify consent page; the command waits until the callback has been processed
-by the API server. See [`spotify`](commands/spotify.md).
+by the API server. See [`provider`](commands/provider.md).
 
 ### 3. Import the streaming history
 

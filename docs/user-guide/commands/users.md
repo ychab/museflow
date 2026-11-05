@@ -50,4 +50,4 @@ museflow users update 3f2b8c1e-0000-4000-8000-000000000000 --email new@example.c
 
 ## Next step
 
-Connect the user to Spotify with [`spotify connect`](spotify.md#spotify-connect).
+Connect the user to Spotify with [`provider connect`](provider.md#provider-connect).
