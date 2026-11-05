@@ -109,7 +109,7 @@ Before running the application, you need to configure the environment variables 
     *   Click on "Edit Settings".
     *   Under "Redirect URIs", add the callback URL.
     *   By default, the application uses: `http://127.0.0.1:8000/api/v1/spotify/callback`
-    *   Ensure this matches the `SPOTIFY_CLIENT_REDIRECT_URI` in your `.envrc` (default: `http://127.0.0.1:8000/api/v1/spotify/callback`).
+    *   Ensure this matches the `SPOTIFY_REDIRECT_URI` in your `.envrc` (default: `http://127.0.0.1:8000/api/v1/spotify/callback`).
 
 ## Running the Application
 
