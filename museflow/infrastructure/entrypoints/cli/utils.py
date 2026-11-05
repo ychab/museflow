@@ -1,9 +1,18 @@
+from contextlib import nullcontext
+
+from rich import get_console
 from rich.console import Console
+from rich.status import Status
 from rich.table import Table
 
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 
 console = Console()
+
+
+def working(message: str) -> Status | nullcontext[None]:
+    live_console = get_console()
+    return live_console.status(message) if live_console.is_terminal else nullcontext()
 
 
 def print_llm_usage(meter: LLMUsageMeter) -> None:

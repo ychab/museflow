@@ -1,10 +1,30 @@
 from decimal import Decimal
+from io import StringIO
 
 import pytest
+from rich.console import Console
 
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.entrypoints.cli import utils
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import working
+
+
+class TestWorking:
+    @pytest.mark.parametrize("terminal", [True, False])
+    def test__shows_spinner_only_on_terminal(self, terminal: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+        output = StringIO()
+        monkeypatch.setenv("TERM", "xterm")
+        console = Console(file=output, force_terminal=terminal, width=80)
+        monkeypatch.setattr(utils, "get_console", lambda: console)
+
+        with working("Working on the test"):
+            console.print("command output")
+
+        rendered = output.getvalue()
+        assert "command output" in rendered
+        assert ("Working on the test" in rendered) is terminal
 
 
 class TestPrintLLMUsage:

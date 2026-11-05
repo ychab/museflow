@@ -17,6 +17,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import working
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -40,19 +41,20 @@ def enrich(
 ) -> None:
     meter = LLMUsageMeter()
     try:
-        result = asyncio.run(
-            enrich_logic(
-                email=email,
-                only_genre=only_genre,
-                only_mood=only_mood,
-                only_locale=only_locale,
-                force=force,
-                batch_size=batch_size,
-                model=model,
-                limit=limit,
-                meter=meter,
+        with working("Enriching tracks…"):
+            result = asyncio.run(
+                enrich_logic(
+                    email=email,
+                    only_genre=only_genre,
+                    only_mood=only_mood,
+                    only_locale=only_locale,
+                    force=force,
+                    batch_size=batch_size,
+                    model=model,
+                    limit=limit,
+                    meter=meter,
+                )
             )
-        )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TrackEnrichmentAbortedException as e:

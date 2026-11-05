@@ -18,6 +18,7 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.utils import working
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")
@@ -55,7 +56,8 @@ def history(
     )
 
     try:
-        report = asyncio.run(history_logic(email=email, config=config, provider=provider))
+        with working("Importing listening history…"):
+            report = asyncio.run(history_logic(email=email, config=config, provider=provider))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except StreamingHistoryException as e:

@@ -1,4 +1,5 @@
 import logging.config
+import sys
 from copy import deepcopy
 from typing import Any
 from typing import Final
@@ -8,9 +9,27 @@ from museflow.infrastructure.types import LogLevel
 
 LOGGER_MUSEFLOW: Final[str] = "museflow"
 
+
+class CurrentStdout:
+    def write(self, message: str) -> int:
+        return sys.stdout.write(message)
+
+    def flush(self) -> None:
+        sys.stdout.flush()
+
+
+class BelowWarning(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.levelno < logging.WARNING
+
+
+# Rich redirects stdout while a live status is running. Resolve it when a log is written.
+STDOUT: Final = CurrentStdout()
+
 default_conf: Final[dict[str, Any]] = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {"below_warning": {"()": BelowWarning}},
     "formatters": {
         "default": {
             "format": "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
@@ -37,13 +56,13 @@ default_conf: Final[dict[str, Any]] = {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
             "formatter": "message",
-            "stream": "ext://sys.stdout",
+            "stream": STDOUT,
         },
         "cli_alert": {
             "class": "logging.StreamHandler",
             "level": "WARNING",
             "formatter": "default",
-            "stream": "ext://sys.stdout",
+            "stream": STDOUT,
         },
         "rich": {
             "class": "rich.logging.RichHandler",
@@ -107,6 +126,8 @@ def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bo
         propagate: Whether messages should be propagated to ancestor loggers.
     """
     conf = deepcopy(default_conf)
+    if "cli" in handlers and "cli_alert" in handlers:
+        conf["handlers"]["cli"]["filters"] = ["below_warning"]
 
     # Change level and propagate only for our main logger.
     conf["loggers"][LOGGER_MUSEFLOW]["level"] = level
