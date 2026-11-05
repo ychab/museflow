@@ -64,6 +64,16 @@ class OAuthProviderStateRepository(ABC):
         """
         ...
 
+    @abstractmethod
+    async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:
+        """Deletes the OAuth state of a user and provider, if any, when a flow is given up.
+
+        Args:
+            user_id: The user's ID.
+            provider: The music provider.
+        """
+        ...
+
 
 class OAuthProviderTokenRepository(ABC):
     """A repository for managing `OAuthProviderUserToken` entities.

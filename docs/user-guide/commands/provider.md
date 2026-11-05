@@ -34,6 +34,8 @@ museflow provider connect --email user@example.com --timeout 120
 and finally `Authentication successful!` once a new token is stored. Otherwise the command times out with an error
 asking whether the browser was opened and the consent accepted: a refused consent or a failed code exchange ends there
 too, and the browser page shows the API's error. If the browser cannot be opened automatically, copy the printed URL.
+A timeout cancels the flow: accepting the consent afterwards fails, so run the command again. The flow also expires
+after 10 minutes, whatever `--timeout` says.
 
 !!! note
     A connected account is needed by the commands that talk to the provider: [`playlist discover`](playlist.md#playlist-discover),

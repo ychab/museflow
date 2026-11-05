@@ -72,6 +72,13 @@ class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
         auth_state_db = result.scalar_one_or_none()
         return auth_state_db.to_entity() if auth_state_db else None
 
+    async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:
+        stmt = delete(AuthProviderStateModel).where(
+            AuthProviderStateModel.user_id == user_id,
+            AuthProviderStateModel.provider == provider,
+        )
+        await self.session.execute(stmt)
+
 
 class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
     def __init__(self, session: AsyncSession) -> None:

@@ -1,5 +1,7 @@
 from museflow.domain.enums import GenreTag
 
+OAUTH_STATE_TTL_SECONDS: int = 60 * 10
+
 DISCOVERY_TRACK_SCORE_MIN: int = 0
 DISCOVERY_TRACK_SCORE_MAX: int = 10
 

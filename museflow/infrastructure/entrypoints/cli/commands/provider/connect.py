@@ -9,6 +9,7 @@ import typer
 from rich import get_console
 
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
 from museflow.application.use_cases.provider_token_view import view_provider_token
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
@@ -105,4 +106,6 @@ async def connect_wait_logic(start: ConnectStart, timeout: float, poll_interval:
         if token != start.previous_token:
             return
 
+    # The command gives up: a late consent must not link the account behind its back.
+    await discard_oauth_state(user_id=start.user_id, provider=start.provider, uow=uow)
     raise TimeoutError()

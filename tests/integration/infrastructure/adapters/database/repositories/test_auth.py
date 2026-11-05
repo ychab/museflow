@@ -119,6 +119,24 @@ class TestOAuthProviderStateSQLRepository:
 
         assert auth_state_db is not None
 
+    async def test_delete__nominal(
+        self,
+        auth_state_repository: OAuthProviderStateRepository,
+        auth_state: OAuthProviderState,
+    ) -> None:
+        await auth_state_repository.delete(user_id=auth_state.user_id, provider=auth_state.provider)
+
+        assert await auth_state_repository.get(user_id=auth_state.user_id, provider=auth_state.provider) is None
+
+    async def test_delete__other_user(
+        self,
+        auth_state_repository: OAuthProviderStateRepository,
+        auth_state: OAuthProviderState,
+    ) -> None:
+        await auth_state_repository.delete(user_id=uuid.uuid4(), provider=auth_state.provider)
+
+        assert await auth_state_repository.get(user_id=auth_state.user_id, provider=auth_state.provider) is not None
+
 
 class TestOAuthProviderTokenSQLRepository:
     async def test_get__nominal(
