@@ -16,8 +16,11 @@ from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ProviderOAuthStateInvalidError
+from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -119,14 +122,9 @@ async def get_user_from_state(
     if not state:
         raise HTTPException(status_code=400, detail="Missing state parameter")
 
-    async with uow:
-        auth_state = await uow.auth_states.consume(state=state)
-        user = await uow.users.get_by_id(auth_state.user_id) if auth_state else None
-
-    # The route takes its provider from the URL: a state only answers for the provider it was issued for.
-    if not auth_state or auth_state.provider != provider:
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
-    if not user:
-        raise HTTPException(status_code=400, detail="Unable to load user from state")
-
-    return user
+    try:
+        return await consume_oauth_state(state=state, provider=provider, uow=uow)
+    except ProviderOAuthStateInvalidError as e:
+        raise HTTPException(status_code=400, detail="Invalid or expired state") from e
+    except UserNotFound as e:
+        raise HTTPException(status_code=400, detail="Unable to load user from state") from e

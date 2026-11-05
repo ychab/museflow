@@ -7,8 +7,8 @@ from museflow.domain.enums import MusicProvider
 
 async def oauth_redirect(
     user: User,
-    uow: UnitOfWorkPort,
     provider: MusicProvider,
+    uow: UnitOfWorkPort,
     provider_oauth: ProviderOAuthPort,
     state_token_generator: StateTokenGeneratorPort,
 ) -> str:
@@ -19,8 +19,8 @@ async def oauth_redirect(
 
     Args:
         user: The user entity initiating the authentication.
-        uow: The unit of work giving access to the OAuth state repository.
         provider: The music provider to authenticate with.
+        uow: The unit of work giving access to the OAuth state repository.
         provider_oauth: The OAuth adapter for the provider.
         state_token_generator: The generator for creating a state token.
 

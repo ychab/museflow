@@ -36,6 +36,9 @@ class ProviderAuthTokenNotFoundError(Exception): ...
 class ProviderExchangeCodeError(Exception): ...
 
 
+class ProviderOAuthStateInvalidError(Exception): ...
+
+
 class ProviderPageValidationError(Exception):
     def __init__(self, msg: str, code: ProviderPageErrorCodes | None = None) -> None:
         self.code = code
