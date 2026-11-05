@@ -9,6 +9,8 @@ import typer
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.application.use_cases.provider_token_view import view_provider_token
+from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
@@ -60,6 +62,8 @@ async def connect_logic(email: EmailStr, provider: MusicProvider, timeout: float
         if not user:
             raise UserNotFound()
 
+        previous_token = await view_provider_token(user_id=user.id, provider=provider, uow=uow)
+
         authorization_url = await oauth_redirect(
             user=user,
             uow=uow,
@@ -75,6 +79,7 @@ async def connect_logic(email: EmailStr, provider: MusicProvider, timeout: float
         await _wait_for_authentication(
             user_id=user.id,
             provider=provider,
+            previous_token=previous_token,
             timeout=timeout,
             poll_interval=poll_interval,
             uow=uow,
@@ -84,6 +89,7 @@ async def connect_logic(email: EmailStr, provider: MusicProvider, timeout: float
 async def _wait_for_authentication(
     user_id: uuid.UUID,
     provider: MusicProvider,
+    previous_token: OAuthProviderUserToken | None,
     timeout: float,
     poll_interval: float,
     uow: UnitOfWorkPort,
@@ -95,11 +101,9 @@ async def _wait_for_authentication(
         await asyncio.sleep(poll_interval)
         typer.echo(".", nl=False)  # Visual feedback
 
-        # A new block per poll: a fresh session sees the state consumed by the API callback.
-        async with uow:
-            auth_state = await uow.auth_states.get(user_id=user_id, provider=provider)
-
-        if auth_state is None:
+        # Only a new token proves success: the API callback consumes the state even when the flow then fails.
+        token = await view_provider_token(user_id=user_id, provider=provider, uow=uow)
+        if token != previous_token:
             return
 
     raise TimeoutError()

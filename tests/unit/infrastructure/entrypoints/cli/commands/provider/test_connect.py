@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from dataclasses import replace
 from typing import Any
 from typing import Final
 from unittest import mock
@@ -6,7 +7,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.auth import OAuthProviderState
+from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
@@ -190,7 +191,11 @@ class TestProviderConnectCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work", "mock_user_repository", "mock_auth_state_repository", "mock_provider_oauth"
+    "mock_get_unit_of_work",
+    "mock_user_repository",
+    "mock_auth_state_repository",
+    "mock_auth_token_repository",
+    "mock_provider_oauth",
 )
 class TestProviderConnectLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.provider.connect"
@@ -207,18 +212,46 @@ class TestProviderConnectLogic:
         with pytest.raises(UserNotFound):
             await connect_logic(email, MusicProvider.SPOTIFY, 10, 2)
 
-    async def test__timeout__exceed(
+    async def test__failed_flow__no_token(
         self,
         mock_user_repository: mock.AsyncMock,
         mock_auth_state_repository: mock.AsyncMock,
-        mock_provider_oauth: mock.Mock,
+        mock_auth_token_repository: mock.AsyncMock,
         user: User,
-        auth_state: OAuthProviderState,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_auth_state_repository.get.return_value = auth_state
-        mock_provider_oauth.get_authorization_url.return_value = "http://example.com", "dummy-token-state"
+        # The callback consumes the state, even when the consent is refused or the code exchange fails.
+        mock_auth_state_repository.get.return_value = None
+        mock_auth_token_repository.get.return_value = None
 
-        timeout = 0.1
         with pytest.raises(TimeoutError):
-            await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=timeout, poll_interval=0.05)
+            await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=0.1, poll_interval=0.05)
+
+    async def test__failed_flow__token_unchanged(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_auth_state_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
+        user: User,
+        auth_token: OAuthProviderUserToken,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        mock_auth_state_repository.get.return_value = None
+        mock_auth_token_repository.get.return_value = auth_token
+
+        with pytest.raises(TimeoutError):
+            await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=0.1, poll_interval=0.05)
+
+    async def test__token__renewed(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
+        user: User,
+        auth_token: OAuthProviderUserToken,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        mock_auth_token_repository.get.side_effect = [auth_token, replace(auth_token, token_access="renewed")]
+
+        await connect_logic(user.email, provider=MusicProvider.SPOTIFY, timeout=2.0, poll_interval=0.01)
+
+        assert mock_auth_token_repository.get.await_count == 2
