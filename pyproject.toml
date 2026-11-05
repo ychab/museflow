@@ -271,7 +271,7 @@ env = [
     # Spotify client required settings (could be overriden for live tests)
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
     'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
-    'SPOTIFY_CLIENT_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+    'SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
     # Wiremock spotify settings
     'WIREMOCK_SPOTIFY_ADMIN_URL=http://localhost:8081',
     'WIREMOCK_SPOTIFY_BASE_URL=https://localhost:8444',
