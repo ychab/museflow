@@ -1,11 +1,14 @@
 import uuid
+from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from contextlib import asynccontextmanager
 from typing import Final
 from unittest import mock
 
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
@@ -14,6 +17,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.delete"
@@ -186,6 +190,22 @@ class TestDeleteCommand:
 class TestDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
+    @pytest.fixture
+    def provider_libraries(self) -> dict[str, mock.AsyncMock]:
+        return {
+            MusicProvider.SPOTIFY: mock.AsyncMock(spec=ProviderLibraryPort),
+            "foo": mock.AsyncMock(spec=ProviderLibraryPort),
+        }
+
+    @pytest.fixture
+    def mock_get_provider_libraries(self, provider_libraries: dict[str, mock.AsyncMock]) -> Iterable[mock.Mock]:
+        @asynccontextmanager
+        async def _get_provider_library(provider: str, **_: object) -> AsyncGenerator[mock.AsyncMock]:
+            yield provider_libraries[provider]
+
+        with mock.patch(f"{TARGET_PATH}.get_provider_library", side_effect=_get_provider_library) as patched:
+            yield patched
+
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
@@ -261,12 +281,13 @@ class TestDeleteLogic:
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
+        playlist = PlaylistFactory.build()
+        mock_playlist_repository.get.return_value = playlist
         mock_playlist_repository.delete.return_value = True
-        playlist_id = uuid.uuid4()
 
         count = await delete_logic(
             email="test@example.com",
-            playlist_id=playlist_id,
+            playlist_id=playlist.id,
             purge=False,
             type=None,
             provider=None,
@@ -274,4 +295,47 @@ class TestDeleteLogic:
         )
 
         assert count == 1
-        mock_provider_library.delete_playlist.assert_awaited_once()
+        mock_provider_library.delete_playlist.assert_awaited_once_with(playlist.provider_id)
+
+    async def test__include_remote__not_found__no_library_built(
+        self,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_get_provider_libraries: mock.Mock,
+    ) -> None:
+        mock_playlist_repository.get.return_value = None
+
+        with pytest.raises(PlaylistNotFoundError):
+            await delete_logic(
+                email="test@example.com",
+                playlist_id=uuid.uuid4(),
+                purge=False,
+                type=None,
+                provider=None,
+                include_remote=True,
+            )
+
+        mock_get_provider_libraries.assert_not_called()
+
+    async def test__purge__include_remote__one_library_per_provider(
+        self,
+        mock_playlist_repository: mock.AsyncMock,
+        mock_get_provider_libraries: mock.Mock,
+        provider_libraries: dict[str, mock.AsyncMock],
+    ) -> None:
+        spotify_playlists = PlaylistFactory.batch(2, provider=MusicProvider.SPOTIFY)
+        other_playlist = PlaylistFactory.build(provider="foo")
+        mock_playlist_repository.list.return_value = [*spotify_playlists, other_playlist]
+
+        count = await delete_logic(
+            email="test@example.com",
+            playlist_id=None,
+            purge=True,
+            type=None,
+            provider=None,
+            include_remote=True,
+        )
+
+        assert count == 3
+        assert mock_get_provider_libraries.call_count == 2
+        assert provider_libraries[MusicProvider.SPOTIFY].delete_playlist.await_count == 2
+        provider_libraries["foo"].delete_playlist.assert_awaited_once_with(other_playlist.provider_id)

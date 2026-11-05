@@ -3,7 +3,9 @@ from unittest import mock
 
 import pytest
 
+from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.playlist_delete import PlaylistDeleteUseCase
+from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
@@ -14,120 +16,113 @@ from tests.unit.factories.entities.user import UserFactory
 
 class TestPlaylistDeleteUseCase:
     @pytest.fixture
-    def use_case(self, mock_uow: mock.AsyncMock) -> PlaylistDeleteUseCase:
-        return PlaylistDeleteUseCase(uow=mock_uow)
+    def user(self) -> User:
+        return UserFactory.build()
 
     @pytest.fixture
-    def use_case_with_remote(
-        self,
-        mock_uow: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-    ) -> PlaylistDeleteUseCase:
-        return PlaylistDeleteUseCase(
-            uow=mock_uow,
-            provider_library=mock_provider_library,
-        )
+    def use_case(self, user: User, mock_uow: mock.AsyncMock) -> PlaylistDeleteUseCase:
+        return PlaylistDeleteUseCase(user_id=user.id, uow=mock_uow)
 
-    async def test__delete__nominal(
+    @pytest.fixture
+    def provider_libraries(self, mock_provider_library: mock.AsyncMock) -> dict[MusicProvider, ProviderLibraryPort]:
+        return {MusicProvider.SPOTIFY: mock_provider_library}
+
+    async def test__find__not_found(
         self,
         use_case: PlaylistDeleteUseCase,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
-        playlist_id = uuid.uuid4()
-        mock_playlist_repository.delete.return_value = True
+        mock_playlist_repository.get.return_value = None
 
-        await use_case.delete(user=user, playlist_id=playlist_id)
-        mock_playlist_repository.delete.assert_awaited_once_with(user_id=user.id, playlist_id=playlist_id)
+        with pytest.raises(PlaylistNotFoundError):
+            await use_case.find(playlist_id=uuid.uuid4())
+
+    async def test__find_matching__filters_applied(
+        self,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
+        mock_playlist_repository: mock.AsyncMock,
+    ) -> None:
+        discovery = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY)
+        history = PlaylistFactory.build(user_id=user.id, type=PlaylistType.HISTORY)
+        other_provider = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY, provider="foo")
+        mock_playlist_repository.list.return_value = [discovery, history, other_provider]
+
+        playlists = await use_case.find_matching(type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
+
+        assert playlists == [discovery]
 
     async def test__delete__not_found(
         self,
         use_case: PlaylistDeleteUseCase,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_playlist_repository.delete.return_value = False
 
         with pytest.raises(PlaylistNotFoundError):
-            await use_case.delete(user=user, playlist_id=uuid.uuid4())
+            await use_case.delete(playlist_id=uuid.uuid4())
 
-    async def test__delete__include_remote__requires_provider_library(self, use_case: PlaylistDeleteUseCase) -> None:
-        user = UserFactory.build()
-
-        with pytest.raises(ValueError, match="provider_library is required"):
-            await use_case.delete(user=user, playlist_id=uuid.uuid4(), include_remote=True)
-
-    async def test__delete__include_remote__nominal(
+    async def test__delete_remote__own_provider_library(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
-        playlist = PlaylistFactory.build(user_id=user.id)
-        mock_playlist_repository.get.return_value = playlist
+        spotify_library = mock.AsyncMock(spec=ProviderLibraryPort)
+        other_library = mock.AsyncMock(spec=ProviderLibraryPort)
+        playlist = PlaylistFactory.build(user_id=user.id, provider="foo")
         mock_playlist_repository.delete.return_value = True
 
-        await use_case_with_remote.delete(user=user, playlist_id=playlist.id, include_remote=True)
-        mock_provider_library.delete_playlist.assert_awaited_once_with(playlist.provider_id)
+        await use_case.delete_remote(
+            playlist=playlist,
+            provider_libraries={MusicProvider.SPOTIFY: spotify_library, "foo": other_library},  # type: ignore[dict-item]
+        )
+
+        other_library.delete_playlist.assert_awaited_once_with(playlist.provider_id)
+        spotify_library.delete_playlist.assert_not_awaited()
         mock_playlist_repository.delete.assert_awaited_once_with(user_id=user.id, playlist_id=playlist.id)
 
-    async def test__delete__include_remote__not_found(
+    async def test__delete_remote__local_delete_returns_false(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
+        provider_libraries: dict[MusicProvider, ProviderLibraryPort],
     ) -> None:
-        user = UserFactory.build()
-        mock_playlist_repository.get.return_value = None
-
-        with pytest.raises(PlaylistNotFoundError):
-            await use_case_with_remote.delete(user=user, playlist_id=uuid.uuid4(), include_remote=True)
-
-        mock_provider_library.delete_playlist.assert_not_awaited()
-        mock_playlist_repository.delete.assert_not_awaited()
-
-    async def test__delete__include_remote__local_delete_returns_false(
-        self,
-        use_case_with_remote: PlaylistDeleteUseCase,
-        mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
         playlist = PlaylistFactory.build(user_id=user.id)
-        mock_playlist_repository.get.return_value = playlist
         mock_playlist_repository.delete.return_value = False
 
         with pytest.raises(PlaylistNotFoundError):
-            await use_case_with_remote.delete(user=user, playlist_id=playlist.id, include_remote=True)
+            await use_case.delete_remote(playlist=playlist, provider_libraries=provider_libraries)
 
         mock_provider_library.delete_playlist.assert_awaited_once_with(playlist.provider_id)
 
-    async def test__delete__include_remote__remote_error_propagates(
+    async def test__delete_remote__remote_error_propagates(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
+        provider_libraries: dict[MusicProvider, ProviderLibraryPort],
     ) -> None:
-        user = UserFactory.build()
         playlist = PlaylistFactory.build(user_id=user.id)
-        mock_playlist_repository.get.return_value = playlist
-        mock_provider_library.delete_playlist.side_effect = RuntimeError("Spotify down")
+        mock_provider_library.delete_playlist.side_effect = RuntimeError("Provider down")
 
-        with pytest.raises(RuntimeError, match="Spotify down"):
-            await use_case_with_remote.delete(user=user, playlist_id=playlist.id, include_remote=True)
+        with pytest.raises(RuntimeError, match="Provider down"):
+            await use_case.delete_remote(playlist=playlist, provider_libraries=provider_libraries)
 
         mock_playlist_repository.delete.assert_not_awaited()
 
     async def test__purge__nominal(
         self,
         use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
         mock_playlist_repository.purge.return_value = 5
 
-        count = await use_case.purge(user=user, type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
+        count = await use_case.purge(type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
 
         assert count == 5
         mock_playlist_repository.purge.assert_called_once_with(
@@ -136,60 +131,50 @@ class TestPlaylistDeleteUseCase:
             provider=MusicProvider.SPOTIFY,
         )
 
-    async def test__purge__include_remote__requires_provider_library(self, use_case: PlaylistDeleteUseCase) -> None:
-        user = UserFactory.build()
-
-        with pytest.raises(ValueError, match="provider_library is required"):
-            await use_case.purge(user=user, include_remote=True)
-
-    async def test__purge__include_remote__nominal(
+    async def test__purge_remote__mixed_providers(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
     ) -> None:
-        user = UserFactory.build()
-        playlists = PlaylistFactory.batch(2, user_id=user.id)
-        mock_playlist_repository.list.return_value = playlists
-        mock_playlist_repository.delete.return_value = True
+        spotify_library = mock.AsyncMock(spec=ProviderLibraryPort)
+        other_library = mock.AsyncMock(spec=ProviderLibraryPort)
+        spotify_playlist = PlaylistFactory.build(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        other_playlist = PlaylistFactory.build(user_id=user.id, provider="foo")
 
-        count = await use_case_with_remote.purge(user=user, include_remote=True)
+        count = await use_case.purge_remote(
+            playlists=[spotify_playlist, other_playlist],
+            provider_libraries={MusicProvider.SPOTIFY: spotify_library, "foo": other_library},  # type: ignore[dict-item]
+        )
 
         assert count == 2
-        assert mock_provider_library.delete_playlist.await_count == 2
+        spotify_library.delete_playlist.assert_awaited_once_with(spotify_playlist.provider_id)
+        other_library.delete_playlist.assert_awaited_once_with(other_playlist.provider_id)
         assert mock_playlist_repository.delete.await_count == 2
 
-    async def test__purge__include_remote__remote_failure_skipped(
+    async def test__purge_remote__remote_failure_skipped(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
+        provider_libraries: dict[MusicProvider, ProviderLibraryPort],
     ) -> None:
-        user = UserFactory.build()
         playlists = PlaylistFactory.batch(2, user_id=user.id)
-        mock_playlist_repository.list.return_value = playlists
         mock_provider_library.delete_playlist.side_effect = [RuntimeError("network error"), None]
-        mock_playlist_repository.delete.return_value = True
 
-        count = await use_case_with_remote.purge(user=user, include_remote=True)
+        count = await use_case.purge_remote(playlists=playlists, provider_libraries=provider_libraries)
 
         assert count == 1
         mock_playlist_repository.delete.assert_awaited_once_with(user_id=user.id, playlist_id=playlists[1].id)
 
-    async def test__purge__include_remote__filters_applied(
+    async def test__purge_remote__missing_library_not_swallowed(
         self,
-        use_case_with_remote: PlaylistDeleteUseCase,
-        mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
+        use_case: PlaylistDeleteUseCase,
+        user: User,
+        provider_libraries: dict[MusicProvider, ProviderLibraryPort],
     ) -> None:
-        user = UserFactory.build()
-        discovery = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY)
-        history = PlaylistFactory.build(user_id=user.id, type=PlaylistType.HISTORY)
-        mock_playlist_repository.list.return_value = [discovery, history]
-        mock_playlist_repository.delete.return_value = True
+        playlist = PlaylistFactory.build(user_id=user.id, provider="foo")
 
-        count = await use_case_with_remote.purge(user=user, type=PlaylistType.DISCOVERY, include_remote=True)
-
-        assert count == 1
-        mock_provider_library.delete_playlist.assert_awaited_once_with(discovery.provider_id)
-        mock_playlist_repository.delete.assert_awaited_once_with(user_id=user.id, playlist_id=discovery.id)
+        with pytest.raises(KeyError):
+            await use_case.purge_remote(playlists=[playlist], provider_libraries=provider_libraries)
