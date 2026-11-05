@@ -11,11 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import jwt
 
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -51,19 +53,23 @@ def get_unit_of_work() -> UnitOfWorkPort:
     return SQLUnitOfWork(async_session_factory)
 
 
-async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
-    async with SpotifyOAuthAdapter(
-        client_id=spotify_settings.CLIENT_ID,
-        client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
-        redirect_uri=spotify_settings.REDIRECT_URI,
-        base_url=spotify_settings.BASE_URL,
-        auth_endpoint=spotify_settings.AUTH_ENDPOINT,
-        token_endpoint=spotify_settings.TOKEN_ENDPOINT,
-        timeout=spotify_settings.HTTP_TIMEOUT,
-        token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
-        max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
-    ) as spotify_oauth:
-        yield spotify_oauth
+async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
+    match provider:
+        case MusicProvider.SPOTIFY:
+            async with SpotifyOAuthAdapter(
+                client_id=spotify_settings.CLIENT_ID,
+                client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
+                redirect_uri=spotify_settings.REDIRECT_URI,
+                base_url=spotify_settings.BASE_URL,
+                auth_endpoint=spotify_settings.AUTH_ENDPOINT,
+                token_endpoint=spotify_settings.TOKEN_ENDPOINT,
+                timeout=spotify_settings.HTTP_TIMEOUT,
+                token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
+                max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
+            ) as provider_oauth:
+                yield provider_oauth
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 
 
 async def get_current_user(
@@ -107,6 +113,7 @@ async def get_current_user(
 
 async def get_user_from_state(
     state: str,
+    provider: MusicProvider,
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
 ) -> User:
     if not state:
@@ -116,7 +123,8 @@ async def get_user_from_state(
         auth_state = await uow.auth_states.consume(state=state)
         user = await uow.users.get_by_id(auth_state.user_id) if auth_state else None
 
-    if not auth_state:
+    # The route takes its provider from the URL: a state only answers for the provider it was issued for.
+    if not auth_state or auth_state.provider != provider:
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     if not user:
         raise HTTPException(status_code=400, detail="Unable to load user from state")
