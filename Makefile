@@ -127,9 +127,10 @@ db-dump: up-db  ## Dump database to external_data/backups/TIMESTAMP.sql
 	docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$$FILE" && \
 	echo "Database dumped to $$FILE"
 
-db-restore: up-db  ## Restore latest backup (or FILE=path)
+db-restore: down up-db  ## Restore latest backup (or FILE=path)
 	@FILE=$${FILE:-$$(ls -t external_data/backups/*.sql 2>/dev/null | head -1)} && \
 	test -n "$$FILE" || (echo "No backup found in external_data/backups/" && exit 1) && \
+	echo "Restoring $$FILE" && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB" > /dev/null' && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null' && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" > /dev/null' < "$$FILE"
