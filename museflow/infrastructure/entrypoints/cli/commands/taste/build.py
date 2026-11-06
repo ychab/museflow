@@ -18,6 +18,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -62,20 +63,21 @@ def build(
 ) -> None:
     meter = LLMUsageMeter()
     try:
-        profile = asyncio.run(
-            build_logic(
-                email=email,
-                name=name,
-                resume=resume,
-                rated_only=rated_only,
-                track_limit=track_limit,
-                batch_size=batch_size,
-                segment_model=segment_model,
-                merge_model=merge_model,
-                reflect_model=reflect_model,
-                meter=meter,
+        with spinner("Building taste profile…"):
+            profile = asyncio.run(
+                build_logic(
+                    email=email,
+                    name=name,
+                    resume=resume,
+                    rated_only=rated_only,
+                    track_limit=track_limit,
+                    batch_size=batch_size,
+                    segment_model=segment_model,
+                    merge_model=merge_model,
+                    reflect_model=reflect_model,
+                    meter=meter,
+                )
             )
-        )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNoSeedException as e:

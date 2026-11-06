@@ -1,10 +1,34 @@
+import logging
+from collections.abc import Iterable
+from contextlib import nullcontext
 from decimal import Decimal
 
 import pytest
+from rich.logging import RichHandler
+from rich.status import Status
 
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import spinner
+
+
+class TestSpinner:
+    @pytest.fixture
+    def rich_log_handler(self) -> Iterable[None]:
+        logger = logging.getLogger(LOGGER_MUSEFLOW)
+        handler = RichHandler()
+        logger.addHandler(handler)
+        yield
+        logger.removeHandler(handler)
+
+    @pytest.mark.usefixtures("rich_log_handler")
+    def test__rich_log_handler(self) -> None:
+        assert isinstance(spinner("Working"), Status)
+
+    def test__other_log_handler(self) -> None:
+        assert isinstance(spinner("Working"), nullcontext)
 
 
 class TestPrintLLMUsage:

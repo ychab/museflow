@@ -29,6 +29,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils import spinner
 
 console = Console()
 
@@ -95,30 +96,31 @@ def discover(
     """Discover new tracks guided by your AI taste profile."""
     meter = LLMUsageMeter()
     try:
-        result = asyncio.run(
-            discover_logic(
-                email=email,
-                provider=provider,
-                model=model,
-                config=DiscoverTasteConfigInput(
-                    focus=focus,
-                    profile_name=name,
-                    genre=genre,
-                    mood=mood,
-                    custom_instructions=custom_instructions,
-                    advisor_limit=advisor_limit,
-                    reconciler_limit=reconciler_limit,
-                    score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
-                    liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
-                    liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
-                    playlist_limit=playlist_limit,
-                    max_attempts=max_attempts,
-                    max_tracks_per_artist=max_tracks_per_artist,
-                    dry_run=dry_run,
+        with spinner("Discovering tracks…"):
+            result = asyncio.run(
+                discover_logic(
+                    email=email,
+                    provider=provider,
+                    model=model,
+                    config=DiscoverTasteConfigInput(
+                        focus=focus,
+                        profile_name=name,
+                        genre=genre,
+                        mood=mood,
+                        custom_instructions=custom_instructions,
+                        advisor_limit=advisor_limit,
+                        reconciler_limit=reconciler_limit,
+                        score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
+                        liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
+                        liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
+                        playlist_limit=playlist_limit,
+                        max_attempts=max_attempts,
+                        max_tracks_per_artist=max_tracks_per_artist,
+                        dry_run=dry_run,
+                    ),
+                    meter=meter,
                 ),
-                meter=meter,
-            ),
-        )
+            )
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except ProviderAuthTokenNotFoundError as e:

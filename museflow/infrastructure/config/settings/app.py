@@ -35,7 +35,7 @@ class AppSettings(BaseSettings):
     LOG_HANDLERS_API: list[LogHandler] = ["console"]
 
     LOG_LEVEL_CLI: LogLevel = "WARNING"
-    LOG_HANDLERS_CLI: list[LogHandler] = ["cli", "cli_alert"]
+    LOG_HANDLERS_CLI: list[LogHandler] = ["console"]
 
     HTTP_MAX_RETRIES: int = 5
 
