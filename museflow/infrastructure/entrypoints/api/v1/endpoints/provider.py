@@ -53,6 +53,10 @@ async def callback(
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
 ) -> SuccessResponse:
+    # Accepted risk (#101): the state isn't tied to the browser that started the flow, so someone could get another
+    # person to consent and have that person's provider tokens stored on their own account. Harmless today: the app is
+    # local and single-user, and only the CLI uses the tokens. To fix before the API uses them or the app is shared:
+    # see the known gaps in docs/technical/privacy-and-data.md.
     if error:
         logger.warning(
             "OAuth callback error received",
