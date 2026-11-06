@@ -164,6 +164,15 @@ class TestUserCurrentInfo:
         assert response_data["email"] == str(user.email)
         assert response_data["is_active"] is True
 
+    @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
+    async def test_not_active(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+        url = app.url_path_for("user_me")
+        response = await async_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        response_data = response.json()
+        assert "User account is inactive" in response_data["detail"]
+
 
 class TestUserCurrentUpdate:
     async def test_not_authenticated(self, async_client: AsyncClient) -> None:
