@@ -56,6 +56,25 @@ class TestPlaylistDeleteUseCase:
 
         assert await playlist_repository.get(user.id, playlist_db.id) is None
 
+    @pytest.mark.wiremock("spotify")
+    async def test__single_delete__include_remote__without_tracks(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[])
+
+        use_case = PlaylistDeleteUseCase(user_id=user.id, uow=uow)
+        playlist = await use_case.find(playlist_id=playlist_db.id)
+        await use_case.delete_remote(
+            playlist=playlist,
+            provider_libraries={MusicProvider.SPOTIFY: spotify_library},
+        )
+
+        assert await playlist_repository.get(user.id, playlist_db.id) is None
+
     async def test__purge__filtered_by_type(
         self,
         uow: UnitOfWorkPort,

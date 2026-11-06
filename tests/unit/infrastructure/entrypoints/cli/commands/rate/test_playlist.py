@@ -113,6 +113,14 @@ class TestRatePlaylistCommand:
         assert result.exit_code == 0
         assert "No unrated discovery tracks" in result.output
 
+    def test__playlist_without_tracks(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+        playlist_id = uuid.uuid4()
+
+        result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
+        assert result.exit_code == 0
+        assert f"Playlist {playlist_id} has no tracks" in result.output
+
     def test__user_not_found(
         self,
         mock_rate_playlist_logic: mock.AsyncMock,
@@ -215,6 +223,20 @@ class TestRatePlaylistLogic:
 
         with pytest.raises(PlaylistNotFoundError):
             await rate_playlist_logic(email=user.email, playlist_id=uuid.uuid4())
+
+    async def test__playlist_without_tracks(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_playlist_repository: mock.AsyncMock,
+    ) -> None:
+        playlist = PlaylistFactory.build(user_id=user.id, tracks=[])
+        mock_user_repository.get_by_email.return_value = user
+        mock_playlist_repository.get.return_value = playlist
+
+        result = await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+
+        assert result.no_tracks is True
 
     async def test__nominal__rates_track(
         self,

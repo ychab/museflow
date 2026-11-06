@@ -60,6 +60,12 @@ class TestViewCommand:
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code == 0
 
+    def test__without_tracks(self, mock_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_view_logic.return_value = PlaylistFactory.build(tracks=[])
+
+        result = runner.invoke(app, ["playlist", "view", str(uuid.uuid4()), "--email", "test@example.com"])
+        assert result.exit_code == 0
+
     def test__user_not_found(
         self,
         mock_view_logic: mock.AsyncMock,
