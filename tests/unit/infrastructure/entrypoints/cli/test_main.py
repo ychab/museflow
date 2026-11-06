@@ -5,6 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow import __version__
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.main import app
 from museflow.infrastructure.types import LogLevel
 
@@ -32,6 +33,7 @@ class TestBaseCommand:
 
         block_cli_configure_loggers.assert_called_once_with(
             level="DEBUG",
+            third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
             handlers=mock.ANY,
         )
 
@@ -45,6 +47,7 @@ class TestBaseCommand:
 
         block_cli_configure_loggers.assert_called_once_with(
             level=mock.ANY,
+            third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
             handlers=["console", "null"],
         )
 

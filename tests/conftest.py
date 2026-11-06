@@ -78,7 +78,7 @@ def configure_logging() -> Iterable[None]:
     from museflow.infrastructure.config.loggers import configure_loggers
 
     # Configure with test-friendly settings
-    configure_loggers(level="DEBUG", handlers=["null"], propagate=True)
+    configure_loggers(level="DEBUG", third_party_level="WARNING", handlers=["null"], propagate=True)
 
     yield
 

@@ -34,7 +34,7 @@ default_conf: Final[dict[str, Any]] = {
             "formatter": "rich",
             "level": "NOTSET",
             # Optional Rich settings
-            "markup": True,
+            "markup": False,
             "rich_tracebacks": True,
             "show_level": True,
             "show_path": True,
@@ -50,21 +50,25 @@ default_conf: Final[dict[str, Any]] = {
             "handlers": ["console"],
             "propagate": False,
         },
+        # Keeps its startup and shutdown messages, whatever the third-party level.
         "uvicorn": {
             "level": "INFO",
             "handlers": ["console"],
             "propagate": False,
         },
-        "alembic": {
-            "level": "INFO",
+        # Follows the third-party level: a proxy usually keeps that trace in production.
+        "uvicorn.access": {
+            "level": "WARNING",
             "handlers": ["console"],
             "propagate": False,
         },
+        # Stays at WARNING: from INFO, it logs the SQL with its parameters (tokens, password hashes).
         "sqlalchemy.engine": {
             "level": "WARNING",
             "handlers": ["console"],
             "propagate": False,
         },
+        # Stays at WARNING: from INFO, it logs one line per request with its full URL, query string included.
         "httpx": {
             "level": "WARNING",
             "handlers": ["console"],
@@ -72,13 +76,18 @@ default_conf: Final[dict[str, Any]] = {
         },
     },
     "root": {
-        "level": "INFO",
+        "level": "WARNING",
         "handlers": ["console"],
     },
 }
 
 
-def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bool = False) -> None:
+def configure_loggers(
+    level: LogLevel,
+    third_party_level: LogLevel,
+    handlers: list[LogHandler],
+    propagate: bool = False,
+) -> None:
     """Configures the application's loggers based on the provided level and handlers.
 
     This function takes a default logging configuration, modifies the log level and
@@ -86,7 +95,8 @@ def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bo
     to other defined loggers and the root logger.
 
     Args:
-        level: The minimum logging level to set (e.g., "INFO", "DEBUG").
+        level: The minimum logging level of the application (e.g., "INFO", "DEBUG").
+        third_party_level: The minimum logging level of the libraries that are not pinned, and of the uvicorn access logs.
         handlers: A list of handler names (e.g., ["console"], ["rich"]) to use.
         propagate: Whether messages should be propagated to ancestor loggers.
     """
@@ -102,5 +112,7 @@ def configure_loggers(level: LogLevel, handlers: list[LogHandler], propagate: bo
 
     # Without forgetting the root handlers.
     conf["root"]["handlers"] = handlers
+    conf["root"]["level"] = third_party_level
+    conf["loggers"]["uvicorn.access"]["level"] = third_party_level
 
     logging.config.dictConfig(conf)
