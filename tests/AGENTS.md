@@ -7,6 +7,8 @@ Tests are the **contract with our users**: clean, clear and easy to maintain, no
 - **Integration tests** are the primary focus: full flows with a real DB and WireMock.
 - **Unit tests** fill gaps: error branches and edge cases hard to reach via integration.
 - **Do not mirror happy paths**: if integration covers the nominal flow, no unit test for the same.
+- **Coverage is measured on the whole suite**: no dedicated test for a line another test already runs, nor to check a
+  third-party library's behaviour.
 - **Error paths belong in unit tests**, with `AsyncMock` repositories. No fake (in-memory) repositories.
 - **All test code is typed**: fixtures, functions, factories, helpers.
 - **No inner imports** in test functions: all imports at module level.
