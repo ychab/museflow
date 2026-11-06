@@ -1,6 +1,6 @@
 # `users` commands
 
-Create and update the local MuseFlow user. All other commands identify the user with `--email`.
+Create, update and delete the local MuseFlow user. All other commands identify the user with `--email`.
 
 ## `users create`
 
@@ -47,6 +47,32 @@ museflow users update <user_id> [--email <new_email>] [--password <new_password>
 ```bash
 museflow users update 3f2b8c1e-0000-4000-8000-000000000000 --email new@example.com
 ```
+
+## `users delete`
+
+Deletes a user account and all of its data: tracks, playlists, taste profiles, blacklist, provider tokens and LLM
+usage. Asks for confirmation first.
+
+```bash
+museflow users delete --email <email> [--yes]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | required | User email address. |
+| `--yes`, `-y` | off | Skip the confirmation prompt. |
+
+**Example**
+
+```bash
+museflow users delete --email user@example.com
+```
+
+**Output.** `User user@example.com deleted.`. If the email is unknown, the command exits with an error.
+
+!!! warning
+    This cannot be undone, and it only touches the local database: the playlists already on Spotify stay there, and
+    MuseFlow stays authorized on the Spotify account until access is removed from the Spotify settings.
 
 ## Next step
 
