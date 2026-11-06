@@ -38,8 +38,8 @@ class PlaylistSQLRepository(PlaylistRepository):
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
         stmt = (
             select(PlaylistDB, TrackDB)
-            .join(PlaylistTrackDB, PlaylistTrackDB.playlist_id == PlaylistDB.id)
-            .join(TrackDB, TrackDB.id == PlaylistTrackDB.track_id)
+            .outerjoin(PlaylistTrackDB, PlaylistTrackDB.playlist_id == PlaylistDB.id)
+            .outerjoin(TrackDB, TrackDB.id == PlaylistTrackDB.track_id)
             .where(PlaylistDB.id == playlist_id, PlaylistDB.user_id == user_id)
             .order_by(PlaylistTrackDB.position)
         )
@@ -49,7 +49,7 @@ class PlaylistSQLRepository(PlaylistRepository):
             return None
 
         playlist_db, _ = rows[0]
-        tracks = [track_db.to_entity() for _, track_db in rows]
+        tracks = [track_db.to_entity() for _, track_db in rows if track_db is not None]
         return replace(playlist_db.to_entity(), tracks=tracks)
 
     async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:

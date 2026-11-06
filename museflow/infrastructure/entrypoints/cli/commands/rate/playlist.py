@@ -72,7 +72,8 @@ def rate_playlist(
         raise typer.Exit(code=1) from e
 
     if result.no_tracks:
-        typer.secho("No unrated discovery tracks.", fg=typer.colors.YELLOW)
+        message = f"Playlist {playlist_id} has no tracks." if playlist_id else "No unrated discovery tracks."
+        typer.secho(message, fg=typer.colors.YELLOW)
         return
 
     typer.secho(
@@ -105,8 +106,9 @@ async def rate_playlist_logic(
             tracks = await use_case.find_playlist(playlist_id=playlist_id)
         else:
             tracks = await use_case.find_discovery(limit=limit)
-            if not tracks:
-                return RatePlaylistResult(no_tracks=True)
+
+        if not tracks:
+            return RatePlaylistResult(no_tracks=True)
 
         total = len(tracks)
         answers: list[RateAnswer] = []

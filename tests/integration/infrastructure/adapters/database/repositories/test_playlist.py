@@ -140,6 +140,19 @@ class TestPlaylistSQLRepository:
         assert len(result.tracks) == 1
         assert result.tracks[0].id == track_db.id
 
+    async def test__get__returns_playlist_without_tracks(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[])
+
+        result = await playlist_repository.get(user.id, playlist_db.id)
+
+        assert result is not None
+        assert result.id == playlist_db.id
+        assert result.tracks == []
+
     async def test__get__returns_none_when_not_found(
         self,
         user: User,

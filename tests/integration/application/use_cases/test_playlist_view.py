@@ -21,3 +21,19 @@ class TestPlaylistViewUseCase:
 
         assert result.id == playlist_db.id
         assert result.name == playlist_db.name
+
+    async def test__without_tracks(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+    ) -> None:
+        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[])
+
+        result = await playlist_view(
+            user=user,
+            playlist_id=playlist_db.id,
+            uow=uow,
+        )
+
+        assert result.id == playlist_db.id
+        assert result.tracks == []
