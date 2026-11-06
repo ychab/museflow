@@ -2,6 +2,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
+from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserNotFound
 
 
@@ -11,6 +12,7 @@ async def consume_oauth_state(state: str, provider: MusicProvider, uow: UnitOfWo
     Raises:
         ProviderOAuthStateInvalidError: If the state is unknown, expired, or was issued for another provider.
         UserNotFound: If the user of the state no longer exists.
+        UserInactive: If the user of the state was deactivated during the flow.
     """
     async with uow:
         auth_state = await uow.auth_states.consume(state=state)
@@ -20,5 +22,7 @@ async def consume_oauth_state(state: str, provider: MusicProvider, uow: UnitOfWo
         raise ProviderOAuthStateInvalidError()
     if not user:
         raise UserNotFound()
+    if not user.is_active:
+        raise UserInactive()
 
     return user

@@ -217,6 +217,23 @@ class TestProviderCallback:
         assert response_data["detail"] == "Invalid or expired state"
         assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
 
+    @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
+    async def test__user__inactive(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        auth_state: OAuthProviderState,
+        async_client: AsyncClient,
+    ) -> None:
+        url = app.url_path_for("provider_callback", provider=MusicProvider.SPOTIFY)
+        response = await async_client.get(url, params={"state": auth_state.state, "code": "my_secret_code"})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "User account is inactive" in response.json()["detail"]
+
+        stmt = select(AuthProviderTokenModel).where(AuthProviderTokenModel.user_id == user.id)
+        result = await async_session_db.execute(stmt)
+        assert result.scalar_one_or_none() is None
+
     async def test__provider_error(
         self,
         user: User,
