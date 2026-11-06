@@ -43,6 +43,8 @@ async def register(
             password_hasher=password_hasher,
         )
     except UserAlreadyExistsException as e:
+        # Accepted risk (#102): this answer reveals that the email has an account. A neutral one needs a full user
+        # workflow with email verification, not worth building for a local, single-user app still in development.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
 
     access_token = access_token_manager.create(data={"sub": str(user.id)})
@@ -98,6 +100,7 @@ async def update_current_user(
             password_hasher=password_hasher,
         )
     except UserEmailAlreadyExistsException as e:
+        # Accepted risk (#102): see `register`.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
 
     return UserResponse.model_validate(updated_user)

@@ -1,8 +1,10 @@
 import random
+import secrets
 import string
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
+from functools import cache
 from typing import Any
 
 import jwt
@@ -14,6 +16,12 @@ from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.infrastructure.config.settings.app import app_settings
+
+
+@cache
+def _get_dummy_hash() -> str:
+    # Hashed once per process: the hasher is created per request, and a request must only pay for the verification.
+    return Argon2Hasher().hash(secrets.token_urlsafe())
 
 
 class Argon2PasswordHasher(PasswordHasherPort):
@@ -34,6 +42,9 @@ class Argon2PasswordHasher(PasswordHasherPort):
             return self._ph.verify(hashed_password, plain_password)
         except Argon2Error, InvalidHashError:
             return False
+
+    def verify_dummy(self, plain_password: str) -> None:
+        self.verify(plain_password, _get_dummy_hash())
 
 
 class JwtAccessTokenManager(AccessTokenManagerPort):

@@ -36,6 +36,18 @@ class PasswordHasherPort(ABC):
         """
         pass
 
+    @abstractmethod
+    def verify_dummy(self, plain_password: str) -> None:
+        """Does the work of `verify` when there is no hashed password to check against.
+
+        An unknown user then takes as long to reject as a wrong password, so the response time doesn't reveal whether
+        an account exists.
+
+        Args:
+            plain_password: The plain text password provided by the user.
+        """
+        pass
+
 
 class AccessTokenManagerPort(ABC):
     """Interface for creating, decoding, and managing access tokens (e.g., JWT).
