@@ -1,9 +1,23 @@
+import logging
+from contextlib import nullcontext
+
+from rich import get_console
 from rich.console import Console
+from rich.logging import RichHandler
+from rich.status import Status
 from rich.table import Table
 
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
 
 console = Console()
+
+
+def spinner(message: str) -> Status | nullcontext[None]:
+    """Shows a spinner with the `rich` log handler only: it shares Rich's console, so its logs print above the spinner."""
+    if any(isinstance(handler, RichHandler) for handler in logging.getLogger(LOGGER_MUSEFLOW).handlers):
+        return get_console().status(message)
+    return nullcontext()
 
 
 def print_llm_usage(meter: LLMUsageMeter) -> None:

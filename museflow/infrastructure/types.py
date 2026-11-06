@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import Literal
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-LogHandler = Literal["console", "cli", "cli_alert", "rich", "null"]
+LogHandler = Literal["console", "rich", "null"]
 
 
 class ReasoningEffort(StrEnum):

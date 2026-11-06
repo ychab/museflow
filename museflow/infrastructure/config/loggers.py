@@ -16,10 +16,6 @@ default_conf: Final[dict[str, Any]] = {
             "format": "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
-        "message": {
-            "format": "%(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
         "rich": {
             # RichHandler ignores the 'format' string usually, but 'datefmt' works
             "format": "%(message)s",
@@ -30,18 +26,6 @@ default_conf: Final[dict[str, Any]] = {
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-        },
-        "cli": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "message",
-            "stream": "ext://sys.stdout",
-        },
-        "cli_alert": {
-            "class": "logging.StreamHandler",
-            "level": "WARNING",
             "formatter": "default",
             "stream": "ext://sys.stdout",
         },
