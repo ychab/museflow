@@ -25,12 +25,12 @@ class TestArgon2PasswordHasher:
         hashed_password = password_hasher.hash("blahblah")
         assert password_hasher.verify("testtest", hashed_password) is False
 
-    def test__verify_dummy__same_cost_as_verify(
+    def test__verify_simulate__same_cost_as_verify(
         self,
         password_hasher: PasswordHasherPort,
         spy_argon2_verify: mock.Mock,
     ) -> None:
-        password_hasher.verify_dummy("testtest")
+        password_hasher.verify_simulate("testtest")
 
         spy_argon2_verify.assert_called_once()
         _, dummy_hash, password = spy_argon2_verify.call_args.args

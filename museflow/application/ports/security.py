@@ -37,7 +37,7 @@ class PasswordHasherPort(ABC):
         pass
 
     @abstractmethod
-    def verify_dummy(self, plain_password: str) -> None:
+    def verify_simulate(self, plain_password: str) -> None:
         """Does the work of `verify` when there is no hashed password to check against.
 
         An unknown user then takes as long to reject as a wrong password, so the response time doesn't reveal whether
