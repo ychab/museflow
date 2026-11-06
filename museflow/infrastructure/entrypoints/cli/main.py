@@ -72,7 +72,11 @@ def main(
 
     This function initializes the logging configuration.
     """
-    configure_loggers(level=log_level, handlers=cast(list[LogHandler], log_handlers))
+    configure_loggers(
+        level=log_level,
+        third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
+        handlers=cast(list[LogHandler], log_handlers),
+    )
 
 
 # This entrypoint should be used only for local debugging.

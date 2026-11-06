@@ -68,7 +68,7 @@ class ImportStreamingHistoryUseCase:
             async with self._uow as uow:
                 orphan_ids = await uow.tracks.unlink_provider(user_id=user.id, provider=MusicProvider.SPOTIFY)
                 tracks_purged = await uow.tracks.delete(user_id=user.id, track_ids=orphan_ids)
-            logger.info("History tracks purged.\n")
+            logger.info("History tracks purged.")
 
         # Collect all play events per track across all files, keyed by fingerprint.
         # When two provider_ids resolve to the same fingerprint, their play times are merged.
@@ -132,7 +132,7 @@ class ImportStreamingHistoryUseCase:
             logger.info(f"Refreshed play data for {tracks_played_at_updated} already-known tracks.")
 
         # Build Track entities for new tracks and upsert in batches
-        logger.info(f"\nUpserting {len(unknown_fingerprints)} new tracks from file metadata.")
+        logger.info(f"Upserting {len(unknown_fingerprints)} new tracks from file metadata.")
         tracks_created = 0
         unknown_fps = list(unknown_fingerprints)
 

@@ -37,6 +37,8 @@ class AppSettings(BaseSettings):
     LOG_LEVEL_CLI: LogLevel = "WARNING"
     LOG_HANDLERS_CLI: list[LogHandler] = ["console"]
 
+    LOG_LEVEL_THIRD_PARTY: LogLevel = "WARNING"
+
     HTTP_MAX_RETRIES: int = 5
 
     RECONCILER_MATCH_THRESHOLD: float = 80.0

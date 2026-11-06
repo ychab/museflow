@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Only load configuration loggers at bootstrap, not at import (testing conflicts).
-    configure_loggers(level=app_settings.LOG_LEVEL_API, handlers=app_settings.LOG_HANDLERS_API)
+    configure_loggers(
+        level=app_settings.LOG_LEVEL_API,
+        third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
+        handlers=app_settings.LOG_HANDLERS_API,
+    )
     yield
 
 
