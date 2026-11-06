@@ -41,7 +41,7 @@ async def user_authenticate(
         user = await uow.users.get_by_email(email)
 
     if not user:
-        password_hasher.verify_dummy(password)
+        password_hasher.verify_simulate(password)
         raise UserNotFound()
 
     if not password_hasher.verify(password, user.hashed_password):

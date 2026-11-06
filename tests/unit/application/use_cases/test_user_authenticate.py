@@ -45,7 +45,7 @@ class TestUserService:
                 password_hasher=mock_password_hasher,
             )
 
-        mock_password_hasher.verify_dummy.assert_called_once_with("testtest")
+        mock_password_hasher.verify_simulate.assert_called_once_with("testtest")
 
     async def test_authenticate__wrong_password(
         self,

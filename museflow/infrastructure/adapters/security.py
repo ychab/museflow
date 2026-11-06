@@ -43,7 +43,7 @@ class Argon2PasswordHasher(PasswordHasherPort):
         except Argon2Error, InvalidHashError:
             return False
 
-    def verify_dummy(self, plain_password: str) -> None:
+    def verify_simulate(self, plain_password: str) -> None:
         self.verify(plain_password, _get_dummy_hash())
 
 
