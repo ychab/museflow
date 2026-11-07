@@ -60,8 +60,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 
 ## Application
 - **Ports** are `abc.ABC` + `@abstractmethod`. They accept input schemas and return domain entities.
-- **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named `<Entity><Action>Input` or
-  `<Feature>ConfigInput`.
+- **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named as in [Naming](#naming).
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
   when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`), and a
   class with one method per step when the entrypoint calls several steps of one flow, e.g. find, confirm, then delete
@@ -116,6 +115,19 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 | `user_db` | SQLAlchemy model | MappedAsDataclass |
 | `user_in` | Input schema | Pydantic / dataclass |
 | `user_dto` | External API DTO | Pydantic |
+
+Functions and use case classes start with a verb, classes holding data are nouns; the object is the noun of the data
+(`enrichment`, `ratings`), the verb names the action only (`enrich`, `rate`).
+
+| What | Pattern | Example |
+|------|---------|---------|
+| Use case module | `<object>_<action>.py`, grouped by object | `ratings_import.py` |
+| Use case function / class | `<verb>_<object>` / `<Verb><Object>UseCase` | `import_ratings`, `EnrichTracksUseCase` |
+| Read use case | `get_` one item, `list_` a collection, `count_` a number | `list_taste_profiles` |
+| Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise | `ImportRatingsResult` |
+| Entity write input | `<Entity><Action>Input` | `UserCreateInput` |
+| Flow config input | `<Verb><Object>ConfigInput` | `EnrichTracksConfigInput` |
+| Imported file entry | `<Noun>EntryInput` | `RatingEntryInput` |
 
 ## Types & style
 - Strict type hints everywhere, tests included. `str | None`; IDs are `uuid.UUID`. No `Any` unless justified.

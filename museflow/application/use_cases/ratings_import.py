@@ -1,13 +1,13 @@
 import uuid
 from dataclasses import dataclass
 
-from museflow.application.inputs.rate import RateEntryInput
+from museflow.application.inputs.rate import RatingEntryInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.tracks import match_fingerprints
 
 
 @dataclass(frozen=True, kw_only=True)
-class RatingsImportResult:
+class ImportRatingsResult:
     imported_count: int
     skipped_count: int
     not_found_count: int
@@ -15,9 +15,9 @@ class RatingsImportResult:
 
 async def import_ratings(
     user_id: uuid.UUID,
-    entries: list[RateEntryInput],
+    entries: list[RatingEntryInput],
     uow: UnitOfWorkPort,
-) -> RatingsImportResult:
+) -> ImportRatingsResult:
     imported_count = 0
     skipped_count = 0
 
@@ -32,7 +32,7 @@ async def import_ratings(
                 await uow.tracks.rate(user_id=user_id, track_id=track.id, score=entry.score)
                 imported_count += 1
 
-    return RatingsImportResult(
+    return ImportRatingsResult(
         imported_count=imported_count,
         skipped_count=skipped_count,
         not_found_count=matches.not_found_count,

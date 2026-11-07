@@ -7,8 +7,8 @@ from pydantic import TypeAdapter
 
 import typer
 
-from museflow.application.inputs.enrich import EnrichEntryInput
-from museflow.application.use_cases.enrichment_import import EnrichmentImportResult
+from museflow.application.inputs.enrich import EnrichmentEntryInput
+from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
 from museflow.application.use_cases.enrichment_import import import_enrichment
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
@@ -39,8 +39,8 @@ def import_(
     )
 
 
-async def import_logic(email: EmailStr, data: list[Any]) -> EnrichmentImportResult:
-    entries = TypeAdapter(list[EnrichEntryInput]).validate_python(data)
+async def import_logic(email: EmailStr, data: list[Any]) -> ImportEnrichmentResult:
+    entries = TypeAdapter(list[EnrichmentEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()
     async with uow:

@@ -7,8 +7,8 @@ from pydantic import TypeAdapter
 
 import typer
 
-from museflow.application.inputs.rate import RateEntryInput
-from museflow.application.use_cases.ratings_import import RatingsImportResult
+from museflow.application.inputs.rate import RatingEntryInput
+from museflow.application.use_cases.ratings_import import ImportRatingsResult
 from museflow.application.use_cases.ratings_import import import_ratings
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
@@ -39,8 +39,8 @@ def import_(
     )
 
 
-async def import_logic(email: EmailStr, data: list[Any]) -> RatingsImportResult:
-    entries = TypeAdapter(list[RateEntryInput]).validate_python(data)
+async def import_logic(email: EmailStr, data: list[Any]) -> ImportRatingsResult:
+    entries = TypeAdapter(list[RatingEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()
     async with uow:

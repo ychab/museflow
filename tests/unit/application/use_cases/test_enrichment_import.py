@@ -1,6 +1,6 @@
 from unittest import mock
 
-from museflow.application.inputs.enrich import EnrichEntryInput
+from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.use_cases.enrichment_import import import_enrichment
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
@@ -17,7 +17,7 @@ class TestImportEnrichmentUseCase:
 
         result = await import_enrichment(
             user_id=user.id,
-            entries=[EnrichEntryInput(fingerprint="unknown-fp", genres=[GenreTag.ROCK])],
+            entries=[EnrichmentEntryInput(fingerprint="unknown-fp", genres=[GenreTag.ROCK])],
             uow=mock_uow,
         )
 

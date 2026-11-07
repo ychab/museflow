@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.inputs.rate import RateEntryInput
+from museflow.application.inputs.rate import RatingEntryInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.ratings_import import import_ratings
 from museflow.domain.entities.user import User
@@ -15,9 +15,9 @@ class TestImportRatingsUseCase:
         rated_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
         skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
         entries = [
-            RateEntryInput(fingerprint=rated_db.fingerprint, score=9),
-            RateEntryInput(fingerprint=skipped_db.fingerprint, score_skipped=True),
-            RateEntryInput(fingerprint="unknown-fp", score=5),
+            RatingEntryInput(fingerprint=rated_db.fingerprint, score=9),
+            RatingEntryInput(fingerprint=skipped_db.fingerprint, score_skipped=True),
+            RatingEntryInput(fingerprint="unknown-fp", score=5),
         ]
 
         result = await import_ratings(user_id=user.id, entries=entries, uow=uow)
