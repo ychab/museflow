@@ -49,7 +49,8 @@ class OpenRouterSettings(BaseSettings):
     ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
 
     PROFILER_SEGMENT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
-    PROFILER_MERGE: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash")
+    # Low effort: same profile as the default effort for 56% less on the merge step (#82). This model rejects `none`.
+    PROFILER_MERGE: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash", REASONING_EFFORT=ReasoningEffort.LOW)
     PROFILER_REFLECT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-pro-preview")
 
     # Zero Data Retention: only route to provider endpoints that neither store prompts and completions nor train on
