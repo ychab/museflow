@@ -11,14 +11,14 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 console = Console()
 
 
 @app.command("list", help="List all your blacklisted artists and tracks.")
 def list_(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
 ) -> None:
     try:
         blacklist = asyncio.run(list_logic(email=email))

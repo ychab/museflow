@@ -16,13 +16,13 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 
 @app.command("artists", help="Show top artists ranked by overall score (breadth x depth x quality).")
 def stats_artists(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
     score_min: int | None = typer.Option(
         None,

@@ -15,14 +15,14 @@ from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils import spinner
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
 def enrich(
-    email: str = typer.Option(..., help="User email address.", parser=parse_email),
+    email: str = EMAIL_OPTION,
     only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
     only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
     only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locales (sung languages) only."),

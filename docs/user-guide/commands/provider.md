@@ -8,12 +8,12 @@ Connects a user account to a provider through OAuth. A browser window opens on t
 command then polls until the authorisation has been completed.
 
 ```bash
-museflow provider connect --email <email> [OPTIONS]
+museflow provider connect [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to connect. |
 | `--timeout` | `60.0` | Seconds to wait for authentication (minimum 10). |
 | `--poll-interval` | `2.0` | Seconds between status checks (minimum 0.5). |
@@ -27,7 +27,7 @@ museflow provider connect --email <email> [OPTIONS]
 **Example**
 
 ```bash
-museflow provider connect --email user@example.com --timeout 120
+museflow provider connect --timeout 120
 ```
 
 **Output.** The authorisation URL is printed and opened in the browser, then a spinner shows while waiting,
@@ -47,12 +47,12 @@ after 10 minutes, whatever `--timeout` says.
 Prints the stored OAuth token of a user for a provider, for diagnostics.
 
 ```bash
-museflow provider info --email <email>
+museflow provider info [--email <email>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider of the token. |
 | `--show-tokens` | off | Print the access and refresh tokens in clear, after a confirmation. |
 

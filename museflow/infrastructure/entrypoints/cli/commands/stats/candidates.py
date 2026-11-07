@@ -12,12 +12,12 @@ from museflow.domain.value_objects.stats import ArtistCandidate
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("candidates", help="Show artists to explore: few total tracks but high average score.")
 def stats_candidates(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     limit: int = typer.Option(20, help="Max rows in the table"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
     max_tracks: int = typer.Option(5, "--max-tracks", help="Maximum total tracks for an artist to be a candidate"),

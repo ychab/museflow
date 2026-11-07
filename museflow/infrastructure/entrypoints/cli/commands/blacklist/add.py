@@ -10,12 +10,12 @@ from museflow.domain.entities.blacklist import BlacklistedTrack
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("add-artist", help="Add one or more artists to your blacklist.")
 def add_artist(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     artist_names: list[str] = typer.Argument(..., help="Artist name(s) to blacklist"),
 ) -> None:
     try:
@@ -44,7 +44,7 @@ async def add_artists_logic(email: EmailStr, artist_names: list[str]) -> list[Bl
 
 @app.command("add-track", help="Add a track to your blacklist.")
 def add_track(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     name: str = typer.Argument(..., help="Track name"),
     artist: str = typer.Option(..., "--artist", help="Artist name"),
 ) -> None:

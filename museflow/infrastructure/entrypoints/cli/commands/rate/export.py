@@ -11,12 +11,12 @@ from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("export", help="Export track ratings to a YAML file.")
 def export(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:

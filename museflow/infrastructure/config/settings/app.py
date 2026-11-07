@@ -22,6 +22,8 @@ class AppSettings(BaseSettings):
 
     DEBUG: bool = False
 
+    CLI_DEFAULT_EMAIL: str | None = None
+
     LOCALE: str = Field(default="en-US", pattern=r"^[a-z]{2}-[A-Z]{2}$")
 
     SECRET_KEY: SecretStr = Field(..., min_length=32)

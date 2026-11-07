@@ -71,7 +71,7 @@ class TestDeleteCommand:
     def test__nominal(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--artist", "X", "--yes"])
         assert result.exit_code == 0
-        assert "Deleted 3" in result.output
+        assert "Deleted 3 track(s) of test@example.com." in result.output
         mock_delete_logic.assert_called_once()
 
     def test__no_tracks__early_exit(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
@@ -274,7 +274,9 @@ class TestDeleteLogic:
         )
 
         assert result == TracksDeleteResult(deleted_count=2)
-        mock_typer_confirm.assert_called_once()
+        mock_typer_confirm.assert_called_once_with(
+            "About to delete 2 track(s) of test@example.com. Continue?", abort=True
+        )
         mock_track_repository.delete.assert_awaited_once_with(
             user_id=user.id,
             track_ids=[track.id for track in tracks],

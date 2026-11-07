@@ -9,18 +9,18 @@ from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("delete", help="Delete a taste profile. Playlists built from it are kept.")
 def delete(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
     if not yes:
         typer.confirm(
-            f"About to delete the taste profile '{name}'. Rebuilding it takes a full LLM build: "
+            f"About to delete the taste profile '{name}' of {email}. Rebuilding it takes a full LLM build: "
             "export it first with `taste export`. Continue?",
             abort=True,
         )
@@ -35,7 +35,7 @@ def delete(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Taste profile '{name}' deleted.", fg=typer.colors.GREEN)
+    typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.GREEN)
 
 
 async def delete_logic(email: EmailStr, name: str) -> None:

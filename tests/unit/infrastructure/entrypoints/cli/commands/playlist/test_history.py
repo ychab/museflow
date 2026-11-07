@@ -327,6 +327,7 @@ class TestHistoryCommand:
 
         output = clean_typer_text(result.stdout)
         assert "Successfully saved into playlist 'History Playlist'!" in output
+        assert "--email" not in output
         assert f"Saved playlist ID: {playlist.id}" in output
 
     def test__output__score_column_shown(

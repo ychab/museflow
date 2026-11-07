@@ -37,7 +37,7 @@ class TestTasteDeleteCommand:
             app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "--yes"]
         )
         assert result.exit_code == 0
-        assert "Taste profile 'my-profile' deleted." in result.output
+        assert "Taste profile 'my-profile' of test@example.com deleted." in result.output
         mock_delete_logic.assert_awaited_once_with(email="test@example.com", name="my-profile")
 
     def test__confirmation_accepted(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
@@ -45,6 +45,7 @@ class TestTasteDeleteCommand:
             app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile"], input="y\n"
         )
         assert result.exit_code == 0
+        assert "About to delete the taste profile 'my-profile' of test@example.com." in result.output
         assert "export it first with `taste export`" in result.output
         mock_delete_logic.assert_awaited_once()
 

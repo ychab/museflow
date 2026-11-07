@@ -25,8 +25,8 @@ from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
@@ -35,7 +35,7 @@ console = Console()
 
 @app.command("history")
 def playlist_history(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     name_suffix: str | None = typer.Option(
         None, "--name-suffix", help="Custom name suffix for the playlist (replaces the timestamp)"
@@ -183,7 +183,7 @@ def playlist_history(
     else:
         typer.secho(f"\n\nSuccessfully saved into playlist '{result.playlist.name}'! ✅", fg=typer.colors.GREEN)
         typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
-        typer.secho(f"  View it: museflow playlist view {result.playlist.id} --email {email}", fg=typer.colors.CYAN)
+        typer.secho(f"  View it: museflow playlist view {result.playlist.id}", fg=typer.colors.CYAN)
 
 
 async def playlist_history_logic(

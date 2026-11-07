@@ -11,12 +11,12 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("list", help="List all taste profiles for a user.")
 def list_(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
 ) -> None:
     try:
         profiles = asyncio.run(list_logic(email=email))

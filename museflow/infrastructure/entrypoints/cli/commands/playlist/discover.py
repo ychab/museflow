@@ -27,7 +27,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils import spinner
 
@@ -36,7 +36,7 @@ console = Console()
 
 @app.command("discover")
 def discover(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     focus: DiscoveryFocus = typer.Option(default=DiscoverTasteConfigInput.focus, help="The discovery focus strategy"),
     name: str | None = typer.Option(None, "--name", help="Taste profile name (defaults to latest)"),
@@ -190,11 +190,11 @@ def discover(
             )
             typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
             typer.secho(
-                f"  View it: museflow playlist view {result.playlist.id} --email {email}",
+                f"  View it: museflow playlist view {result.playlist.id}",
                 fg=typer.colors.CYAN,
             )
             typer.secho(
-                f"  Rate tracks: museflow rate playlist --email {email} --play",
+                "  Rate tracks: museflow rate playlist --play",
                 fg=typer.colors.CYAN,
             )
     finally:

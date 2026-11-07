@@ -9,12 +9,12 @@ Shows top artists ranked by an overall score combining breadth (distinct tracks)
 (ratings).
 
 ```bash
-museflow stats artists --email <email> [OPTIONS]
+museflow stats artists [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--source` | `all` | Track source to include: `all`, `history` or `discovery`. |
 | `--score-min` | none | Minimum score filter (0-10). |
 | `--score-max` | none | Maximum score filter (0-10). |
@@ -34,7 +34,7 @@ museflow stats artists --email <email> [OPTIONS]
 **Example**
 
 ```bash
-museflow stats artists --email user@example.com --source history --sort plays_count --limit 10
+museflow stats artists --source history --sort plays_count --limit 10
 ```
 
 **Output.** A _Top Artists_ table with rank, artist, quality, average rating, number of rated tracks, number of
@@ -45,12 +45,12 @@ tracks and plays (and the overall score when sorting by `overall`). Unrated arti
 Shows artists worth exploring further: few tracks in the library but a high average score.
 
 ```bash
-museflow stats candidates --email <email> [OPTIONS]
+museflow stats candidates [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--limit` | `20` | Max rows in the table. |
 | `--source` | `all` | Track source to include: `all`, `history` or `discovery`. |
 | `--max-tracks` | `5` | Maximum total tracks for an artist to be a candidate. |
@@ -59,7 +59,7 @@ museflow stats candidates --email <email> [OPTIONS]
 **Example**
 
 ```bash
-museflow stats candidates --email user@example.com --max-tracks 3 --min-avg 8
+museflow stats candidates --max-tracks 3 --min-avg 8
 ```
 
 **Output.** A _Discovery Candidates_ table (artist, average score, rated tracks, total tracks), or
@@ -70,12 +70,12 @@ museflow stats candidates --email user@example.com --max-tracks 3 --min-avg 8
 Shows top rated tracks.
 
 ```bash
-museflow stats tracks --email <email> [OPTIONS]
+museflow stats tracks [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--score-min` | none | Minimum score filter (0-10). |
 | `--score-max` | none | Maximum score filter (0-10). |
 | `--sort` | `score` | Ranking strategy: `score` or `played_count`. |

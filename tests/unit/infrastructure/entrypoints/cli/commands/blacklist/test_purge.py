@@ -54,12 +54,12 @@ class TestPurgeCommand:
     def test__with_yes_flag(self, runner: CliRunner) -> None:
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com", "--yes"])
         assert result.exit_code == 0
-        assert "3" in result.output
-        assert "entries" in result.output
+        assert "Deleted 3 blacklist entries of test@example.com." in result.output
 
     def test__confirmation_accepted(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com"], input="y\n")
         assert result.exit_code == 0
+        assert "Delete the entire blacklist of test@example.com?" in result.output
         mock_logic.assert_called_once()
 
     def test__confirmation_aborted(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:

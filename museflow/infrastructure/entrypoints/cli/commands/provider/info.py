@@ -14,7 +14,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.commands.provider import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 def _mask(secret: str) -> str:
@@ -24,7 +24,7 @@ def _mask(secret: str) -> str:
 
 @app.command("info", help="Show the stored provider auth token of a user.")
 def info(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider of the token"),
     show_tokens: bool = typer.Option(False, "--show-tokens", help="Print the tokens in clear, after a confirmation"),
 ) -> None:

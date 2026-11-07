@@ -7,7 +7,7 @@ its tokens and cost when it ends, whatever the outcome: a paused build or a fail
 ## `llm usage`
 
 Sums the saved LLM usage, one row per group, then the total. It reads the local database only and costs nothing.
-Without `--email`, it sums all the users: the overview of an instance.
+Without `--email`, it sums all the users: the overview of an instance. `MUSEFLOW_CLI_DEFAULT_EMAIL` does not apply here.
 
 ```bash
 museflow llm usage [--email <email>] [--by operation|model|step|month|profile|user|run] [--since YYYY-MM-DD]

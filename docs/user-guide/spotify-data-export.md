@@ -67,7 +67,7 @@ IDs is merged into one track with the combined play times.
 ## Importing
 
 ```bash
-museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
+museflow tracks history --directory ~/Downloads/MySpotifyData
 ```
 
 See [`tracks history`](commands/tracks.md#tracks-history) for all options and the printed report.

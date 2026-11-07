@@ -15,8 +15,11 @@ This page walks through the path from an empty install to a first playlist. Ever
 - Your Spotify **Extended streaming history**, see [Spotify data export](spotify-data-export.md).
 
 The CLI is available as `museflow` when installed in the environment, or as `uv run museflow` from the
-repository. Every command takes `--email` to select the user. Run `museflow --help` or
-`museflow <group> <command> --help` at any time.
+repository. Run `museflow --help` or `museflow <group> <command> --help` at any time.
+
+Commands act on the user set by `MUSEFLOW_CLI_DEFAULT_EMAIL`, in the environment or in `.env`; the examples below assume it
+is set. `--email` overrides it, and a command fails if neither is given. Three commands differ: `users delete` always
+needs `--email`, `users update` takes it as the new address, and `llm usage` without it sums all the users.
 
 ## The flow
 
@@ -38,7 +41,7 @@ flowchart TD
 ### 1. Create a user
 
 ```bash
-museflow users create --email user@example.com
+museflow users create
 ```
 
 The password is prompted for (hidden, with confirmation). See [`users`](commands/users.md).
@@ -46,7 +49,7 @@ The password is prompted for (hidden, with confirmation). See [`users`](commands
 ### 2. Connect Spotify
 
 ```bash
-museflow provider connect --email user@example.com
+museflow provider connect
 ```
 
 A browser window opens on the Spotify consent page; the command waits until the callback has been processed
@@ -57,7 +60,7 @@ by the API server. See [`provider`](commands/provider.md).
 Request the export first ([Spotify data export](spotify-data-export.md)), unzip it, then:
 
 ```bash
-museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
+museflow tracks history --directory ~/Downloads/MySpotifyData
 ```
 
 Short plays are ignored (90 seconds by default), and tracks are stored with their play count and first/last
@@ -66,7 +69,7 @@ played dates. See [`tracks`](commands/tracks.md).
 ### 4. Rate tracks (optional)
 
 ```bash
-museflow rate history --email user@example.com --play
+museflow rate history --play
 ```
 
 Scores from 0 to 10 are an explicit preference signal, on top of the play counts. They are used by
@@ -76,7 +79,7 @@ commands. See [`rate`](commands/rate.md).
 ### 5. Enrich tracks (optional)
 
 ```bash
-museflow enrich tracks --email user@example.com
+museflow enrich tracks
 ```
 
 Adds genre, mood and language metadata to tracks with an LLM. Required for the `--genre`, `--mood` and
@@ -85,7 +88,7 @@ Adds genre, mood and language metadata to tracks with an LLM. Required for the `
 ### 6. Build a taste profile
 
 ```bash
-museflow taste build --email user@example.com --name my-profile
+museflow taste build --name my-profile
 ```
 
 Analyses the library with an LLM and stores a master taste profile (eras, personality archetype, life-phase
@@ -94,7 +97,7 @@ insights). Add `--rated-only` when enough tracks have been rated. See [`taste`](
 ### 7. Discover a playlist
 
 ```bash
-museflow playlist discover --email user@example.com
+museflow playlist discover
 ```
 
 Asks the advisor for new tracks guided by the profile, matches them on Spotify, and creates a playlist.
@@ -105,7 +108,7 @@ Add `--dry-run` to preview the result without creating anything. See [`playlist`
 A playlist can also be built from the library itself, filtered and ordered by play count or score:
 
 ```bash
-museflow playlist history --email user@example.com --played-last-max 2023-12-31 --limit 30
+museflow playlist history --played-last-max 2023-12-31 --limit 30
 ```
 
 This needs only steps 1 to 3 (a connected Spotify account is required to create the playlist). See the

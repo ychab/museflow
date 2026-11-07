@@ -6,6 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.users.delete import delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -20,9 +21,16 @@ class TestUsersDeleteParserCommand:
         assert result.exit_code != 0
         assert "An email address must have an @-sign" in clean_typer_text(result.output)
 
-    def test__email__missing(self, runner: CliRunner) -> None:
-        result = runner.invoke(app, ["users", "delete"])
+    @pytest.fixture
+    def cli_email(self) -> Iterable[str]:
+        with mock.patch.object(app_settings, "CLI_DEFAULT_EMAIL", "setting@example.com") as patched:
+            yield patched
+
+    @pytest.mark.usefixtures("cli_email")
+    def test__email__missing__setting_ignored(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["users", "delete", "--yes"])
         assert result.exit_code != 0
+        assert "Missing option '--email'" in clean_typer_text(result.output)
 
 
 class TestUsersDeleteCommand:

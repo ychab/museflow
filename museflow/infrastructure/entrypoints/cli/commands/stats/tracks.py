@@ -14,13 +14,13 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 
 @app.command("tracks", help="Show top rated tracks.")
 def stats_tracks(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     score_min: int | None = typer.Option(
         None,
         "--score-min",

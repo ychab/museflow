@@ -17,12 +17,12 @@ Discovers new tracks guided by the taste profile, matches them on the music prov
 playlist.
 
 ```bash
-museflow playlist discover --email <email> [OPTIONS]
+museflow playlist discover [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to use. |
 | `--focus` | `expansion` | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. |
 | `--name` | latest profile | Taste profile name (defaults to latest). |
@@ -55,9 +55,9 @@ already in the library, and blacklisted artists and tracks ([`blacklist`](blackl
 **Examples**
 
 ```bash
-museflow playlist discover --email user@example.com --focus expansion --playlist-limit 15
-museflow playlist discover --email user@example.com --genre jazz --mood chill --dry-run
-museflow playlist discover --email user@example.com --dry-run --model anthropic/claude-sonnet-4.5
+museflow playlist discover --focus expansion --playlist-limit 15
+museflow playlist discover --genre jazz --mood chill --dry-run
+museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
 
 **Output.** A report table per attempt (suggested, survived, new tracks), then the table of discovered tracks
@@ -71,12 +71,12 @@ Creates a playlist from the history tracks already in the library, filtered and 
 score. No LLM is involved.
 
 ```bash
-museflow playlist history --email <email> [OPTIONS]
+museflow playlist history [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to use. |
 | `--name-suffix` | timestamp | Custom name suffix for the playlist (replaces the timestamp). |
 | `--score-min` | none | Minimum track score (0-10). |
@@ -109,10 +109,10 @@ tracks. Pass `--duplicate` to allow them again. Ranges are validated: `--score-m
 
 ```bash
 # Favourite tracks not heard for a while
-museflow playlist history --email user@example.com --score-min 7 --played-last-max 2024-01-01
+museflow playlist history --score-min 7 --played-last-max 2024-01-01
 
 # Preview electronic tracks without creating anything
-museflow playlist history --email user@example.com --genre electronic --genre pop --dry-run
+museflow playlist history --genre electronic --genre pop --dry-run
 ```
 
 **Output.** A table of matched tracks (artist, track, play count, score). With `--dry-run`, the command stops
@@ -151,12 +151,12 @@ micro tags, see `museflow playlist history --help` for the complete list). Macro
 Lists all playlists of a user.
 
 ```bash
-museflow playlist list --email <email>
+museflow playlist list [--email <email>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Output.** A table with ID, name, type (`discovery` or `history`), focus, genre, mood and creation date, or a
 notice when there is no playlist.
@@ -166,13 +166,13 @@ notice when there is no playlist.
 Shows a playlist with its tracks and their ratings.
 
 ```bash
-museflow playlist view <playlist_id> --email <email>
+museflow playlist view <playlist_id> [--email <email>]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `playlist_id` | required | Playlist ID. |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Output.** The playlist header, then a table of tracks with their position, ID, artists, name and score.
 
@@ -182,13 +182,13 @@ Deletes one playlist, or many with `--purge`. By default only the local record i
 in the provider account unless `--include-remote` is set.
 
 ```bash
-museflow playlist delete [playlist_id] --email <email> [OPTIONS]
+museflow playlist delete [playlist_id] [--email <email>] [OPTIONS]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `playlist_id` | none | Playlist ID (required unless `--purge` is used). |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--purge` | off | Delete all matching playlists instead of a single one. |
 | `--type` | none | Filter by playlist type: `discovery` or `history` (only valid with `--purge`). |
 | `--provider` | none | Filter by provider (only valid with `--purge`). |
@@ -200,10 +200,10 @@ Pass either a playlist ID or `--purge`, not both. `--type` and `--provider` requ
 **Example**
 
 ```bash
-museflow playlist delete --email user@example.com --purge --type history --include-remote
+museflow playlist delete --purge --type history --include-remote
 ```
 
-**Output.** Unless `--yes` is given, `--purge` asks for confirmation. Then `Deleted N playlist(s).`.
+**Output.** Unless `--yes` is given, `--purge` asks for confirmation. Then `Deleted N playlist(s) of <email>.`.
 Using `--include-remote` requires a connected account on the provider of each playlist deleted.
 
 !!! note

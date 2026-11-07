@@ -11,13 +11,13 @@ from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 
 @app.command("create", help="Create a new user account.")
 def create(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     password: str = typer.Option(
         None,
         prompt=True,

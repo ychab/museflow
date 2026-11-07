@@ -19,7 +19,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -33,7 +33,7 @@ class RateHistoryResult:
 
 @app.command("history", help="Interactively rate unrated history tracks ordered by play count.")
 def rate_history(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     limit: int = typer.Option(10, help="Maximum number of tracks to rate", min=1),
     reset: bool = typer.Option(False, "--reset", help="Clear all existing history track scores before rating"),
     play: bool = typer.Option(False, "--play", help="Play each track before rating"),
