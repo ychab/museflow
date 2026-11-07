@@ -117,7 +117,11 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 | `user_dto` | External API DTO | Pydantic |
 
 Functions and use case classes start with a verb, classes holding data are nouns; the object is the noun of the data
-(`enrichment`, `ratings`), the verb names the action only (`enrich`, `rate`).
+(`enrichment`, `ratings`), the verb names the action only (`enrich`, `rate`). Use cases speak CRUD (`create`, `get`,
+`list`, `update`, `delete`) whenever it fits, a domain verb otherwise (`import`, `enrich`, `rate`): they display
+nothing and other use cases reuse them. Entrypoints use the concrete user-facing verb (`taste view` calls
+`get_taste_profile`). Modules put the object first so that `ls` groups a feature, which also keeps the module name
+apart from its function (`user_create.create_user`).
 
 | What | Pattern | Example |
 |------|---------|---------|
