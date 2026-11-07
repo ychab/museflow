@@ -302,12 +302,12 @@ def uow(uow_session_factory: async_sessionmaker[AsyncSession]) -> UnitOfWorkPort
 
 
 @pytest.fixture
-def user_create(request: pytest.FixtureRequest) -> UserCreateInput:
+def user_create_in(request: pytest.FixtureRequest) -> UserCreateInput:
     return UserCreateInputFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture
-def user_update(request: pytest.FixtureRequest) -> UserUpdateInput:
+def user_update_in(request: pytest.FixtureRequest) -> UserUpdateInput:
     return UserUpdateInputFactory.build(**getattr(request, "param", {}))
 
 
