@@ -11,7 +11,7 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
+from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import tracks_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -22,8 +22,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.enri
 
 class TestEnrichTracksParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_enrich_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.enrich_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_tracks_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.tracks_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = EnrichTracksReport(enriched_count=0, error_count=0)
             yield patched
 
@@ -32,39 +32,39 @@ class TestEnrichTracksParserCommand:
         assert result.exit_code != 0
         assert "An email address must have an @-sign" in clean_typer_text(result.output)
 
-    def test__batch_size__defaults_to_200(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__batch_size__defaults_to_200(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
-        call_kwargs = mock_enrich_logic.call_args.kwargs
+        call_kwargs = mock_tracks_logic.call_args.kwargs
         assert call_kwargs["batch_size"] == 200
 
-    def test__limit__optional(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__limit__optional(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
-        call_kwargs = mock_enrich_logic.call_args.kwargs
+        call_kwargs = mock_tracks_logic.call_args.kwargs
         assert call_kwargs["limit"] is None
 
-    def test__force__defaults_to_false(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__force__defaults_to_false(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
-        call_kwargs = mock_enrich_logic.call_args.kwargs
+        call_kwargs = mock_tracks_logic.call_args.kwargs
         assert call_kwargs["force"] is False
 
-    def test__only_genre__parsed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__only_genre__parsed(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--only-genre"])
-        call_kwargs = mock_enrich_logic.call_args.kwargs
+        call_kwargs = mock_tracks_logic.call_args.kwargs
         assert call_kwargs["only_genre"] is True
         assert call_kwargs["only_mood"] is False
         assert call_kwargs["only_locale"] is False
 
-    def test__model__defaults_to_none(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__model__defaults_to_none(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
-        assert mock_enrich_logic.call_args.kwargs["model"] is None
+        assert mock_tracks_logic.call_args.kwargs["model"] is None
 
-    def test__model__parsed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__model__parsed(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--model", "openai/gpt-5-mini"])
-        assert mock_enrich_logic.call_args.kwargs["model"] == "openai/gpt-5-mini"
+        assert mock_tracks_logic.call_args.kwargs["model"] == "openai/gpt-5-mini"
 
-    def test__only_flags__all_default_to_false(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__only_flags__all_default_to_false(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
-        call_kwargs = mock_enrich_logic.call_args.kwargs
+        call_kwargs = mock_tracks_logic.call_args.kwargs
         assert call_kwargs["only_genre"] is False
         assert call_kwargs["only_mood"] is False
         assert call_kwargs["only_locale"] is False
@@ -72,8 +72,8 @@ class TestEnrichTracksParserCommand:
 
 class TestEnrichTracksCommand:
     @pytest.fixture(autouse=True)
-    def mock_enrich_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.enrich_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_tracks_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.tracks_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = EnrichTracksReport(enriched_count=5, error_count=0)
             yield patched
 
@@ -82,44 +82,44 @@ class TestEnrichTracksCommand:
         assert result.exit_code == 0
         assert "Enriched 5 track(s)" in result.output
 
-    def test__usage__printed_after_the_report(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__usage__printed_after_the_report(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         async def enrich(**kwargs: Any) -> EnrichTracksReport:
             spend(kwargs["meter"])
             return EnrichTracksReport(enriched_count=5, error_count=0)
 
-        mock_enrich_logic.side_effect = enrich
+        mock_tracks_logic.side_effect = enrich
 
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert result.output.index("Enriched 5 track(s)") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
-    def test__aborted__usage_printed(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
+    def test__aborted__usage_printed(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
         async def enrich(**kwargs: Any) -> EnrichTracksReport:
             spend(kwargs["meter"])
             raise TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
 
-        mock_enrich_logic.side_effect = enrich
+        mock_tracks_logic.side_effect = enrich
 
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 1
         assert result.output.index("Enrichment stopped") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
-    def test__no_tracks(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
-        mock_enrich_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=0)
+    def test__no_tracks(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
+        mock_tracks_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=0)
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No tracks to enrich" in result.output
 
-    def test__error_count__shows_warning(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
-        mock_enrich_logic.return_value = EnrichTracksReport(enriched_count=3, error_count=2)
+    def test__error_count__shows_warning(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
+        mock_tracks_logic.return_value = EnrichTracksReport(enriched_count=3, error_count=2)
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "2 batch(es) failed" in result.output
 
-    def test__no_batch_succeeded__exits_with_error(self, runner: CliRunner, mock_enrich_logic: mock.AsyncMock) -> None:
-        mock_enrich_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=1)
+    def test__no_batch_succeeded__exits_with_error(self, runner: CliRunner, mock_tracks_logic: mock.AsyncMock) -> None:
+        mock_tracks_logic.return_value = EnrichTracksReport(enriched_count=0, error_count=1)
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 1
         assert "No track enriched: 1 batch(es) failed" in result.output
@@ -127,10 +127,10 @@ class TestEnrichTracksCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_enrich_logic: mock.AsyncMock,
+        mock_tracks_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_enrich_logic.side_effect = UserNotFound()
+        mock_tracks_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -145,12 +145,12 @@ class TestEnrichTracksCommand:
     def test__aborted__shows_progress_and_hint(
         self,
         runner: CliRunner,
-        mock_enrich_logic: mock.AsyncMock,
+        mock_tracks_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
         args: list[str],
         expected_hint: str,
     ) -> None:
-        mock_enrich_logic.side_effect = TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
+        mock_tracks_logic.side_effect = TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", *args])
         assert result.exit_code == 1
 
@@ -161,10 +161,10 @@ class TestEnrichTracksCommand:
     def test__generic_exception(
         self,
         runner: CliRunner,
-        mock_enrich_logic: mock.AsyncMock,
+        mock_tracks_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_enrich_logic.side_effect = Exception("OpenRouter down")
+        mock_tracks_logic.side_effect = Exception("OpenRouter down")
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: OpenRouter down" in clean_typer_text(result.stderr)
@@ -182,7 +182,7 @@ class TestEnrichTracksLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await enrich_logic(email="unknown@example.com")
+            await tracks_logic(email="unknown@example.com")
 
     async def test__model_and_meter__forwarded_to_enricher(
         self,
@@ -192,7 +192,7 @@ class TestEnrichTracksLogic:
         mock_track_repository.get_list.return_value = []
         meter = LLMUsageMeter()
 
-        await enrich_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
+        await tracks_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
 
         spy_get_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
 
@@ -203,7 +203,7 @@ class TestEnrichTracksLogic:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await enrich_logic(
+        await tracks_logic(
             email="test@example.com",
             force=True,
             batch_size=10,
@@ -223,7 +223,7 @@ class TestEnrichTracksLogic:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await enrich_logic(
+        await tracks_logic(
             email="test@example.com",
             only_locale=True,
         )
@@ -241,7 +241,7 @@ class TestEnrichTracksLogic:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await enrich_logic(email="test@example.com")
+        await tracks_logic(email="test@example.com")
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,

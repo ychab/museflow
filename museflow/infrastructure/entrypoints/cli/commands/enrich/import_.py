@@ -18,7 +18,7 @@ from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import track enrichment data (genres and moods) from a YAML file.")
-def import_(
+def import_command(
     email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:

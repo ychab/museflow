@@ -15,7 +15,7 @@ console = Console()
 
 
 @app.command("list")
-def list_(
+def list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     """List all playlists for a user."""

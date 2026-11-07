@@ -15,7 +15,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.history import history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -28,7 +28,7 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.play
 class TestHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = CreateHistoryPlaylistResult(playlist=PlaylistFactory.build(tracks=[]), tracks=[])
             yield patched
 
@@ -263,7 +263,7 @@ class TestHistoryParserCommand:
 class TestHistoryCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
@@ -401,7 +401,7 @@ class TestHistoryLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await playlist_history_logic(
+            await history_logic(
                 email="unknown@example.com",
                 provider=MusicProvider.SPOTIFY,
                 config=CreateHistoryPlaylistConfigInput(),
@@ -417,7 +417,7 @@ class TestHistoryLogic:
         expected = CreateHistoryPlaylistResult(playlist=None, tracks=[TrackFactory.build()])
         mock_history_use_case.return_value = expected
 
-        result = await playlist_history_logic(
+        result = await history_logic(
             email=user.email,
             provider=MusicProvider.SPOTIFY,
             config=CreateHistoryPlaylistConfigInput(dry_run=True),

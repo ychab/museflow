@@ -35,7 +35,7 @@ class RatePlaylistResult:
     "playlist",
     help="Interactively rate tracks in a playlist, or all unrated discovery tracks if no playlist is specified.",
 )
-def rate_playlist(
+def playlist_command(
     email: str = EMAIL_OPTION,
     playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist UUID to rate"),
     limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)", min=1),
@@ -49,7 +49,7 @@ def rate_playlist(
 
     try:
         result = asyncio.run(
-            rate_playlist_logic(
+            playlist_logic(
                 email=email,
                 playlist_id=playlist_id,
                 limit=limit,
@@ -83,7 +83,7 @@ def rate_playlist(
     )
 
 
-async def rate_playlist_logic(
+async def playlist_logic(
     email: EmailStr,
     playlist_id: uuid.UUID | None,
     limit: int = 20,

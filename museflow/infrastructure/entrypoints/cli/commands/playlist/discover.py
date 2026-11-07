@@ -35,7 +35,7 @@ console = Console()
 
 
 @app.command("discover")
-def discover(
+def discover_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     focus: DiscoveryFocus = typer.Option(default=DiscoverTasteConfigInput.focus, help="The discovery focus strategy"),

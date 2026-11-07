@@ -34,7 +34,7 @@ console = Console()
 
 
 @app.command("history")
-def playlist_history(
+def history_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     name_suffix: str | None = typer.Option(
@@ -117,7 +117,7 @@ def playlist_history(
 
     try:
         result = asyncio.run(
-            playlist_history_logic(
+            history_logic(
                 email=email,
                 provider=provider,
                 config=CreateHistoryPlaylistConfigInput(
@@ -186,7 +186,7 @@ def playlist_history(
         typer.secho(f"  View it: museflow playlist view {result.playlist.id}", fg=typer.colors.CYAN)
 
 
-async def playlist_history_logic(
+async def history_logic(
     email: EmailStr,
     provider: MusicProvider,
     config: CreateHistoryPlaylistConfigInput,

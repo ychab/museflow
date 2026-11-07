@@ -15,7 +15,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("list", help="List all taste profiles for a user.")
-def list_(
+def list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     try:

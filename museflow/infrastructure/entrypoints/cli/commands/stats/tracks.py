@@ -19,7 +19,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 
 @app.command("tracks", help="Show top rated tracks.")
-def stats_tracks(
+def tracks_command(
     email: str = EMAIL_OPTION,
     score_min: int | None = typer.Option(
         None,

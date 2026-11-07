@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
-def enrich(
+def tracks_command(
     email: str = EMAIL_OPTION,
     only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
     only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
@@ -43,7 +43,7 @@ def enrich(
     try:
         with spinner("Enriching tracks…"):
             result = asyncio.run(
-                enrich_logic(
+                tracks_logic(
                     email=email,
                     only_genre=only_genre,
                     only_mood=only_mood,
@@ -91,7 +91,7 @@ def enrich(
         print_llm_usage(meter)
 
 
-async def enrich_logic(
+async def tracks_logic(
     email: EmailStr,
     only_genre: bool = False,
     only_mood: bool = False,

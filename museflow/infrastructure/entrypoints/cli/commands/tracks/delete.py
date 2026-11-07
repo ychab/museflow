@@ -22,7 +22,7 @@ class TracksDeleteResult:
 
 
 @app.command("delete", help="Delete tracks matching the given filters.")
-def delete(
+def delete_command(
     email: str = EMAIL_OPTION,
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name (case-insensitive)"),
     name: str | None = typer.Option(None, "--name", help="Filter by track name (case-insensitive)"),

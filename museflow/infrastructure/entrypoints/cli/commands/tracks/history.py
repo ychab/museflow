@@ -22,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")
-def history(
+def history_command(
     email: str = EMAIL_OPTION,
     directory: Path = typer.Option(
         ...,

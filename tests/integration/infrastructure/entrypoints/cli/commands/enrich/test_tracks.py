@@ -8,7 +8,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
-from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_logic
+from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import tracks_logic
 
 
 class TestEnrichTracksLogic:
@@ -28,7 +28,7 @@ class TestEnrichTracksLogic:
             yield patched
 
     async def test__nominal(self, user: User, mock_use_case: mock.Mock, mock_check_models: mock.AsyncMock) -> None:
-        result = await enrich_logic(email=user.email, model="openai/gpt-5-mini")
+        result = await tracks_logic(email=user.email, model="openai/gpt-5-mini")
 
         assert result.enriched_count == 1
         called_user = mock_use_case.enrich.call_args.kwargs["user"]
@@ -39,4 +39,4 @@ class TestEnrichTracksLogic:
 
     async def test__user_not_found(self, mock_use_case: mock.Mock) -> None:
         with pytest.raises(UserNotFound):
-            await enrich_logic(email="nobody@example.com")
+            await tracks_logic(email="nobody@example.com")

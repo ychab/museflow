@@ -23,7 +23,7 @@ def _mask(secret: str) -> str:
 
 
 @app.command("info", help="Show the stored provider auth token of a user.")
-def info(
+def info_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider of the token"),
     show_tokens: bool = typer.Option(False, "--show-tokens", help="Print the tokens in clear, after a confirmation"),

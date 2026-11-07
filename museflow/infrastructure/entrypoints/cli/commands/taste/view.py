@@ -41,7 +41,7 @@ class ViewFormat(StrEnum):
 
 
 @app.command("view", help="View a taste profile.")
-def view(
+def view_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     output_format: ViewFormat = typer.Option(

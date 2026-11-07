@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.infrastructure.adapters.database.models import User as UserModel
-from museflow.infrastructure.entrypoints.cli.commands.users.create import user_create_logic
+from museflow.infrastructure.entrypoints.cli.commands.users.create import create_logic
 
 
 class TestUserCreateLogic:
@@ -15,7 +15,7 @@ class TestUserCreateLogic:
         email = "test@example.com"
         password = "testtest"
 
-        user = await user_create_logic(email, password)
+        user = await create_logic(email, password)
         assert user is not None
 
         stmt = select(UserModel).where(UserModel.email == email)

@@ -12,7 +12,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("purge", help="Delete your entire blacklist. This cannot be undone.")
-def purge(
+def purge_command(
     email: str = EMAIL_OPTION,
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:

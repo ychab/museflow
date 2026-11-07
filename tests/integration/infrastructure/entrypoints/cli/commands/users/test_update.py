@@ -7,7 +7,7 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models import User as UserModel
-from museflow.infrastructure.entrypoints.cli.commands.users.update import user_update_logic
+from museflow.infrastructure.entrypoints.cli.commands.users.update import update_logic
 
 
 class TestUserUpdateLogic:
@@ -21,7 +21,7 @@ class TestUserUpdateLogic:
         email = "new@museflow.com"
         password = "new-password"
 
-        await user_update_logic(user.id, user_data=UserUpdateInput(email=email, password=password))
+        await update_logic(user.id, user_data=UserUpdateInput(email=email, password=password))
 
         stmt = select(UserModel).where(UserModel.id == user.id)
         result = await async_session_db.execute(stmt)

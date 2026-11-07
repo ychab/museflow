@@ -6,7 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_artists_logic
+from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_artist_logic
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_track_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -20,7 +20,7 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blac
 class TestAddArtistParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.add_artists_logic", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{TARGET_PATH}.add_artist_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -50,7 +50,7 @@ class TestAddArtistParserCommand:
 class TestAddArtistCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.add_artists_logic", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{TARGET_PATH}.add_artist_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__nominal(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
@@ -85,7 +85,7 @@ class TestAddArtistLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await add_artists_logic(email="unknown@example.com", artist_names=["Taylor Swift"])
+            await add_artist_logic(email="unknown@example.com", artist_names=["Taylor Swift"])
 
 
 class TestAddTrackParserCommand:

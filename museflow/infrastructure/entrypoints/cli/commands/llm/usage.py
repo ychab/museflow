@@ -23,7 +23,7 @@ console = Console()
     "usage",
     help="Show what the LLM calls cost, grouped by operation, model, step, month, profile or user.",
 )
-def usage(
+def usage_command(
     email: str | None = typer.Option(None, help="User email address (all the users when omitted)", parser=parse_email),
     group_by: LLMUsageGroupBy = typer.Option(LLMUsageGroupBy.OPERATION, "--by", help="Group the usage by"),
     since: date | None = typer.Option(

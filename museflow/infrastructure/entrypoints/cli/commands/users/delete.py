@@ -12,7 +12,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
 @app.command("delete", help="Delete a user account and all of its data.")
-def delete(
+def delete_command(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
