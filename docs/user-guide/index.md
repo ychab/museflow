@@ -126,5 +126,5 @@ This needs only steps 1 to 3 (a connected Spotify account is required to create 
 Each of them prints what it spent at the end; [`llm usage`](commands/llm.md) sums it over time.
 
 !!! tip
-    `enrich export` / `taste export` / `rate export` save LLM results and ratings to YAML, so a database reset
-    does not mean paying again. See [Back up and restore](recipes.md#back-up-and-restore-ratings-enrichment-and-taste-profiles).
+    `enrich export` / `taste export` / `rate export` / `blacklist export` save LLM results, ratings and the blacklist
+    to YAML, so a database reset does not mean paying again. See [Back up and restore](recipes.md#back-up-and-restore-your-data).
