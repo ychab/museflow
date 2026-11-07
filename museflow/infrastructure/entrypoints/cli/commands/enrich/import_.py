@@ -1,6 +1,4 @@
 import asyncio
-import dataclasses
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -8,20 +6,15 @@ from pydantic import EmailStr
 from pydantic import TypeAdapter
 
 import typer
-import yaml
 
 from museflow.application.inputs.enrich import EnrichEntryInput
-from museflow.domain.enums import EnrichField
+from museflow.application.use_cases.enrichment_import import EnrichmentImportResult
+from museflow.application.use_cases.enrichment_import import import_enrichment
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-
-
-@dataclass(frozen=True, kw_only=True)
-class EnrichImportResult:
-    imported_count: int
-    not_found_count: int
+from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import track enrichment data (genres and moods) from a YAML file.")
@@ -29,15 +22,7 @@ def import_(
     email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:
-    try:
-        with input_path.open("r", encoding="utf-8") as f:
-            data: list[Any] = yaml.safe_load(f)
-    except FileNotFoundError:
-        typer.secho(f"Error: File not found: {input_path}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from None
-    except yaml.YAMLError as e:
-        typer.secho(f"Error: Invalid YAML file: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from e
+    data = read_yaml(input_path)
 
     try:
         result = asyncio.run(import_logic(email=email, data=data))
@@ -54,30 +39,14 @@ def import_(
     )
 
 
-async def import_logic(email: EmailStr, data: list[Any]) -> EnrichImportResult:
+async def import_logic(email: EmailStr, data: list[Any]) -> EnrichmentImportResult:
     entries = TypeAdapter(list[EnrichEntryInput]).validate_python(data)
 
-    # One block: the import is saved as a whole, or not at all.
-    async with get_unit_of_work() as uow:
+    uow = get_unit_of_work()
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound()
 
-        all_tracks = await uow.tracks.get_list(user_id=user.id)
-        fingerprint_to_track = {t.fingerprint: t for t in all_tracks}
+    if user is None:
+        raise UserNotFound()
 
-        updated_tracks = []
-        not_found_count = 0
-        for entry in entries:
-            if entry.fingerprint not in fingerprint_to_track:
-                not_found_count += 1
-                continue
-            track = fingerprint_to_track[entry.fingerprint]
-            updated_tracks.append(
-                dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locales=entry.locales)
-            )
-
-        if updated_tracks:
-            await uow.tracks.bulk_update(updated_tracks, fields=frozenset(EnrichField))
-
-    return EnrichImportResult(imported_count=len(updated_tracks), not_found_count=not_found_count)
+    return await import_enrichment(user_id=user.id, entries=entries, uow=uow)

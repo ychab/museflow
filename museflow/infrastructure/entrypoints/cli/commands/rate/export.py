@@ -5,13 +5,13 @@ from typing import Any
 from pydantic import EmailStr
 
 import typer
-import yaml
 
-from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
+from museflow.application.use_cases.ratings_export import export_ratings
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export track ratings to a YAML file.")
@@ -27,8 +27,7 @@ def export(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    with output.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    write_yaml(output, data)
 
     rated_count = sum(1 for entry in data if entry.get("score") is not None)
     skipped_count = sum(1 for entry in data if entry.get("score_skipped"))
@@ -39,14 +38,15 @@ def export(
 
 
 async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
-    async with get_unit_of_work() as uow:
+    uow = get_unit_of_work()
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound()
 
-        rated = await uow.tracks.get_list(user_id=user.id, min_score=DISCOVERY_TRACK_SCORE_MIN)
-        skipped = await uow.tracks.get_list(user_id=user.id, score_skipped_only=True)
+    if user is None:
+        raise UserNotFound()
 
-    result: list[dict[str, Any]] = [{"fingerprint": t.fingerprint, "score": t.score} for t in rated]
-    result += [{"fingerprint": t.fingerprint, "score_skipped": True} for t in skipped]
+    ratings = await export_ratings(user_id=user.id, uow=uow)
+
+    result: list[dict[str, Any]] = [{"fingerprint": t.fingerprint, "score": t.score} for t in ratings.rated]
+    result += [{"fingerprint": t.fingerprint, "score_skipped": True} for t in ratings.skipped]
     return result

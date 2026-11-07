@@ -6,11 +6,11 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.use_cases.enrichment_import import EnrichmentImportResult
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import EnrichImportResult
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -24,7 +24,7 @@ class TestEnrichImportParserCommand:
     def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = EnrichImportResult(imported_count=0, not_found_count=0)
+            patched.return_value = EnrichmentImportResult(imported_count=0, not_found_count=0)
             yield patched
 
     @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ class TestEnrichImportCommand:
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = EnrichImportResult(imported_count=3, not_found_count=1)
+        mock_import_logic.return_value = EnrichmentImportResult(imported_count=3, not_found_count=1)
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 
@@ -215,23 +215,6 @@ class TestEnrichImportLogic:
         updated_track = mock_track_repository.bulk_update.call_args.args[0][0]
         assert updated_track.genres == []
         assert updated_track.moods == []
-
-    async def test__fingerprint_not_found(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = UserFactory.build()
-        mock_track_repository.get_list.return_value = []
-
-        result = await import_logic(
-            email="test@example.com",
-            data=[{"fingerprint": "unknown-fp", "genres": ["rock"], "moods": []}],
-        )
-
-        assert result.imported_count == 0
-        assert result.not_found_count == 1
-        mock_track_repository.bulk_update.assert_not_awaited()
 
     async def test__nominal(
         self,

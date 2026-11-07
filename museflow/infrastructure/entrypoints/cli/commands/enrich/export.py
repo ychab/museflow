@@ -5,12 +5,13 @@ from typing import Any
 from pydantic import EmailStr
 
 import typer
-import yaml
 
+from museflow.application.use_cases.enrichment_export import export_enrichment
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export track enrichment data (genres and moods) to a YAML file.")
@@ -26,8 +27,7 @@ def export(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    with output.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    write_yaml(output, data)
 
     typer.secho(
         f"Exported enrichment for {len(data)} track(s) to {output}",
@@ -39,12 +39,12 @@ async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound()
 
-        tracks = await uow.tracks.get_list(user_id=user.id)
+    if user is None:
+        raise UserNotFound()
 
-    enriched = [t for t in tracks if t.genres or t.moods or t.locales is not None]
+    tracks = await export_enrichment(user_id=user.id, uow=uow)
+
     return [
         {
             "fingerprint": t.fingerprint,
@@ -52,5 +52,5 @@ async def export_logic(email: EmailStr) -> list[dict[str, Any]]:
             "moods": [m.value for m in t.moods],
             "locales": t.locales,
         }
-        for t in enriched
+        for t in tracks
     ]

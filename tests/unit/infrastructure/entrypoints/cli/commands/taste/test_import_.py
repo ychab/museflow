@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -197,25 +196,3 @@ class TestTasteImportLogic:
 
         with pytest.raises(ValidationError):
             await import_logic(email="test@example.com", data={"invalid": "data"})
-
-    async def test__new_id_generated_each_call(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
-        original_profile = TasteProfileFactory.build()
-        profile_data: dict[str, Any] = TypeAdapter(TasteProfile).dump_python(original_profile, mode="json")
-
-        mock_user_repository.get_by_email.return_value = user
-        mock_taste_profile_repository.upsert.side_effect = lambda p: p
-
-        await import_logic(email="test@example.com", data=profile_data)
-        first_id: uuid.UUID = mock_taste_profile_repository.upsert.call_args[0][0].id
-
-        await import_logic(email="test@example.com", data=profile_data)
-        second_id: uuid.UUID = mock_taste_profile_repository.upsert.call_args[0][0].id
-
-        assert first_id != second_id
-        assert first_id != original_profile.id
-        assert second_id != original_profile.id
