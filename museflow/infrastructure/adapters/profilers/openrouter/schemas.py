@@ -5,6 +5,7 @@ from pydantic import field_validator
 from museflow.domain.const import GENRE_MACRO_TAGS
 from museflow.domain.const import GENRE_MESO_TAGS
 from museflow.domain.const import GENRE_MICRO_TAGS
+from museflow.domain.const import TASTE_WEIGHT_DECIMALS
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
@@ -20,9 +21,6 @@ _WEIGHT_TIERS: dict[str, list[str]] = {
 }
 
 _MOOD_ENUM: list[str] = _WEIGHT_TIERS["mood"]
-
-# Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
-_WEIGHT_DECIMALS = 3
 
 # Every tag sits in one tier only: `core_identity` keys the weights by tag alone
 _TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in _WEIGHT_TIERS.items() for tag in tags}
@@ -91,7 +89,7 @@ class TasteProfileResponse(BaseModel):
         if not isinstance(v, dict) or not all(isinstance(items, list) for items in v.values()):
             raise ValueError(f"expected an object of {{key, value}} lists per tier, got {type(v).__name__}")
         weights = {
-            item["key"]: round(item["value"], _WEIGHT_DECIMALS)
+            item["key"]: round(item["value"], TASTE_WEIGHT_DECIMALS)
             for items in v.values()
             for item in items
             if item["key"] in _VALID_IDENTITY_KEYS
@@ -102,6 +100,11 @@ class TasteProfileResponse(BaseModel):
     @classmethod
     def _null_traits(cls, v: object) -> object:
         return {} if v is None else v  # null until the reflection step
+
+
+class TimelineMergeResponse(BaseModel):
+    absorb: bool
+    oldest_label: str | None = None
 
 
 TASTE_PROFILE_SCHEMA = JsonSchemaProperty.object(
@@ -139,5 +142,12 @@ TASTE_PROFILE_SCHEMA = JsonSchemaProperty.object(
             nullable=True,
         ),
         "discovery_style": JsonSchemaProperty.string(nullable=True),
+    }
+)
+
+TIMELINE_MERGE_SCHEMA = JsonSchemaProperty.object(
+    {
+        "absorb": JsonSchemaProperty.boolean(),
+        "oldest_label": JsonSchemaProperty.string(nullable=True),
     }
 )

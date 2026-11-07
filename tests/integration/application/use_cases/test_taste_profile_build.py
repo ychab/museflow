@@ -45,13 +45,14 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         async_session_db: AsyncSession,
     ) -> None:
-        await TrackModelFactory.create_batch_async(size=7, user_id=user.id)
+        # 11 tracks in batches of 5: the trailing single track is folded into the second batch (5 / 6)
+        await TrackModelFactory.create_batch_async(size=11, user_id=user.id)
 
         profile = await use_case.build_profile(user=user, config=config)
 
-        assert profile.tracks_count == 7
+        assert profile.tracks_count == 11
         assert profile.user_id == user.id
-        assert profile.logic_version == "v2.0"
+        assert profile.logic_version == "v2.1"
         assert profile.profiler_metadata["gateway"] == "openrouter"
         assert profile.profile["personality_archetype"] == "The Introspective Wanderer"
         assert profile.profile["life_phase_insights"] == [
@@ -73,10 +74,10 @@ class TestBuildTasteProfileUseCase:
         rows = (
             await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
         ).scalars()
-        assert {(row.operation, row.step, row.profile_id) for row in rows} == {
-            (LLMOperation.TASTE_BUILD, "profiler segment", profile.id),
-            (LLMOperation.TASTE_BUILD, "profiler merge", profile.id),
-            (LLMOperation.TASTE_BUILD, "profiler reflect", profile.id),
+        assert {(row.operation, row.step, row.profile_id, row.calls) for row in rows} == {
+            (LLMOperation.TASTE_BUILD, "profiler segment", profile.id, 2),
+            (LLMOperation.TASTE_BUILD, "profiler merge", profile.id, 1),
+            (LLMOperation.TASTE_BUILD, "profiler reflect", profile.id, 1),
         }
 
     async def test__upsert(

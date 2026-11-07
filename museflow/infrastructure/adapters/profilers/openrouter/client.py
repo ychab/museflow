@@ -2,25 +2,33 @@ import json
 from typing import Any
 from typing import cast
 
+from pydantic import BaseModel
+
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.const import GENRE_MACRO_TAGS
 from museflow.domain.const import GENRE_MESO_TAGS
 from museflow.domain.const import GENRE_MICRO_TAGS
+from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
+from museflow.domain.entities.taste import TasteEra
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
+from museflow.domain.utils.taste import merge_taste_profiles
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRequestError
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMResponseError
+from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import TASTE_PROFILE_SCHEMA
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import TIMELINE_MERGE_SCHEMA
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import TasteProfileResponse
+from museflow.infrastructure.adapters.profilers.openrouter.schemas import TimelineMergeResponse
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
@@ -59,6 +67,10 @@ def _profile_json(profile: TasteProfileData) -> str:
     )
 
 
+def _era_json(era: TasteEra) -> str:
+    return json.dumps(era, ensure_ascii=False)
+
+
 def _step_metadata(llm: LLMSettings) -> dict[str, Any]:
     return {
         "model": llm.MODEL,
@@ -90,7 +102,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
 
     @property
     def logic_version(self) -> str:
-        return "v2.0"
+        return "v2.1"
 
     @property
     def profiler_metadata(self) -> dict[str, Any]:
@@ -103,12 +115,19 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             },
         }
 
-    async def _complete(self, prompt: str, llm: LLMSettings, step: str) -> TasteProfileData:
+    async def _complete[T: BaseModel](
+        self,
+        prompt: str,
+        response_model: type[T],
+        schema: JsonSchemaProperty,
+        llm: LLMSettings,
+        step: str,
+    ) -> T:
         try:
             content = await self._client.complete(
                 [ChatMessage(role="user", content=prompt)],
-                response_model=TasteProfileResponse,
-                schema=TASTE_PROFILE_SCHEMA,
+                response_model=response_model,
+                schema=schema,
                 llm=llm,
                 adapter=f"profiler {step}",
             )
@@ -119,6 +138,10 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         except LLMResponseError as e:
             raise TasteProfileBuildError(f"Invalid taste profile response: {e}") from e
 
+        return content
+
+    async def _complete_profile(self, prompt: str, llm: LLMSettings, step: str) -> TasteProfileData:
+        content = await self._complete(prompt, TasteProfileResponse, TASTE_PROFILE_SCHEMA, llm, step)
         return cast(TasteProfileData, content.model_dump())
 
     async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
@@ -161,50 +184,40 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "\nTracks:\n"
             f"{_format_tracks(tracks)}"
         )
-        return await self._complete(prompt, self._segment_llm, "segment")
+        return await self._complete_profile(prompt, self._segment_llm, "segment")
 
     async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
-        foundation_json = _profile_json(foundation)
-        segment_json = _profile_json(new_segment)
+        # The code merges the weights and assembles the timeline: the model only takes the decisions that need
+        # judgment, so it reads and writes a few eras instead of the whole profile.
+        timeline = foundation["taste_timeline"]
+        segment_eras = new_segment["taste_timeline"]
+        if not timeline or not segment_eras:
+            return merge_taste_profiles(foundation, new_segment, absorb=False, oldest_label=None)
 
         prompt = (
-            "You are a precise data architect evolving a Master Taste Profile.\n\n"
-            f"Existing profile (Foundation):\n{foundation_json}\n\n"
-            f"New incoming data (Segment):\n{segment_json}\n\n"
-            "Rules for merging:\n"
-            "1. taste_timeline Logic:\n"
-            "   - Compare the New Segment to the last Era in the Foundation.\n"
-            "   - If they are >80% similar (moods match and technical_fingerprint values differ by <0.15 on average) "
-            "AND the last era's label already describes the Segment's music, MERGE them: extend the time_range of "
-            "the last era to the end date of the Segment's era and keep its label unchanged. Never broaden a label "
-            "to absorb a Segment.\n"
-            "   - Otherwise, add the New Segment as a new TasteEra. When in doubt, add a new era: the timeline should "
-            "show distinct listening phases, typically 6 to 15 eras.\n"
-            "   - HARD CONSTRAINT: If the timeline exceeds 15 entries, merge the two oldest consecutive eras into one "
-            "whose time_range spans both, to keep the total timeline concise and avoid JSON bloat.\n"
-            f"   - {_ERA_LABEL_RULE}\n\n"
-            "2. core_identity (The DNA):\n"
-            "   - If the Foundation is empty, initialize it with the Segment values.\n"
-            "   - If not empty, calculate a weighted average: (Foundation * 0.7) + (Segment * 0.3).\n"
-            "   - Ensure all keys from both Foundation and Segment are preserved or merged, each in the list of its tier.\n"
-            "   - Example: Foundation 'French Rap': 0.8 + Segment 'French Rap': 0.2 = 0.62.\n"
-            "3. current_vibe:\n"
-            "   - DISCARD foundation values. REPLACE entirely with the New Segment's vibe to reflect the current trajectory.\n\n"
-            "4. Technical Integrity:\n"
-            "   - Keep all existing 'technical_fingerprint' values in previous eras UNCHANGED.\n"
-            "   - personality_archetype: keep null.\n"
-            "   - life_phase_insights: keep empty.\n"
-            "   - musical_identity_summary, behavioral_traits, discovery_style: keep null.\n\n"
-            "For core_identity, current_vibe, and dominant_moods, use ONLY values from this exact vocabulary:\n"
-            f"  Genres — macro: {', '.join(t.value for t in GENRE_MACRO_TAGS)}\n"
-            f"         — meso:  {', '.join(t.value for t in GENRE_MESO_TAGS)}\n"
-            f"         — micro: {', '.join(t.value for t in GENRE_MICRO_TAGS)}\n"
-            f"  Moods: {', '.join(m.value for m in MoodTag)}\n"
-            "Do NOT use any genre or mood label outside this vocabulary.\n"
-            "Return the full merged JSON. Be mathematically precise and preserve all keys."
+            "You are a precise music curator extending the taste timeline of a listener.\n\n"
+            f"Last era of the timeline:\n{_era_json(timeline[-1])}\n\n"
+            f"New era, from the next listening segment:\n{_era_json(segment_eras[0])}\n\n"
+            "Return JSON with exactly these keys:\n"
+            '- "absorb": true if the new era continues the last era: they are >80% similar (moods match and '
+            "technical_fingerprint values differ by <0.15 on average) AND the last era's label already describes the "
+            "new era's music. The last era is then extended to the new era's end date, its label unchanged: never "
+            "count on a broader label. Otherwise false, and the new era is added to the timeline. When in doubt, "
+            "answer false: the timeline should show distinct listening phases.\n"
         )
+        if len(timeline) >= TASTE_TIMELINE_MAX_ERAS:
+            prompt += (
+                '- "oldest_label": the timeline is full, so if the new era is added, its two oldest eras become one:\n'
+                f"{_era_json(timeline[0])}\n{_era_json(timeline[1])}\n"
+                f"Name the era covering both. {_ERA_LABEL_RULE}\n"
+            )
+        else:
+            prompt += '- "oldest_label": null\n'
 
-        return await self._complete(prompt, self._merge_llm, "merge")
+        decision = await self._complete(prompt, TimelineMergeResponse, TIMELINE_MERGE_SCHEMA, self._merge_llm, "merge")
+        return merge_taste_profiles(
+            foundation, new_segment, absorb=decision.absorb, oldest_label=decision.oldest_label
+        )
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:
         profile_json = _profile_json(profile)
@@ -233,4 +246,4 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "Return the full profile JSON with all five fields populated. Keep all other fields unchanged."
         )
 
-        return await self._complete(prompt, self._reflect_llm, "reflect")
+        return await self._complete_profile(prompt, self._reflect_llm, "reflect")

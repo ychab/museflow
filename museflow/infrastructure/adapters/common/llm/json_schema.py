@@ -42,6 +42,10 @@ class JsonSchemaProperty(BaseModel):
         return cls(type="number")
 
     @classmethod
+    def boolean(cls) -> JsonSchemaProperty:
+        return cls(type="boolean")
+
+    @classmethod
     def integer(cls) -> JsonSchemaProperty:
         return cls(type="integer")
 
