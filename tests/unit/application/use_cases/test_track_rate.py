@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.track_rate import TrackRateUseCase
+from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MusicProvider
@@ -14,7 +14,7 @@ from museflow.domain.exceptions import RateScoreInvalidException
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestTrackRateUseCase:
+class TestRateTrackUseCase:
     @pytest.fixture
     def user_id(self) -> uuid.UUID:
         return uuid.uuid4()
@@ -25,8 +25,8 @@ class TestTrackRateUseCase:
         user_id: uuid.UUID,
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
-    ) -> TrackRateUseCase:
-        return TrackRateUseCase(
+    ) -> RateTrackUseCase:
+        return RateTrackUseCase(
             user_id=user_id,
             provider=MusicProvider.SPOTIFY,
             uow=mock_uow,
@@ -35,7 +35,7 @@ class TestTrackRateUseCase:
 
     async def test__find_playlist__not_found(
         self,
-        use_case: TrackRateUseCase,
+        use_case: RateTrackUseCase,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_playlist_repository.get.return_value = None
@@ -43,7 +43,7 @@ class TestTrackRateUseCase:
         with pytest.raises(PlaylistNotFoundError):
             await use_case.find_playlist(playlist_id=uuid.uuid4())
 
-    async def test__play(self, use_case: TrackRateUseCase, mock_provider_library: mock.AsyncMock) -> None:
+    async def test__play(self, use_case: RateTrackUseCase, mock_provider_library: mock.AsyncMock) -> None:
         track = TrackFactory.build(
             provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="spotify-id")]
         )
@@ -54,7 +54,7 @@ class TestTrackRateUseCase:
 
     async def test__play__track_not_linked(
         self,
-        use_case: TrackRateUseCase,
+        use_case: RateTrackUseCase,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         track = mock.MagicMock(spec=Track)
@@ -66,7 +66,7 @@ class TestTrackRateUseCase:
 
     async def test__play__no_active_device(
         self,
-        use_case: TrackRateUseCase,
+        use_case: RateTrackUseCase,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         mock_provider_library.play_track.side_effect = ProviderNoActiveDeviceException()
@@ -75,7 +75,7 @@ class TestTrackRateUseCase:
             await use_case.play(TrackFactory.build())
 
     async def test__play__without_library(self, user_id: uuid.UUID, mock_uow: mock.AsyncMock) -> None:
-        use_case = TrackRateUseCase(user_id=user_id, provider=None, uow=mock_uow)
+        use_case = RateTrackUseCase(user_id=user_id, provider=None, uow=mock_uow)
 
         with pytest.raises(ValueError, match="Playback needs a provider"):
             await use_case.play(TrackFactory.build())
@@ -83,7 +83,7 @@ class TestTrackRateUseCase:
     @pytest.mark.parametrize("score", [-1, 11])
     async def test__rate__score_out_of_range(
         self,
-        use_case: TrackRateUseCase,
+        use_case: RateTrackUseCase,
         mock_track_repository: mock.AsyncMock,
         score: int,
     ) -> None:

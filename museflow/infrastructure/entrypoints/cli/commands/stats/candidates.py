@@ -5,7 +5,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.use_cases.stats_candidates import artist_candidates
+from museflow.application.use_cases.stats_candidates import list_artist_candidates
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.stats import ArtistCandidate
@@ -75,7 +75,7 @@ async def candidates_logic(
     if not user:
         raise UserNotFound()
 
-    return await artist_candidates(
+    return await list_artist_candidates(
         user_id=user.id,
         source=source,
         max_tracks=max_tracks,

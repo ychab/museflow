@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.user_delete import user_delete
+from museflow.application.use_cases.user_delete import delete_user
 from museflow.domain.entities.user import User
 from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models import User as UserModel
@@ -24,7 +24,7 @@ from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 
 
-class TestUserDeleteUseCase:
+class TestDeleteUserUseCase:
     @pytest.fixture
     async def other_user_db(self, user: User) -> UserModel:
         """Gives both users exactly one row in each table."""
@@ -57,7 +57,7 @@ class TestUserDeleteUseCase:
         other_user_db: UserModel,
         uow: UnitOfWorkPort,
     ) -> None:
-        await user_delete(user_id=user.id, uow=uow)
+        await delete_user(user_id=user.id, uow=uow)
 
         # Goes through all the tables: a new one fails here until the fixture above fills it.
         tables = Base.metadata.sorted_tables

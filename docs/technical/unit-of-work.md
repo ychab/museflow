@@ -157,7 +157,7 @@ async with self._uow as uow:
     playlist_db = await uow.playlists.save(playlist)
 ```
 
-**Remote first, then one block** (`oauth_callback`). The code is exchanged with Spotify before any query, then the
+**Remote first, then one block** (`handle_oauth_callback`). The code is exchanged with Spotify before any query, then the
 token is read and created or updated in one block:
 
 ```python

@@ -1,17 +1,17 @@
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.user_authenticate import user_authenticate
+from museflow.application.use_cases.user_authenticate import authenticate_user
 from museflow.domain.entities.user import User
 
 
-class TestUserAuthenticateUseCase:
+class TestAuthenticateUserUseCase:
     async def test_authenticate__nominal(
         self,
         uow: UnitOfWorkPort,
         user: User,
         password_hasher: PasswordHasherPort,
     ) -> None:
-        user_auth = await user_authenticate(
+        user_auth = await authenticate_user(
             email=user.email,
             password="testtest",
             uow=uow,

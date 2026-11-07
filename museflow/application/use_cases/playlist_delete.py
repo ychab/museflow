@@ -12,7 +12,7 @@ from museflow.domain.exceptions import PlaylistNotFoundError
 logger = logging.getLogger(__name__)
 
 
-class PlaylistDeleteUseCase:
+class DeletePlaylistUseCase:
     """Deletes a user's playlists, locally only or on their provider too.
 
     For a remote deletion, the caller finds the playlists, builds the library of each of their providers, then passes

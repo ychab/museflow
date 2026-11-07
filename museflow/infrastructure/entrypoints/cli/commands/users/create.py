@@ -5,7 +5,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.inputs.user import UserCreateInput
-from museflow.application.use_cases.user_create import user_create
+from museflow.application.use_cases.user_create import create_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.infrastructure.entrypoints.cli.commands.users import app
@@ -42,7 +42,7 @@ def create(
 async def user_create_logic(email: EmailStr, password: str) -> User:
     password_hasher = get_password_hasher()
 
-    return await user_create(
+    return await create_user(
         user_data=UserCreateInput(email=email, password=password),
         uow=get_unit_of_work(),
         password_hasher=password_hasher,

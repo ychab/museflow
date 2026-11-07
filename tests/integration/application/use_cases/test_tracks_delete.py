@@ -1,16 +1,16 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.tracks_delete import TracksDeleteUseCase
+from museflow.application.use_cases.tracks_delete import DeleteTracksUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestTracksDeleteUseCase:
+class TestDeleteTracksUseCase:
     async def test__find__by_artist_and_name(self, uow: UnitOfWorkPort, user: User) -> None:
         creep_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
-        use_case = TracksDeleteUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = DeleteTracksUseCase(user_id=user.id, provider=None, uow=uow)
 
         tracks = await use_case.find(artist="Radiohead", name="Creep", source=None)
 
@@ -19,7 +19,7 @@ class TestTracksDeleteUseCase:
     async def test__delete__by_ids(self, uow: UnitOfWorkPort, user: User) -> None:
         creep_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Creep")
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"], name="Karma Police")
-        use_case = TracksDeleteUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = DeleteTracksUseCase(user_id=user.id, provider=None, uow=uow)
 
         deleted = await use_case.delete(track_ids=[creep_db.id])
 
@@ -30,7 +30,7 @@ class TestTracksDeleteUseCase:
     async def test__delete__by_provider__keeps_the_other_filters(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
         await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"])
-        use_case = TracksDeleteUseCase(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
+        use_case = DeleteTracksUseCase(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
         tracks = await use_case.find(artist="Radiohead", name=None, source=None)
 
         deleted = await use_case.delete(track_ids=[track.id for track in tracks])
@@ -42,7 +42,7 @@ class TestTracksDeleteUseCase:
     async def test__delete_all__no_provider(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
         other_track_db = await TrackModelFactory.create_async()
-        use_case = TracksDeleteUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = DeleteTracksUseCase(user_id=user.id, provider=None, uow=uow)
 
         deleted = await use_case.delete_all()
 
@@ -53,7 +53,7 @@ class TestTracksDeleteUseCase:
     async def test__delete_all__by_provider(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_batch_async(size=2, user_id=user.id)
         other_track_db = await TrackModelFactory.create_async()
-        use_case = TracksDeleteUseCase(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
+        use_case = DeleteTracksUseCase(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
 
         deleted = await use_case.delete_all()
 

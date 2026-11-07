@@ -8,7 +8,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.track_rate import TrackRateUseCase
+from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -100,7 +100,7 @@ async def rate_playlist_logic(
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
-        use_case = TrackRateUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
+        use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         if playlist_id is not None:
             tracks = await use_case.find_playlist(playlist_id=playlist_id)

@@ -7,7 +7,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
 
 
-async def oauth_callback(
+async def handle_oauth_callback(
     code: str,
     user: User,
     provider: MusicProvider,

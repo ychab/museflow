@@ -6,7 +6,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNotFoundError
 
 
-async def playlist_view(
+async def get_playlist(
     user: User,
     playlist_id: uuid.UUID,
     uow: UnitOfWorkPort,

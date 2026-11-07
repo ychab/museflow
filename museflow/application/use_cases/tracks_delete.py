@@ -6,7 +6,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 
 
-class TracksDeleteUseCase:
+class DeleteTracksUseCase:
     """Deletes a user's tracks; with a provider, every step only targets that provider's tracks and unlinks it.
 
     A track still linked to another provider is kept; only the tracks left with no link are deleted.

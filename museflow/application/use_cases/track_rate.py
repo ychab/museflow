@@ -13,7 +13,7 @@ from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import RateScoreInvalidException
 
 
-class TrackRateUseCase:
+class RateTrackUseCase:
     """Rates a user's tracks one at a time: each step is its own transaction, so every answer is saved at once.
 
     With a provider and its library, `play` starts each track on the user's device before it is rated.

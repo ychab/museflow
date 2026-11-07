@@ -15,7 +15,7 @@ from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserNotFound
 
 
-class TestConsumeOAuthState:
+class TestConsumeOAuthStateUseCase:
     async def test__state__unknown(
         self,
         mock_uow: mock.AsyncMock,

@@ -12,7 +12,7 @@ from museflow.domain.exceptions import UserNotFound
 logger = logging.getLogger(__name__)
 
 
-async def user_authenticate(
+async def authenticate_user(
     email: EmailStr,
     password: str,
     uow: UnitOfWorkPort,

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.playlist import Playlist
@@ -18,17 +18,17 @@ from museflow.domain.exceptions import PlaylistNoTracksError
 
 
 @dataclass(frozen=True, kw_only=True)
-class PlaylistHistoryResult:
+class CreateHistoryPlaylistResult:
     playlist: Playlist | None
     tracks: list[Track]
 
 
-async def playlist_history(
+async def create_history_playlist(
     user: User,
-    config: PlaylistHistoryConfigInput,
+    config: CreateHistoryPlaylistConfigInput,
     uow: UnitOfWorkPort,
     provider_library: ProviderLibraryPort | None,
-) -> PlaylistHistoryResult:
+) -> CreateHistoryPlaylistResult:
     if provider_library is None and not config.dry_run:
         raise ValueError("provider_library is required unless config.dry_run is set")
 
@@ -72,7 +72,7 @@ async def playlist_history(
         tracks = [track for group in sorted_groups for track in group]
 
     if config.dry_run:
-        return PlaylistHistoryResult(playlist=None, tracks=tracks)
+        return CreateHistoryPlaylistResult(playlist=None, tracks=tracks)
 
     name_prefix = "[MF] - History"
     name_suffix = (
@@ -87,4 +87,4 @@ async def playlist_history(
     async with uow:
         playlist = await uow.playlists.save(playlist)
 
-    return PlaylistHistoryResult(playlist=playlist, tracks=tracks)
+    return CreateHistoryPlaylistResult(playlist=playlist, tracks=tracks)

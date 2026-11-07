@@ -169,7 +169,7 @@ class TestUserUpdateLogic:
 
     @pytest.fixture
     def mock_user_update(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{self.TARGET_PATH}.user_update", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{self.TARGET_PATH}.update_user", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     async def test__user_not_found(

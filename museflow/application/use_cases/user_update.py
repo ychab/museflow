@@ -5,7 +5,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
 
 
-async def user_update(
+async def update_user(
     user: User,
     user_data: UserUpdateInput,
     uow: UnitOfWorkPort,

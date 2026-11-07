@@ -6,7 +6,7 @@ from pydantic import ValidationError
 import typer
 
 from museflow.application.inputs.user import UserUpdateInput
-from museflow.application.use_cases.user_update import user_update
+from museflow.application.use_cases.user_update import update_user
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
@@ -53,7 +53,7 @@ async def user_update_logic(
     if not user:
         raise UserNotFound()
 
-    await user_update(
+    await update_user(
         user=user,
         user_data=user_data,
         uow=uow,

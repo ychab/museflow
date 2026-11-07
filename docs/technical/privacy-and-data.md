@@ -43,7 +43,7 @@ A Spotify extended streaming-history export contains much more than listening da
 | `master_metadata_album_artist_name` | Artist |
 | `master_metadata_album_album_name` | Album |
 
-IP address, country, device platform and playback behaviour are never read into the application's data structures (`StreamingHistoryEntry` has five fields), so they cannot reach the database, a prompt or a log. Individual play timestamps are reduced to a count plus first and last timestamp per track.
+IP address, country, device platform and playback behaviour are never read into the application's data structures (`StreamingHistoryEntryInput` has five fields), so they cannot reach the database, a prompt or a log. Individual play timestamps are reduced to a count plus first and last timestamp per track.
 
 ## What leaves the machine
 

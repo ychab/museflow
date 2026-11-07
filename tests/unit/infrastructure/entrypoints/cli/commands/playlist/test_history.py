@@ -6,8 +6,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
-from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
+from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
@@ -29,7 +29,7 @@ class TestHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
-            patched.return_value = PlaylistHistoryResult(playlist=PlaylistFactory.build(tracks=[]), tracks=[])
+            patched.return_value = CreateHistoryPlaylistResult(playlist=PlaylistFactory.build(tracks=[]), tracks=[])
             yield patched
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -320,7 +320,7 @@ class TestHistoryCommand:
     ) -> None:
         track = TrackFactory.build(played_count=7)
         playlist = PlaylistFactory.build(name="History Playlist", tracks=[track])
-        mock_history_logic.return_value = PlaylistHistoryResult(playlist=playlist, tracks=[track])
+        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[track])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -339,7 +339,7 @@ class TestHistoryCommand:
         track_scored = TrackFactory.build(score=8)
         track_unscored = TrackFactory.build(score=None)
         playlist = PlaylistFactory.build(tracks=[track_scored, track_unscored])
-        mock_history_logic.return_value = PlaylistHistoryResult(
+        mock_history_logic.return_value = CreateHistoryPlaylistResult(
             playlist=playlist, tracks=[track_scored, track_unscored]
         )
 
@@ -358,7 +358,7 @@ class TestHistoryCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         playlist = PlaylistFactory.build(tracks=[])
-        mock_history_logic.return_value = PlaylistHistoryResult(playlist=playlist, tracks=[])
+        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--group-by-artists"])
         assert result.exit_code == 0
@@ -371,7 +371,7 @@ class TestHistoryCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         track = TrackFactory.build(played_count=7)
-        mock_history_logic.return_value = PlaylistHistoryResult(playlist=None, tracks=[track])
+        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=None, tracks=[track])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
@@ -394,7 +394,7 @@ class TestHistoryLogic:
 
     @pytest.fixture
     def mock_history_use_case(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.playlist_history_use_case", new_callable=mock.AsyncMock) as patched:
+        with mock.patch(f"{TARGET_PATH}.create_history_playlist", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
@@ -404,7 +404,7 @@ class TestHistoryLogic:
             await playlist_history_logic(
                 email="unknown@example.com",
                 provider=MusicProvider.SPOTIFY,
-                config=PlaylistHistoryConfigInput(),
+                config=CreateHistoryPlaylistConfigInput(),
             )
 
     async def test__dry_run__no_provider_library(
@@ -414,13 +414,13 @@ class TestHistoryLogic:
         mock_history_use_case: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        expected = PlaylistHistoryResult(playlist=None, tracks=[TrackFactory.build()])
+        expected = CreateHistoryPlaylistResult(playlist=None, tracks=[TrackFactory.build()])
         mock_history_use_case.return_value = expected
 
         result = await playlist_history_logic(
             email=user.email,
             provider=MusicProvider.SPOTIFY,
-            config=PlaylistHistoryConfigInput(dry_run=True),
+            config=CreateHistoryPlaylistConfigInput(dry_run=True),
         )
 
         assert result == expected

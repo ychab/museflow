@@ -6,8 +6,8 @@ from unittest import mock
 
 import pytest
 
+from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import StreamingHistoryFileStats
-from museflow.application.inputs.history import StreamingHistoryImportConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.track import Track
@@ -55,7 +55,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir, min_ms_played=30_000),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir, min_ms_played=30_000),
         )
 
         assert report == ImportStreamingHistoryReport(
@@ -92,7 +92,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir),
         )
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
@@ -129,7 +129,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir),
         )
 
         assert report.tracks_already_known == 2
@@ -152,7 +152,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir, purge=True),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir, purge=True),
         )
 
         mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
@@ -168,7 +168,7 @@ class TestImportStreamingHistorySpotifyUseCase:
     ) -> None:
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir),
         )
 
         assert report.unique_track_ids == 0
@@ -183,7 +183,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         with pytest.raises(StreamingHistoryDirectoryNotFound):
             await use_case.import_history(
                 user=user,
-                config=StreamingHistoryImportConfigInput(directory=tmp_path / "nonexistent"),
+                config=ImportStreamingHistoryConfigInput(directory=tmp_path / "nonexistent"),
             )
 
     async def test__directory__no_json_files(
@@ -196,7 +196,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         with pytest.raises(StreamingHistoryDirectoryNotFound):
             await use_case.import_history(
                 user=user,
-                config=StreamingHistoryImportConfigInput(directory=tmp_path),
+                config=ImportStreamingHistoryConfigInput(directory=tmp_path),
             )
 
     async def test__directory__ignores_non_audio_json_files(
@@ -210,7 +210,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         (history_dir / "Userdata.json").write_text("{}")
         mock_streaming_history.parse_file.return_value = ([], StreamingHistoryFileStats())
 
-        await use_case.import_history(user=user, config=StreamingHistoryImportConfigInput(directory=history_dir))
+        await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(directory=history_dir))
 
         mock_streaming_history.parse_file.assert_awaited_once_with(
             path=history_dir / "Streaming_History_Audio_0.json", min_ms_played=90_000
@@ -233,7 +233,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir, batch_size=1),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir, batch_size=1),
         )
 
         assert report.tracks_created == 3
@@ -303,7 +303,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=tmp_path),
+            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
         )
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
@@ -343,7 +343,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir),
         )
 
         assert report.unique_track_ids == 1
@@ -388,7 +388,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(directory=history_dir),
         )
 
         assert report.tracks_played_at_updated == 2

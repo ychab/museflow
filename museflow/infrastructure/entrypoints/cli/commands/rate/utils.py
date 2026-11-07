@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import typer
 
-from museflow.application.use_cases.track_rate import TrackRateUseCase
+from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.entities.track import Track
@@ -19,7 +19,7 @@ class RateAnswer:
     artist_blacklisted: bool = False
 
 
-async def play_track(use_case: TrackRateUseCase, track: Track, provider: MusicProvider) -> bool:
+async def play_track(use_case: RateTrackUseCase, track: Track, provider: MusicProvider) -> bool:
     """Plays the track, asking once to start a device; returns False when there is still none."""
     try:
         await use_case.play(track)
@@ -35,7 +35,7 @@ async def play_track(use_case: TrackRateUseCase, track: Track, provider: MusicPr
     return True
 
 
-async def rate_track(use_case: TrackRateUseCase, track: Track, allow_permanent_skip: bool) -> RateAnswer:
+async def rate_track(use_case: RateTrackUseCase, track: Track, allow_permanent_skip: bool) -> RateAnswer:
     """Prompts until a valid answer, saves it, then offers the blacklist for a low score."""
     choices = "s=skip, u=permanently skip" if allow_permanent_skip else "s=skip"
     while True:

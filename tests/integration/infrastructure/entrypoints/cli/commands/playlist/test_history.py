@@ -3,8 +3,8 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
-from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
+from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -21,7 +21,7 @@ class TestHistoryLogic:
 
     @pytest.fixture
     def mock_playlist_history(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.playlist.history.playlist_history_use_case"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.playlist.history.create_history_playlist"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -32,9 +32,9 @@ class TestHistoryLogic:
         mock_playlist_history: mock.AsyncMock,
     ) -> None:
         expected_playlist = PlaylistFactory.build(user_id=user.id)
-        expected_result = PlaylistHistoryResult(playlist=expected_playlist, tracks=expected_playlist.tracks)
+        expected_result = CreateHistoryPlaylistResult(playlist=expected_playlist, tracks=expected_playlist.tracks)
         mock_playlist_history.return_value = expected_result
-        config = PlaylistHistoryConfigInput(limit=5)
+        config = CreateHistoryPlaylistConfigInput(limit=5)
 
         result = await playlist_history_logic(email=user.email, provider=MusicProvider.SPOTIFY, config=config)
 

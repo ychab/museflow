@@ -1,13 +1,13 @@
 from unittest import mock
 
-from museflow.application.use_cases.stats_tracks import top_tracks
+from museflow.application.use_cases.stats_tracks import list_top_tracks
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSortBy
 
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestTopTracksUseCase:
+class TestListTopTracksUseCase:
     async def test__no_rated_tracks(
         self,
         user: User,
@@ -16,7 +16,7 @@ class TestTopTracksUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
@@ -32,7 +32,7 @@ class TestTopTracksUseCase:
         track_high = TrackFactory.build(artists=["Artist B"], score=9)
         mock_track_repository.get_list.return_value = [track_low, track_high]
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
@@ -49,7 +49,7 @@ class TestTopTracksUseCase:
         track_a = TrackFactory.build(artists=["Aaron"], score=8)
         mock_track_repository.get_list.return_value = [track_z, track_a]
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
@@ -66,7 +66,7 @@ class TestTopTracksUseCase:
         track_high = TrackFactory.build(artists=["Artist B"], played_count=9)
         mock_track_repository.get_list.return_value = [track_low, track_high]
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.PLAYED_COUNT, uow=mock_uow
         )
 
@@ -83,7 +83,7 @@ class TestTopTracksUseCase:
         track_a = TrackFactory.build(artists=["Aaron"], played_count=4)
         mock_track_repository.get_list.return_value = [track_z, track_a]
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.PLAYED_COUNT, uow=mock_uow
         )
 
@@ -100,7 +100,7 @@ class TestTopTracksUseCase:
         track_high = TrackFactory.build(artists=["Artist B"], score=9)
         mock_track_repository.get_list.return_value = [track_low, track_high]
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=1, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
@@ -114,7 +114,9 @@ class TestTopTracksUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await top_tracks(user_id=user.id, limit=20, score_min=7, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow)
+        await list_top_tracks(
+            user_id=user.id, limit=20, score_min=7, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
+        )
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=user.id, min_score=7, max_score=None, limit=None
@@ -128,7 +130,7 @@ class TestTopTracksUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await top_tracks(
+        await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 

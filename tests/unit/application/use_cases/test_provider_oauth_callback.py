@@ -2,13 +2,13 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.provider_oauth_callback import oauth_callback
+from museflow.application.use_cases.provider_oauth_callback import handle_oauth_callback
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
 
 
-class TestOauthCallbackUseCase:
+class TestHandleOAuthCallbackUseCase:
     async def test__exchange_code__exception(
         self,
         mock_uow: mock.AsyncMock,
@@ -18,7 +18,7 @@ class TestOauthCallbackUseCase:
         mock_provider_oauth.exchange_code_for_token.side_effect = Exception("Boom")
 
         with pytest.raises(ProviderExchangeCodeError):
-            await oauth_callback(
+            await handle_oauth_callback(
                 code="foo",
                 user=user,
                 provider=MusicProvider.SPOTIFY,

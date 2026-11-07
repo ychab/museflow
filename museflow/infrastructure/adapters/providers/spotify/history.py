@@ -5,7 +5,7 @@ from pathlib import Path
 
 import ijson
 
-from museflow.application.inputs.history import StreamingHistoryEntry
+from museflow.application.inputs.history import StreamingHistoryEntryInput
 from museflow.application.inputs.history import StreamingHistoryFileStats
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.domain.exceptions import StreamingHistoryInvalidFormat
@@ -23,7 +23,7 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
         self,
         path: Path,
         min_ms_played: int,
-    ) -> tuple[list[StreamingHistoryEntry], StreamingHistoryFileStats]:
+    ) -> tuple[list[StreamingHistoryEntryInput], StreamingHistoryFileStats]:
         return await asyncio.to_thread(
             self._parse_file_sync,
             path=path,
@@ -34,8 +34,8 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
     def _parse_file_sync(
         path: Path,
         min_ms_played: int,
-    ) -> tuple[list[StreamingHistoryEntry], StreamingHistoryFileStats]:
-        track_entries: list[StreamingHistoryEntry] = []
+    ) -> tuple[list[StreamingHistoryEntryInput], StreamingHistoryFileStats]:
+        track_entries: list[StreamingHistoryEntryInput] = []
 
         items_read = 0
         items_skipped_no_timestamp = 0
@@ -73,7 +73,7 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
                     album_name = item.get("master_metadata_album_album_name") or None
 
                     track_entries.append(
-                        StreamingHistoryEntry(
+                        StreamingHistoryEntryInput(
                             provider_id=track_id,
                             played_at=ts,
                             name=name,

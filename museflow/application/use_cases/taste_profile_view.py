@@ -5,7 +5,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 
 
-async def view_taste_profile(
+async def get_taste_profile(
     user_id: uuid.UUID,
     name: str,
     uow: UnitOfWorkPort,

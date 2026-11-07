@@ -7,7 +7,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.inputs.history import StreamingHistoryImportConfigInput
+from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.enums import MusicProvider
@@ -33,12 +33,12 @@ def history(
         MusicProvider.SPOTIFY, "--provider", help="Music provider to import streaming history from"
     ),
     min_duration_played: int = typer.Option(
-        StreamingHistoryImportConfigInput.min_ms_played // 1_000,
+        ImportStreamingHistoryConfigInput.min_ms_played // 1_000,
         "--min-duration-played",
         help="Minimum duration played in seconds to include",
     ),
     batch_size: int = typer.Option(
-        StreamingHistoryImportConfigInput.batch_size,
+        ImportStreamingHistoryConfigInput.batch_size,
         "--batch-size",
         help="Number of tracks to upsert per batch",
         min=1,
@@ -48,7 +48,7 @@ def history(
 ) -> None:
     start_time = time.perf_counter()
 
-    config = StreamingHistoryImportConfigInput(
+    config = ImportStreamingHistoryConfigInput(
         directory=directory,
         min_ms_played=min_duration_played * 1_000,
         batch_size=batch_size,
@@ -91,7 +91,7 @@ def history(
 
 async def history_logic(
     email: EmailStr,
-    config: StreamingHistoryImportConfigInput,
+    config: ImportStreamingHistoryConfigInput,
     provider: MusicProvider,
 ) -> ImportStreamingHistoryReport:
     uow = get_unit_of_work()
