@@ -75,18 +75,28 @@ class TestDeletePlaylistUseCase:
 
         assert await playlist_repository.get(user.id, playlist_db.id) is None
 
-    async def test__purge__filtered_by_type(
+    async def test__purge__filtered(
         self,
         uow: UnitOfWorkPort,
         user: User,
         playlist_repository: PlaylistRepository,
     ) -> None:
-        playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.DISCOVERY)
+        playlist_db = await PlaylistModelFactory.create_async(
+            user_id=user.id,
+            type=PlaylistType.DISCOVERY,
+            provider=MusicProvider.SPOTIFY,
+        )
+        other_type_db = await PlaylistModelFactory.create_async(
+            user_id=user.id,
+            type=PlaylistType.HISTORY,
+            provider=MusicProvider.SPOTIFY,
+        )
 
         count = await DeletePlaylistUseCase(user_id=user.id, uow=uow).purge(
             type=PlaylistType.DISCOVERY,
-            provider=None,
+            provider=MusicProvider.SPOTIFY,
         )
 
         assert count == 1
         assert await playlist_repository.get(user.id, playlist_db.id) is None
+        assert await playlist_repository.get(user.id, other_type_db.id) is not None

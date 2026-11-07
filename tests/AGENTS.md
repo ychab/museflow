@@ -9,7 +9,15 @@ Tests are the **contract with our users**: clean, clear and easy to maintain, no
 - **Do not mirror happy paths**: if integration covers the nominal flow, no unit test for the same.
 - **Coverage is measured on the whole suite**: no dedicated test for a line another test already runs, nor to check a
   third-party library's behaviour.
-- **Error paths belong in unit tests**, with `AsyncMock` repositories. No fake (in-memory) repositories.
+- **Error paths** go where the error comes from:
+  - an error our code decides (user not found → raise) belongs in a unit test, with `AsyncMock` repositories, even
+    when an integration test also runs through it;
+  - an error produced by the database or an external API (constraint violation, WireMock 4xx) belongs in an
+    integration test: a mock would only assert our assumption about it.
+  No fake (in-memory) repositories.
+- **A unit test whose coverage an integration test contains is a mirror**: remove it. If it asserts something the
+  integration test doesn't (an argument passed, a batch size), move the assertion into the integration test, on the
+  observable outcome, first. Measure with `--cov-context=test` (issue #92).
 - **All test code is typed**: fixtures, functions, factories, helpers.
 - **No inner imports** in test functions: all imports at module level.
 - A failing test is fixed in the test, never by bending the source; if the source is wrong, fix it on purpose.

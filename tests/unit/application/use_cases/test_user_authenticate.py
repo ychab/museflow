@@ -10,24 +10,6 @@ from museflow.domain.exceptions import UserNotFoundError
 
 
 class TestAuthenticateUserUseCase:
-    async def test__authenticate__nominal(
-        self,
-        mock_uow: mock.AsyncMock,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_password_hasher: mock.Mock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-
-        user_auth = await authenticate_user(
-            email=user.email,
-            password="testtest",
-            uow=mock_uow,
-            password_hasher=mock_password_hasher,
-        )
-        assert user_auth is not None
-        assert user_auth.email == user.email
-
     async def test__authenticate__not_found(
         self,
         mock_uow: mock.AsyncMock,

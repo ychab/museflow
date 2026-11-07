@@ -8,41 +8,6 @@ from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestGetArtistCandidatesUseCase:
-    async def test__nominal(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        candidate_track = TrackFactory.build(artists=["Hidden Gem"], score=9)
-        popular_tracks = [TrackFactory.build(artists=["Big Name"], score=9) for _ in range(6)]
-        low_score_track = TrackFactory.build(artists=["Mediocre"], score=4)
-        mock_track_repository.get_list.return_value = [candidate_track] + popular_tracks + [low_score_track]
-
-        result = await get_artist_candidates(
-            user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
-        )
-
-        assert len(result) == 1
-        assert result[0].artist == "Hidden Gem"
-        assert result[0].avg_score == 9.0
-        assert result[0].rated_count == 1
-        assert result[0].total_count == 1
-
-    async def test__no_tracks(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = []
-
-        result = await get_artist_candidates(
-            user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
-        )
-
-        assert result == []
-
     async def test__artist_with_too_many_tracks_excluded(
         self,
         user: User,
