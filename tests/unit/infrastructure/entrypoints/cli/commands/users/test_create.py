@@ -5,6 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserAlreadyExistsException
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -23,6 +24,17 @@ class TestUserCreateParserCommand:
             ["users", "create", "--email", "test@example.com", "--password", "testtest"],
         )
         assert result.exit_code == 0
+
+    @pytest.fixture
+    def cli_email(self) -> Iterable[str]:
+        with mock.patch.object(app_settings, "CLI_DEFAULT_EMAIL", "setting@example.com") as patched:
+            yield patched
+
+    @pytest.mark.usefixtures("cli_email")
+    def test__email__missing__setting_ignored(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["users", "create", "--password", "testtest"])
+        assert result.exit_code != 0
+        assert "Missing option '--email'" in clean_typer_text(result.output)
 
     def test__password__prompted_when_omitted(self, runner: CliRunner, mock_create_user_logic: mock.AsyncMock) -> None:
         result = runner.invoke(

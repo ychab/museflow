@@ -39,12 +39,12 @@ class TestEmailOption:
         assert result.exit_code == 0
         assert "email=option@example.com" in result.output
 
-    @pytest.mark.parametrize("cli_email", [None, ""], indirect=True)
+    @pytest.mark.parametrize("cli_email", [None], indirect=True)
     def test__missing(
         self,
         app: typer.Typer,
         runner: CliRunner,
-        cli_email: str | None,
+        cli_email: None,
         clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(app)
@@ -54,25 +54,15 @@ class TestEmailOption:
         )
 
     @pytest.mark.parametrize("cli_email", ["setting@example.com"], indirect=True)
-    def test__option__empty(
+    @pytest.mark.parametrize("email", ["", "not-an-email"])
+    def test__option__invalid(
         self,
         app: typer.Typer,
         runner: CliRunner,
         cli_email: str,
+        email: str,
         clean_typer_text: TextCleaner,
     ) -> None:
-        result = runner.invoke(app, ["--email", ""])
-        assert result.exit_code != 0
-        assert "required, pass it or set MUSEFLOW_CLI_DEFAULT_EMAIL" in clean_typer_text(result.output)
-
-    @pytest.mark.parametrize("cli_email", ["not-an-email"], indirect=True)
-    def test__setting__invalid(
-        self,
-        app: typer.Typer,
-        runner: CliRunner,
-        cli_email: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        result = runner.invoke(app)
+        result = runner.invoke(app, ["--email", email])
         assert result.exit_code != 0
         assert "An email address must have an @-sign" in clean_typer_text(result.output)

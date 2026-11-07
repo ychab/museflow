@@ -17,9 +17,9 @@ This page walks through the path from an empty install to a first playlist. Ever
 The CLI is available as `museflow` when installed in the environment, or as `uv run museflow` from the
 repository. Run `museflow --help` or `museflow <group> <command> --help` at any time.
 
-Commands act on the user set by `MUSEFLOW_CLI_DEFAULT_EMAIL`, in the environment or in `.env`; the examples below assume it
-is set. `--email` overrides it, and a command fails if neither is given. Three commands differ: `users delete` always
-needs `--email`, `users update` takes it as the new address, and `llm usage` without it sums all the users.
+Commands act on the user set by `MUSEFLOW_CLI_DEFAULT_EMAIL`, in the environment or in `.env`; the examples below
+assume it is set. `--email` overrides it, and a command fails if neither is given. Two exceptions: the `users` commands
+never use the setting, and `llm usage` without `--email` sums all the users.
 
 ## The flow
 
@@ -41,7 +41,7 @@ flowchart TD
 ### 1. Create a user
 
 ```bash
-museflow users create
+museflow users create --email user@example.com
 ```
 
 The password is prompted for (hidden, with confirmation). See [`users`](commands/users.md).
