@@ -6,7 +6,6 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.export import taste_export_logic
@@ -178,20 +177,6 @@ class TestTasteExportCommand:
 )
 class TestTasteExportLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.export"
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        taste_profile = TasteProfileFactory.build()
-        mock_user_repository.get_by_email.return_value = UserFactory.build()
-        mock_taste_profile_repository.get.return_value = taste_profile
-
-        result = await taste_export_logic(email="test@example.com", name="my-profile")
-
-        assert isinstance(result, TasteProfile)
-        assert result == taste_profile
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

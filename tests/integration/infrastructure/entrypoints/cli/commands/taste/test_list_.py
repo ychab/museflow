@@ -8,6 +8,7 @@ from tests.integration.factories.models.taste import TasteProfileModelFactory
 class TestTasteListLogic:
     async def test__nominal(self, user: User) -> None:
         await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
+        await TasteProfileModelFactory.create_async(name="other-profile")
 
         result = await taste_list_logic(email=user.email)
 

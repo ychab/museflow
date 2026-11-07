@@ -14,8 +14,9 @@ class TestEnrichImportLogic:
         data = [
             {
                 "fingerprint": track_db.fingerprint,
-                "genres": ["folk", "indie-folk"],
-                "moods": ["melancholic"],
+                # Unknown tags are dropped, not rejected.
+                "genres": ["folk", "INVALID_GENRE", "indie-folk"],
+                "moods": ["melancholic", "INVALID_MOOD"],
                 "locales": ["fr", "en"],
             },
         ]

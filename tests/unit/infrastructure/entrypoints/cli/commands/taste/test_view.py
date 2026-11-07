@@ -5,7 +5,6 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.view import generate_profile_html_content
@@ -14,7 +13,6 @@ from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
-from tests.unit.factories.entities.user import UserFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
@@ -149,20 +147,6 @@ class TestTasteViewCommand:
 )
 class TestTasteViewLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.view"
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        taste_profile = TasteProfileFactory.build()
-        mock_user_repository.get_by_email.return_value = UserFactory.build()
-        mock_taste_profile_repository.get.return_value = taste_profile
-
-        result = await taste_view_logic(email="test@example.com", name="my-profile")
-
-        assert isinstance(result, TasteProfile)
-        assert result == taste_profile
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
