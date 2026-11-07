@@ -1,6 +1,6 @@
 from unittest import mock
 
-from museflow.application.inputs.rate import RateEntryInput
+from museflow.application.inputs.rate import RatingEntryInput
 from museflow.application.use_cases.ratings_import import import_ratings
 from museflow.domain.entities.user import User
 
@@ -18,7 +18,7 @@ class TestImportRatingsUseCase:
 
         result = await import_ratings(
             user_id=user.id,
-            entries=[RateEntryInput(fingerprint="unknown-fp", score=5)],
+            entries=[RatingEntryInput(fingerprint="unknown-fp", score=5)],
             uow=mock_uow,
         )
 
@@ -37,7 +37,7 @@ class TestImportRatingsUseCase:
 
         result = await import_ratings(
             user_id=user.id,
-            entries=[RateEntryInput(fingerprint=track.fingerprint, score_skipped=True)],
+            entries=[RatingEntryInput(fingerprint=track.fingerprint, score_skipped=True)],
             uow=mock_uow,
         )
 
@@ -57,7 +57,7 @@ class TestImportRatingsUseCase:
 
         result = await import_ratings(
             user_id=user.id,
-            entries=[RateEntryInput(fingerprint=track.fingerprint)],
+            entries=[RatingEntryInput(fingerprint=track.fingerprint)],
             uow=mock_uow,
         )
 

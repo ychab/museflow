@@ -1,9 +1,9 @@
 import pytest
 
-from museflow.application.inputs.enrich import EnrichEntryInput
+from museflow.application.inputs.enrich import EnrichmentEntryInput
 
 
-class TestEnrichEntryInput:
+class TestEnrichmentEntryInput:
     @pytest.mark.parametrize(
         ("data", "expected"),
         [
@@ -15,6 +15,6 @@ class TestEnrichEntryInput:
         ],
     )
     def test__locales__sanitized(self, data: dict[str, object], expected: list[str] | None) -> None:
-        entry = EnrichEntryInput.model_validate({"fingerprint": "abc", **data})
+        entry = EnrichmentEntryInput.model_validate({"fingerprint": "abc", **data})
 
         assert entry.locales == expected

@@ -8,7 +8,7 @@ from pydantic import ValidationError
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.ratings_import import RatingsImportResult
+from museflow.application.use_cases.ratings_import import ImportRatingsResult
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -22,7 +22,7 @@ class TestRateImportParserCommand:
     def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = RatingsImportResult(imported_count=0, skipped_count=0, not_found_count=0)
+            patched.return_value = ImportRatingsResult(imported_count=0, skipped_count=0, not_found_count=0)
             yield patched
 
     @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ class TestRateImportCommand:
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = RatingsImportResult(imported_count=3, skipped_count=0, not_found_count=1)
+        mock_import_logic.return_value = ImportRatingsResult(imported_count=3, skipped_count=0, not_found_count=1)
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 

@@ -20,7 +20,7 @@ class EnrichTracksConfigInput:
     max_consecutive_failures: int = 3
 
 
-class EnrichEntryInput(BaseModel):
+class EnrichmentEntryInput(BaseModel):
     fingerprint: str
 
     genres: list[GenreTag] = []

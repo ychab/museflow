@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.enrichment_import import EnrichmentImportResult
+from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
@@ -24,7 +24,7 @@ class TestEnrichImportParserCommand:
     def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = EnrichmentImportResult(imported_count=0, not_found_count=0)
+            patched.return_value = ImportEnrichmentResult(imported_count=0, not_found_count=0)
             yield patched
 
     @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ class TestEnrichImportCommand:
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = EnrichmentImportResult(imported_count=3, not_found_count=1)
+        mock_import_logic.return_value = ImportEnrichmentResult(imported_count=3, not_found_count=1)
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 

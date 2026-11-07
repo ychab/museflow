@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from museflow.application.inputs.enrich import EnrichEntryInput
+from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.enrichment_import import import_enrichment
 from museflow.domain.entities.user import User
@@ -16,13 +16,13 @@ class TestImportEnrichmentUseCase:
     async def test__nominal(self, user: User, uow: UnitOfWorkPort, async_session_db: AsyncSession) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[], locales=None)
         entries = [
-            EnrichEntryInput(
+            EnrichmentEntryInput(
                 fingerprint=track_db.fingerprint,
                 genres=[GenreTag.FOLK],
                 moods=[MoodTag.MELANCHOLIC],
                 locales=["fr"],
             ),
-            EnrichEntryInput(fingerprint="unknown-fp", genres=[GenreTag.ROCK]),
+            EnrichmentEntryInput(fingerprint="unknown-fp", genres=[GenreTag.ROCK]),
         ]
 
         result = await import_enrichment(user_id=user.id, entries=entries, uow=uow)
