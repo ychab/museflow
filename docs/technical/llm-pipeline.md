@@ -35,7 +35,7 @@ The live suite (`tests/integration/live/openrouter`) sends the real schemas to a
 
 ## Model choice per step
 
-Each step has its own `LLMSettings` ([`museflow/infrastructure/config/settings/openrouter.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/config/settings/openrouter.py)): `MODEL`, `MAX_TOKENS`, `REASONING_EFFORT`, `TEMPERATURE` and `FALLBACK_MODELS`. Only the model has a default; the others are left to the provider. A field is overridden with a nested environment variable, and the step keeps its other defaults:
+Each step has its own `LLMSettings` ([`museflow/infrastructure/config/settings/openrouter.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/config/settings/openrouter.py)): `MODEL`, `MAX_TOKENS`, `REASONING_EFFORT`, `TEMPERATURE` and `FALLBACK_MODELS`. Only the model has a default, plus a low reasoning effort on the merge step; the others are left to the provider. A field is overridden with a nested environment variable, and the step keeps its other defaults:
 
 ```bash
 OPENROUTER_ENRICHER__MODEL=openai/gpt-5-nano
@@ -48,7 +48,7 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 | Step | Setting | Default model | Volume | Why this tier |
 |---|---|---|---|---|
 | Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per batch (15 for the default 3,000 seeds in batches of 200) | High volume, narrow task: classify a batch of tracks into tags and weights against a closed vocabulary. A small, cheap model is enough |
-| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Needs to follow arithmetic and structural rules over a growing JSON document without drifting. A step up from the lite tier |
+| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Needs to follow arithmetic and structural rules over a growing JSON document without drifting. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
 | Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
 | Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
