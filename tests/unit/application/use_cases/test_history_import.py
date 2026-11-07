@@ -15,7 +15,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.utils.text import generate_fingerprint
-from museflow.domain.value_objects.track import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
 from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
 
@@ -50,7 +50,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             entries,
             StreamingHistoryFileStats(items_read=5, items_skipped_short_play=1, items_skipped_no_track_id=2),
         )
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 2)
 
         report = await use_case.import_history(
@@ -87,7 +87,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             StreamingHistoryEntryFactory.build(provider_id="track2"),
         ]
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 2)
 
         await use_case.import_history(
@@ -122,7 +122,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         fp2 = generate_fingerprint(name="Song Two", artist_names=["Artist Two"])
 
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(
             fingerprints=frozenset([fp1, fp2])
         )
         mock_track_repository.bulk_upsert.return_value = ([], 0)
@@ -148,7 +148,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         orphan_ids = [uuid.uuid4() for _ in range(5)]
         mock_track_repository.unlink_provider.return_value = orphan_ids
         mock_track_repository.delete.return_value = 5
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
 
         report = await use_case.import_history(
             user=user,
@@ -228,7 +228,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             StreamingHistoryEntryFactory.batch(3),
             StreamingHistoryFileStats(),
         )
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.side_effect = [([], 1), ([], 1), ([], 1)]
 
         report = await use_case.import_history(
@@ -298,7 +298,7 @@ class TestImportStreamingHistorySpotifyUseCase:
                 StreamingHistoryFileStats(),
             ),
         ]
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 4)
 
         await use_case.import_history(
@@ -338,7 +338,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             ),
         ]
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(fingerprints=frozenset())
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(fingerprints=frozenset())
         mock_track_repository.bulk_upsert.return_value = ([], 1)
 
         report = await use_case.import_history(
@@ -381,7 +381,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         fp2 = generate_fingerprint(name="Song Two", artist_names=["Artist Two"])
 
         mock_streaming_history.parse_file.return_value = (entries, StreamingHistoryFileStats())
-        mock_track_repository.get_known_identifiers.return_value = TrackKnowIdentifiers(
+        mock_track_repository.get_known_identifiers.return_value = TrackKnownIdentifiers(
             fingerprints=frozenset([fp1, fp2])
         )
         mock_track_repository.bulk_upsert.return_value = ([], 0)
