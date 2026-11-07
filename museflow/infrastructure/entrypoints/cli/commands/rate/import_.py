@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -7,20 +6,15 @@ from pydantic import EmailStr
 from pydantic import TypeAdapter
 
 import typer
-import yaml
 
 from museflow.application.inputs.rate import RateEntryInput
+from museflow.application.use_cases.ratings_import import RatingsImportResult
+from museflow.application.use_cases.ratings_import import import_ratings
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-
-
-@dataclass(frozen=True, kw_only=True)
-class RateImportResult:
-    imported_count: int
-    skipped_count: int
-    not_found_count: int
+from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import track ratings from a YAML file.")
@@ -28,15 +22,7 @@ def import_(
     email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:
-    try:
-        with input_path.open("r", encoding="utf-8") as f:
-            data: list[Any] = yaml.safe_load(f)
-    except FileNotFoundError:
-        typer.secho(f"Error: File not found: {input_path}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from None
-    except yaml.YAMLError as e:
-        typer.secho(f"Error: Invalid YAML file: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from e
+    data = read_yaml(input_path)
 
     try:
         result = asyncio.run(import_logic(email=email, data=data))
@@ -53,33 +39,14 @@ def import_(
     )
 
 
-async def import_logic(email: EmailStr, data: list[Any]) -> RateImportResult:
+async def import_logic(email: EmailStr, data: list[Any]) -> RatingsImportResult:
     entries = TypeAdapter(list[RateEntryInput]).validate_python(data)
 
-    # One block: the import is saved as a whole, or not at all.
-    async with get_unit_of_work() as uow:
+    uow = get_unit_of_work()
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound()
 
-        all_tracks = await uow.tracks.get_list(user_id=user.id)
-        fingerprint_to_id = {t.fingerprint: t.id for t in all_tracks}
+    if user is None:
+        raise UserNotFound()
 
-        imported_count = 0
-        skipped_count = 0
-        not_found_count = 0
-        for entry in entries:
-            if entry.fingerprint not in fingerprint_to_id:
-                not_found_count += 1
-                continue
-            track_id = fingerprint_to_id[entry.fingerprint]
-            if entry.score_skipped:
-                await uow.tracks.skip(user_id=user.id, track_id=track_id)
-                skipped_count += 1
-            elif entry.score is not None:
-                await uow.tracks.rate(user_id=user.id, track_id=track_id, score=entry.score)
-                imported_count += 1
-
-    return RateImportResult(
-        imported_count=imported_count, skipped_count=skipped_count, not_found_count=not_found_count
-    )
+    return await import_ratings(user_id=user.id, entries=entries, uow=uow)

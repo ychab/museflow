@@ -24,7 +24,7 @@ class TestRateExportParserCommand:
 
     @pytest.fixture(autouse=True)
     def mock_yaml_dump(self) -> Iterable[mock.Mock]:
-        with mock.patch("museflow.infrastructure.entrypoints.cli.commands.rate.export.yaml.safe_dump") as patched:
+        with mock.patch("museflow.infrastructure.entrypoints.cli.utils.files.yaml.safe_dump") as patched:
             yield patched
 
     @pytest.fixture(autouse=True)

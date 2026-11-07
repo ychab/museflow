@@ -5,14 +5,15 @@ from pydantic import EmailStr
 from pydantic import TypeAdapter
 
 import typer
-import yaml
 
+from museflow.application.use_cases.taste_profile_view import view_taste_profile
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export a taste profile to a YAML file.")
@@ -31,22 +32,18 @@ def export(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    data = TypeAdapter(TasteProfile).dump_python(taste_profile, mode="json")
-    with output.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    write_yaml(output, TypeAdapter(TasteProfile).dump_python(taste_profile, mode="json"))
 
     typer.secho(f"Taste profile '{name}' exported to {output}", fg=typer.colors.GREEN)
 
 
 async def export_logic(email: EmailStr, name: str) -> TasteProfile:
-    async with get_unit_of_work() as uow:
+    uow = get_unit_of_work()
+    async with uow:
         user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFound()
 
-        taste_profile = await uow.taste_profiles.get(user_id=user.id, name=name)
+    if user is None:
+        raise UserNotFound()
 
-    if not taste_profile:
-        raise TasteProfileNotFoundException()
-
-    return taste_profile
+    # Exporting reads the profile exactly as viewing it does.
+    return await view_taste_profile(user_id=user.id, name=name, uow=uow)
