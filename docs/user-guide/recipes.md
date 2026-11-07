@@ -74,37 +74,36 @@ museflow blacklist remove 3f2b8c1e-0000-4000-8000-000000000000
 
 See [`blacklist`](commands/blacklist.md).
 
-## Back up and restore ratings, enrichment and taste profiles
+## Back up and restore your data
 
-Ratings and LLM results are the only data that cannot be recomputed from the Spotify export for free. Ratings are
-your own work, and the taste profile is the most expensive export: recreating it means a full paid build. Export
-them to YAML:
+Ratings, the blacklist and LLM results are the only data that cannot be recomputed from the Spotify export for free.
+Ratings and the blacklist are your own work, and the taste profile is the most expensive export: recreating it means a
+full paid build. Export them to YAML:
 
 ```bash
-museflow rate export   --output backup/ratings.yaml
-museflow enrich export --output backup/enrichment.yaml
-museflow taste export  --name my-profile --output backup/my-profile.yaml
+museflow rate export      --output backup/ratings.yaml
+museflow blacklist export --output backup/blacklist.yaml
+museflow enrich export    --output backup/enrichment.yaml
+museflow taste export     --name my-profile --output backup/my-profile.yaml
 ```
 
 After a database reset, re-import the history first, then restore (no LLM call, no cost):
 
 ```bash
-museflow tracks history --directory ~/Downloads/MySpotifyData
-museflow rate import    --input backup/ratings.yaml
-museflow enrich import  --input backup/enrichment.yaml
-museflow taste import   --input backup/my-profile.yaml
+museflow tracks history   --directory ~/Downloads/MySpotifyData
+museflow rate import      --input backup/ratings.yaml
+museflow blacklist import --input backup/blacklist.yaml
+museflow enrich import    --input backup/enrichment.yaml
+museflow taste import     --input backup/my-profile.yaml
 ```
 
 Ratings and enrichment are matched by track fingerprint, so tracks missing from the library are reported as
-"not found" and skipped.
+"not found" and skipped. The blacklist needs no track in the library: it is stored by name.
 
 !!! warning "Export before upgrading"
     A new MuseFlow version may require a database reset. Run the exports with the version you have installed,
     *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
     dump and prints its path.
-
-The blacklist has no export: keep the output of `museflow blacklist list` to recreate it by
-hand with `blacklist add-artist` and `blacklist add-track`.
 
 ## Find artists worth exploring
 

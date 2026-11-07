@@ -90,3 +90,47 @@ museflow blacklist purge [--email <email>] [--yes]
 | `--yes`, `-y` | off | Skip confirmation prompt. |
 
 **Output.** A confirmation prompt (unless `--yes`), then `Deleted N blacklist entries of <email>.`.
+
+## `blacklist export`
+
+Exports the blacklist to a YAML file. Entries are stored by name, so the file can be restored after a database reset,
+or edited by hand.
+
+```bash
+museflow blacklist export [--email <email>] --output <path>
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--output` | required | Path to the output YAML file. |
+
+**File format**
+
+```yaml
+artists:
+  - artist_name: Some Artist
+tracks:
+  - name: Some Track
+    artist_name: Another Artist
+```
+
+**Output.** `Exported N artist(s) and M track(s) to <path>`.
+
+## `blacklist import`
+
+Adds the entries of a YAML file produced by `blacklist export`. Entries already blacklisted (same name, whatever the
+case or accents) are kept as they are and counted, so running the import twice changes nothing.
+
+```bash
+museflow blacklist import [--email <email>] --input <path>
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--input` | required | Path to the input YAML file. |
+
+The import is saved as a whole: an invalid entry (empty name, track without artist) rejects the whole file.
+
+**Output.** `Imported N artist(s) and M track(s) (K already blacklisted).`.
