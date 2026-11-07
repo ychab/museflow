@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.track import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
 
 class TrackRepository(ABC):
@@ -79,7 +79,7 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_known_identifiers(self, user_id: uuid.UUID, fingerprints: list[str]) -> TrackKnowIdentifiers:
+    async def get_known_identifiers(self, user_id: uuid.UUID, fingerprints: list[str]) -> TrackKnownIdentifiers:
         """
         Queries the database to find which of the provided fingerprints are already owned by the user.
 
@@ -88,7 +88,7 @@ class TrackRepository(ABC):
             fingerprints: A list of fingerprints to filter on.
 
         Returns:
-            A value object TrackKnowIdentifiers containing the known fingerprints.
+            A value object TrackKnownIdentifiers containing the known fingerprints.
         """
         ...
 

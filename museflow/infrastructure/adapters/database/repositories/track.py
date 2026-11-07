@@ -30,7 +30,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.track import TrackKnowIdentifiers
+from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 
@@ -150,7 +150,7 @@ class TrackSQLRepository(TrackRepository):
         self,
         user_id: uuid.UUID,
         fingerprints: list[str],
-    ) -> TrackKnowIdentifiers:
+    ) -> TrackKnownIdentifiers:
         stmt = select(TrackModel.fingerprint).where(
             TrackModel.user_id == user_id,
             TrackModel.fingerprint.in_(fingerprints),
@@ -159,7 +159,7 @@ class TrackSQLRepository(TrackRepository):
         result = await self.session.execute(stmt)
         known_fingerprints = frozenset(row.fingerprint for row in result.fetchall())
 
-        return TrackKnowIdentifiers(fingerprints=known_fingerprints)
+        return TrackKnownIdentifiers(fingerprints=known_fingerprints)
 
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         # Keyed by fingerprint: PostgreSQL does not guarantee that RETURNING follows the VALUES order.

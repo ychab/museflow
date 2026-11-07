@@ -23,7 +23,7 @@ class TrackNormalized:
 
 
 @dataclass(frozen=True, kw_only=True)
-class TrackKnowIdentifiers:
+class TrackKnownIdentifiers:
     """Value Object representing the tracks a user already knows."""
 
     fingerprints: frozenset[str]
