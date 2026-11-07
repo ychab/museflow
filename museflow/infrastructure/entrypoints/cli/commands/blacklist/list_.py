@@ -17,11 +17,11 @@ console = Console()
 
 
 @app.command("list", help="List all your blacklisted artists and tracks.")
-def list_command(
+def blacklist_list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     try:
-        blacklist = asyncio.run(list_logic(email=email))
+        blacklist = asyncio.run(blacklist_list_logic(email=email))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -47,7 +47,7 @@ def list_command(
     console.print(table)
 
 
-async def list_logic(email: EmailStr) -> UserBlacklist:
+async def blacklist_list_logic(email: EmailStr) -> UserBlacklist:
     uow = get_unit_of_work()
 
     async with uow:

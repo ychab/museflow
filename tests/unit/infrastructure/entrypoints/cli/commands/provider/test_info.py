@@ -14,19 +14,19 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestProviderInfoParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_info_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.info_logic"
+    def mock_provider_info_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.provider_info_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             patched.return_value = None
             yield patched
 
-    def test__nominal(self, mock_info_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__nominal(self, mock_provider_info_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(
             app,
             ["provider", "info", "--email", "test@example.com", "--provider", "spotify"],
         )
         assert result.exit_code == 0
-        mock_info_logic.assert_awaited_once_with(email="test@example.com", provider=MusicProvider.SPOTIFY)
+        mock_provider_info_logic.assert_awaited_once_with(email="test@example.com", provider=MusicProvider.SPOTIFY)
 
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--provider", "foo"])
@@ -64,18 +64,18 @@ class TestProviderInfoParserCommand:
 
 class TestProviderInfoCommand:
     @pytest.fixture(autouse=True)
-    def mock_info_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.info_logic"
+    def mock_provider_info_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.provider.info.provider_info_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_info_logic.side_effect = UserNotFound()
+        mock_provider_info_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stderr)
@@ -85,10 +85,10 @@ class TestProviderInfoCommand:
     def test__output__exceptions(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_info_logic.side_effect = Exception("Boom")
+        mock_provider_info_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -99,11 +99,11 @@ class TestProviderInfoCommand:
     def test__token__print__nominal(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
-        mock_info_logic.return_value = auth_token
+        mock_provider_info_logic.return_value = auth_token
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)
@@ -117,11 +117,11 @@ class TestProviderInfoCommand:
     def test__token__print__show_tokens(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
-        mock_info_logic.return_value = auth_token
+        mock_provider_info_logic.return_value = auth_token
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--show-tokens"], input="y\n")
 
         output = clean_typer_text(result.stdout)
@@ -133,11 +133,11 @@ class TestProviderInfoCommand:
     def test__token__print__show_tokens__aborted(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
         auth_token = OAuthProviderUserTokenFactory.build()
-        mock_info_logic.return_value = auth_token
+        mock_provider_info_logic.return_value = auth_token
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com", "--show-tokens"], input="n\n")
 
         output = clean_typer_text(result.output)
@@ -145,15 +145,15 @@ class TestProviderInfoCommand:
         assert "Aborted" in output
         assert auth_token.token_access not in output
         assert auth_token.token_refresh not in output
-        mock_info_logic.assert_not_called()
+        mock_provider_info_logic.assert_not_called()
 
     def test__token__print__none(
         self,
         runner: CliRunner,
-        mock_info_logic: mock.AsyncMock,
+        mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_info_logic.return_value = None
+        mock_provider_info_logic.return_value = None
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stdout)

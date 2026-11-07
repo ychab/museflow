@@ -12,7 +12,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
-from museflow.infrastructure.entrypoints.cli.commands.llm.usage import usage_logic
+from museflow.infrastructure.entrypoints.cli.commands.llm.usage import llm_usage_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -22,38 +22,40 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.llm.
 
 class TestLLMUsageParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.usage_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_llm_usage_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.llm_usage_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = LLMUsageSummary(groups=[], total=LLMUsageTotals())
             yield patched
 
-    def test__defaults(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__defaults(self, runner: CliRunner, mock_llm_usage_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com"])
         assert result.exit_code == 0
-        mock_logic.assert_awaited_once_with(email="test@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None)
+        mock_llm_usage_logic.assert_awaited_once_with(
+            email="test@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None
+        )
 
-    def test__all_users(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__all_users(self, runner: CliRunner, mock_llm_usage_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["llm", "usage", "--by", "user"])
         assert result.exit_code == 0
-        mock_logic.assert_awaited_once_with(email=None, group_by=LLMUsageGroupBy.USER, since=None)
+        mock_llm_usage_logic.assert_awaited_once_with(email=None, group_by=LLMUsageGroupBy.USER, since=None)
 
     def test__by_user__with_email(
         self,
         runner: CliRunner,
-        mock_logic: mock.AsyncMock,
+        mock_llm_usage_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com", "--by", "user"])
         assert result.exit_code != 0
         assert "--by user sums all the users: drop --email" in clean_typer_text(result.output)
-        mock_logic.assert_not_awaited()
+        mock_llm_usage_logic.assert_not_awaited()
 
-    def test__options(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__options(self, runner: CliRunner, mock_llm_usage_logic: mock.AsyncMock) -> None:
         result = runner.invoke(
             app, ["llm", "usage", "--email", "test@example.com", "--by", "month", "--since", "2026-11-01"]
         )
         assert result.exit_code == 0
-        mock_logic.assert_awaited_once_with(
+        mock_llm_usage_logic.assert_awaited_once_with(
             email="test@example.com", group_by=LLMUsageGroupBy.MONTH, since=date(2026, 11, 1)
         )
 
@@ -75,8 +77,8 @@ class TestLLMUsageParserCommand:
 
 class TestLLMUsageCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.usage_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_llm_usage_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.llm_usage_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = LLMUsageSummary(groups=[], total=LLMUsageTotals())
             yield patched
 
@@ -85,8 +87,10 @@ class TestLLMUsageCommand:
         assert result.exit_code == 0
         assert "No LLM usage recorded." in result.output
 
-    def test__groups(self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner) -> None:
-        mock_logic.return_value = LLMUsageSummary(
+    def test__groups(
+        self, runner: CliRunner, mock_llm_usage_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+    ) -> None:
+        mock_llm_usage_logic.return_value = LLMUsageSummary(
             groups=[
                 LLMUsageGroup(
                     name="evening",
@@ -123,16 +127,18 @@ class TestLLMUsageCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_logic: mock.AsyncMock,
+        mock_llm_usage_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_logic.side_effect = UserNotFound()
+        mock_llm_usage_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
-    def test__exceptions(self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner) -> None:
-        mock_logic.side_effect = Exception("Boom")
+    def test__exceptions(
+        self, runner: CliRunner, mock_llm_usage_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+    ) -> None:
+        mock_llm_usage_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -145,4 +151,4 @@ class TestLLMUsageLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await usage_logic(email="unknown@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None)
+            await llm_usage_logic(email="unknown@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None)

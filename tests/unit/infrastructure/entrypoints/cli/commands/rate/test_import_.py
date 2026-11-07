@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from museflow.application.use_cases.ratings_import import ImportRatingsResult
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import import_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import rate_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.user import UserFactory
@@ -19,8 +19,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestRateImportParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.import_logic"
+    def mock_rate_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.rate_import_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = ImportRatingsResult(imported_count=0, skipped_count=0, not_found_count=0)
             yield patched
@@ -60,8 +60,8 @@ class TestRateImportParserCommand:
 
 class TestRateImportCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.import_logic"
+    def mock_rate_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.rate_import_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -99,12 +99,12 @@ class TestRateImportCommand:
 
     def test__user_not_found(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_rate_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = UserNotFound()
+        mock_rate_import_logic.side_effect = UserNotFound()
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -119,12 +119,12 @@ class TestRateImportCommand:
 
     def test__generic_exception(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_rate_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = Exception("Boom")
+        mock_rate_import_logic.side_effect = Exception("Boom")
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -139,11 +139,11 @@ class TestRateImportCommand:
 
     def test__nominal(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_rate_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = ImportRatingsResult(imported_count=3, skipped_count=0, not_found_count=1)
+        mock_rate_import_logic.return_value = ImportRatingsResult(imported_count=3, skipped_count=0, not_found_count=1)
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -171,7 +171,7 @@ class TestRateImportLogic:
         mock_user_repository.get_by_email.return_value = UserFactory.build()
 
         with pytest.raises(ValidationError):
-            await import_logic(
+            await rate_import_logic(
                 email="test@example.com",
                 data=[{"fingerprint": "abc", "score": 99}],
             )
@@ -180,4 +180,4 @@ class TestRateImportLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await import_logic(email="test@example.com", data=[])
+            await rate_import_logic(email="test@example.com", data=[])

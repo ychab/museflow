@@ -14,7 +14,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 class TestUsersCreateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_create_user_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.create_logic"
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.users_create_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -126,14 +126,14 @@ class TestUsersCreateParserCommand:
 
 class TestUsersCreateCommand:
     @pytest.fixture
-    def mock_create_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.create_logic"
+    def mock_users_create_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.users_create_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__nominal(
         self,
-        mock_create_logic: mock.AsyncMock,
+        mock_users_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
@@ -145,11 +145,11 @@ class TestUsersCreateCommand:
 
     def test__user_already_exists(
         self,
-        mock_create_logic: mock.AsyncMock,
+        mock_users_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_create_logic.side_effect = UserAlreadyExistsException()
+        mock_users_create_logic.side_effect = UserAlreadyExistsException()
 
         result = runner.invoke(app, ["users", "create", "--email", "test@example.com", "--password", "testtest"])
         assert result.exit_code != 0
@@ -159,11 +159,11 @@ class TestUsersCreateCommand:
 
     def test__unexpected_exceptions(
         self,
-        mock_create_logic: mock.AsyncMock,
+        mock_users_create_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_create_logic.side_effect = Exception("Boom")
+        mock_users_create_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["users", "create", "--email", "test@example.com", "--password", "testtest"])
         assert result.exit_code != 0

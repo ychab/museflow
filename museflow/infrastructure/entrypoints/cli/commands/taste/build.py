@@ -22,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
-def build_command(
+def taste_build_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
     resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
@@ -65,7 +65,7 @@ def build_command(
     try:
         with spinner("Building taste profile…"):
             profile = asyncio.run(
-                build_logic(
+                taste_build_logic(
                     email=email,
                     name=name,
                     resume=resume,
@@ -108,7 +108,7 @@ def build_command(
         print_llm_usage(meter)
 
 
-async def build_logic(
+async def taste_build_logic(
     email: EmailStr,
     name: str,
     track_limit: int,

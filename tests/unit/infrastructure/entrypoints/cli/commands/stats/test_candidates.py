@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.stats import ArtistCandidate
-from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import candidates_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import stats_candidates_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -18,8 +18,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stat
 
 class TestStatsCandidatesParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_candidates_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.candidates_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_candidates_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_candidates_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -36,19 +36,19 @@ class TestStatsCandidatesParserCommand:
 
 class TestStatsCandidatesCommand:
     @pytest.fixture(autouse=True)
-    def mock_candidates_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.candidates_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_candidates_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_candidates_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__no_candidates(self, mock_candidates_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_candidates_logic.return_value = []
+    def test__no_candidates(self, mock_stats_candidates_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_stats_candidates_logic.return_value = []
         result = runner.invoke(app, ["stats", "candidates", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No discovery candidates found." in result.output
 
-    def test__with_candidates_table(self, mock_candidates_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_candidates_table(self, mock_stats_candidates_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistCandidate(artist="Artist X", avg_score=9.0, rated_count=1, total_count=2)
-        mock_candidates_logic.return_value = [row]
+        mock_stats_candidates_logic.return_value = [row]
 
         result = runner.invoke(app, ["stats", "candidates", "--email", "test@example.com"])
 
@@ -61,11 +61,11 @@ class TestStatsCandidatesCommand:
 
     def test__user_not_found(
         self,
-        mock_candidates_logic: mock.AsyncMock,
+        mock_stats_candidates_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_candidates_logic.side_effect = UserNotFound()
+        mock_stats_candidates_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["stats", "candidates", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
@@ -73,11 +73,11 @@ class TestStatsCandidatesCommand:
 
     def test__generic_exception(
         self,
-        mock_candidates_logic: mock.AsyncMock,
+        mock_stats_candidates_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_candidates_logic.side_effect = Exception("Boom")
+        mock_stats_candidates_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["stats", "candidates", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
@@ -91,7 +91,7 @@ class TestStatsCandidatesLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await candidates_logic(
+            await stats_candidates_logic(
                 email="test@example.com",
                 limit=20,
                 source=SourceFilter.ALL,

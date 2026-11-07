@@ -17,13 +17,13 @@ from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export a taste profile to a YAML file.")
-def export_command(
+def taste_export_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:
-        taste_profile = asyncio.run(export_logic(email=email, name=name))
+        taste_profile = asyncio.run(taste_export_logic(email=email, name=name))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundException as e:
@@ -37,7 +37,7 @@ def export_command(
     typer.secho(f"Taste profile '{name}' exported to {output}", fg=typer.colors.GREEN)
 
 
-async def export_logic(email: EmailStr, name: str) -> TasteProfile:
+async def taste_export_logic(email: EmailStr, name: str) -> TasteProfile:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)

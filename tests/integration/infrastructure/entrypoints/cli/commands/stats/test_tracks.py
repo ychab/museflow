@@ -1,6 +1,6 @@
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSortBy
-from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import tracks_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import stats_tracks_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -11,7 +11,9 @@ class TestStatsTracksLogic:
         track_b = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6)
         track_c = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10)
 
-        result = await tracks_logic(email=user.email, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE)
+        result = await stats_tracks_logic(
+            email=user.email, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE
+        )
 
         assert len(result) == 3
         # Tracks ordered by score DESC

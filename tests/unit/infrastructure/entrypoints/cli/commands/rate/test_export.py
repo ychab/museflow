@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.rate.export import export_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.export import rate_export_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -16,8 +16,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestRateExportParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_export_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.export.export_logic"
+    def mock_rate_export_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.export.rate_export_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = []
             yield patched
@@ -63,19 +63,19 @@ class TestRateExportParserCommand:
 
 class TestRateExportCommand:
     @pytest.fixture(autouse=True)
-    def mock_export_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.export.export_logic"
+    def mock_rate_export_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.export.rate_export_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_rate_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_export_logic.side_effect = UserNotFound()
+        mock_rate_export_logic.side_effect = UserNotFound()
 
         result = runner.invoke(
             app,
@@ -88,12 +88,12 @@ class TestRateExportCommand:
 
     def test__generic_exception(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_rate_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_export_logic.side_effect = Exception("Boom")
+        mock_rate_export_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(
             app,
@@ -106,12 +106,12 @@ class TestRateExportCommand:
 
     def test__nominal(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_rate_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
         entries: list[dict[str, Any]] = [{"fingerprint": "abc123", "score": 8}]
-        mock_export_logic.return_value = entries
+        mock_rate_export_logic.return_value = entries
         output_path = tmp_path / "out.yaml"
 
         result = runner.invoke(
@@ -135,4 +135,4 @@ class TestRateExportLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await export_logic(email="test@example.com")
+            await rate_export_logic(email="test@example.com")

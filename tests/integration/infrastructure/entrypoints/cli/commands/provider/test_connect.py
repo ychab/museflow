@@ -13,8 +13,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_start_logic
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_wait_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_start_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_wait_logic
 
 
 class TestProviderConnectLogic:
@@ -67,13 +67,13 @@ class TestProviderConnectLogic:
         simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
         async_session_db: AsyncSession,
     ) -> None:
-        start = await connect_start_logic(user.email, MusicProvider.SPOTIFY)
+        start = await provider_connect_start_logic(user.email, MusicProvider.SPOTIFY)
         assert start.previous_token is None
 
         # Start the "callback" simulator in the background
         task = simulate_oauth_callback(0.2)
 
-        await connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
+        await provider_connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
         # Ensure the background task completed without error
         await task
 

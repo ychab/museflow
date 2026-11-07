@@ -12,7 +12,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
 @app.command("delete", help="Delete a user account and all of its data.")
-def delete_command(
+def users_delete_command(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
@@ -24,7 +24,7 @@ def delete_command(
         )
 
     try:
-        asyncio.run(delete_logic(email=email))
+        asyncio.run(users_delete_logic(email=email))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -34,7 +34,7 @@ def delete_command(
     typer.secho(f"User {email} deleted.", fg=typer.colors.GREEN)
 
 
-async def delete_logic(email: EmailStr) -> None:
+async def users_delete_logic(email: EmailStr) -> None:
     uow = get_unit_of_work()
 
     async with uow:

@@ -6,7 +6,7 @@ import pytest
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
-from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.build import taste_build_logic
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
 
@@ -38,7 +38,7 @@ class TestTasteBuildLogic:
         expected_profile = TasteProfileFactory.build(user_id=user.id)
         mock_use_case.build_profile.return_value = expected_profile
 
-        profile = await build_logic(
+        profile = await taste_build_logic(
             email=user.email,
             name="my-profile",
             resume=False,

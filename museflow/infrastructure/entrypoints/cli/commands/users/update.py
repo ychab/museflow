@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 
 @app.command("update", help="Update the email and/or password of a user.")
-def update_command(
+def users_update_command(
     user_id: uuid.UUID = typer.Argument(..., help="User ID to update"),
     email: str | None = typer.Option(None, help="User email address to change", parser=parse_email),
     password: str | None = typer.Option(None, help="User password to change", parser=parse_password),
@@ -29,7 +29,7 @@ def update_command(
         raise typer.BadParameter(str(e)) from e
 
     try:
-        asyncio.run(update_logic(user_id, user_data=user_data))
+        asyncio.run(users_update_logic(user_id, user_data=user_data))
     except UserNotFound as e:
         typer.secho(f"User not found with ID {user_id}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -40,7 +40,7 @@ def update_command(
     typer.secho(f"User {user_id} updated successfully!", fg=typer.colors.GREEN)
 
 
-async def update_logic(
+async def users_update_logic(
     user_id: uuid.UUID,
     user_data: UserUpdateInput,
 ) -> None:

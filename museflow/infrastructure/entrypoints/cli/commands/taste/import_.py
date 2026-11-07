@@ -17,14 +17,14 @@ from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import a taste profile from a YAML file.")
-def import_command(
+def taste_import_command(
     email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:
     data = read_yaml(input_path)
 
     try:
-        taste_profile = asyncio.run(import_logic(email=email, data=data))
+        taste_profile = asyncio.run(taste_import_logic(email=email, data=data))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -34,7 +34,7 @@ def import_command(
     typer.secho(f"Taste profile '{taste_profile.name}' imported successfully.", fg=typer.colors.GREEN)
 
 
-async def import_logic(email: EmailStr, data: dict[str, Any]) -> TasteProfile:
+async def taste_import_logic(email: EmailStr, data: dict[str, Any]) -> TasteProfile:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)

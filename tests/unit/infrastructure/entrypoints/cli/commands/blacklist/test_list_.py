@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.infrastructure.entrypoints.cli.commands.blacklist.list_ import list_logic
+from museflow.infrastructure.entrypoints.cli.commands.blacklist.list_ import blacklist_list_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
@@ -19,8 +19,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blac
 
 class TestBlacklistListParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_blacklist_list_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.blacklist_list_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = UserBlacklist()
             yield patched
 
@@ -49,8 +49,8 @@ class TestBlacklistListParserCommand:
 
 class TestBlacklistListCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_blacklist_list_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.blacklist_list_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = UserBlacklist()
             yield patched
 
@@ -59,10 +59,10 @@ class TestBlacklistListCommand:
         assert result.exit_code == 0
         assert "empty" in result.output
 
-    def test__with_artists_and_tracks(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__with_artists_and_tracks(self, runner: CliRunner, mock_blacklist_list_logic: mock.AsyncMock) -> None:
         artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift")
         track = BlacklistedTrackFactory.build(name="Shake It Off", artist_name="Taylor Swift")
-        mock_logic.return_value = UserBlacklist(artists=[artist], tracks=[track])
+        mock_blacklist_list_logic.return_value = UserBlacklist(artists=[artist], tracks=[track])
 
         result = runner.invoke(app, ["blacklist", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -72,16 +72,18 @@ class TestBlacklistListCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_logic: mock.AsyncMock,
+        mock_blacklist_list_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_logic.side_effect = UserNotFound()
+        mock_blacklist_list_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["blacklist", "list", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
-    def test__exceptions(self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner) -> None:
-        mock_logic.side_effect = Exception("Boom")
+    def test__exceptions(
+        self, runner: CliRunner, mock_blacklist_list_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+    ) -> None:
+        mock_blacklist_list_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["blacklist", "list", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -94,4 +96,4 @@ class TestBlacklistListLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await list_logic(email="unknown@example.com")
+            await blacklist_list_logic(email="unknown@example.com")

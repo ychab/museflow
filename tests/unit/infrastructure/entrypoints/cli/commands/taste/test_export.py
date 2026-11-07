@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.taste.export import export_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.export import taste_export_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -19,8 +19,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestTasteExportParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_export_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.export.export_logic"
+    def mock_taste_export_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.export.taste_export_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = TasteProfileFactory.build()
             yield patched
@@ -66,19 +66,19 @@ class TestTasteExportParserCommand:
 
 class TestTasteExportCommand:
     @pytest.fixture(autouse=True)
-    def mock_export_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.export.export_logic"
+    def mock_taste_export_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.export.taste_export_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_taste_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_export_logic.side_effect = UserNotFound()
+        mock_taste_export_logic.side_effect = UserNotFound()
 
         result = runner.invoke(
             app,
@@ -100,12 +100,12 @@ class TestTasteExportCommand:
 
     def test__profile_not_found(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_taste_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_export_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_export_logic.side_effect = TasteProfileNotFoundException()
 
         result = runner.invoke(
             app,
@@ -127,12 +127,12 @@ class TestTasteExportCommand:
 
     def test__generic_exception(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_taste_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_export_logic.side_effect = Exception("Boom")
+        mock_taste_export_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(
             app,
@@ -154,12 +154,12 @@ class TestTasteExportCommand:
 
     def test__nominal(
         self,
-        mock_export_logic: mock.AsyncMock,
+        mock_taste_export_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
         taste_profile = TasteProfileFactory.build(name="my-profile")
-        mock_export_logic.return_value = taste_profile
+        mock_taste_export_logic.return_value = taste_profile
         output_path = tmp_path / "out.yaml"
 
         result = runner.invoke(
@@ -188,7 +188,7 @@ class TestTasteExportLogic:
         mock_user_repository.get_by_email.return_value = UserFactory.build()
         mock_taste_profile_repository.get.return_value = taste_profile
 
-        result = await export_logic(email="test@example.com", name="my-profile")
+        result = await taste_export_logic(email="test@example.com", name="my-profile")
 
         assert isinstance(result, TasteProfile)
         assert result == taste_profile
@@ -197,7 +197,7 @@ class TestTasteExportLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await export_logic(email="test@example.com", name="my-profile")
+            await taste_export_logic(email="test@example.com", name="my-profile")
 
     async def test__profile__not_found(
         self,
@@ -208,4 +208,4 @@ class TestTasteExportLogic:
         mock_taste_profile_repository.get.return_value = None
 
         with pytest.raises(TasteProfileNotFoundException):
-            await export_logic(email="test@example.com", name="my-profile")
+            await taste_export_logic(email="test@example.com", name="my-profile")

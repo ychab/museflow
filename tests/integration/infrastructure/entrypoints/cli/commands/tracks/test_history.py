@@ -8,7 +8,7 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
+from museflow.infrastructure.entrypoints.cli.commands.tracks.history import tracks_history_logic
 
 
 class TestTracksHistoryLogic:
@@ -40,7 +40,7 @@ class TestTracksHistoryLogic:
             tracks_created=200,
         )
 
-        report = await history_logic(
+        report = await tracks_history_logic(
             email=user.email,
             config=ImportStreamingHistoryConfigInput(directory=tmp_path),
             provider=MusicProvider.SPOTIFY,

@@ -14,12 +14,12 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("remove", help="Remove one or more blacklist entries by their ID.")
-def remove_command(
+def blacklist_remove_command(
     email: str = EMAIL_OPTION,
     item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `museflow blacklist list`)"),
 ) -> None:
     try:
-        asyncio.run(remove_logic(email=email, item_ids=item_ids))
+        asyncio.run(blacklist_remove_logic(email=email, item_ids=item_ids))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except BlacklistItemNotFoundError as e:
@@ -32,7 +32,7 @@ def remove_command(
     typer.secho(f"Removed {len(item_ids)} blacklist entry(ies).", fg=typer.colors.GREEN)
 
 
-async def remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
+async def blacklist_remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
     uow = get_unit_of_work()
 
     async with uow:

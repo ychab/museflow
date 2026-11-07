@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
-from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import discover_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 
@@ -50,7 +50,7 @@ class TestPlaylistDiscoverLogic:
         )
         mock_use_case.create_suggestions_playlist.return_value = expected_result
 
-        result = await discover_logic(
+        result = await playlist_discover_logic(
             email=user.email,
             provider=MusicProvider.SPOTIFY,
             config=DiscoverTasteConfigInput(),

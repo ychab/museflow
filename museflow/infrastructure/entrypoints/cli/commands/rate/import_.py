@@ -18,14 +18,14 @@ from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import track ratings from a YAML file.")
-def import_command(
+def rate_import_command(
     email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:
     data = read_yaml(input_path)
 
     try:
-        result = asyncio.run(import_logic(email=email, data=data))
+        result = asyncio.run(rate_import_logic(email=email, data=data))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -39,7 +39,7 @@ def import_command(
     )
 
 
-async def import_logic(email: EmailStr, data: list[Any]) -> ImportRatingsResult:
+async def rate_import_logic(email: EmailStr, data: list[Any]) -> ImportRatingsResult:
     entries = TypeAdapter(list[RatingEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()

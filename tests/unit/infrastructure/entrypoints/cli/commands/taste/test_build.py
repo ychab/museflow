@@ -11,7 +11,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedException
 from museflow.domain.exceptions import TasteProfileNoSeedException
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.taste.build import build_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.build import taste_build_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
@@ -22,8 +22,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
 class TestTasteBuildParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_build_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.build.build_logic"
+    def mock_taste_build_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.build.taste_build_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = TasteProfileFactory.build()
             yield patched
@@ -46,7 +46,7 @@ class TestTasteBuildParserCommand:
 
     def test__rated_only__passed_to_logic(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         # fmt: off
@@ -61,12 +61,12 @@ class TestTasteBuildParserCommand:
             ],
         )
         # fmt: on
-        mock_build_logic.assert_called_once()
-        assert mock_build_logic.call_args.kwargs["rated_only"] is True
+        mock_taste_build_logic.assert_called_once()
+        assert mock_taste_build_logic.call_args.kwargs["rated_only"] is True
 
     def test__models__passed_to_logic(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         # fmt: off
@@ -83,10 +83,10 @@ class TestTasteBuildParserCommand:
             ],
         )
         # fmt: on
-        mock_build_logic.assert_called_once()
-        assert mock_build_logic.call_args.kwargs["segment_model"] == "openai/gpt-5-nano"
-        assert mock_build_logic.call_args.kwargs["merge_model"] == "openai/gpt-5-mini"
-        assert mock_build_logic.call_args.kwargs["reflect_model"] == "anthropic/claude-sonnet-4.5"
+        mock_taste_build_logic.assert_called_once()
+        assert mock_taste_build_logic.call_args.kwargs["segment_model"] == "openai/gpt-5-nano"
+        assert mock_taste_build_logic.call_args.kwargs["merge_model"] == "openai/gpt-5-mini"
+        assert mock_taste_build_logic.call_args.kwargs["reflect_model"] == "anthropic/claude-sonnet-4.5"
 
     @pytest.mark.parametrize(
         ("email", "expected_msg"),
@@ -167,8 +167,8 @@ class TestTasteBuildParserCommand:
 
 class TestTasteBuildCommand:
     @pytest.fixture(autouse=True)
-    def mock_build_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.build.build_logic"
+    def mock_taste_build_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.build.taste_build_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -185,11 +185,11 @@ class TestTasteBuildCommand:
 
     def test__user_not_found(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.side_effect = UserNotFound()
+        mock_taste_build_logic.side_effect = UserNotFound()
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -199,11 +199,11 @@ class TestTasteBuildCommand:
 
     def test__no_seeds(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.side_effect = TasteProfileNoSeedException()
+        mock_taste_build_logic.side_effect = TasteProfileNoSeedException()
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -213,11 +213,11 @@ class TestTasteBuildCommand:
 
     def test__paused(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.side_effect = TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
+        mock_taste_build_logic.side_effect = TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -229,7 +229,7 @@ class TestTasteBuildCommand:
 
     def test__usage__printed_after_the_profile(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         taste_profile: TasteProfile,
         runner: CliRunner,
     ) -> None:
@@ -237,7 +237,7 @@ class TestTasteBuildCommand:
             spend(kwargs["meter"])
             return taste_profile
 
-        mock_build_logic.side_effect = build
+        mock_taste_build_logic.side_effect = build
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
@@ -246,14 +246,14 @@ class TestTasteBuildCommand:
 
     def test__paused__usage_printed(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         async def build(**kwargs: Any) -> TasteProfile:
             spend(kwargs["meter"])
             raise TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
 
-        mock_build_logic.side_effect = build
+        mock_taste_build_logic.side_effect = build
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -262,11 +262,11 @@ class TestTasteBuildCommand:
 
     def test__generic_exception(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.side_effect = Exception("Boom")
+        mock_taste_build_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -286,12 +286,12 @@ class TestTasteBuildCommand:
     )
     def test__output__with_archetype(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         taste_profile: TasteProfile,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.return_value = taste_profile
+        mock_taste_build_logic.return_value = taste_profile
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
@@ -313,12 +313,12 @@ class TestTasteBuildCommand:
     )
     def test__output__without_archetype(
         self,
-        mock_build_logic: mock.AsyncMock,
+        mock_taste_build_logic: mock.AsyncMock,
         runner: CliRunner,
         taste_profile: TasteProfile,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_build_logic.return_value = taste_profile
+        mock_taste_build_logic.return_value = taste_profile
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
@@ -342,7 +342,7 @@ class TestTasteBuildLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await build_logic(
+            await taste_build_logic(
                 email="test@example.com",
                 name="my-profile",
                 track_limit=3000,

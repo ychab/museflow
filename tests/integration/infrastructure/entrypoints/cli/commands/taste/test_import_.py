@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
-from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import import_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import taste_import_logic
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
@@ -18,7 +18,7 @@ class TestTasteImportLogic:
         taste_profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
         profile_data: dict[str, Any] = TypeAdapter(TasteProfile).dump_python(taste_profile_db.to_entity(), mode="json")
 
-        result = await import_logic(email=user.email, data=profile_data)
+        result = await taste_import_logic(email=user.email, data=profile_data)
 
         assert isinstance(result, TasteProfile)
         assert result.name == "my-profile"
@@ -36,7 +36,7 @@ class TestTasteImportLogic:
         original_tracks_count = taste_profile_db.to_entity().tracks_count
         profile_data: dict[str, Any] = TypeAdapter(TasteProfile).dump_python(taste_profile_db.to_entity(), mode="json")
 
-        await import_logic(email=user.email, data=profile_data)
+        await taste_import_logic(email=user.email, data=profile_data)
 
         stmt = select(TasteProfileModel).where(
             TasteProfileModel.user_id == user.id,

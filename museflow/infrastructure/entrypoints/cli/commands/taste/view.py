@@ -41,7 +41,7 @@ class ViewFormat(StrEnum):
 
 
 @app.command("view", help="View a taste profile.")
-def view_command(
+def taste_view_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     output_format: ViewFormat = typer.Option(
@@ -49,7 +49,7 @@ def view_command(
     ),
 ) -> None:
     try:
-        taste_profile = asyncio.run(view_logic(email=email, name=name))
+        taste_profile = asyncio.run(taste_view_logic(email=email, name=name))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundException as e:
@@ -71,7 +71,7 @@ def view_command(
         webbrowser.open(file_uri)
 
 
-async def view_logic(email: EmailStr, name: str) -> TasteProfile:
+async def taste_view_logic(email: EmailStr, name: str) -> TasteProfile:
     uow = get_unit_of_work()
 
     async with uow:

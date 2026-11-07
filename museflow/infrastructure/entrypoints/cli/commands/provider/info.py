@@ -23,7 +23,7 @@ def _mask(secret: str) -> str:
 
 
 @app.command("info", help="Show the stored provider auth token of a user.")
-def info_command(
+def provider_info_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider of the token"),
     show_tokens: bool = typer.Option(False, "--show-tokens", help="Print the tokens in clear, after a confirmation"),
@@ -32,7 +32,7 @@ def info_command(
         typer.confirm("This prints the tokens in clear. Continue?", abort=True)
 
     try:
-        token = asyncio.run(info_logic(email=email, provider=provider))
+        token = asyncio.run(provider_info_logic(email=email, provider=provider))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -46,7 +46,7 @@ def info_command(
         console.print(Pretty(asdict(token)), soft_wrap=True)
 
 
-async def info_logic(email: EmailStr, provider: MusicProvider) -> OAuthProviderUserToken | None:
+async def provider_info_logic(email: EmailStr, provider: MusicProvider) -> OAuthProviderUserToken | None:
     uow = get_unit_of_work()
 
     async with uow:

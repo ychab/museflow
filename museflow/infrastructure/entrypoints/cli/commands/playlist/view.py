@@ -18,13 +18,13 @@ console = Console()
 
 
 @app.command("view")
-def view_command(
+def playlist_view_command(
     playlist_id: uuid.UUID = typer.Argument(..., help="Playlist ID"),
     email: str = EMAIL_OPTION,
 ) -> None:
     """View a playlist with its tracks and ratings."""
     try:
-        playlist = asyncio.run(view_logic(email=email, playlist_id=playlist_id))
+        playlist = asyncio.run(playlist_view_logic(email=email, playlist_id=playlist_id))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except PlaylistNotFoundError as e:
@@ -59,7 +59,7 @@ def view_command(
     console.print(track_table)
 
 
-async def view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
+async def playlist_view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
     uow = get_unit_of_work()
 
     async with uow:

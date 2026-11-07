@@ -1,5 +1,5 @@
 from museflow.domain.entities.user import User
-from museflow.infrastructure.entrypoints.cli.commands.enrich.export import export_logic
+from museflow.infrastructure.entrypoints.cli.commands.enrich.export import enrich_export_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -14,7 +14,7 @@ class TestEnrichExportLogic:
         )
         await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[], locales=None)
 
-        result = await export_logic(email=user.email)
+        result = await enrich_export_logic(email=user.email)
 
         assert len(result) == 1
         assert result[0]["fingerprint"] == enriched_db.fingerprint
@@ -25,7 +25,7 @@ class TestEnrichExportLogic:
     async def test__locales_only(self, user: User) -> None:
         instrumental_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[], locales=[])
 
-        result = await export_logic(email=user.email)
+        result = await enrich_export_logic(email=user.email)
 
         assert len(result) == 1
         assert result[0]["fingerprint"] == instrumental_db.fingerprint

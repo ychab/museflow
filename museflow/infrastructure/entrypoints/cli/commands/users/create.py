@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 
 @app.command("create", help="Create a new user account.")
-def create_command(
+def users_create_command(
     email: str = typer.Option(..., help="User email address", parser=parse_email),
     password: str = typer.Option(
         None,
@@ -28,7 +28,7 @@ def create_command(
     ),
 ) -> None:
     try:
-        asyncio.run(create_logic(email, password))
+        asyncio.run(users_create_logic(email, password))
     except UserAlreadyExistsException as e:
         typer.secho(f"User with email {email} already exists.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -39,7 +39,7 @@ def create_command(
     typer.secho(f"User {email} created successfully!", fg=typer.colors.GREEN)
 
 
-async def create_logic(email: EmailStr, password: str) -> User:
+async def users_create_logic(email: EmailStr, password: str) -> User:
     password_hasher = get_password_hasher()
 
     return await create_user(
