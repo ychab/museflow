@@ -11,6 +11,8 @@ class TestGetTopTracksUseCase:
         track_a = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=8)
         track_b = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6)
         track_c = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10)
+        # Without score_min, the minimum score defaults to 0: unrated tracks are left out.
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Artist C"], score=None)
 
         result = await get_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=uow
@@ -36,3 +38,14 @@ class TestGetTopTracksUseCase:
         assert result[0].id == track_b.id
         assert result[1].id == track_c.id
         assert result[2].id == track_a.id
+
+    async def test__score_range(self, uow: UnitOfWorkPort, user: User) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, score=3)
+        track_in_range = await TrackModelFactory.create_async(user_id=user.id, score=6)
+        await TrackModelFactory.create_async(user_id=user.id, score=9)
+
+        result = await get_top_tracks(
+            user_id=user.id, limit=20, score_min=5, score_max=8, sort=TrackSortBy.SCORE, uow=uow
+        )
+
+        assert [track.id for track in result] == [track_in_range.id]

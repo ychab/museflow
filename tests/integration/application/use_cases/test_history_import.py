@@ -1,3 +1,4 @@
+import json
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -62,12 +63,14 @@ class TestImportStreamingHistorySpotifyUseCase:
         Streaming_History_Audio_2017-2018_1.json : read=3, skip_dur=1, skip_uri=0 → 2 ids
         Streaming_History_Audio_2023-2024_11.json: read=3, skip_dur=1, skip_uri=0 → 2 ids
         Total: read=6, skip_dur=2, skip_uri=0, unique_track_ids=4
+        A batch size of 3 upserts the 4 new tracks in 2 chunks: tracks_created sums them.
         """
         report = await use_case.import_history(
             user=user,
             config=ImportStreamingHistoryConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
+                batch_size=3,
             ),
         )
 
@@ -156,6 +159,7 @@ class TestImportStreamingHistorySpotifyUseCase:
             ),
         )
 
+        assert report.tracks_already_known == 4
         assert report.tracks_played_at_updated == 4
         assert report.tracks_created == 0
 
@@ -202,8 +206,6 @@ class TestImportStreamingHistorySpotifyUseCase:
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
     ) -> None:
         """Two Spotify IDs for the same song collapse into one DB row with merged play count."""
-        import json
-
         history_file = tmp_path / "Streaming_History_Audio_dup.json"
         history_file.write_text(
             json.dumps(
@@ -249,3 +251,5 @@ class TestImportStreamingHistorySpotifyUseCase:
         rows = results.scalars().all()
         assert len(rows) == 1
         assert rows[0].played_count == 2
+        assert rows[0].played_at_first == datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
+        assert rows[0].played_at_last == datetime(2024, 1, 2, 10, 0, 0, tzinfo=UTC)

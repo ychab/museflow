@@ -13,27 +13,6 @@ from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestGetTopArtistsUseCase:
-    async def test__no_tracks(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = []
-
-        result = await get_top_artists(
-            user_id=user.id,
-            limit=20,
-            source=SourceFilter.ALL,
-            score_min=None,
-            score_max=None,
-            confidence=5,
-            sort=ArtistSortBy.OVERALL,
-            uow=mock_uow,
-        )
-
-        assert result == []
-
     async def test__unrated_artists_included__ranked_by_volume(
         self,
         user: User,

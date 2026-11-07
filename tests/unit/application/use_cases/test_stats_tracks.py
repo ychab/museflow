@@ -8,20 +8,6 @@ from tests.unit.factories.entities.track import TrackFactory
 
 
 class TestGetTopTracksUseCase:
-    async def test__no_rated_tracks(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = []
-
-        result = await get_top_tracks(
-            user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
-        )
-
-        assert result == []
-
     async def test__returns_tracks_sorted_by_score_desc(
         self,
         user: User,
@@ -105,35 +91,3 @@ class TestGetTopTracksUseCase:
         )
 
         assert result == [track_high]
-
-    async def test__score_min_passed_to_repository(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = []
-
-        await get_top_tracks(
-            user_id=user.id, limit=20, score_min=7, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
-        )
-
-        mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, min_score=7, max_score=None, limit=None
-        )
-
-    async def test__score_min_defaults_to_zero_when_none(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        mock_track_repository.get_list.return_value = []
-
-        await get_top_tracks(
-            user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
-        )
-
-        mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, min_score=0, max_score=None, limit=None
-        )

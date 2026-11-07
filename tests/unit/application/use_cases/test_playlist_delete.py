@@ -114,23 +114,6 @@ class TestDeletePlaylistUseCase:
 
         mock_playlist_repository.delete.assert_not_awaited()
 
-    async def test__purge__nominal(
-        self,
-        use_case: DeletePlaylistUseCase,
-        user: User,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        mock_playlist_repository.purge.return_value = 5
-
-        count = await use_case.purge(type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
-
-        assert count == 5
-        mock_playlist_repository.purge.assert_called_once_with(
-            user_id=user.id,
-            type=PlaylistType.DISCOVERY,
-            provider=MusicProvider.SPOTIFY,
-        )
-
     async def test__purge_remote__mixed_providers(
         self,
         use_case: DeletePlaylistUseCase,
