@@ -1,8 +1,10 @@
 from typing import Literal
 
+from pydantic import EmailStr
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import SecretStr
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -22,7 +24,7 @@ class AppSettings(BaseSettings):
 
     DEBUG: bool = False
 
-    CLI_DEFAULT_EMAIL: str | None = None
+    CLI_DEFAULT_EMAIL: EmailStr | None = None
 
     LOCALE: str = Field(default="en-US", pattern=r"^[a-z]{2}-[A-Z]{2}$")
 
@@ -74,6 +76,13 @@ class AppSettings(BaseSettings):
         "X-Response-Time",
     ]
     BACKEND_CORS_MAX_AGE: int = 600
+
+    @field_validator("CLI_DEFAULT_EMAIL", mode="before")
+    @classmethod
+    def empty_cli_default_email_is_none(cls, value: str | None) -> str | None:
+        # An empty MUSEFLOW_CLI_DEFAULT_EMAIL= reads as "not set", not as an invalid email. Not env_ignore_empty: an
+        # empty variable would no longer override .env, and an empty value could no longer be set on purpose.
+        return value or None
 
 
 app_settings = AppSettings()

@@ -5,13 +5,17 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
 def resolve_email(value: str | None) -> str:
-    email = value if value is not None else app_settings.CLI_DEFAULT_EMAIL
+    email = value or app_settings.CLI_DEFAULT_EMAIL
     if not email:
         raise typer.BadParameter("required, pass it or set MUSEFLOW_CLI_DEFAULT_EMAIL")
 
-    return parse_email(email)
+    return email
 
 
+# The setting is validated on load: only the option needs the parser.
 EMAIL_OPTION: str = typer.Option(
-    None, help="User email address [default: MUSEFLOW_CLI_DEFAULT_EMAIL]", callback=resolve_email
+    None,
+    help="User email address [default: MUSEFLOW_CLI_DEFAULT_EMAIL]",
+    parser=parse_email,
+    callback=resolve_email,
 )
