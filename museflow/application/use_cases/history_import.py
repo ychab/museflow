@@ -10,7 +10,7 @@ from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
+from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.utils.text import generate_fingerprint
 
 logger = logging.getLogger(__name__)
@@ -53,12 +53,12 @@ class ImportStreamingHistoryUseCase:
     ) -> ImportStreamingHistoryReport:
         # Validate directory
         if not config.directory.exists() or not config.directory.is_dir():
-            raise StreamingHistoryDirectoryNotFound(f"Directory not found: {config.directory}")
+            raise StreamingHistoryDirectoryNotFoundError(f"Directory not found: {config.directory}")
 
         # Validate files
         json_files = sorted(config.directory.glob(self._streaming_history.file_glob))
         if not json_files:
-            raise StreamingHistoryDirectoryNotFound(
+            raise StreamingHistoryDirectoryNotFoundError(
                 f"No {self._streaming_history.file_glob} files found in: {config.directory}"
             )
 

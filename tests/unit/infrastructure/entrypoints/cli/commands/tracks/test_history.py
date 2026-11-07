@@ -11,8 +11,8 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks.history import tracks_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -145,7 +145,7 @@ class TestTracksHistoryCommand:
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_tracks_history_logic.side_effect = UserNotFound()
+        mock_tracks_history_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(
             app,
@@ -163,7 +163,9 @@ class TestTracksHistoryCommand:
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_tracks_history_logic.side_effect = StreamingHistoryDirectoryNotFound("Directory not found: /bad/path")
+        mock_tracks_history_logic.side_effect = StreamingHistoryDirectoryNotFoundError(
+            "Directory not found: /bad/path"
+        )
 
         result = runner.invoke(
             app,
@@ -261,7 +263,7 @@ class TestTracksHistoryLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await tracks_history_logic(
                 email="test@example.com",
                 config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),

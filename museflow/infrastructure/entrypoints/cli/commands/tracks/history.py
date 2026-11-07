@@ -11,8 +11,8 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import StreamingHistoryException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import StreamingHistoryError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
@@ -58,9 +58,9 @@ def tracks_history_command(
     try:
         with spinner("Importing listening history…"):
             report = asyncio.run(tracks_history_logic(email=email, config=config, provider=provider))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except StreamingHistoryException as e:
+    except StreamingHistoryError as e:
         typer.secho(str(e), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -100,7 +100,7 @@ async def tracks_history_logic(
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     use_case = ImportStreamingHistoryUseCase(uow=uow, streaming_history=get_streaming_history_adapter(provider))
     return await use_case.import_history(user=user, config=config)

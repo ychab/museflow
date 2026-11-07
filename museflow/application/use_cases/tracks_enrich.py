@@ -10,10 +10,10 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import LLMOperation
-from museflow.domain.exceptions import EnricherRateLimitExceeded
-from museflow.domain.exceptions import EnricherUnavailableException
-from museflow.domain.exceptions import TrackEnrichmentAbortedException
-from museflow.domain.exceptions import TrackEnrichmentException
+from museflow.domain.exceptions import EnricherRateLimitExceededError
+from museflow.domain.exceptions import EnricherUnavailableError
+from museflow.domain.exceptions import TrackEnrichmentAbortedError
+from museflow.domain.exceptions import TrackEnrichmentError
 from museflow.domain.value_objects.track import TrackEnrichment
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class EnrichTracksUseCase:
         """Enriches the user's tracks batch by batch; each enriched batch is saved at once, so a stop keeps it.
 
         Raises:
-            TrackEnrichmentAbortedException: If the enricher cannot serve any batch (auth, credits, outage, rate
+            TrackEnrichmentAbortedError: If the enricher cannot serve any batch (auth, credits, outage, rate
                 limit), or after `max_consecutive_failures` failed batches in a row, since a failed batch may still be
                 billed.
         """
@@ -77,9 +77,9 @@ class EnrichTracksUseCase:
         for i, batch in enumerate(batches, start=1):
             try:
                 enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)
-            except (EnricherRateLimitExceeded, EnricherUnavailableException) as e:
-                raise TrackEnrichmentAbortedException(i, total_batches, enriched_count, reason=str(e)) from e
-            except TrackEnrichmentException as e:
+            except (EnricherRateLimitExceededError, EnricherUnavailableError) as e:
+                raise TrackEnrichmentAbortedError(i, total_batches, enriched_count, reason=str(e)) from e
+            except TrackEnrichmentError as e:
                 # An expected batch failure, already explained by its message: no traceback
                 logger.warning(
                     f"Enrichment batch {i}/{total_batches} failed: {e}", extra={"batch": i, "total": total_batches}
@@ -105,7 +105,7 @@ class EnrichTracksUseCase:
                 error_count += 1
                 consecutive_failures += 1
                 if consecutive_failures >= config.max_consecutive_failures:
-                    raise TrackEnrichmentAbortedException(
+                    raise TrackEnrichmentAbortedError(
                         i,
                         total_batches,
                         enriched_count,

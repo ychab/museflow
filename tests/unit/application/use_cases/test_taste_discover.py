@@ -13,10 +13,10 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import TrackSource
-from museflow.domain.exceptions import DiscoveryTrackNoNew
-from museflow.domain.exceptions import ProviderRateLimitExceeded
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import TasteProfileStatusNotReadyException
+from museflow.domain.exceptions import DiscoveryTrackNoNewError
+from museflow.domain.exceptions import ProviderRateLimitExceededError
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
@@ -170,7 +170,7 @@ class TestDiscoverTasteUseCase:
     ) -> None:
         mock_taste_profile_repository.get_latest.return_value = None
 
-        with pytest.raises(TasteProfileNotFoundException):
+        with pytest.raises(TasteProfileNotFoundError):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(),
@@ -186,7 +186,7 @@ class TestDiscoverTasteUseCase:
             user_id=user.id, status=TasteProfileStatus.BUILDING
         )
 
-        with pytest.raises(TasteProfileStatusNotReadyException):
+        with pytest.raises(TasteProfileStatusNotReadyError):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(),
@@ -214,7 +214,7 @@ class TestDiscoverTasteUseCase:
         mock_reconciler.reconcile.return_value = None
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=True))
 
-        with pytest.raises(DiscoveryTrackNoNew):
+        with pytest.raises(DiscoveryTrackNoNewError):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(max_attempts=1),
@@ -698,7 +698,7 @@ class TestDiscoverTasteUseCase:
         mock_provider_library.search_tracks.return_value = []
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
 
-        with pytest.raises(DiscoveryTrackNoNew):
+        with pytest.raises(DiscoveryTrackNoNewError):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, max_attempts=1),
@@ -723,9 +723,9 @@ class TestDiscoverTasteUseCase:
         mock_provider_library.search_tracks.return_value = [reconciled_track]
         mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
-        mock_provider_library.create_playlist.side_effect = ProviderRateLimitExceeded("Spotify rate limit")
+        mock_provider_library.create_playlist.side_effect = ProviderRateLimitExceededError("Spotify rate limit")
 
-        with pytest.raises(ProviderRateLimitExceeded):
+        with pytest.raises(ProviderRateLimitExceededError):
             await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, dry_run=False),

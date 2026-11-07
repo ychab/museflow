@@ -7,7 +7,7 @@ import typer
 from museflow.application.use_cases.blacklist_add import AddToBlacklistUseCase
 from museflow.domain.entities.blacklist import BlacklistedArtist
 from museflow.domain.entities.blacklist import BlacklistedTrack
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -20,7 +20,7 @@ def blacklist_add_artist_command(
 ) -> None:
     try:
         entries = asyncio.run(blacklist_add_artist_logic(email=email, artist_names=artist_names))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -36,7 +36,7 @@ async def blacklist_add_artist_logic(email: EmailStr, artist_names: list[str]) -
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     use_case = AddToBlacklistUseCase(uow=uow)
     return [await use_case.add_artist(user_id=user.id, artist_name=artist_name) for artist_name in artist_names]
@@ -50,7 +50,7 @@ def blacklist_add_track_command(
 ) -> None:
     try:
         entry = asyncio.run(blacklist_add_track_logic(email=email, name=name, artist_name=artist))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -69,7 +69,7 @@ async def blacklist_add_track_logic(email: EmailStr, name: str, artist_name: str
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     use_case = AddToBlacklistUseCase(uow=uow)
     return await use_case.add_track(user_id=user.id, name=name, artist_name=artist_name)

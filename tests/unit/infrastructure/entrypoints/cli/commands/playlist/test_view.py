@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNotFoundError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist.view import playlist_view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -72,7 +72,7 @@ class TestPlaylistViewCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_view_logic.side_effect = UserNotFound()
+        mock_playlist_view_logic.side_effect = UserNotFoundError()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
@@ -117,7 +117,7 @@ class TestPlaylistViewLogic:
         mock_user_repository.get_by_email.return_value = None
         playlist_id = uuid.uuid4()
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await playlist_view_logic(email="test@example.com", playlist_id=playlist_id)
 
     async def test__playlist_not_found(

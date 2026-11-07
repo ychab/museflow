@@ -15,9 +15,9 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
+from museflow.domain.exceptions import ProviderNoActiveDeviceError
 from museflow.domain.exceptions import ProviderPageValidationError
-from museflow.domain.exceptions import ProviderPremiumRequiredException
+from museflow.domain.exceptions import ProviderPremiumRequiredError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
@@ -171,9 +171,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             )
         except SpotifyApiError as e:
             if e.status_code == 404:
-                raise ProviderNoActiveDeviceException() from e
+                raise ProviderNoActiveDeviceError() from e
             if e.status_code == 403:
-                raise ProviderPremiumRequiredException() from e
+                raise ProviderPremiumRequiredError() from e
             raise  # pragma: no cover
 
     # -------------------------------------------------------------------------

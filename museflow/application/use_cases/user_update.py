@@ -2,7 +2,7 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserEmailAlreadyExistsException
+from museflow.domain.exceptions import UserEmailAlreadyExistsError
 
 
 async def update_user(
@@ -27,14 +27,14 @@ async def update_user(
         The updated `User` entity.
 
     Raises:
-        UserEmailAlreadyExistsException: If the new email is already registered by another user.
+        UserEmailAlreadyExistsError: If the new email is already registered by another user.
     """
     # Check if email is being changed and if it's already taken
     if user_data.email and user_data.email != user.email:
         async with uow:
             existing = await uow.users.get_by_email(user_data.email)
         if existing:
-            raise UserEmailAlreadyExistsException()
+            raise UserEmailAlreadyExistsError()
 
     hashed_password = password_hasher.hash(user_data.password) if user_data.password else None
 

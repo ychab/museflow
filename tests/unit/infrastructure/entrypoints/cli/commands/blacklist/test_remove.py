@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import BlacklistItemNotFoundError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.remove import blacklist_remove_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -50,7 +50,7 @@ class TestBlacklistRemoveCommand:
         mock_blacklist_remove_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_blacklist_remove_logic.side_effect = UserNotFound()
+        mock_blacklist_remove_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["blacklist", "remove", "--email", "test@example.com", str(uuid.uuid4())])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -81,5 +81,5 @@ class TestBlacklistRemoveLogic:
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await blacklist_remove_logic(email="unknown@example.com", item_ids=[uuid.uuid4()])

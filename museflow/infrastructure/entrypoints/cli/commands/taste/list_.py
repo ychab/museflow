@@ -7,7 +7,7 @@ from rich.table import Table
 
 from museflow.application.use_cases.taste_profile_list import list_taste_profiles
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -20,7 +20,7 @@ def taste_list_command(
 ) -> None:
     try:
         profiles = asyncio.run(taste_list_logic(email=email))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -58,6 +58,6 @@ async def taste_list_logic(email: EmailStr) -> list[TasteProfile]:
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     return await list_taste_profiles(user_id=user.id, uow=uow)

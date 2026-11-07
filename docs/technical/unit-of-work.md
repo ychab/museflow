@@ -188,7 +188,7 @@ async with uow:
     user = await uow.users.get_by_email(email)
 
 if user is None:
-    raise UserNotFound()
+    raise UserNotFoundError()
 ```
 
 ## The rules

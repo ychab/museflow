@@ -5,8 +5,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.delete import taste_delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -62,7 +62,7 @@ class TestTasteDeleteCommand:
         mock_taste_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_delete_logic.side_effect = UserNotFound()
+        mock_taste_delete_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "-y"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -73,7 +73,7 @@ class TestTasteDeleteCommand:
         mock_taste_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_delete_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_delete_logic.side_effect = TasteProfileNotFoundError()
         result = runner.invoke(app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "-y"])
         assert result.exit_code != 0
         assert "Taste profile not found with name: my-profile" in clean_typer_text(result.output)
@@ -97,7 +97,7 @@ class TestTasteDeleteLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await taste_delete_logic(email="unknown@example.com", name="my-profile")
 
     async def test__nominal(

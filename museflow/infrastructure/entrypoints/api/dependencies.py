@@ -20,8 +20,8 @@ from museflow.application.use_cases.provider_oauth_state_consume import consume_
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
-from museflow.domain.exceptions import UserInactive
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserInactiveError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -130,7 +130,7 @@ async def get_user_from_state(
         return await consume_oauth_state(state=state, provider=provider, uow=uow)
     except ProviderOAuthStateInvalidError as e:
         raise HTTPException(status_code=400, detail="Invalid or expired state") from e
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise HTTPException(status_code=400, detail="Unable to load user from state") from e
-    except UserInactive as e:
+    except UserInactiveError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive") from e

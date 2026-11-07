@@ -11,7 +11,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import taste_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -103,7 +103,7 @@ class TestTasteImportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_import_logic.side_effect = UserNotFound()
+        mock_taste_import_logic.side_effect = UserNotFoundError()
         valid_yaml = tmp_path / "profile.yaml"
         valid_yaml.write_text("name: test-profile\n")
 
@@ -185,7 +185,7 @@ class TestTasteImportLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await taste_import_logic(email="test@example.com", data={})
 
     async def test__invalid_data(

@@ -17,10 +17,10 @@ from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
-from museflow.domain.exceptions import TasteProfileBuildException
-from museflow.domain.exceptions import TasteProfileBuildPausedException
-from museflow.domain.exceptions import TasteProfileNoSeedException
-from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfileBuildPausedError
+from museflow.domain.exceptions import TasteProfileNoSeedError
+from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
@@ -339,7 +339,7 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        with pytest.raises(TasteProfileNoSeedException):
+        with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
 
     async def test__rated_only__passes_min_score_to_get_list(
@@ -351,7 +351,7 @@ class TestBuildTasteProfileUseCase:
         mock_track_repository.get_list.return_value = []
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, rated_only=True)
 
-        with pytest.raises(TasteProfileNoSeedException):
+        with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
 
         mock_track_repository.get_list.assert_called_once_with(
@@ -425,8 +425,8 @@ class TestBuildTasteProfileUseCase:
     @pytest.mark.parametrize(
         ("mock_segment", "reason"),
         [
-            pytest.param(TasteProfilerRateLimitExceeded("rate limit"), "rate limit", id="rate_limit_exceeded"),
-            pytest.param(TasteProfileBuildException("bad response"), "bad response", id="build_exception"),
+            pytest.param(TasteProfilerRateLimitExceededError("rate limit"), "rate limit", id="rate_limit_exceeded"),
+            pytest.param(TasteProfileBuildError("bad response"), "bad response", id="build_exception"),
         ],
         indirect=["mock_segment"],
     )
@@ -444,7 +444,7 @@ class TestBuildTasteProfileUseCase:
         # Batch 1 fails: the build pauses at once, no checkpoint saved
         mock_track_repository.get_list.return_value = tracks
 
-        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+        with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
 
         assert exc_info.value.batch_index == 1
@@ -466,10 +466,10 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         usage = LLMUsageFactory.build()
         profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
-        profiler.build_profile_segment.side_effect = TasteProfileBuildException("bad response")
+        profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
         mock_track_repository.get_list.return_value = tracks
 
-        with pytest.raises(TasteProfileBuildPausedException):
+        with pytest.raises(TasteProfileBuildPausedError):
             await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler).build_profile(user=user, config=config)
 
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=config.name)
@@ -490,9 +490,9 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         # Batch 1 succeeds (checkpoint saved), batch 2 fails: pauses at 2/3, upsert never called
         mock_track_repository.get_list.return_value = tracks
-        mock_segment.side_effect = [profile_data, TasteProfilerRateLimitExceeded("rate limit")]
+        mock_segment.side_effect = [profile_data, TasteProfilerRateLimitExceededError("rate limit")]
 
-        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+        with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
 
         assert exc_info.value.batch_index == 2
@@ -505,8 +505,8 @@ class TestBuildTasteProfileUseCase:
     @pytest.mark.parametrize(
         ("mock_reflect", "reason"),
         [
-            (TasteProfilerRateLimitExceeded("rate limit"), "rate limit"),
-            (TasteProfileBuildException("bad response"), "bad response"),
+            (TasteProfilerRateLimitExceededError("rate limit"), "rate limit"),
+            (TasteProfileBuildError("bad response"), "bad response"),
         ],
         indirect=["mock_reflect"],
     )
@@ -525,7 +525,7 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = tracks
 
-        with pytest.raises(TasteProfileBuildPausedException) as exc_info:
+        with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
 
         assert exc_info.value.batch_index == 3

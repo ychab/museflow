@@ -161,6 +161,9 @@ apart from its function (`user_create.create_user`).
   In `except` blocks: `logger.exception("Static message", extra={...})`, the traceback carries the detail.
 - Never log secrets (tokens, passwords): log IDs.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.
+- An exception ends in `Error`, as in the standard library (`ValueError`): `UserNotFoundError`, even when the caller
+  handles it as an expected outcome (`TasteProfileBuildPausedError`). Only a control-flow signal that never reaches a
+  user drops the suffix, like `StopIteration` (`RateLimitRetry`, caught by the retry loop).
 - In tenacity adapters, `_is_retryable_error()` explicitly returns `False` for every non-retryable exception.
 - No `assert` in production code (Ruff S101): raise `ValueError` at the top of the function for contract violations;
   where mypy can't narrow after the guard, use `# type: ignore[union-attr]` at the call site.

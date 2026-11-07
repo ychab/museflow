@@ -10,7 +10,7 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import PlaylistNotFoundError
-from museflow.domain.exceptions import RateScoreInvalidException
+from museflow.domain.exceptions import RateScoreInvalidError
 
 
 class RateTrackUseCase:
@@ -77,7 +77,7 @@ class RateTrackUseCase:
         """Starts the track on the user's device; does nothing for a track not linked to the provider.
 
         Raises:
-            ProviderNoActiveDeviceException: If no device is currently active.
+            ProviderNoActiveDeviceError: If no device is currently active.
         """
         if self._provider is None or self._provider_library is None:
             raise ValueError("Playback needs a provider and its library")
@@ -88,7 +88,7 @@ class RateTrackUseCase:
 
     async def rate(self, track_id: uuid.UUID, score: int) -> None:
         if not DISCOVERY_TRACK_SCORE_MIN <= score <= DISCOVERY_TRACK_SCORE_MAX:
-            raise RateScoreInvalidException(
+            raise RateScoreInvalidError(
                 f"Score must be between {DISCOVERY_TRACK_SCORE_MIN} and {DISCOVERY_TRACK_SCORE_MAX}, got {score}"
             )
         async with self._uow as uow:

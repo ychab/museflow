@@ -12,8 +12,8 @@ from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import ProviderPremiumRequiredException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import ProviderPremiumRequiredError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import RateAnswer
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_track
@@ -56,7 +56,7 @@ def rate_playlist_command(
                 provider=(play_provider or MusicProvider.SPOTIFY) if play else None,
             )
         )
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except PlaylistNotFoundError as e:
         typer.secho(f"Playlist {playlist_id} not found.", fg=typer.colors.RED, err=True)
@@ -64,7 +64,7 @@ def rate_playlist_command(
     except ProviderAuthTokenNotFoundError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-    except ProviderPremiumRequiredException as e:
+    except ProviderPremiumRequiredError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -95,7 +95,7 @@ async def rate_playlist_logic(
         async with uow:
             user = await uow.users.get_by_email(email)
             if not user:
-                raise UserNotFound()
+                raise UserNotFoundError()
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:

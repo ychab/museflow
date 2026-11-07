@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.use_cases.taste_profile_delete import delete_taste_profile
-from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileNotFoundError
 
 
 class TestDeleteTasteProfileUseCase:
@@ -19,5 +19,5 @@ class TestDeleteTasteProfileUseCase:
     async def test__not_found(self, mock_uow: mock.AsyncMock, mock_taste_profile_repository: mock.AsyncMock) -> None:
         mock_taste_profile_repository.delete.return_value = False
 
-        with pytest.raises(TasteProfileNotFoundException):
+        with pytest.raises(TasteProfileNotFoundError):
             await delete_taste_profile(user_id=uuid.uuid4(), name="my-profile", uow=mock_uow)

@@ -15,10 +15,10 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
-from museflow.domain.exceptions import TasteProfileBuildException
-from museflow.domain.exceptions import TasteProfileBuildPausedException
-from museflow.domain.exceptions import TasteProfileNoSeedException
-from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfileBuildPausedError
+from museflow.domain.exceptions import TasteProfileNoSeedError
+from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class BuildTasteProfileUseCase:
                 limit=config.track_limit,
             )
         if not tracks:
-            raise TasteProfileNoSeedException(f"No tracks found for user {user.id}")
+            raise TasteProfileNoSeedError(f"No tracks found for user {user.id}")
 
         # Re-sort chronologically so the LLM builds coherent taste eras from date-range batches.
         max_dt = datetime.max.replace(tzinfo=UTC)
@@ -116,13 +116,13 @@ class BuildTasteProfileUseCase:
             step = len(batches)
             logger.info("Processing psychographic reflection")
             current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
-        except (TasteProfilerRateLimitExceeded, TasteProfileBuildException) as e:
+        except (TasteProfilerRateLimitExceededError, TasteProfileBuildError) as e:
             # The caller reports the pause from the exception: a warning here would print it twice
             logger.debug(
                 f"Taste profile build failed at step {step} / {len(batches)}, pausing build: {e}",
                 extra={"step": step, "total": len(batches)},
             )
-            raise TasteProfileBuildPausedException(step, len(batches), reason=str(e)) from e
+            raise TasteProfileBuildPausedError(step, len(batches), reason=str(e)) from e
 
         taste_profile = TasteProfile(
             user_id=user.id,

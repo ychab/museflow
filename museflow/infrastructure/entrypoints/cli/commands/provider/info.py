@@ -10,7 +10,7 @@ from rich.pretty import Pretty
 from museflow.application.use_cases.provider_token_view import get_provider_token
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.commands.provider import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -33,7 +33,7 @@ def provider_info_command(
 
     try:
         token = asyncio.run(provider_info_logic(email=email, provider=provider))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -53,6 +53,6 @@ async def provider_info_logic(email: EmailStr, provider: MusicProvider) -> OAuth
         user = await uow.users.get_by_email(email)
 
     if user is None:
-        raise UserNotFound(f"User with email '{email}' not found.")
+        raise UserNotFoundError(f"User with email '{email}' not found.")
 
     return await get_provider_token(user_id=user.id, provider=provider, uow=uow)

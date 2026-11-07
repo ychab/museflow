@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.users.delete import users_delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -67,7 +67,7 @@ class TestUsersDeleteCommand:
         mock_users_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_users_delete_logic.side_effect = UserNotFound()
+        mock_users_delete_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["users", "delete", "--email", "test@example.com", "--yes"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -91,7 +91,7 @@ class TestUsersDeleteLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await users_delete_logic(email="unknown@example.com")
 
         mock_user_repository.delete.assert_not_called()

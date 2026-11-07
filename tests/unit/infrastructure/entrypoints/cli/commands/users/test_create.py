@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.exceptions import UserAlreadyExistsException
+from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -149,7 +149,7 @@ class TestUsersCreateCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_users_create_logic.side_effect = UserAlreadyExistsException()
+        mock_users_create_logic.side_effect = UserAlreadyExistsError()
 
         result = runner.invoke(app, ["users", "create", "--email", "test@example.com", "--password", "testtest"])
         assert result.exit_code != 0

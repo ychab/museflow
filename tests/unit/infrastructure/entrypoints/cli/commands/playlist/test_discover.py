@@ -11,11 +11,11 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteAttemptRe
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import DiscoveryTrackNoNew
+from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import TasteProfileStatusNotReadyException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import TasteProfileStatusNotReadyError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -253,7 +253,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_discover_logic.side_effect = UserNotFound()
+        mock_playlist_discover_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -300,7 +300,7 @@ class TestPlaylistDiscoverCommand:
     ) -> None:
         async def discover(**kwargs: Any) -> DiscoverTasteResult:
             spend(kwargs["meter"])
-            raise DiscoveryTrackNoNew()
+            raise DiscoveryTrackNoNewError()
 
         mock_playlist_discover_logic.side_effect = discover
 
@@ -315,7 +315,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_discover_logic.side_effect = TasteProfileNotFoundException()
+        mock_playlist_discover_logic.side_effect = TasteProfileNotFoundError()
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -329,7 +329,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_discover_logic.side_effect = TasteProfileStatusNotReadyException()
+        mock_playlist_discover_logic.side_effect = TasteProfileStatusNotReadyError()
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -343,7 +343,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_discover_logic.side_effect = DiscoveryTrackNoNew()
+        mock_playlist_discover_logic.side_effect = DiscoveryTrackNoNewError()
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -454,7 +454,7 @@ class TestPlaylistDiscoverLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await playlist_discover_logic(
                 "test@example.com",
                 provider=MusicProvider.SPOTIFY,

@@ -13,8 +13,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import AdvisorRateLimitExceeded
-from museflow.domain.exceptions import DiscoveryTasteStrategyException
+from museflow.domain.exceptions import AdvisorRateLimitExceededError
+from museflow.domain.exceptions import DiscoveryTasteStrategyError
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
@@ -177,7 +177,7 @@ class TestOpenRouterAdvisorAdapter:
     ) -> None:
         httpx_mock.add_response(url=URL, method="POST", json={"choices": []})
 
-        with pytest.raises(DiscoveryTasteStrategyException, match="Invalid discovery strategy response"):
+        with pytest.raises(DiscoveryTasteStrategyError, match="Invalid discovery strategy response"):
             await openrouter_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
@@ -197,7 +197,7 @@ class TestOpenRouterAdvisorAdapter:
             is_reusable=True,
         )
 
-        with pytest.raises(DiscoveryTasteStrategyException):
+        with pytest.raises(DiscoveryTasteStrategyError):
             await openrouter_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
@@ -219,7 +219,7 @@ class TestOpenRouterAdvisorAdapter:
             headers={"Retry-After": "6"},  # above max_retry_wait=5
         )
 
-        with pytest.raises(AdvisorRateLimitExceeded, match="exceeds max wait"):
+        with pytest.raises(AdvisorRateLimitExceededError, match="exceeds max wait"):
             await openrouter_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,
@@ -239,7 +239,7 @@ class TestOpenRouterAdvisorAdapter:
             json={"error": {"code": 402, "message": "Insufficient credits"}},
         )
 
-        with pytest.raises(DiscoveryTasteStrategyException, match="Insufficient credits"):
+        with pytest.raises(DiscoveryTasteStrategyError, match="Insufficient credits"):
             await openrouter_advisor.get_discovery_strategy(
                 profile=taste_profile,
                 focus=DiscoveryFocus.EXPANSION,

@@ -5,9 +5,9 @@ from pydantic import EmailStr
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserInactive
-from museflow.domain.exceptions import UserInvalidCredentials
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserInactiveError
+from museflow.domain.exceptions import UserInvalidCredentialsError
+from museflow.domain.exceptions import UserNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +33,21 @@ async def authenticate_user(
         The authenticated `User` entity.
 
     Raises:
-        UserNotFound: If no user with the given email exists.
-        UserInvalidCredentials: If the provided password does not match.
-        UserInactive: If the user account is not active.
+        UserNotFoundError: If no user with the given email exists.
+        UserInvalidCredentialsError: If the provided password does not match.
+        UserInactiveError: If the user account is not active.
     """
     async with uow:
         user = await uow.users.get_by_email(email)
 
     if not user:
         password_hasher.verify_simulate(password)
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     if not password_hasher.verify(password, user.hashed_password):
-        raise UserInvalidCredentials()
+        raise UserInvalidCredentialsError()
 
     if not user.is_active:
-        raise UserInactive()
+        raise UserInactiveError()
 
     return user

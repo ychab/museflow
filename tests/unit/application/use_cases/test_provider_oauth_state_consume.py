@@ -12,7 +12,7 @@ from museflow.domain.const import OAUTH_STATE_TTL_SECONDS
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 
 
 class TestConsumeOAuthStateUseCase:
@@ -64,5 +64,5 @@ class TestConsumeOAuthStateUseCase:
         mock_auth_state_repository.consume.return_value = auth_state
         mock_user_repository.get_by_id.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await consume_oauth_state(state=auth_state.state, provider=auth_state.provider, uow=mock_uow)

@@ -5,7 +5,7 @@ from typing import Final
 
 import pytest
 
-from museflow.domain.exceptions import StreamingHistoryInvalidFormat
+from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 
 from tests import ASSETS_DIR
@@ -90,5 +90,5 @@ class TestSpotifyStreamingHistoryAdapter:
         path = tmp_path / "history.json"
         path.write_text("{invalid json")
 
-        with pytest.raises(StreamingHistoryInvalidFormat):
+        with pytest.raises(StreamingHistoryInvalidFormatError):
             await adapter.parse_file(path=path, min_ms_played=0)

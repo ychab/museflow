@@ -5,8 +5,8 @@ from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import AdvisorRateLimitExceeded
-from museflow.domain.exceptions import DiscoveryTasteStrategyException
+from museflow.domain.exceptions import AdvisorRateLimitExceededError
+from museflow.domain.exceptions import DiscoveryTasteStrategyError
 from museflow.domain.utils import taste as taste_utils
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.mappers import to_discovery_strategy
@@ -163,10 +163,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 adapter="advisor",
             )
         except LLMRateLimitError as e:
-            raise AdvisorRateLimitExceeded(str(e)) from e
+            raise AdvisorRateLimitExceededError(str(e)) from e
         except LLMRequestError as e:
-            raise DiscoveryTasteStrategyException(str(e)) from e
+            raise DiscoveryTasteStrategyError(str(e)) from e
         except LLMResponseError as e:
-            raise DiscoveryTasteStrategyException(f"Invalid discovery strategy response: {e}") from e
+            raise DiscoveryTasteStrategyError(f"Invalid discovery strategy response: {e}") from e
 
         return to_discovery_strategy(content)

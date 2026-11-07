@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -62,7 +62,7 @@ def playlist_delete_command(
                 include_remote=include_remote,
             )
         )
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except PlaylistNotFoundError as e:
         typer.secho(f"Playlist {playlist_id} not found.", fg=typer.colors.RED, err=True)
@@ -90,7 +90,7 @@ async def playlist_delete_logic(
     async with uow:
         user = await uow.users.get_by_email(email)
         if not user:
-            raise UserNotFound()
+            raise UserNotFoundError()
 
     use_case = DeletePlaylistUseCase(user_id=user.id, uow=uow)
 

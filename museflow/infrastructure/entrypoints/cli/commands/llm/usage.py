@@ -9,7 +9,7 @@ from rich.table import Table
 
 from museflow.application.use_cases.llm_usage_summary import summarize_llm_usage
 from museflow.domain.enums import LLMUsageGroupBy
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -38,7 +38,7 @@ def llm_usage_command(
 
     try:
         summary = asyncio.run(llm_usage_logic(email=email, group_by=group_by, since=since))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -79,7 +79,7 @@ async def llm_usage_logic(email: EmailStr | None, group_by: LLMUsageGroupBy, sin
         async with uow:
             user = await uow.users.get_by_email(email)
         if not user:
-            raise UserNotFound()
+            raise UserNotFoundError()
         user_id = user.id
 
     return await summarize_llm_usage(user_id=user_id, group_by=group_by, since=since, uow=uow)

@@ -1,7 +1,7 @@
 import uuid
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileNotFoundError
 
 
 async def delete_taste_profile(
@@ -13,4 +13,4 @@ async def delete_taste_profile(
         deleted = await uow.taste_profiles.delete(user_id=user_id, name=name)
 
     if not deleted:
-        raise TasteProfileNotFoundException()
+        raise TasteProfileNotFoundError()

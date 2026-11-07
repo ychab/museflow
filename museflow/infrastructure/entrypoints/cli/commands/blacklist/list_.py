@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from museflow.application.use_cases.blacklist_list import list_blacklist
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -22,7 +22,7 @@ def blacklist_list_command(
 ) -> None:
     try:
         blacklist = asyncio.run(blacklist_list_logic(email=email))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -54,6 +54,6 @@ async def blacklist_list_logic(email: EmailStr) -> UserBlacklist:
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     return await list_blacklist(user_id=user.id, uow=uow)

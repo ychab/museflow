@@ -5,8 +5,8 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.taste_profile_delete import delete_taste_profile
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -27,9 +27,9 @@ def taste_delete_command(
 
     try:
         asyncio.run(taste_delete_logic(email=email, name=name))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except TasteProfileNotFoundException as e:
+    except TasteProfileNotFoundError as e:
         raise typer.BadParameter(f"Taste profile not found with name: {name}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -44,6 +44,6 @@ async def taste_delete_logic(email: EmailStr, name: str) -> None:
     async with uow:
         user = await uow.users.get_by_email(email)
         if user is None:
-            raise UserNotFound()
+            raise UserNotFoundError()
 
     await delete_taste_profile(user_id=user.id, name=name, uow=uow)

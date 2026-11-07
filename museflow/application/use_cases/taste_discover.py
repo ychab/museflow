@@ -24,9 +24,9 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TrackSource
-from museflow.domain.exceptions import DiscoveryTrackNoNew
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import TasteProfileStatusNotReadyException
+from museflow.domain.exceptions import DiscoveryTrackNoNewError
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -86,8 +86,8 @@ class DiscoverTasteUseCase:
             the last strategy, and the final list of tracks.
 
         Raises:
-            TasteProfileNotFoundException: If no matching taste profile is found.
-            DiscoveryTrackNoNew: If no new tracks are found after all attempts.
+            TasteProfileNotFoundError: If no matching taste profile is found.
+            DiscoveryTrackNoNewError: If no new tracks are found after all attempts.
         """
         # Load everything the attempts need once, before the loop
         async with self._uow as uow:
@@ -97,9 +97,9 @@ class DiscoverTasteUseCase:
                 profile = await uow.taste_profiles.get_latest(user_id=user.id)
 
             if profile is None:
-                raise TasteProfileNotFoundException()
+                raise TasteProfileNotFoundError()
             elif profile.status == TasteProfileStatus.BUILDING:
-                raise TasteProfileStatusNotReadyException()
+                raise TasteProfileStatusNotReadyError()
 
             blacklist = await uow.blacklist.get_all(user.id)
             liked_tracks = await uow.tracks.get_list(
@@ -213,7 +213,7 @@ class DiscoverTasteUseCase:
 
         # strategy can only be None if no attempt ran, which DiscoverTasteConfigInput forbids (max_attempts >= 1)
         if strategy is None or not tracks_scores:
-            raise DiscoveryTrackNoNew()
+            raise DiscoveryTrackNoNewError()
 
         # Sort: band by advisor score DESC, then by reconciler confidence DESC within band
         tracks_scores.sort(

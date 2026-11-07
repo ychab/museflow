@@ -11,9 +11,9 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import EnricherRateLimitExceeded
-from museflow.domain.exceptions import EnricherUnavailableException
-from museflow.domain.exceptions import TrackEnrichmentException
+from museflow.domain.exceptions import EnricherRateLimitExceededError
+from museflow.domain.exceptions import EnricherUnavailableError
+from museflow.domain.exceptions import TrackEnrichmentError
 from museflow.domain.value_objects.track import TrackEnrichment
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
@@ -110,15 +110,15 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
                 adapter="enricher",
             )
         except LLMRateLimitError as e:
-            raise EnricherRateLimitExceeded(str(e)) from e
+            raise EnricherRateLimitExceededError(str(e)) from e
         except LLMRequestError as e:
             if e.moderated or e.status_code in _BATCH_STATUS_CODES:
-                raise TrackEnrichmentException(str(e)) from e
-            raise EnricherUnavailableException(str(e)) from e
+                raise TrackEnrichmentError(str(e)) from e
+            raise EnricherUnavailableError(str(e)) from e
         except httpx.RequestError as e:
-            raise EnricherUnavailableException(f"OpenRouter unreachable after retries: {e!r}") from e
+            raise EnricherUnavailableError(f"OpenRouter unreachable after retries: {e!r}") from e
         except LLMResponseError as e:
-            raise TrackEnrichmentException(f"Invalid enrichment response: {e}") from e
+            raise TrackEnrichmentError(f"Invalid enrichment response: {e}") from e
 
         return [
             TrackEnrichment(

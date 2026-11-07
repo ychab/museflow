@@ -2,7 +2,7 @@ import uuid
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import TasteProfileNotFoundException
+from museflow.domain.exceptions import TasteProfileNotFoundError
 
 
 async def get_taste_profile(
@@ -14,6 +14,6 @@ async def get_taste_profile(
         taste_profile = await uow.taste_profiles.get(user_id=user_id, name=name)
 
     if not taste_profile:
-        raise TasteProfileNotFoundException()
+        raise TasteProfileNotFoundError()
 
     return taste_profile

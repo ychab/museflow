@@ -9,7 +9,7 @@ import typer
 
 from museflow.application.use_cases.taste_profile_import import import_taste_profile
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -25,7 +25,7 @@ def taste_import_command(
 
     try:
         taste_profile = asyncio.run(taste_import_logic(email=email, data=data))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -40,7 +40,7 @@ async def taste_import_logic(email: EmailStr, data: dict[str, Any]) -> TasteProf
         user = await uow.users.get_by_email(email)
 
     if user is None:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     taste_profile = TypeAdapter(TasteProfile).validate_python(data)
     return await import_taste_profile(user_id=user.id, taste_profile=taste_profile, uow=uow)

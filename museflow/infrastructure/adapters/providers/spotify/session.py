@@ -8,7 +8,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import ProviderRateLimitExceeded
+from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.mappers.auth import auth_token_from_token_payload
 from museflow.domain.mappers.auth import auth_token_to_token_payload
 from museflow.infrastructure.adapters.http import RateLimitRetry
@@ -108,10 +108,10 @@ class SpotifyOAuthSessionClient:
                     ignored_status_codes=ignored_status_codes,
                 )
             except RateLimitRetry as e:
-                raise ProviderRateLimitExceeded("Spotify rate limit exceeded after max retries") from e
+                raise ProviderRateLimitExceededError("Spotify rate limit exceeded after max retries") from e
 
         except RateLimitRetry as e:
-            raise ProviderRateLimitExceeded("Spotify rate limit exceeded after max retries") from e
+            raise ProviderRateLimitExceededError("Spotify rate limit exceeded after max retries") from e
 
         return response
 

@@ -13,7 +13,7 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
+from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
@@ -180,7 +180,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         use_case: ImportStreamingHistoryUseCase,
         tmp_path: Path,
     ) -> None:
-        with pytest.raises(StreamingHistoryDirectoryNotFound):
+        with pytest.raises(StreamingHistoryDirectoryNotFoundError):
             await use_case.import_history(
                 user=user,
                 config=ImportStreamingHistoryConfigInput(directory=tmp_path / "nonexistent"),
@@ -193,7 +193,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         use_case: ImportStreamingHistoryUseCase,
     ) -> None:
         (tmp_path / "not_json.txt").write_text("")
-        with pytest.raises(StreamingHistoryDirectoryNotFound):
+        with pytest.raises(StreamingHistoryDirectoryNotFoundError):
             await use_case.import_history(
                 user=user,
                 config=ImportStreamingHistoryConfigInput(directory=tmp_path),
