@@ -19,7 +19,7 @@ class TestRemoveFromBlacklistUseCase:
 
         await use_case.remove(user_id=user.id, item_ids=[artist_db.id])
 
-        result = await blacklist_repository.get_all(user_id=user.id)
+        result = await blacklist_repository.get(user_id=user.id)
         assert result.is_empty
 
     async def test__remove__track(
@@ -33,7 +33,7 @@ class TestRemoveFromBlacklistUseCase:
 
         await use_case.remove(user_id=user.id, item_ids=[track_db.id])
 
-        result = await blacklist_repository.get_all(user_id=user.id)
+        result = await blacklist_repository.get(user_id=user.id)
         assert result.is_empty
 
     async def test__remove__multiple(
@@ -48,7 +48,7 @@ class TestRemoveFromBlacklistUseCase:
 
         await use_case.remove(user_id=user.id, item_ids=[artist_db.id, track_db.id])
 
-        result = await blacklist_repository.get_all(user_id=user.id)
+        result = await blacklist_repository.get(user_id=user.id)
         assert result.is_empty
 
     async def test__purge(
@@ -64,5 +64,5 @@ class TestRemoveFromBlacklistUseCase:
         count = await use_case.purge(user_id=user.id)
 
         assert count == 2
-        result = await blacklist_repository.get_all(user_id=user.id)
+        result = await blacklist_repository.get(user_id=user.id)
         assert result.is_empty

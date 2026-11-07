@@ -9,7 +9,7 @@ async def export_enrichment(
     uow: UnitOfWorkPort,
 ) -> list[Track]:
     async with uow:
-        tracks = await uow.tracks.get_list(user_id=user_id)
+        tracks = await uow.tracks.list(user_id=user_id)
 
     # Empty locales still count: the track was enriched as instrumental.
     return [track for track in tracks if track.genres or track.moods or track.locales is not None]

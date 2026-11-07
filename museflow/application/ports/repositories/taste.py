@@ -9,9 +9,6 @@ from museflow.domain.entities.taste import TasteProfileData
 
 class TasteProfileRepository(ABC):
     @abstractmethod
-    async def list(self, user_id: uuid.UUID) -> list[TasteProfile]: ...
-
-    @abstractmethod
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...
 
     @abstractmethod
@@ -24,7 +21,7 @@ class TasteProfileRepository(ABC):
     async def delete(self, user_id: uuid.UUID, name: str) -> bool: ...
 
     @abstractmethod
-    async def save_checkpoint(
+    async def upsert_checkpoint(
         self,
         user_id: uuid.UUID,
         name: str,
@@ -37,3 +34,7 @@ class TasteProfileRepository(ABC):
 
     @abstractmethod
     async def get_checkpoint(self, user_id: uuid.UUID, name: str) -> tuple[TasteProfileData, int] | None: ...
+
+    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
+    @abstractmethod
+    async def list(self, user_id: uuid.UUID) -> list[TasteProfile]: ...

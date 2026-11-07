@@ -102,6 +102,6 @@ class TestRateTrackUseCase:
         await use_case.blacklist_artist(artist_name="Portishead")
 
         async with uow:
-            blacklist = await uow.blacklist.get_all(user_id=user.id)
+            blacklist = await uow.blacklist.get(user_id=user.id)
         assert [(track.name, track.artist_name) for track in blacklist.tracks] == [("Creep", "Radiohead")]
         assert [artist.artist_name for artist in blacklist.artists] == ["Portishead"]

@@ -101,8 +101,8 @@ class DiscoverTasteUseCase:
             elif profile.status == TasteProfileStatus.BUILDING:
                 raise TasteProfileStatusNotReadyError()
 
-            blacklist = await uow.blacklist.get_all(user.id)
-            liked_tracks = await uow.tracks.get_list(
+            blacklist = await uow.blacklist.get(user.id)
+            liked_tracks = await uow.tracks.list(
                 user_id=user.id,
                 min_score=config.liked_tracks_score_threshold,
                 limit=config.liked_tracks_limit,
@@ -272,7 +272,7 @@ class DiscoverTasteUseCase:
                 custom_instructions=config.custom_instructions,
                 tracks=tracks_with_ids,
             )
-            playlist_db = await uow.playlists.save(playlist)
+            playlist_db = await uow.playlists.create(playlist)
 
         return DiscoverTasteResult(
             playlist=playlist_db,

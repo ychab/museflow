@@ -48,7 +48,7 @@ class TestDeleteTracksUseCase:
 
         assert deleted == 3
         async with uow:
-            assert await uow.tracks.get_list(user_id=other_track_db.user_id) != []
+            assert await uow.tracks.list(user_id=other_track_db.user_id) != []
 
     async def test__delete_all__by_provider(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_batch_async(size=2, user_id=user.id)
@@ -59,5 +59,5 @@ class TestDeleteTracksUseCase:
 
         assert deleted == 2
         async with uow:
-            assert await uow.tracks.get_list(user_id=user.id) == []
-            assert await uow.tracks.get_list(user_id=other_track_db.user_id) != []
+            assert await uow.tracks.list(user_id=user.id) == []
+            assert await uow.tracks.list(user_id=other_track_db.user_id) != []

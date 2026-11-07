@@ -20,7 +20,7 @@ class TestRecordLLMUsage:
         await record_llm_usage(user_id=user.id, operation=LLMOperation.ENRICH, usages=[], uow=mock_uow)
 
         mock_uow.__aenter__.assert_not_awaited()
-        mock_llm_usage_repository.add_many.assert_not_awaited()
+        mock_llm_usage_repository.bulk_create.assert_not_awaited()
 
     async def test__profile_not_found__recorded_without_profile(
         self,
@@ -40,7 +40,7 @@ class TestRecordLLMUsage:
             profile_name="my-profile",
         )
 
-        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert record.profile_id is None
 
     async def test__failure__logged_not_raised(
@@ -50,7 +50,7 @@ class TestRecordLLMUsage:
         mock_llm_usage_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_llm_usage_repository.add_many.side_effect = RuntimeError("database down")
+        mock_llm_usage_repository.bulk_create.side_effect = RuntimeError("database down")
 
         with caplog.at_level(logging.ERROR):
             await record_llm_usage(

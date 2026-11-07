@@ -34,7 +34,7 @@ class TestDeleteTracksUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         matching = TrackFactory.build(name="Creep")
-        mock_track_repository.get_list.return_value = [matching, TrackFactory.build(name="Karma Police")]
+        mock_track_repository.list.return_value = [matching, TrackFactory.build(name="Karma Police")]
 
         tracks = await use_case.find(artist=None, name="creep", source=None)
 
@@ -47,11 +47,11 @@ class TestDeleteTracksUseCase:
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await use_case.find(artist="Radiohead", name=None, source=TrackSource.HISTORY)
 
-        mock_track_repository.get_list.assert_awaited_once_with(
+        mock_track_repository.list.assert_awaited_once_with(
             user_id=user_id,
             artist_name="Radiohead",
             source=TrackSource.HISTORY,
@@ -100,13 +100,13 @@ class TestDeleteTracksUseCase:
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.delete_all.return_value = 3
+        mock_track_repository.purge.return_value = 3
 
         deleted = await use_case.delete_all()
 
         assert deleted == 3
         mock_track_repository.unlink_provider.assert_not_awaited()
-        mock_track_repository.delete_all.assert_awaited_once_with(user_id=user_id)
+        mock_track_repository.purge.assert_awaited_once_with(user_id=user_id)
 
     @pytest.mark.parametrize("provider", [MusicProvider.SPOTIFY], indirect=True)
     async def test__delete_all__provider__deletes_the_orphans_only(
@@ -124,4 +124,4 @@ class TestDeleteTracksUseCase:
         assert deleted == 1
         mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user_id, provider=MusicProvider.SPOTIFY)
         mock_track_repository.delete.assert_awaited_once_with(user_id=user_id, track_ids=orphan_ids)
-        mock_track_repository.delete_all.assert_not_awaited()
+        mock_track_repository.purge.assert_not_awaited()

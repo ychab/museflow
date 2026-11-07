@@ -29,7 +29,7 @@ from tests.unit.factories.entities.llm import LLMUsageRecordFactory
 
 
 class TestLLMUsageSQLRepository:
-    async def test__add_many__nominal(
+    async def test__bulk_create__nominal(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -37,7 +37,7 @@ class TestLLMUsageSQLRepository:
     ) -> None:
         records = LLMUsageRecordFactory.batch(2, user_id=user.id)
 
-        await llm_usage_repository.add_many(records)
+        await llm_usage_repository.bulk_create(records)
 
         rows = (
             await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
@@ -56,7 +56,7 @@ class TestLLMUsageSQLRepository:
     ) -> None:
         profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
         record = LLMUsageRecordFactory.build(user_id=user.id, profile_id=profile_db.id)
-        await llm_usage_repository.add_many([record])
+        await llm_usage_repository.bulk_create([record])
 
         await async_session_db.execute(delete(TasteProfileModel).where(TasteProfileModel.id == profile_db.id))
 
@@ -73,7 +73,7 @@ class TestLLMUsageSQLRepository:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
         record = LLMUsageRecordFactory.build(user_id=user.id, playlist_id=playlist_db.id)
-        await llm_usage_repository.add_many([record])
+        await llm_usage_repository.bulk_create([record])
 
         await async_session_db.execute(delete(PlaylistModel).where(PlaylistModel.id == playlist_db.id))
 

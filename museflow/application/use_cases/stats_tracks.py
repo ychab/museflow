@@ -15,7 +15,7 @@ async def list_top_tracks(
     uow: UnitOfWorkPort,
 ) -> list[Track]:
     async with uow:
-        tracks = await uow.tracks.get_list(
+        tracks = await uow.tracks.list(
             user_id=user_id,
             min_score=score_min if score_min is not None else 0,
             max_score=score_max,

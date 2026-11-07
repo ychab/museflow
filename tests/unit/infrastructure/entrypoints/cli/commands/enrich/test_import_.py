@@ -180,7 +180,7 @@ class TestEnrichImportLogic:
         user = UserFactory.build()
         fingerprint = "test-fingerprint-xyz"
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [
+        mock_track_repository.list.return_value = [
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
@@ -202,7 +202,7 @@ class TestEnrichImportLogic:
         user = UserFactory.build()
         fingerprint = "test-fingerprint-xyz"
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [
+        mock_track_repository.list.return_value = [
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
@@ -224,7 +224,7 @@ class TestEnrichImportLogic:
         user = UserFactory.build()
         fingerprint = "test-fingerprint-abc"
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [
+        mock_track_repository.list.return_value = [
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 

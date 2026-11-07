@@ -55,7 +55,7 @@ class TestSQLUnitOfWork:
             assert await self.count_rows(user.id) == (0, 0)
 
             tracks_with_ids = [replace(t, id=track_ids[t.fingerprint]) for t in tracks]
-            await uow.playlists.save(PlaylistFactory.build(user_id=user.id, profile_id=None, tracks=tracks_with_ids))
+            await uow.playlists.create(PlaylistFactory.build(user_id=user.id, profile_id=None, tracks=tracks_with_ids))
             assert await self.count_rows(user.id) == (0, 0)
 
         assert await self.count_rows(user.id) == (2, 1)
@@ -91,7 +91,7 @@ class TestSQLUnitOfWork:
         checked_out = pool.checkedout()
 
         async with unit_of_work as uow:
-            await uow.tracks.get_list(user_id=user.id)
+            await uow.tracks.list(user_id=user.id)
             assert pool.checkedout() == checked_out + 1
 
         assert pool.checkedout() == checked_out

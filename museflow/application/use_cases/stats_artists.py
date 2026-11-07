@@ -31,7 +31,7 @@ async def list_top_artists(
     uow: UnitOfWorkPort,
 ) -> list[ArtistStats]:
     async with uow:
-        all_tracks = await uow.tracks.get_list(
+        all_tracks = await uow.tracks.list(
             user_id=user_id,
             source=source.to_track_source(),
             limit=None,

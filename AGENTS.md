@@ -97,6 +97,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - `.returning()` instead of an extra SELECT; key returned rows by a column (e.g. fingerprint), never by position.
   - Upserts with `pg_insert(...).on_conflict_do_update(...)`.
   - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
+  - A `list` method comes last in its class, in the port and the adapter: below it, `list` in an annotation would name
+    the method, not the builtin (mypy `valid-type`).
 - **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
@@ -138,6 +140,7 @@ apart from its function (`user_create.create_user`).
 | Entity write input | `<Entity><Action>Input` | `UserCreateInput` |
 | Flow config input | `<Verb><Object>ConfigInput` | `EnrichTracksConfigInput` |
 | Imported file entry | `<Noun>EntryInput` | `RatingEntryInput` |
+| Repository method | CRUD (`create`, `get` / `get_by_<field>`, `list`, `update`, `delete`), `bulk_<verb>` for a batch, `purge` to delete all of a user's rows, a domain verb when it fits better | `tracks.list`, `bulk_upsert`, `consume`, `blacklist.add_artist` |
 
 ## Types & style
 - Strict type hints everywhere, tests included. `str | None`; IDs are `uuid.UUID`. No `Any` unless justified.

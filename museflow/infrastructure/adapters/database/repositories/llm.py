@@ -31,7 +31,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def add_many(self, records: list[LLMUsageRecord]) -> None:
+    async def bulk_create(self, records: list[LLMUsageRecord]) -> None:
         self.session.add_all([LLMUsageModel.from_entity(record) for record in records])
         await self.session.flush()
 

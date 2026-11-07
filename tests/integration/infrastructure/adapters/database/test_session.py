@@ -34,6 +34,6 @@ class TestCreateEngine:
 
         with pytest.raises(DBAPIError, match="connection is closed"):
             async with unit_of_work as uow:
-                await uow.tracks.get_list(user_id=uuid.uuid4())
+                await uow.tracks.list(user_id=uuid.uuid4())
                 await asyncio.sleep(1.5)  # A remote call inside the block, by mistake
-                await uow.tracks.get_list(user_id=uuid.uuid4())
+                await uow.tracks.list(user_id=uuid.uuid4())

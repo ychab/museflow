@@ -14,7 +14,7 @@ class TestListTopTracksUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
@@ -30,7 +30,7 @@ class TestListTopTracksUseCase:
     ) -> None:
         track_low = TrackFactory.build(artists=["Artist A"], score=5)
         track_high = TrackFactory.build(artists=["Artist B"], score=9)
-        mock_track_repository.get_list.return_value = [track_low, track_high]
+        mock_track_repository.list.return_value = [track_low, track_high]
 
         result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
@@ -47,7 +47,7 @@ class TestListTopTracksUseCase:
     ) -> None:
         track_z = TrackFactory.build(artists=["Zara"], score=8)
         track_a = TrackFactory.build(artists=["Aaron"], score=8)
-        mock_track_repository.get_list.return_value = [track_z, track_a]
+        mock_track_repository.list.return_value = [track_z, track_a]
 
         result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
@@ -64,7 +64,7 @@ class TestListTopTracksUseCase:
     ) -> None:
         track_low = TrackFactory.build(artists=["Artist A"], played_count=2)
         track_high = TrackFactory.build(artists=["Artist B"], played_count=9)
-        mock_track_repository.get_list.return_value = [track_low, track_high]
+        mock_track_repository.list.return_value = [track_low, track_high]
 
         result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.PLAYED_COUNT, uow=mock_uow
@@ -81,7 +81,7 @@ class TestListTopTracksUseCase:
     ) -> None:
         track_z = TrackFactory.build(artists=["Zara"], played_count=4)
         track_a = TrackFactory.build(artists=["Aaron"], played_count=4)
-        mock_track_repository.get_list.return_value = [track_z, track_a]
+        mock_track_repository.list.return_value = [track_z, track_a]
 
         result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.PLAYED_COUNT, uow=mock_uow
@@ -98,7 +98,7 @@ class TestListTopTracksUseCase:
     ) -> None:
         track_low = TrackFactory.build(artists=["Artist A"], score=5)
         track_high = TrackFactory.build(artists=["Artist B"], score=9)
-        mock_track_repository.get_list.return_value = [track_low, track_high]
+        mock_track_repository.list.return_value = [track_low, track_high]
 
         result = await list_top_tracks(
             user_id=user.id, limit=1, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
@@ -112,15 +112,13 @@ class TestListTopTracksUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await list_top_tracks(
             user_id=user.id, limit=20, score_min=7, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, min_score=7, max_score=None, limit=None
-        )
+        mock_track_repository.list.assert_awaited_once_with(user_id=user.id, min_score=7, max_score=None, limit=None)
 
     async def test__score_min_defaults_to_zero_when_none(
         self,
@@ -128,12 +126,10 @@ class TestListTopTracksUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=mock_uow
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, min_score=0, max_score=None, limit=None
-        )
+        mock_track_repository.list.assert_awaited_once_with(user_id=user.id, min_score=0, max_score=None, limit=None)
