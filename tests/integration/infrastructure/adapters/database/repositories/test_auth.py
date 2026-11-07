@@ -22,7 +22,7 @@ from museflow.infrastructure.adapters.database.models import AuthProviderToken a
 
 
 class TestOAuthProviderStateSQLRepository:
-    async def test_upsert__create(
+    async def test__upsert__create(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         state_token_generator: StateTokenGeneratorPort,
@@ -41,7 +41,7 @@ class TestOAuthProviderStateSQLRepository:
         assert auth_state.provider == MusicProvider.SPOTIFY
         assert auth_state.state == state
 
-    async def test_upsert__update(
+    async def test__upsert__update(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         state_token_generator: StateTokenGeneratorPort,
@@ -62,7 +62,7 @@ class TestOAuthProviderStateSQLRepository:
         assert auth_state_updated.state == state != auth_state.state
         assert auth_state_updated.updated_at >= auth_state.updated_at
 
-    async def test_get__nominal(
+    async def test__get__nominal(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
@@ -77,7 +77,7 @@ class TestOAuthProviderStateSQLRepository:
         assert auth_state_duplicate.provider == auth_state.provider
         assert auth_state_duplicate.state == auth_state.state
 
-    async def test_get__invalid(
+    async def test__get__invalid(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
@@ -88,7 +88,7 @@ class TestOAuthProviderStateSQLRepository:
         )
         assert auth_state_invalid is None
 
-    async def test_consume__nominal(
+    async def test__consume__nominal(
         self,
         async_session_db: AsyncSession,
         auth_state_repository: OAuthProviderStateRepository,
@@ -104,7 +104,7 @@ class TestOAuthProviderStateSQLRepository:
         with pytest.raises(SQLAlchemyError):
             await async_session_db.refresh(auth_state)
 
-    async def test_consume__none(
+    async def test__consume__none(
         self,
         async_session_db: AsyncSession,
         auth_state_repository: OAuthProviderStateRepository,
@@ -119,7 +119,7 @@ class TestOAuthProviderStateSQLRepository:
 
         assert auth_state_db is not None
 
-    async def test_delete__nominal(
+    async def test__delete__nominal(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
@@ -128,7 +128,7 @@ class TestOAuthProviderStateSQLRepository:
 
         assert await auth_state_repository.get(user_id=auth_state.user_id, provider=auth_state.provider) is None
 
-    async def test_delete__other_user(
+    async def test__delete__other_user(
         self,
         auth_state_repository: OAuthProviderStateRepository,
         auth_state: OAuthProviderState,
@@ -139,17 +139,17 @@ class TestOAuthProviderStateSQLRepository:
 
 
 class TestOAuthProviderTokenSQLRepository:
-    async def test_get__nominal(
+    async def test__get__nominal(
         self,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
         assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider)
 
-    async def test_get__none(self, auth_token_repository: OAuthProviderTokenRepository) -> None:
+    async def test__get__none(self, auth_token_repository: OAuthProviderTokenRepository) -> None:
         assert await auth_token_repository.get(uuid.uuid4(), provider=MusicProvider.SPOTIFY) is None
 
-    async def test_create__nominal(
+    async def test__create__nominal(
         self,
         user: User,
         auth_token_create: OAuthProviderUserTokenCreateInput,
@@ -170,7 +170,7 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_refresh == auth_token_create.token_refresh
         assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
 
-    async def test_update__partial(
+    async def test__update__partial(
         self,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
@@ -192,7 +192,7 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_refresh == auth_token_data.token_refresh
         assert auth_token_db.token_expires_at == auth_token_data.token_expires_at
 
-    async def test_update__all(
+    async def test__update__all(
         self,
         auth_token: OAuthProviderUserToken,
         auth_token_update: OAuthProviderUserTokenUpdateInput,
@@ -211,7 +211,7 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_refresh == auth_token_update.token_refresh
         assert auth_token_db.token_expires_at == auth_token_update.token_expires_at
 
-    async def test_delete__nominal(
+    async def test__delete__nominal(
         self,
         async_session_db: AsyncSession,
         auth_token: OAuthProviderUserToken,

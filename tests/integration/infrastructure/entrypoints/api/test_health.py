@@ -7,7 +7,7 @@ from museflow.infrastructure.entrypoints.api.main import app
 
 
 class TestHealthCheck:
-    async def test_healthy(self, async_client: AsyncClient) -> None:
+    async def test__healthy(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("health_check")
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_200_OK
@@ -18,7 +18,7 @@ class TestHealthCheck:
             "database": "connected",
         }
 
-    async def test_unhealthy(self, mock_db_session: AsyncMock, async_client: AsyncClient) -> None:
+    async def test__unhealthy(self, mock_db_session: AsyncMock, async_client: AsyncClient) -> None:
         mock_db_session.execute.side_effect = Exception("Boom")
 
         url = app.url_path_for("health_check")

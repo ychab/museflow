@@ -104,11 +104,11 @@ class TestSpotifyLibraryLive:
             to_domain_track(SpotifyTrack.model_validate(item), user_id=user.id) for item in top_track_page.items[:3]
         ]
 
-    async def test_search(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
+    async def test__search(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
         tracks = await spotify_library_live.search_tracks(track="Mi Pueblo", page_size=5, max_pages=1)
         assert len(tracks) > 0
 
-    async def test_playlist_create(
+    async def test__playlist_create(
         self,
         spotify_library_live: SpotifyLibraryAdapter,
         tracks: list[Track],

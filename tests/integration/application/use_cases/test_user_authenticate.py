@@ -5,7 +5,7 @@ from museflow.domain.entities.user import User
 
 
 class TestAuthenticateUserUseCase:
-    async def test_authenticate__nominal(
+    async def test__authenticate__nominal(
         self,
         uow: UnitOfWorkPort,
         user: User,

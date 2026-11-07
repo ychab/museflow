@@ -16,7 +16,7 @@ from museflow.infrastructure.adapters.providers.spotify.types import SpotifyScop
 
 
 class TestSpotifyScope:
-    def test_required_scopes(self) -> None:
+    def test__required_scopes(self) -> None:
         assert SpotifyScope.required_scopes() == " ".join(
             [
                 "playlist-modify-public",
@@ -67,7 +67,7 @@ class TestSpotifyTrack:
 
 
 class TestSpotifyToken:
-    def test_expires_in__invalid(self, frozen_time: datetime) -> None:
+    def test__expires_in__invalid(self, frozen_time: datetime) -> None:
         payload: dict[str, Any] = {
             "token_type": "bearer",
             "access_token": "dummy-access-token",
@@ -109,7 +109,7 @@ class TestSpotifyToken:
         assert "dummy-access-token" not in str(exc_info.value)
         assert "dummy-refresh-token" not in str(exc_info.value)
 
-    def test_expires_at__nominal(self, frozen_time: datetime) -> None:
+    def test__expires_at__nominal(self, frozen_time: datetime) -> None:
         expires_in = 3600
         spotify_token = SpotifyToken(
             **{

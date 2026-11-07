@@ -6,7 +6,7 @@ from museflow.infrastructure.config.settings.database import DatabaseSettings
 
 
 class TestDatabaseSettings:
-    def test_uri_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__uri_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_HOST", raising=False)
         monkeypatch.delenv("DATABASE_PORT", raising=False)
         monkeypatch.delenv("DATABASE_USER", raising=False)
@@ -17,7 +17,7 @@ class TestDatabaseSettings:
         settings = DatabaseSettings(_env_file=None)
         assert str(settings.URI) == "postgresql+asyncpg://user:pass@localhost:5432/testdb"
 
-    def test_components_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__components_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_URI", raising=False)
 
         monkeypatch.setenv("DATABASE_HOST", "localhost")
@@ -29,7 +29,7 @@ class TestDatabaseSettings:
         settings = DatabaseSettings(_env_file=None)
         assert str(settings.URI) == "postgresql+asyncpg://testuser:testpass@localhost:5432/testdb"
 
-    def test_uri_takes_precedence(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__uri_takes_precedence(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DATABASE_URI", "postgresql+asyncpg://uri_user:pass@uri-host:5432/uri_db")
         monkeypatch.setenv("DATABASE_HOST", "component_host")
         monkeypatch.setenv("DATABASE_USER", "component_user")
@@ -37,7 +37,7 @@ class TestDatabaseSettings:
         settings = DatabaseSettings(_env_file=None)
         assert str(settings.URI) == "postgresql+asyncpg://uri_user:pass@uri-host:5432/uri_db"
 
-    def test_missing_components_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__missing_components_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_URI", raising=False)
         monkeypatch.delenv("DATABASE_USER", raising=False)
         monkeypatch.delenv("DATABASE_PASSWORD", raising=False)
@@ -56,14 +56,14 @@ class TestDatabaseSettings:
         assert "PASSWORD" in error_message
         assert "PATH" in error_message
 
-    def test_idle_in_transaction_timeout_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__idle_in_transaction_timeout_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DATABASE_IDLE_IN_TRANSACTION_TIMEOUT", raising=False)
         monkeypatch.setenv("DATABASE_URI", "postgresql+asyncpg://user:pass@localhost:5432/testdb")
 
         settings = DatabaseSettings(_env_file=None)
         assert settings.IDLE_IN_TRANSACTION_TIMEOUT == 60
 
-    def test_idle_in_transaction_timeout_negative_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test__idle_in_transaction_timeout_negative_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DATABASE_URI", "postgresql+asyncpg://user:pass@localhost:5432/testdb")
         monkeypatch.setenv("DATABASE_IDLE_IN_TRANSACTION_TIMEOUT", "-1")
 
