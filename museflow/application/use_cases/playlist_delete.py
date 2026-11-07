@@ -33,7 +33,7 @@ class DeletePlaylistUseCase:
 
     async def find_matching(self, type: PlaylistType | None, provider: MusicProvider | None) -> list[Playlist]:
         async with self._uow as uow:
-            playlists = await uow.playlists.list(user_id=self._user_id)
+            playlists = await uow.playlists.get_list(user_id=self._user_id)
 
         return [
             p for p in playlists if (type is None or p.type == type) and (provider is None or p.provider == provider)

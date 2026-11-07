@@ -36,7 +36,7 @@ class TestEnrichTracksUseCase:
         assert result.error_count == 0
 
         async with uow:
-            tracks = await uow.tracks.list(user_id=user.id)
+            tracks = await uow.tracks.get_list(user_id=user.id)
         assert len(tracks) == 1
         enriched = tracks[0]
         assert enriched.id == track_db.id
@@ -79,7 +79,7 @@ class TestEnrichTracksUseCase:
 
         assert result.enriched_count == 1
         async with uow:
-            tracks = await uow.tracks.list(user_id=user.id)
+            tracks = await uow.tracks.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.HIP_HOP]
         assert tracks[0].locales == ["fr"]
 
@@ -98,6 +98,6 @@ class TestEnrichTracksUseCase:
 
         assert result.enriched_count == 1
         async with uow:
-            tracks = await uow.tracks.list(user_id=user.id)
+            tracks = await uow.tracks.get_list(user_id=user.id)
         assert tracks[0].genres == [GenreTag.FOLK, GenreTag.INDIE_FOLK]
         assert tracks[0].locales is None

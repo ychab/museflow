@@ -14,7 +14,7 @@ class TestPlaylistListLogic:
         await PlaylistModelFactory.create_async(user_id=user.id)
         await PlaylistModelFactory.create_async(user_id=user.id)
 
-        playlists = await playlist_repository.list(user.id)
+        playlists = await playlist_repository.get_list(user.id)
         assert len(playlists) == 2
 
         await playlist_list_logic(email=user.email)

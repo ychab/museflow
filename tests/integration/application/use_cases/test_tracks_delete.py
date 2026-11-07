@@ -39,25 +39,25 @@ class TestDeleteTracksUseCase:
         remaining = await use_case.find(artist=None, name=None, source=None)
         assert [track.artists for track in remaining] == [["Portishead"]]
 
-    async def test__delete_all__no_provider(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__purge__no_provider(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
         other_track_db = await TrackModelFactory.create_async()
         use_case = DeleteTracksUseCase(user_id=user.id, provider=None, uow=uow)
 
-        deleted = await use_case.delete_all()
+        deleted = await use_case.purge()
 
         assert deleted == 3
         async with uow:
-            assert await uow.tracks.list(user_id=other_track_db.user_id) != []
+            assert await uow.tracks.get_list(user_id=other_track_db.user_id) != []
 
-    async def test__delete_all__by_provider(self, uow: UnitOfWorkPort, user: User) -> None:
+    async def test__purge__by_provider(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_batch_async(size=2, user_id=user.id)
         other_track_db = await TrackModelFactory.create_async()
         use_case = DeleteTracksUseCase(user_id=user.id, provider=MusicProvider.SPOTIFY, uow=uow)
 
-        deleted = await use_case.delete_all()
+        deleted = await use_case.purge()
 
         assert deleted == 2
         async with uow:
-            assert await uow.tracks.list(user_id=user.id) == []
-            assert await uow.tracks.list(user_id=other_track_db.user_id) != []
+            assert await uow.tracks.get_list(user_id=user.id) == []
+            assert await uow.tracks.get_list(user_id=other_track_db.user_id) != []

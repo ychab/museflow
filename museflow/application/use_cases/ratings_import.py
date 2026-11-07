@@ -23,7 +23,7 @@ async def import_ratings(
 
     # One block: the import is saved as a whole, or not at all.
     async with uow:
-        matches = match_fingerprints(entries, await uow.tracks.list(user_id=user_id))
+        matches = match_fingerprints(entries, await uow.tracks.get_list(user_id=user_id))
         for entry, track in matches.matched:
             if entry.score_skipped:
                 await uow.tracks.skip(user_id=user_id, track_id=track.id)

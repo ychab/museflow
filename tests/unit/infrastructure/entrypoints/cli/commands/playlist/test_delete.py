@@ -328,7 +328,7 @@ class TestPlaylistDeleteLogic:
     ) -> None:
         spotify_playlists = PlaylistFactory.batch(2, provider=MusicProvider.SPOTIFY)
         other_playlist = PlaylistFactory.build(provider="foo")
-        mock_playlist_repository.list.return_value = [*spotify_playlists, other_playlist]
+        mock_playlist_repository.get_list.return_value = [*spotify_playlists, other_playlist]
 
         count = await playlist_delete_logic(
             email="test@example.com",

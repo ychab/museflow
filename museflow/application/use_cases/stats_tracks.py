@@ -6,7 +6,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import TrackSortBy
 
 
-async def list_top_tracks(
+async def get_top_tracks(
     user_id: uuid.UUID,
     score_min: int | None,
     score_max: int | None,
@@ -15,7 +15,7 @@ async def list_top_tracks(
     uow: UnitOfWorkPort,
 ) -> list[Track]:
     async with uow:
-        tracks = await uow.tracks.list(
+        tracks = await uow.tracks.get_list(
             user_id=user_id,
             min_score=score_min if score_min is not None else 0,
             max_score=score_max,

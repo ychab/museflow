@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.stats_artists import list_top_artists
+from museflow.application.use_cases.stats_artists import get_top_artists
 from museflow.domain.entities.user import User
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
@@ -12,16 +12,16 @@ from museflow.domain.enums import TrackSource
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestListTopArtistsUseCase:
+class TestGetTopArtistsUseCase:
     async def test__no_tracks(
         self,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -45,9 +45,9 @@ class TestListTopArtistsUseCase:
         # played_count pinned to 1 so the depth term doesn't add randomness to the comparison.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=None, played_count=1) for _ in range(5)]
         track_b = TrackFactory.build(artists=["Artist B"], score=8, played_count=1)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -79,9 +79,9 @@ class TestListTopArtistsUseCase:
         # than Artist A's, so B ranks first here (unlike overall sort, which favors A's volume).
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=7) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -115,9 +115,9 @@ class TestListTopArtistsUseCase:
         # Artist B: single track → low overall despite quality boost.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=7, played_count=1) for _ in range(20)]
         track_b = TrackFactory.build(artists=["Artist B"], score=10, played_count=1)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -141,9 +141,9 @@ class TestListTopArtistsUseCase:
         track_a1 = TrackFactory.build(artists=["Artist A", "Featured"], score=8)
         track_a2 = TrackFactory.build(artists=["Artist A"], score=6)
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
-        mock_track_repository.list.return_value = [track_a1, track_a2, track_b]
+        mock_track_repository.get_list.return_value = [track_a1, track_a2, track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -171,9 +171,9 @@ class TestListTopArtistsUseCase:
     ) -> None:
         track_high = TrackFactory.build(artists=["Artist A"], score=9)
         track_low = TrackFactory.build(artists=["Artist A"], score=3)
-        mock_track_repository.list.return_value = [track_high, track_low]
+        mock_track_repository.get_list.return_value = [track_high, track_low]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -196,9 +196,9 @@ class TestListTopArtistsUseCase:
     ) -> None:
         track_high = TrackFactory.build(artists=["Artist A"], score=9)
         track_low = TrackFactory.build(artists=["Artist A"], score=3)
-        mock_track_repository.list.return_value = [track_high, track_low]
+        mock_track_repository.get_list.return_value = [track_high, track_low]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -221,9 +221,9 @@ class TestListTopArtistsUseCase:
     ) -> None:
         rated = TrackFactory.build(artists=["Artist A"], score=8)
         unrated = TrackFactory.build(artists=["Artist A"], score=None)
-        mock_track_repository.list.return_value = [rated, unrated]
+        mock_track_repository.get_list.return_value = [rated, unrated]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -246,9 +246,9 @@ class TestListTopArtistsUseCase:
     ) -> None:
         track_1 = TrackFactory.build(artists=["Artist A"], score=None, played_count=3)
         track_2 = TrackFactory.build(artists=["Artist A"], score=None, played_count=4)
-        mock_track_repository.list.return_value = [track_1, track_2]
+        mock_track_repository.get_list.return_value = [track_1, track_2]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -271,9 +271,9 @@ class TestListTopArtistsUseCase:
         # played_count pinned equal on both sides so the overall scores genuinely tie.
         track_z = TrackFactory.build(artists=["Zara"], score=8, played_count=1)
         track_a = TrackFactory.build(artists=["Aaron"], score=8, played_count=1)
-        mock_track_repository.list.return_value = [track_z, track_a]
+        mock_track_repository.get_list.return_value = [track_z, track_a]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -294,9 +294,9 @@ class TestListTopArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         tracks = [TrackFactory.build(artists=[f"Artist {i}"], score=i) for i in range(1, 6)]
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=3,
             source=SourceFilter.ALL,
@@ -315,9 +315,9 @@ class TestListTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
-        await list_top_artists(
+        await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.HISTORY,
@@ -328,7 +328,9 @@ class TestListTopArtistsUseCase:
             uow=mock_uow,
         )
 
-        mock_track_repository.list.assert_awaited_once_with(user_id=user.id, source=TrackSource.HISTORY, limit=None)
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, source=TrackSource.HISTORY, limit=None
+        )
 
     async def test__source_discovery_passed_to_repository(
         self,
@@ -336,9 +338,9 @@ class TestListTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
-        await list_top_artists(
+        await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.DISCOVERY,
@@ -349,7 +351,9 @@ class TestListTopArtistsUseCase:
             uow=mock_uow,
         )
 
-        mock_track_repository.list.assert_awaited_once_with(user_id=user.id, source=TrackSource.DISCOVERY, limit=None)
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, source=TrackSource.DISCOVERY, limit=None
+        )
 
     async def test__fallback_global_mean_when_no_rated_tracks_in_range(
         self,
@@ -360,9 +364,9 @@ class TestListTopArtistsUseCase:
         # All tracks filtered by score_min → global_mean = 0.0 → quality_ratio falls back to 1.0
         # Artist still appears ranked by volume alone.
         track = TrackFactory.build(artists=["Artist A"], score=3, played_count=1)
-        mock_track_repository.list.return_value = [track]
+        mock_track_repository.get_list.return_value = [track]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -389,9 +393,9 @@ class TestListTopArtistsUseCase:
         # track_count sort → Artist B (3 tracks) ranks first despite lower avg score.
         track_a = TrackFactory.build(artists=["Artist A"], score=9)
         tracks_b = [TrackFactory.build(artists=["Artist B"], score=5) for _ in range(3)]
-        mock_track_repository.list.return_value = [track_a] + tracks_b
+        mock_track_repository.get_list.return_value = [track_a] + tracks_b
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -416,9 +420,9 @@ class TestListTopArtistsUseCase:
         # plays_count sort → Artist A ranks first despite having far fewer distinct tracks.
         track_a = TrackFactory.build(artists=["Artist A"], score=None, played_count=100)
         tracks_b = [TrackFactory.build(artists=["Artist B"], score=None, played_count=1) for _ in range(5)]
-        mock_track_repository.list.return_value = [track_a] + tracks_b
+        mock_track_repository.get_list.return_value = [track_a] + tracks_b
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -444,9 +448,9 @@ class TestListTopArtistsUseCase:
         # rate_avg sort → Artist B (avg=10) ranks first despite fewer tracks.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=6) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -470,9 +474,9 @@ class TestListTopArtistsUseCase:
         # Unrated artists (rate_avg=None) sink to the bottom when sorting by rate_avg.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=None) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=5)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -497,9 +501,9 @@ class TestListTopArtistsUseCase:
         # Unrated artists (quality_score=None) sink to the bottom when sorting by quality.
         tracks_a = [TrackFactory.build(artists=["Artist A"], score=None) for _ in range(10)]
         track_b = TrackFactory.build(artists=["Artist B"], score=5)
-        mock_track_repository.list.return_value = tracks_a + [track_b]
+        mock_track_repository.get_list.return_value = tracks_a + [track_b]
 
-        result = await list_top_artists(
+        result = await get_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,

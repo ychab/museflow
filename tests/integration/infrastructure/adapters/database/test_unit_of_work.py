@@ -91,7 +91,7 @@ class TestSQLUnitOfWork:
         checked_out = pool.checkedout()
 
         async with unit_of_work as uow:
-            await uow.tracks.list(user_id=user.id)
+            await uow.tracks.get_list(user_id=user.id)
             assert pool.checkedout() == checked_out + 1
 
         assert pool.checkedout() == checked_out

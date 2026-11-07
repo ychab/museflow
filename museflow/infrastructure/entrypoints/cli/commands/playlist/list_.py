@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from museflow.application.use_cases.playlist_list import list_playlists
+from museflow.application.use_cases.playlist_list import get_playlists
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
@@ -63,4 +63,4 @@ async def playlist_list_logic(email: str) -> list[Playlist]:
     if not user:
         raise UserNotFoundError()
 
-    return await list_playlists(user=user, uow=uow)
+    return await get_playlists(user=user, uow=uow)

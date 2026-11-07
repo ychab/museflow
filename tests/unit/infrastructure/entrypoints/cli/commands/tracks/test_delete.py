@@ -117,7 +117,7 @@ class TestTracksDeleteLogic:
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
         result = await tracks_delete_logic(
             email="test@example.com",
@@ -138,7 +138,7 @@ class TestTracksDeleteLogic:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         tracks: list[Track] = TrackFactory.batch(size=3)
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 3
 
         await tracks_delete_logic(
@@ -161,7 +161,7 @@ class TestTracksDeleteLogic:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         tracks: list[Track] = TrackFactory.batch(size=3)
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 3
 
         await tracks_delete_logic(
@@ -184,7 +184,7 @@ class TestTracksDeleteLogic:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         tracks: list[Track] = TrackFactory.batch(size=3)
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.purge.return_value = 3
 
         result = await tracks_delete_logic(
@@ -209,7 +209,7 @@ class TestTracksDeleteLogic:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         user = mock_user_repository.get_by_email.return_value
-        mock_track_repository.list.return_value = TrackFactory.batch(size=2)
+        mock_track_repository.get_list.return_value = TrackFactory.batch(size=2)
         mock_track_repository.unlink_provider.return_value = []
         mock_track_repository.delete.return_value = 0
 
@@ -233,7 +233,7 @@ class TestTracksDeleteLogic:
     ) -> None:
         user = mock_user_repository.get_by_email.return_value
         tracks = TrackFactory.batch(size=2)
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 2
 
         result = await tracks_delete_logic(
@@ -261,7 +261,7 @@ class TestTracksDeleteLogic:
     ) -> None:
         user = mock_user_repository.get_by_email.return_value
         tracks = TrackFactory.batch(size=2)
-        mock_track_repository.list.return_value = tracks
+        mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 2
         mock_typer_confirm.return_value = True
 
@@ -288,7 +288,7 @@ class TestTracksDeleteLogic:
         mock_track_repository: mock.AsyncMock,
         mock_typer_confirm: mock.Mock,
     ) -> None:
-        mock_track_repository.list.return_value = TrackFactory.batch(size=2)
+        mock_track_repository.get_list.return_value = TrackFactory.batch(size=2)
         mock_typer_confirm.side_effect = typer.Abort()
 
         with pytest.raises(typer.Abort):

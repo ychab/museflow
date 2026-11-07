@@ -27,8 +27,8 @@ class TestCreateHistoryPlaylistUseCase:
     ) -> None:
         user = UserFactory.build()
         excluded_id = uuid.uuid4()
-        mock_playlist_repository.list_track_ids.return_value = frozenset({excluded_id})
-        mock_track_repository.list.return_value = []
+        mock_playlist_repository.get_track_ids.return_value = frozenset({excluded_id})
+        mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
             await create_history_playlist(
@@ -38,8 +38,8 @@ class TestCreateHistoryPlaylistUseCase:
                 provider_library=mock_provider_library,
             )
 
-        mock_playlist_repository.list_track_ids.assert_awaited_once_with(user.id, type=PlaylistType.HISTORY)
-        assert mock_track_repository.list.call_args.kwargs["exclude_ids"] == [excluded_id]
+        mock_playlist_repository.get_track_ids.assert_awaited_once_with(user.id, type=PlaylistType.HISTORY)
+        assert mock_track_repository.get_list.call_args.kwargs["exclude_ids"] == [excluded_id]
         mock_provider_library.create_playlist.assert_not_awaited()
 
     async def test__no_tracks_found__duplicates_allowed__skips_dedup_lookup(
@@ -50,7 +50,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
             await create_history_playlist(
@@ -60,8 +60,8 @@ class TestCreateHistoryPlaylistUseCase:
                 provider_library=mock_provider_library,
             )
 
-        mock_playlist_repository.list_track_ids.assert_not_awaited()
-        assert mock_track_repository.list.call_args.kwargs["exclude_ids"] is None
+        mock_playlist_repository.get_track_ids.assert_not_awaited()
+        assert mock_track_repository.get_list.call_args.kwargs["exclude_ids"] is None
 
     async def test__dry_run__skips_playlist_creation(
         self,
@@ -72,7 +72,7 @@ class TestCreateHistoryPlaylistUseCase:
     ) -> None:
         user = UserFactory.build()
         track = TrackFactory.build()
-        mock_track_repository.list.return_value = [track]
+        mock_track_repository.get_list.return_value = [track]
 
         result = await create_history_playlist(
             user=user,
@@ -92,7 +92,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build()
-        mock_track_repository.list.return_value = [track]
+        mock_track_repository.get_list.return_value = [track]
 
         result = await create_history_playlist(
             user=UserFactory.build(),
@@ -117,7 +117,7 @@ class TestCreateHistoryPlaylistUseCase:
                 provider_library=None,
             )
 
-        mock_track_repository.list.assert_not_awaited()
+        mock_track_repository.get_list.assert_not_awaited()
 
     async def test__group_by_artists__played_count(
         self,
@@ -132,7 +132,7 @@ class TestCreateHistoryPlaylistUseCase:
         track_a2 = TrackFactory.build(artists=["Artist A"], played_count=3)
         track_b1 = TrackFactory.build(artists=["Artist B"], played_count=8)
         # DB returns tracks already sorted by played_count DESC
-        mock_track_repository.list.return_value = [track_b1, track_a1, track_a2]
+        mock_track_repository.get_list.return_value = [track_b1, track_a1, track_a2]
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.create.return_value = playlist
 
@@ -160,7 +160,7 @@ class TestCreateHistoryPlaylistUseCase:
         track_a2 = TrackFactory.build(artists=["Artist A"], score=5)
         track_c1 = TrackFactory.build(artists=["Artist C"], score=None)
         # DB returns tracks sorted by score DESC NULLS LAST
-        mock_track_repository.list.return_value = [track_b1, track_a1, track_a2, track_c1]
+        mock_track_repository.get_list.return_value = [track_b1, track_a1, track_a2, track_c1]
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.create.return_value = playlist
 
@@ -182,7 +182,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
-        mock_track_repository.list.return_value = [TrackFactory.build()]
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.create.return_value = playlist
 
@@ -204,7 +204,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
-        mock_track_repository.list.return_value = [TrackFactory.build()]
+        mock_track_repository.get_list.return_value = [TrackFactory.build()]
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.create.return_value = playlist
 
@@ -225,7 +225,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
             await create_history_playlist(
@@ -240,7 +240,7 @@ class TestCreateHistoryPlaylistUseCase:
                 provider_library=mock_provider_library,
             )
 
-        kwargs = mock_track_repository.list.call_args.kwargs
+        kwargs = mock_track_repository.get_list.call_args.kwargs
         assert kwargs["played_first_min"] == date(2025, 1, 1)
         assert kwargs["played_first_max"] == date(2025, 12, 31)
         assert kwargs["played_last_min"] == date(2026, 1, 1)
@@ -253,7 +253,7 @@ class TestCreateHistoryPlaylistUseCase:
         mock_provider_library: mock.AsyncMock,
     ) -> None:
         user = UserFactory.build()
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
             await create_history_playlist(
@@ -263,5 +263,5 @@ class TestCreateHistoryPlaylistUseCase:
                 provider_library=mock_provider_library,
             )
 
-        assert mock_track_repository.list.call_args.kwargs["order"] == [(TrackOrderBy.SCORE, SortOrder.DESC)]
+        assert mock_track_repository.get_list.call_args.kwargs["order"] == [(TrackOrderBy.SCORE, SortOrder.DESC)]
         mock_provider_library.create_playlist.assert_not_awaited()

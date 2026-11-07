@@ -4,6 +4,6 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.value_objects.blacklist import UserBlacklist
 
 
-async def list_blacklist(user_id: uuid.UUID, uow: UnitOfWorkPort) -> UserBlacklist:
+async def get_blacklist(user_id: uuid.UUID, uow: UnitOfWorkPort) -> UserBlacklist:
     async with uow:
         return await uow.blacklist.get(user_id=user_id)

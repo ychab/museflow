@@ -32,7 +32,7 @@ class TestPlaylistDeleteLogic:
         count = await playlist_delete_logic(email=user.email, playlist_id=None, purge=True, type=None, provider=None)
 
         assert count == 2
-        assert await playlist_repository.list(user.id) == []
+        assert await playlist_repository.get_list(user.id) == []
 
     async def test__purge__filtered_by_type(
         self,

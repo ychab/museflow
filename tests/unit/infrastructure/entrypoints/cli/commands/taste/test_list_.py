@@ -104,9 +104,9 @@ class TestTasteListLogic:
         user = UserFactory.build()
         profiles = TasteProfileFactory.batch(2)
         mock_user_repository.get_by_email.return_value = user
-        mock_taste_profile_repository.list.return_value = profiles
+        mock_taste_profile_repository.get_list.return_value = profiles
 
         result = await taste_list_logic(email=user.email)
 
         assert result == profiles
-        mock_taste_profile_repository.list.assert_called_once_with(user_id=user.id)
+        mock_taste_profile_repository.get_list.assert_called_once_with(user_id=user.id)

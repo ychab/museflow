@@ -96,7 +96,7 @@ async def tracks_delete_logic(
         typer.confirm(f"About to delete {count} track(s) of {email}. Continue?", abort=True)
 
     if purge and source is None:
-        deleted = await use_case.delete_all()
+        deleted = await use_case.purge()
     else:
         deleted = await use_case.delete(track_ids=[track.id for track in tracks])
     return TracksDeleteResult(deleted_count=deleted)

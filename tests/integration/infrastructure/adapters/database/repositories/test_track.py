@@ -61,7 +61,7 @@ class TestTrackSQLRepository:
         ]
 
     async def test__get_list__none(self, user: User, track_repository: TrackRepository) -> None:
-        track_list = await track_repository.list(user.id)
+        track_list = await track_repository.get_list(user.id)
         assert len(track_list) == 0
 
     async def test__get_list__filtering__user(
@@ -71,7 +71,7 @@ class TestTrackSQLRepository:
         tracks_other: list[Track],
         track_repository: TrackRepository,
     ) -> None:
-        track_list = await track_repository.list(user.id)
+        track_list = await track_repository.get_list(user.id)
 
         assert len(track_list) == len(tracks)
         assert {t.id for t in track_list} == {t.id for t in tracks}
@@ -84,7 +84,7 @@ class TestTrackSQLRepository:
         tracks_other: list[Track],
         track_repository: TrackRepository,
     ) -> None:
-        track_list = await track_repository.list(user.id, provider=MusicProvider.SPOTIFY)
+        track_list = await track_repository.get_list(user.id, provider=MusicProvider.SPOTIFY)
 
         assert len(track_list) == len(tracks)
         assert {t.id for t in track_list} == {t.id for t in tracks}
@@ -101,10 +101,10 @@ class TestTrackSQLRepository:
             user_id=user.id, source=int(TrackSource.HISTORY | TrackSource.DISCOVERY)
         )
 
-        history_list = await track_repository.list(user.id, source=TrackSource.HISTORY)
+        history_list = await track_repository.get_list(user.id, source=TrackSource.HISTORY)
         assert {t.id for t in history_list} == {history_db.id, both_db.id}
 
-        discovery_list = await track_repository.list(user.id, source=TrackSource.DISCOVERY)
+        discovery_list = await track_repository.get_list(user.id, source=TrackSource.DISCOVERY)
         assert {t.id for t in discovery_list} == {discovery_db.id, both_db.id}
 
     async def test__get_list__filtering__max_score(
@@ -115,7 +115,7 @@ class TestTrackSQLRepository:
         low_db = await TrackModelFactory.create_async(user_id=user.id, score=4)
         await TrackModelFactory.create_async(user_id=user.id, score=8)
 
-        result = await track_repository.list(user.id, max_score=5)
+        result = await track_repository.get_list(user.id, max_score=5)
         assert [t.id for t in result] == [low_db.id]
 
     async def test__get_list__filtering__unrated_only(
@@ -126,7 +126,7 @@ class TestTrackSQLRepository:
         unrated_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
         await TrackModelFactory.create_async(user_id=user.id, score=7)
 
-        unrated_list = await track_repository.list(user.id, unrated_only=True)
+        unrated_list = await track_repository.get_list(user.id, unrated_only=True)
         assert [t.id for t in unrated_list] == [unrated_db.id]
 
     async def test__get_list__missing_fields__locale__null_eligible_empty_list_not(
@@ -138,7 +138,7 @@ class TestTrackSQLRepository:
         await TrackModelFactory.create_async(user_id=user.id, locales=[])
         await TrackModelFactory.create_async(user_id=user.id, locales=["fr"])
 
-        result = await track_repository.list(user.id, missing_fields=frozenset({EnrichField.LOCALE}))
+        result = await track_repository.get_list(user.id, missing_fields=frozenset({EnrichField.LOCALE}))
         assert [t.id for t in result] == [never_enriched_db.id]
 
     async def test__get_list__filtering__locales__overlap(
@@ -151,7 +151,7 @@ class TestTrackSQLRepository:
         await TrackModelFactory.create_async(user_id=user.id, locales=[])
         await TrackModelFactory.create_async(user_id=user.id, locales=None)
 
-        result = await track_repository.list(user.id, locales=["en"])
+        result = await track_repository.get_list(user.id, locales=["en"])
         assert [t.id for t in result] == [duet_db.id]
 
     async def test__get_list__filtering__artist_name(
@@ -162,10 +162,10 @@ class TestTrackSQLRepository:
         target_db = await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
         await TrackModelFactory.create_async(user_id=user.id, artists=["Other Artist"])
 
-        result = await track_repository.list(user.id, artist_name="Radiohead")
+        result = await track_repository.get_list(user.id, artist_name="Radiohead")
         assert [t.id for t in result] == [target_db.id]
 
-        result_ci = await track_repository.list(user.id, artist_name="radiohead")
+        result_ci = await track_repository.get_list(user.id, artist_name="radiohead")
         assert [t.id for t in result_ci] == [target_db.id]
 
     async def test__get_list__min_score_with_explicit_order__order_wins(
@@ -176,7 +176,7 @@ class TestTrackSQLRepository:
         low_played = await TrackModelFactory.create_async(user_id=user.id, score=8, played_count=1)
         high_played = await TrackModelFactory.create_async(user_id=user.id, score=5, played_count=10)
 
-        result = await track_repository.list(
+        result = await track_repository.get_list(
             user.id,
             min_score=5,
             order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
@@ -192,7 +192,7 @@ class TestTrackSQLRepository:
         kept = await TrackModelFactory.create_async(user_id=user.id)
         excluded = await TrackModelFactory.create_async(user_id=user.id)
 
-        result = await track_repository.list(user.id, exclude_ids=[excluded.id])
+        result = await track_repository.get_list(user.id, exclude_ids=[excluded.id])
 
         assert [t.id for t in result] == [kept.id]
 
@@ -204,7 +204,7 @@ class TestTrackSQLRepository:
         not_skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
         await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
 
-        result = await track_repository.list(user.id, exclude_skipped=True)
+        result = await track_repository.get_list(user.id, exclude_skipped=True)
 
         assert [t.id for t in result] == [not_skipped_db.id]
 
@@ -216,7 +216,7 @@ class TestTrackSQLRepository:
         await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=False)
         skipped_db = await TrackModelFactory.create_async(user_id=user.id, score=None, score_skipped=True)
 
-        result = await track_repository.list(user.id, score_skipped_only=True)
+        result = await track_repository.get_list(user.id, score_skipped_only=True)
 
         assert [t.id for t in result] == [skipped_db.id]
 
@@ -254,7 +254,7 @@ class TestTrackSQLRepository:
 
         expected_tracks = sorted(tracks, key=key_func, reverse=(sort_order == SortOrder.DESC))  # type: ignore[arg-type]
 
-        track_list = await track_repository.list(user.id, order=[(order_by, sort_order)])
+        track_list = await track_repository.get_list(user.id, order=[(order_by, sort_order)])
 
         assert len(track_list) == len(expected_tracks)
         assert [t.id for t in track_list] == [t.id for t in expected_tracks]
@@ -268,8 +268,8 @@ class TestTrackSQLRepository:
         tracks = await TrackModelFactory.create_batch_async(size=10, user_id=user.id)
         track_ids = {t.id for t in tracks}
 
-        random_list_1 = await track_repository.list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
-        random_list_2 = await track_repository.list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
+        random_list_1 = await track_repository.get_list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
+        random_list_2 = await track_repository.get_list(user.id, order=[(TrackOrderBy.RANDOM, SortOrder.ASC)])
 
         assert len(random_list_1) == len(random_list_2) == 10
         assert {t.id for t in random_list_1} == {t.id for t in random_list_2} == track_ids
@@ -288,10 +288,10 @@ class TestTrackSQLRepository:
         t3 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=datetime(2024, 1, 1, tzinfo=UTC))
         t4 = await TrackModelFactory.create_async(user_id=user.id, played_at_last=None)
 
-        tracks_asc = await track_repository.list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.ASC)])
+        tracks_asc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.ASC)])
         assert [t.id for t in tracks_asc] == [t1.id, t2.id, t3.id, t4.id]
 
-        tracks_desc = await track_repository.list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.DESC)])
+        tracks_desc = await track_repository.get_list(user.id, order=[(TrackOrderBy.PLAYED_AT_LAST, SortOrder.DESC)])
         assert [t.id for t in tracks_desc] == [t3.id, t2.id, t1.id, t4.id]
 
     @pytest.mark.parametrize(("offset", "limit"), [(None, None), (2, 5)])
@@ -306,7 +306,7 @@ class TestTrackSQLRepository:
     ) -> None:
         tracks_expected = tracks[offset : offset + limit] if offset is not None and limit is not None else tracks
 
-        track_list = await track_repository.list(user.id, offset=offset, limit=limit)
+        track_list = await track_repository.get_list(user.id, offset=offset, limit=limit)
 
         assert len(track_list) == len(tracks_expected)
         assert set([t.provider_links[0].provider_id for t in track_list]).issubset(

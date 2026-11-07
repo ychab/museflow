@@ -46,7 +46,7 @@ class TestDeletePlaylistUseCase:
         discovery = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY)
         history = PlaylistFactory.build(user_id=user.id, type=PlaylistType.HISTORY)
         other_provider = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY, provider="foo")
-        mock_playlist_repository.list.return_value = [discovery, history, other_provider]
+        mock_playlist_repository.get_list.return_value = [discovery, history, other_provider]
 
         playlists = await use_case.find_matching(type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
 

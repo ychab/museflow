@@ -14,7 +14,7 @@ class TestImportRatingsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
 
         result = await import_ratings(
             user_id=user.id,
@@ -33,7 +33,7 @@ class TestImportRatingsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(user_id=user.id, fingerprint="test-fingerprint-abc", score_skipped=False)
-        mock_track_repository.list.return_value = [track]
+        mock_track_repository.get_list.return_value = [track]
 
         result = await import_ratings(
             user_id=user.id,
@@ -53,7 +53,7 @@ class TestImportRatingsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(user_id=user.id, fingerprint="test-fingerprint-noop", score_skipped=False)
-        mock_track_repository.list.return_value = [track]
+        mock_track_repository.get_list.return_value = [track]
 
         result = await import_ratings(
             user_id=user.id,

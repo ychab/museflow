@@ -17,7 +17,7 @@ async def export_ratings(
     uow: UnitOfWorkPort,
 ) -> RatingsExport:
     async with uow:
-        rated = await uow.tracks.list(user_id=user_id, min_score=DISCOVERY_TRACK_SCORE_MIN)
-        skipped = await uow.tracks.list(user_id=user_id, score_skipped_only=True)
+        rated = await uow.tracks.get_list(user_id=user_id, min_score=DISCOVERY_TRACK_SCORE_MIN)
+        skipped = await uow.tracks.get_list(user_id=user_id, score_skipped_only=True)
 
     return RatingsExport(rated=rated, skipped=skipped)

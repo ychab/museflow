@@ -30,6 +30,11 @@ class PlaylistSQLRepository(PlaylistRepository):
 
         return replace(playlist_db.to_entity(), tracks=playlist.tracks)
 
+    async def get_list(self, user_id: uuid.UUID) -> list[Playlist]:
+        stmt = select(PlaylistDB).where(PlaylistDB.user_id == user_id).order_by(PlaylistDB.created_at.desc())
+        result = await self.session.execute(stmt)
+        return [row.to_entity() for row in result.scalars()]
+
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
         stmt = (
             select(PlaylistDB, TrackDB)
@@ -47,7 +52,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         tracks = [track_db.to_entity() for _, track_db in rows if track_db is not None]
         return replace(playlist_db.to_entity(), tracks=tracks)
 
-    async def list_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
+    async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
         stmt = (
             select(PlaylistTrackDB.track_id)
             .join(PlaylistDB, PlaylistDB.id == PlaylistTrackDB.playlist_id)
@@ -82,9 +87,3 @@ class PlaylistSQLRepository(PlaylistRepository):
         result = await self.session.execute(stmt.returning(PlaylistDB.id))
         deleted_ids = result.scalars().all()
         return len(deleted_ids)
-
-    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
-    async def list(self, user_id: uuid.UUID) -> list[Playlist]:
-        stmt = select(PlaylistDB).where(PlaylistDB.user_id == user_id).order_by(PlaylistDB.created_at.desc())
-        result = await self.session.execute(stmt)
-        return [row.to_entity() for row in result.scalars()]

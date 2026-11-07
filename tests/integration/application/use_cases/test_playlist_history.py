@@ -59,7 +59,7 @@ class TestCreateHistoryPlaylistUseCase:
 
         assert result.playlist is None
         assert [t.id for t in result.tracks] == [high.id, low.id]
-        assert await playlist_repository.list(user.id) == []
+        assert await playlist_repository.get_list(user.id) == []
 
     async def test__filters_by_score_and_artist(
         self,

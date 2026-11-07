@@ -1,16 +1,16 @@
 from unittest import mock
 
-from museflow.application.use_cases.taste_profile_list import list_taste_profiles
+from museflow.application.use_cases.taste_profile_list import get_taste_profiles
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
 
 
-class TestListTasteProfilesUseCase:
+class TestGetTasteProfilesUseCase:
     async def test__nominal(self, mock_uow: mock.AsyncMock, mock_taste_profile_repository: mock.AsyncMock) -> None:
         profiles = TasteProfileFactory.batch(2)
-        mock_taste_profile_repository.list.return_value = profiles
+        mock_taste_profile_repository.get_list.return_value = profiles
 
-        result = await list_taste_profiles(
+        result = await get_taste_profiles(
             user_id=profiles[0].user_id,
             uow=mock_uow,
         )
@@ -18,9 +18,9 @@ class TestListTasteProfilesUseCase:
         assert result == profiles
 
     async def test__empty(self, mock_uow: mock.AsyncMock, mock_taste_profile_repository: mock.AsyncMock) -> None:
-        mock_taste_profile_repository.list.return_value = []
+        mock_taste_profile_repository.get_list.return_value = []
 
-        result = await list_taste_profiles(
+        result = await get_taste_profiles(
             user_id=TasteProfileFactory.build().user_id,
             uow=mock_uow,
         )
