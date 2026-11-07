@@ -8,12 +8,12 @@ life-phase insights) that guides [`playlist discover`](playlist.md#playlist-disc
 Builds a master taste profile from the library.
 
 ```bash
-museflow taste build --email <email> --name <name> [OPTIONS]
+museflow taste build [--email <email>] --name <name> [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--name` | required | Profile name (unique per user). |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
@@ -42,8 +42,8 @@ with an error. Run the same command again with `--resume` to continue from the c
 **Example**
 
 ```bash
-museflow taste build --email user@example.com --name my-profile --track-limit 1500
-museflow taste build --email user@example.com --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
+museflow taste build --name my-profile --track-limit 1500
+museflow taste build --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
 **Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
@@ -56,12 +56,12 @@ since those calls were paid.
 Lists all taste profiles of a user.
 
 ```bash
-museflow taste list --email <email>
+museflow taste list [--email <email>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Output.** A table with ID, name, logic version, status, tracks and last update, or `No taste profiles found.`.
 A profile whose build was paused shows an in-progress status and cannot be used for discovery until completed.
@@ -71,19 +71,19 @@ A profile whose build was paused shows an in-progress status and cannot be used 
 Displays one profile in detail.
 
 ```bash
-museflow taste view --email <email> --name <name> [--format json|python|html]
+museflow taste view [--email <email>] --name <name> [--format json|python|html]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--name` | required | Profile name (unique per user). |
 | `--format` | `json` | Output format: `json`, `python`, or `html` (browser). |
 
 **Example**
 
 ```bash
-museflow taste view --email user@example.com --name my-profile --format html
+museflow taste view --name my-profile --format html
 ```
 
 `html` writes a report to a file and opens it in the default browser.
@@ -93,16 +93,16 @@ museflow taste view --email user@example.com --name my-profile --format html
 Deletes one profile.
 
 ```bash
-museflow taste delete --email <email> --name <name> [--yes]
+museflow taste delete [--email <email>] --name <name> [--yes]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--name` | required | Profile name (unique per user). |
 | `--yes`, `-y` | `false` | Skip the confirmation prompt. |
 
-**Output.** `Taste profile '<name>' deleted.`, or an error if no profile has that name. Discovery playlists built from
+**Output.** `Taste profile '<name>' of <email> deleted.`, or an error if no profile has that name. Discovery playlists built from
 the profile are kept; they only lose their link to it. A paused build is deleted with its checkpoint.
 
 !!! warning
@@ -113,12 +113,12 @@ the profile are kept; they only lose their link to it. A paused build is deleted
 Exports a profile to a YAML file, for backup or transfer.
 
 ```bash
-museflow taste export --email <email> --name <name> --output <path>
+museflow taste export [--email <email>] --name <name> --output <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--name` | required | Profile name (unique per user). |
 | `--output` | required | Path to the output YAML file. |
 
@@ -129,12 +129,12 @@ museflow taste export --email <email> --name <name> --output <path>
 Imports a profile from a YAML file produced by `taste export`.
 
 ```bash
-museflow taste import --email <email> --input <path>
+museflow taste import [--email <email>] --input <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--input` | required | Path to the input YAML file. |
 
 **Output.** `Taste profile '<name>' imported successfully.`. A missing file or invalid YAML ends with an error.

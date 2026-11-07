@@ -106,14 +106,14 @@ class TestDeleteCommand:
     def test__single_delete__nominal(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com"])
         assert result.exit_code == 0
-        assert "Deleted 1 playlist(s)." in result.output
+        assert "Deleted 1 playlist(s) of test@example.com." in result.output
         mock_delete_logic.assert_called_once()
 
     def test__purge__with_yes_flag(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
         mock_delete_logic.return_value = 3
         result = runner.invoke(app, ["playlist", "delete", "--purge", "--email", "test@example.com", "--yes"])
         assert result.exit_code == 0
-        assert "Deleted 3 playlist(s)." in result.output
+        assert "Deleted 3 playlist(s) of test@example.com." in result.output
 
     def test__purge__confirmation_accepted(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["playlist", "delete", "--purge", "--email", "test@example.com"], input="y\n")
@@ -131,7 +131,7 @@ class TestDeleteCommand:
             ["playlist", "delete", "--purge", "--type", "discovery", "--email", "test@example.com"],
             input="n\n",
         )
-        assert "type=discovery" in result.output
+        assert "About to delete ALL playlists (type=discovery) of test@example.com." in result.output
 
     def test__user_not_found(
         self,

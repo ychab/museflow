@@ -390,6 +390,7 @@ class TestDiscoverCommand:
         assert "Suggested tracks successfully saved into playlist 'Progressive Horizons'!" in output
         assert f"Saved playlist ID: {playlist.id}" in output
         assert "Rate tracks: museflow rate playlist" in output
+        assert "--email" not in output
 
     def test__output__dry_run(
         self,

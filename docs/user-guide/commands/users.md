@@ -1,24 +1,25 @@
 # `users` commands
 
-Create, update and delete the local MuseFlow user. All other commands identify the user with `--email`.
+Create, update and delete the local MuseFlow user. All other commands identify the user with `--email`, or with
+`MUSEFLOW_CLI_DEFAULT_EMAIL` when it is omitted.
 
 ## `users create`
 
 Creates a user account.
 
 ```bash
-museflow users create --email <email> [--password <password>]
+museflow users create [--email <email>] [--password <password>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--password` | prompted | User password. When omitted, it is prompted for with hidden input and a confirmation. |
 
 **Example**
 
 ```bash
-museflow users create --email user@example.com
+museflow users create
 ```
 
 **Output.** `User user@example.com created successfully!`. If the email is already registered, the command
@@ -51,7 +52,7 @@ museflow users update 3f2b8c1e-0000-4000-8000-000000000000 --email new@example.c
 ## `users delete`
 
 Deletes a user account and all of its data: tracks, playlists, taste profiles, blacklist, provider tokens and LLM
-usage. Asks for confirmation first.
+usage. Asks for confirmation first. `MUSEFLOW_CLI_DEFAULT_EMAIL` does not apply: the account to delete is always named.
 
 ```bash
 museflow users delete --email <email> [--yes]

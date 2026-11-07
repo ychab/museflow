@@ -7,12 +7,12 @@ Import the streaming history and delete tracks from the library.
 Imports the extended streaming history from JSON files (see [Spotify data export](../spotify-data-export.md)).
 
 ```bash
-museflow tracks history --email <email> --directory <path> [OPTIONS]
+museflow tracks history [--email <email>] --directory <path> [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--directory` | required | Directory containing streaming history JSON files. |
 | `--provider` | `spotify` | Music provider to import streaming history from. |
 | `--min-duration-played` | `90` | Minimum duration played in seconds to include. |
@@ -28,7 +28,7 @@ museflow tracks history --email <email> --directory <path> [OPTIONS]
 **Example**
 
 ```bash
-museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData --min-duration-played 30
+museflow tracks history --directory ~/Downloads/MySpotifyData --min-duration-played 30
 ```
 
 **Output.** A green `Import successful in <n>s!` line and an _Import Streaming History Results_ table with
@@ -43,12 +43,12 @@ start from a clean library instead (this removes existing tracks of the provider
 Deletes tracks matching filters.
 
 ```bash
-museflow tracks delete --email <email> (--artist <name> | --name <name> | --purge) [OPTIONS]
+museflow tracks delete [--email <email>] (--artist <name> | --name <name> | --purge) [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--artist` | none | Filter by primary artist name (case-insensitive). |
 | `--name` | none | Filter by track name (case-insensitive). |
 | `--source` | `all` | Filter by track source: `all`, `history` or `discovery`. |
@@ -61,11 +61,11 @@ Give `--artist` and/or `--name`, or `--purge`.
 **Example**
 
 ```bash
-museflow tracks delete --email user@example.com --artist "Some Artist" --source history
+museflow tracks delete --artist "Some Artist" --source history
 ```
 
 **Output.** When filtering by artist only, the matching track names are listed. Unless `--yes` is given, a
-prompt `About to delete N track(s). Continue?` must be confirmed. Then `Deleted N track(s).`, or
+prompt `About to delete N track(s) of <email>. Continue?` must be confirmed. Then `Deleted N track(s) of <email>.`, or
 `No tracks found matching the filters.`.
 
 !!! warning

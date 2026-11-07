@@ -12,7 +12,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -23,7 +23,7 @@ class TracksDeleteResult:
 
 @app.command("delete", help="Delete tracks matching the given filters.")
 def delete(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name (case-insensitive)"),
     name: str | None = typer.Option(None, "--name", help="Filter by track name (case-insensitive)"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Filter by track source"),
@@ -60,7 +60,7 @@ def delete(
         typer.secho("No tracks found matching the filters.", fg=typer.colors.YELLOW)
         return
 
-    typer.secho(f"Deleted {result.deleted_count} track(s).", fg=typer.colors.GREEN)
+    typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.GREEN)
 
 
 async def delete_logic(
@@ -93,7 +93,7 @@ async def delete_logic(
 
     # The confirmation waits for the user: keep it out of any block.
     if not yes:
-        typer.confirm(f"About to delete {count} track(s). Continue?", abort=True)
+        typer.confirm(f"About to delete {count} track(s) of {email}. Continue?", abort=True)
 
     if purge and source is None:
         deleted = await use_case.delete_all()

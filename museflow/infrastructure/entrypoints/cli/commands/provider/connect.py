@@ -18,7 +18,7 @@ from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -31,7 +31,7 @@ class ConnectStart:
 
 @app.command("connect", help="Connect a user account to a music provider via OAuth.")
 def connect(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider to connect"),
     timeout: float = typer.Option(60.0, help="Seconds to wait for authentication.", min=10),
     poll_interval: float = typer.Option(2.0, help="Seconds between status checks.", min=0.5),

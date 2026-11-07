@@ -16,14 +16,14 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
 def build(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
     resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
     rated_only: bool = typer.Option(

@@ -264,6 +264,8 @@ env = [
     'MUSEFLOW_LOG_LEVEL_CLI=DEBUG',
     'MUSEFLOW_LOG_HANDLERS_API=["null"]',
     'MUSEFLOW_LOG_HANDLERS_CLI=["null"]',
+    # A CLI_DEFAULT_EMAIL from a local .env must not change the CLI tests
+    'MUSEFLOW_CLI_DEFAULT_EMAIL=',
     # Database required settings (could be overriden)
     'D:DATABASE_HOST=127.0.0.1',
     'D:DATABASE_PORT=5432',

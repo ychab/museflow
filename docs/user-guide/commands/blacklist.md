@@ -8,18 +8,18 @@ follow-up questions of the [`rate`](rate.md) prompts.
 Adds one or more artists to the blacklist.
 
 ```bash
-museflow blacklist add-artist <artist_name> [<artist_name> ...] --email <email>
+museflow blacklist add-artist <artist_name> [<artist_name> ...] [--email <email>]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `artist_names` | required | Artist name(s) to blacklist. |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Example**
 
 ```bash
-museflow blacklist add-artist "Some Artist" "Another Artist" --email user@example.com
+museflow blacklist add-artist "Some Artist" "Another Artist"
 ```
 
 **Output.** One `Blacklisted artist: <name> (id: <uuid>)` line per artist.
@@ -29,19 +29,19 @@ museflow blacklist add-artist "Some Artist" "Another Artist" --email user@exampl
 Adds a single track to the blacklist.
 
 ```bash
-museflow blacklist add-track <name> --artist <artist_name> --email <email>
+museflow blacklist add-track <name> --artist <artist_name> [--email <email>]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `name` | required | Track name. |
 | `--artist` | required | Artist name. |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Example**
 
 ```bash
-museflow blacklist add-track "Some Track" --artist "Some Artist" --email user@example.com
+museflow blacklist add-track "Some Track" --artist "Some Artist"
 ```
 
 **Output.** `Blacklisted track: <name> by <artist> (id: <uuid>)`.
@@ -51,12 +51,12 @@ museflow blacklist add-track "Some Track" --artist "Some Artist" --email user@ex
 Lists all blacklisted artists and tracks.
 
 ```bash
-museflow blacklist list --email <email>
+museflow blacklist list [--email <email>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Output.** A _Your Blacklist_ table with ID, type, artist name and track name, or `Your blacklist is empty.`.
 The IDs are the ones expected by `blacklist remove`.
@@ -66,13 +66,13 @@ The IDs are the ones expected by `blacklist remove`.
 Removes one or more entries by ID.
 
 ```bash
-museflow blacklist remove <id> [<id> ...] --email <email>
+museflow blacklist remove <id> [<id> ...] [--email <email>]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `item_ids` | required | Blacklist entry ID(s), as shown by `blacklist list`. |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
 **Output.** `Removed N blacklist entry(ies).`.
 
@@ -81,12 +81,12 @@ museflow blacklist remove <id> [<id> ...] --email <email>
 Deletes the entire blacklist. This cannot be undone.
 
 ```bash
-museflow blacklist purge --email <email> [--yes]
+museflow blacklist purge [--email <email>] [--yes]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--yes`, `-y` | off | Skip confirmation prompt. |
 
-**Output.** A confirmation prompt (unless `--yes`), then `Deleted N blacklist entries.`.
+**Output.** A confirmation prompt (unless `--yes`), then `Deleted N blacklist entries of <email>.`.

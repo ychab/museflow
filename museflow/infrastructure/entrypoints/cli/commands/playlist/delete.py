@@ -15,7 +15,7 @@ from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command(
@@ -24,7 +24,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 )
 def delete(
     playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist ID (required unless --purge is used)"),
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     purge: bool = typer.Option(False, "--purge", help="Delete all matching playlists instead of a single one"),
     type: PlaylistType | None = typer.Option(None, "--type", help="Filter by playlist type (only valid with --purge)"),
     provider: MusicProvider | None = typer.Option(
@@ -43,7 +43,9 @@ def delete(
                 f"{key}={value.value}" for key, value in (("type", type), ("provider", provider)) if value is not None
             )
             suffix = f" ({scope})" if scope else ""
-            typer.confirm(f"About to delete ALL playlists{suffix}. This cannot be undone. Continue?", abort=True)
+            typer.confirm(
+                f"About to delete ALL playlists{suffix} of {email}. This cannot be undone. Continue?", abort=True
+            )
     elif playlist_id is None:
         raise typer.BadParameter("Provide a playlist ID, or use --purge to delete multiple playlists.")
     elif type is not None or provider is not None:
@@ -72,7 +74,7 @@ def delete(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Deleted {count} playlist(s).", fg=typer.colors.GREEN)
+    typer.secho(f"Deleted {count} playlist(s) of {email}.", fg=typer.colors.GREEN)
 
 
 async def delete_logic(

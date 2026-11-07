@@ -15,7 +15,7 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -26,7 +26,7 @@ class EnrichImportResult:
 
 @app.command("import", help="Import track enrichment data (genres and moods) from a YAML file.")
 def import_(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
 ) -> None:
     try:

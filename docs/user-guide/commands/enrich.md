@@ -8,12 +8,12 @@ Add genre, mood and language metadata to tracks with an LLM, and back it up. Enr
 Enriches tracks with AI-inferred genre, mood and locales (sung languages) metadata.
 
 ```bash
-museflow enrich tracks --email <email> [OPTIONS]
+museflow enrich tracks [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--only-genre` | off | Enrich genre tags only. |
 | `--only-mood` | off | Enrich mood labels only. |
 | `--only-locale` | off | Enrich locales (sung languages) only. |
@@ -35,9 +35,9 @@ labels, and the locales are the ISO 639-1 codes of every language sung in the tr
 **Examples**
 
 ```bash
-museflow enrich tracks --email user@example.com --limit 200
-museflow enrich tracks --email user@example.com --only-mood --force
-museflow enrich tracks --email user@example.com --limit 20 --model openai/gpt-5-mini
+museflow enrich tracks --limit 200
+museflow enrich tracks --only-mood --force
+museflow enrich tracks --limit 20 --model openai/gpt-5-mini
 ```
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
@@ -62,12 +62,12 @@ before the stop are saved: fix the cause, then run the same command again; track
 Exports the genres, moods and locales of all enriched tracks to a YAML file, keyed by track fingerprint.
 
 ```bash
-museflow enrich export --email <email> --output <path>
+museflow enrich export [--email <email>] --output <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--output` | required | Path to the output YAML file. |
 
 **Output.** `Exported enrichment for N track(s) to <path>`.
@@ -77,12 +77,12 @@ museflow enrich export --email <email> --output <path>
 Restores genres, moods and locales from a YAML file produced by `enrich export`, without calling the LLM.
 
 ```bash
-museflow enrich import --email <email> --input <path>
+museflow enrich import [--email <email>] --input <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--input` | required | Path to the input YAML file. |
 
 Tracks must already exist in the library.

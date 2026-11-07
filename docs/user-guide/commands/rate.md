@@ -27,12 +27,12 @@ what was already rated.
 Interactively rates unrated history tracks, ordered by play count (most played first).
 
 ```bash
-museflow rate history --email <email> [OPTIONS]
+museflow rate history [--email <email>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--limit` | `10` | Maximum number of tracks to rate. |
 | `--reset` | off | Clear all existing history track scores before rating. |
 | `--play` | off | Play each track before rating. |
@@ -47,7 +47,7 @@ song without starting the track; the web player and the desktop app play it.
 **Example**
 
 ```bash
-museflow rate history --email user@example.com --play --limit 25
+museflow rate history --play --limit 25
 ```
 
 **Output.** The prompts above, then `Saved N rating(s). X track(s) and Y artist(s) blacklisted. Z track(s)
@@ -60,13 +60,13 @@ Interactively rates the tracks of a discovery playlist, or, when no playlist is 
 discovery tracks.
 
 ```bash
-museflow rate playlist [playlist_id] --email <email> [OPTIONS]
+museflow rate playlist [playlist_id] [--email <email>] [OPTIONS]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `playlist_id` | none | Playlist UUID to rate. |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--limit` | `20` | Max unrated tracks to show (queue mode only). |
 | `--play` | off | Play each track before rating. |
 | `--play-provider` | `spotify` | Provider to use for playback. Requires `--play` (an error otherwise). |
@@ -74,8 +74,8 @@ museflow rate playlist [playlist_id] --email <email> [OPTIONS]
 **Examples**
 
 ```bash
-museflow rate playlist --email user@example.com --play
-museflow rate playlist 3f2b8c1e-0000-4000-8000-000000000000 --email user@example.com
+museflow rate playlist --play
+museflow rate playlist 3f2b8c1e-0000-4000-8000-000000000000
 ```
 
 **Output.** Same prompts and summary as `rate history`, or `No unrated discovery tracks.`.
@@ -86,12 +86,12 @@ Exports ratings (and permanent skips) to a YAML file. Tracks are identified by f
 restored after a database reset.
 
 ```bash
-museflow rate export --email <email> --output <path>
+museflow rate export [--email <email>] --output <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--output` | required | Path to the output YAML file. |
 
 **Output.** `Exported N rated track(s) and M permanently skipped track(s) to <path>`.
@@ -101,12 +101,12 @@ museflow rate export --email <email> --output <path>
 Restores ratings from a YAML file produced by `rate export`.
 
 ```bash
-museflow rate import --email <email> --input <path>
+museflow rate import [--email <email>] --input <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | required | User email address. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--input` | required | Path to the input YAML file. |
 
 Tracks must already exist in the library (import the history first).

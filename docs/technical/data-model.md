@@ -210,7 +210,7 @@ its cost history. An index on `(user_id, created_at)` serves the per-user overvi
 ## Blacklist and authentication
 
 - **Blacklist.** Two tables, `museflow_blacklisted_artist` and `museflow_blacklisted_track`, each unique on `(user_id, fingerprint)`. An artist fingerprint is just the normalised name; a track fingerprint is the same `name|artist` form as `museflow_track`. They are enforced twice at discovery time: sent to the advisor as "never suggest", and re-applied after reconciliation in case the advisor ignored the instruction.
-- **Users.** `email` (unique) and an Argon2 password hash. The API issues JWT access tokens (HS256, 30 minutes by default); the CLI identifies a user by `--email` and does not authenticate.
+- **Users.** `email` (unique) and an Argon2 password hash. The API issues JWT access tokens (HS256, 30 minutes by default); the CLI identifies a user by `--email` or `MUSEFLOW_CLI_DEFAULT_EMAIL` and does not authenticate.
 - **Provider tokens.** `museflow_auth_token` stores the Spotify access and refresh token per `(user, provider)`, and `museflow_auth_state` stores the single-use OAuth `state`. Tokens are stored as plain strings in the database (see [Privacy & data](privacy-and-data.md)).
 
 ## Migrations

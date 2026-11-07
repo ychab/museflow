@@ -10,7 +10,6 @@ recipe), then filter on score and on the last play date.
 
 ```bash
 museflow playlist history \
-  --email user@example.com \
   --score-min 7 \
   --played-last-max 2023-12-31 \
   --limit 30
@@ -23,7 +22,7 @@ to keep an artist's tracks together. Without any rating, drop `--score-min` and 
 ## Rate your history while listening
 
 ```bash
-museflow rate history --email user@example.com --play --limit 20
+museflow rate history --play --limit 20
 ```
 
 Each track plays on the active Spotify device and a score between 0 and 10 is asked for. Enter `s` to skip a
@@ -36,7 +35,7 @@ offers to blacklist the track or the artist. Restrict the session to one artist 
 From the library, with enriched tracks ([`enrich tracks`](commands/enrich.md#enrich-tracks) first):
 
 ```bash
-museflow playlist history --email user@example.com --mood chill --genre jazz --locale en --dry-run
+museflow playlist history --mood chill --genre jazz --locale en --dry-run
 ```
 
 `--genre`, `--mood` and `--locale` can be repeated and match any of the given values (OR logic) within the
@@ -45,7 +44,7 @@ same filter, while different filters are combined (AND). Remove `--dry-run` once
 For new music instead, give the advisor a hint:
 
 ```bash
-museflow playlist discover --email user@example.com --genre electronic --mood energetic
+museflow playlist discover --genre electronic --mood energetic
 ```
 
 ## Preview before creating
@@ -54,8 +53,8 @@ Both playlist commands accept `--dry-run`: the tracks are listed in a table and 
 Spotify.
 
 ```bash
-museflow playlist history --email user@example.com --score-min 8 --dry-run
-museflow playlist discover --email user@example.com --focus roots_revival --dry-run
+museflow playlist history --score-min 8 --dry-run
+museflow playlist discover --focus roots_revival --dry-run
 ```
 
 `discover --dry-run` still calls the LLM; `history --dry-run` does not.
@@ -63,14 +62,14 @@ museflow playlist discover --email user@example.com --focus roots_revival --dry-
 ## Keep an artist out of your playlists
 
 ```bash
-museflow blacklist add-artist "Some Artist" --email user@example.com
-museflow blacklist list --email user@example.com
+museflow blacklist add-artist "Some Artist"
+museflow blacklist list
 ```
 
 Blacklisted artists and tracks are excluded from discovery. To undo, pass the ID shown by `blacklist list`:
 
 ```bash
-museflow blacklist remove 3f2b8c1e-0000-4000-8000-000000000000 --email user@example.com
+museflow blacklist remove 3f2b8c1e-0000-4000-8000-000000000000
 ```
 
 See [`blacklist`](commands/blacklist.md).
@@ -82,18 +81,18 @@ your own work, and the taste profile is the most expensive export: recreating it
 them to YAML:
 
 ```bash
-museflow rate export   --email user@example.com --output backup/ratings.yaml
-museflow enrich export --email user@example.com --output backup/enrichment.yaml
-museflow taste export  --email user@example.com --name my-profile --output backup/my-profile.yaml
+museflow rate export   --output backup/ratings.yaml
+museflow enrich export --output backup/enrichment.yaml
+museflow taste export  --name my-profile --output backup/my-profile.yaml
 ```
 
 After a database reset, re-import the history first, then restore (no LLM call, no cost):
 
 ```bash
-museflow tracks history --email user@example.com --directory ~/Downloads/MySpotifyData
-museflow rate import    --email user@example.com --input backup/ratings.yaml
-museflow enrich import  --email user@example.com --input backup/enrichment.yaml
-museflow taste import   --email user@example.com --input backup/my-profile.yaml
+museflow tracks history --directory ~/Downloads/MySpotifyData
+museflow rate import    --input backup/ratings.yaml
+museflow enrich import  --input backup/enrichment.yaml
+museflow taste import   --input backup/my-profile.yaml
 ```
 
 Ratings and enrichment are matched by track fingerprint, so tracks missing from the library are reported as
@@ -104,14 +103,14 @@ Ratings and enrichment are matched by track fingerprint, so tracks missing from 
     *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
     dump and prints its path.
 
-The blacklist has no export: keep the output of `museflow blacklist list --email user@example.com` to recreate it by
+The blacklist has no export: keep the output of `museflow blacklist list` to recreate it by
 hand with `blacklist add-artist` and `blacklist add-track`.
 
 ## Find artists worth exploring
 
 ```bash
-museflow stats candidates --email user@example.com --max-tracks 3 --min-avg 8
-museflow stats artists --email user@example.com --sort quality --limit 10
+museflow stats candidates --max-tracks 3 --min-avg 8
+museflow stats artists --sort quality --limit 10
 ```
 
 See [`stats`](commands/stats.md).
@@ -130,8 +129,8 @@ Without `--email`, the command sums all the users; `--by user` shows who spends 
 ## Clean up after experiments
 
 ```bash
-museflow playlist delete --email user@example.com --purge --type discovery --include-remote
-museflow tracks delete --email user@example.com --source discovery --purge
+museflow playlist delete --purge --type discovery --include-remote
+museflow tracks delete --source discovery --purge
 ```
 
 The first command removes discovery playlists locally and on Spotify; the second removes the discovery tracks

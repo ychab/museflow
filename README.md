@@ -99,6 +99,8 @@ Before running the application, you need to configure the environment variables 
     *   `OPENROUTER_API_KEY`: Your OpenRouter API key.
     *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters, generate with `openssl rand -hex 32`).
 
+    Set `MUSEFLOW_CLI_DEFAULT_EMAIL` to skip `--email` on the CLI commands: the option wins over the environment, which wins over `.env`.
+
     Personal overrides (e.g. a non-standard `DATABASE_PORT`) can also be added to `.env` — they take precedence over `.envrc` defaults.
 
 2.  **Spotify App Configuration:**

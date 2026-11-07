@@ -20,7 +20,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,7 +36,7 @@ class RatePlaylistResult:
     help="Interactively rate tracks in a playlist, or all unrated discovery tracks if no playlist is specified.",
 )
 def rate_playlist(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
+    email: str = EMAIL_OPTION,
     playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist UUID to rate"),
     limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)", min=1),
     play: bool = typer.Option(False, "--play", help="Play each track before rating"),
