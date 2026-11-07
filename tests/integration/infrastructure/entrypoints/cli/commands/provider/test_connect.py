@@ -2,13 +2,14 @@ import asyncio
 from collections.abc import Callable
 
 from sqlalchemy import delete
-from sqlalchemy import insert
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
+from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
@@ -42,16 +43,19 @@ class TestProviderConnectLogic:
                 )
                 await async_session_db.execute(stmt_delete)
 
-                # Then create a new account.
-                stmt_insert = insert(AuthProviderTokenModel).values(
-                    user_id=user.id,
-                    provider=MusicProvider.SPOTIFY,
-                    token_type=auth_token_create.token_type,
-                    token_access=auth_token_create.token_access,
-                    token_refresh=auth_token_create.token_refresh,
-                    token_expires_at=auth_token_create.token_expires_at,
+                # Then save the token, replacing the previous one on a reconnection.
+                token_values = {
+                    "token_type": auth_token_create.token_type,
+                    "token_access": auth_token_create.token_access,
+                    "token_refresh": auth_token_create.token_refresh,
+                    "token_expires_at": auth_token_create.token_expires_at,
+                }
+                stmt_upsert = (
+                    pg_insert(AuthProviderTokenModel)
+                    .values(user_id=user.id, provider=MusicProvider.SPOTIFY, **token_values)
+                    .on_conflict_do_update(constraint="uq_user_provider_auth_token", set_=token_values)
                 )
-                await async_session_db.execute(stmt_insert)
+                await async_session_db.execute(stmt_upsert)
 
                 # Flush to make this change visible to the CLI's query
                 await async_session_db.flush()
@@ -96,3 +100,26 @@ class TestProviderConnectLogic:
         assert auth_token_db.token_access == auth_token_create.token_access
         assert auth_token_db.token_refresh == auth_token_create.token_refresh
         assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
+
+    async def test__reconnect__token_renewed(
+        self,
+        user: User,
+        auth_token: OAuthProviderUserToken,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
+        async_session_db: AsyncSession,
+    ) -> None:
+        start = await provider_connect_start_logic(user.email, MusicProvider.SPOTIFY)
+        assert start.previous_token == auth_token
+
+        task = simulate_oauth_callback(0.2)
+
+        # Returns once the stored token differs from the previous one, without waiting for the timeout.
+        await provider_connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
+        await task
+
+        stmt_token = select(AuthProviderTokenModel.token_access).where(
+            AuthProviderTokenModel.user_id == user.id,
+            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        )
+        assert (await async_session_db.execute(stmt_token)).scalar_one() == auth_token_create.token_access

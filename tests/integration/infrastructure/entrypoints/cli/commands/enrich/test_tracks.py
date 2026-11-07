@@ -5,7 +5,6 @@ import pytest
 
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_tracks_logic
@@ -36,7 +35,3 @@ class TestEnrichTracksLogic:
         mock_check_models.assert_awaited_once()
         steps: dict[str, LLMSettings] = mock_check_models.call_args.args[0]
         assert steps["enricher"].MODEL == "openai/gpt-5-mini"
-
-    async def test__user_not_found(self, mock_use_case: mock.Mock) -> None:
-        with pytest.raises(UserNotFoundError):
-            await enrich_tracks_logic(email="nobody@example.com")

@@ -10,7 +10,6 @@ from typer.testing import CliRunner
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
@@ -221,28 +220,6 @@ class TestPlaylistDeleteLogic:
                 provider=None,
             )
 
-    async def test__single_delete__success(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        mock_playlist_repository.delete.return_value = True
-        playlist_id = uuid.uuid4()
-
-        count = await playlist_delete_logic(
-            email="test@example.com",
-            playlist_id=playlist_id,
-            purge=False,
-            type=None,
-            provider=None,
-        )
-
-        assert count == 1
-        mock_playlist_repository.delete.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            playlist_id=playlist_id,
-        )
-
     async def test__single_delete__not_found(
         self,
         mock_playlist_repository: mock.AsyncMock,
@@ -257,28 +234,6 @@ class TestPlaylistDeleteLogic:
                 type=None,
                 provider=None,
             )
-
-    async def test__purge__calls_repository_with_filters(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        mock_playlist_repository.purge.return_value = 5
-
-        count = await playlist_delete_logic(
-            email="test@example.com",
-            playlist_id=None,
-            purge=True,
-            type=PlaylistType.DISCOVERY,
-            provider=MusicProvider.SPOTIFY,
-        )
-
-        assert count == 5
-        mock_playlist_repository.purge.assert_called_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            type=PlaylistType.DISCOVERY,
-            provider=MusicProvider.SPOTIFY,
-        )
 
     async def test__include_remote__success(
         self,

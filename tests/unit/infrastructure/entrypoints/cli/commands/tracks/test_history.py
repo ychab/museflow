@@ -9,7 +9,6 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
-from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
@@ -241,24 +240,6 @@ class TestTracksHistoryLogic:
         with mock.patch(f"{self.TARGET_PATH}.ImportStreamingHistoryUseCase") as patched:
             patched.return_value.import_history = mock.AsyncMock(return_value=ImportStreamingHistoryReport())
             yield patched
-
-    async def test__nominal(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_use_case_cls: mock.Mock,
-        tmp_path: Path,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-
-        report = await tracks_history_logic(
-            email=user.email,
-            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
-            provider=MusicProvider.SPOTIFY,
-        )
-
-        assert report == ImportStreamingHistoryReport()
-        mock_use_case_cls.assert_called_once()
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

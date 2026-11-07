@@ -271,21 +271,3 @@ class TestProviderConnectLogic:
                 timeout=0.1,
                 poll_interval=0.05,
             )
-
-    async def test__wait__token_renewed(
-        self,
-        mock_auth_token_repository: mock.AsyncMock,
-        mock_auth_state_repository: mock.AsyncMock,
-        connect_start: ConnectStart,
-        auth_token: OAuthProviderUserToken,
-    ) -> None:
-        mock_auth_token_repository.get.return_value = replace(auth_token, token_access="renewed")
-
-        await provider_connect_wait_logic(
-            replace(connect_start, previous_token=auth_token),
-            timeout=2.0,
-            poll_interval=0.01,
-        )
-
-        mock_auth_token_repository.get.assert_awaited_once()
-        mock_auth_state_repository.delete.assert_not_awaited()
