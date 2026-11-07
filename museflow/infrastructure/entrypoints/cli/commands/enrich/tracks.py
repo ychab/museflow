@@ -16,8 +16,8 @@ from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")

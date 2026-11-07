@@ -28,8 +28,8 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_li
 from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 console = Console()
 
