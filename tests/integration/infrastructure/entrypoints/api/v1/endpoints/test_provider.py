@@ -28,12 +28,12 @@ from tests.integration.utils.wiremock import WireMockContext
 
 
 class TestProviderConnect:
-    async def test_not_authenticated(self, async_client: AsyncClient) -> None:
+    async def test__not_authenticated(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("provider_connect", provider=MusicProvider.SPOTIFY)
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_redirect(
+    async def test__redirect(
         self,
         async_session_db: AsyncSession,
         auth_state_repository: OAuthProviderStateRepository,

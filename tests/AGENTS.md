@@ -24,6 +24,14 @@ museflow/application/use_cases/user_create.py
 → tests/integration/application/use_cases/test_user_create.py
 ```
 
+## Naming
+- **Classes:** `Test<Subject>`, named after what they test (`TestTrack`, `TestCreateUserUseCase`); CLI commands follow
+  [CLI commands](#cli-commands).
+- **Tests:** `test__<part>__<part>`: parts separated by a double underscore, from the general to the specific (method
+  or field, then condition, then outcome), words within a part by a single underscore:
+  `test__update_email__already_exists`, `test__make_api_call__retry__rate_limit__without_header`.
+- `test__nominal` for the happy path; when a class covers several methods, `test__<method>__nominal`.
+
 ## Fixtures
 - Place a fixture as close to its use as possible: class, then module, then `conftest.py`.
 - `scope="session"` for expensive shared setup (DB engine, test DB, logging); `scope="function"` (default) for

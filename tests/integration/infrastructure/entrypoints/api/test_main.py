@@ -5,7 +5,7 @@ from museflow.infrastructure.entrypoints.api.main import app
 from museflow.infrastructure.entrypoints.api.main import lifespan
 
 
-async def test_lifespan_configures_loggers(mock_api_logger: mock.Mock) -> None:
+async def test__lifespan_configures_loggers(mock_api_logger: mock.Mock) -> None:
     async with lifespan(app):
         pass
 

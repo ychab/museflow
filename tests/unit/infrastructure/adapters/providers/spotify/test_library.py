@@ -33,7 +33,7 @@ class TestSpotifyLibraryFactory:
             oauth_client=mock_provider_oauth,
         )
 
-    def test_create__nominal(
+    def test__create__nominal(
         self,
         user: User,
         auth_token: OAuthProviderUserToken,

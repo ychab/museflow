@@ -15,7 +15,7 @@ class TestCreateUserUseCase:
     def user_create_data(self) -> UserCreateInput:
         return UserCreateInputFactory.build(password="testtest")
 
-    async def test_create_user__already_exists(
+    async def test__create_user__already_exists(
         self,
         user: User,
         user_create_data: UserCreateInput,

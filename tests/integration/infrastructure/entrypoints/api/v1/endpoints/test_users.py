@@ -19,7 +19,7 @@ from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestUserRegister:
-    async def test_nominal(
+    async def test__nominal(
         self,
         password_hasher: PasswordHasherPort,
         access_token_manager: AccessTokenManagerPort,
@@ -49,7 +49,7 @@ class TestUserRegister:
         decoded_token = access_token_manager.decode(response_data["access_token"])
         assert decoded_token["sub"] == str(user.id)
 
-    async def test_password_min_length(self, async_client: AsyncClient) -> None:
+    async def test__password_min_length(self, async_client: AsyncClient) -> None:
         payload: dict[str, Any] = {
             "email": "foo@example.com",
             "password": "test",
@@ -62,7 +62,7 @@ class TestUserRegister:
         response_data = response.json()
         assert "String should have at least 8 characters" in response_data["detail"][0]["msg"]
 
-    async def test_user_already_exists(self, user: User, async_client: AsyncClient) -> None:
+    async def test__user_already_exists(self, user: User, async_client: AsyncClient) -> None:
         payload: dict[str, Any] = {
             "email": user.email,
             "password": "testtest",
@@ -77,7 +77,7 @@ class TestUserRegister:
 
 
 class TestUserLogin:
-    async def test_nominal(
+    async def test__nominal(
         self,
         access_token_manager: AccessTokenManagerPort,
         async_client: AsyncClient,
@@ -104,7 +104,7 @@ class TestUserLogin:
         decoded_token = access_token_manager.decode(response_data["access_token"])
         assert decoded_token["sub"] == str(user.id)
 
-    async def test_email_invalid(self, async_client: AsyncClient) -> None:
+    async def test__email_invalid(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("user_login")
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         payload: dict[str, Any] = {
@@ -118,7 +118,7 @@ class TestUserLogin:
         response_data = response.json()
         assert "Invalid credentials" in response_data["detail"]
 
-    async def test_password_invalid(self, async_client: AsyncClient, user: User) -> None:
+    async def test__password_invalid(self, async_client: AsyncClient, user: User) -> None:
         url = app.url_path_for("user_login")
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         payload: dict[str, Any] = {
@@ -133,7 +133,7 @@ class TestUserLogin:
         assert "Invalid credentials" in response_data["detail"]
 
     @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
-    async def test_not_active(self, async_client: AsyncClient, user: User) -> None:
+    async def test__not_active(self, async_client: AsyncClient, user: User) -> None:
         url = app.url_path_for("user_login")
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         payload: dict[str, Any] = {
@@ -149,12 +149,12 @@ class TestUserLogin:
 
 
 class TestUserCurrentInfo:
-    async def test_not_authenticated(self, async_client: AsyncClient) -> None:
+    async def test__not_authenticated(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("user_me")
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_authenticated(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+    async def test__authenticated(self, user: User, access_token: str, async_client: AsyncClient) -> None:
         url = app.url_path_for("user_me")
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_200_OK
@@ -165,7 +165,7 @@ class TestUserCurrentInfo:
         assert response_data["is_active"] is True
 
     @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
-    async def test_not_active(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+    async def test__not_active(self, user: User, access_token: str, async_client: AsyncClient) -> None:
         url = app.url_path_for("user_me")
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -175,7 +175,7 @@ class TestUserCurrentInfo:
 
 
 class TestUserCurrentUpdate:
-    async def test_not_authenticated(self, async_client: AsyncClient) -> None:
+    async def test__not_authenticated(self, async_client: AsyncClient) -> None:
         payload: dict[str, Any] = {
             "email": "bar@example.com",
             "password": "blahblah",
@@ -186,7 +186,7 @@ class TestUserCurrentUpdate:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize("user", [{"email": "foo@example.com"}], indirect=True)
-    async def test_update__nominal(
+    async def test__update__nominal(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -213,7 +213,7 @@ class TestUserCurrentUpdate:
         assert user_db.email == response_data["email"] == payload["email"]
         assert password_hasher.verify(payload["password"], user_db.hashed_password) is True
 
-    async def test_update_email__already_exists(
+    async def test__update_email__already_exists(
         self,
         user: User,
         access_token: str,
@@ -233,12 +233,12 @@ class TestUserCurrentUpdate:
 
 
 class TestUserCurrentDelete:
-    async def test_not_authenticated(self, async_client: AsyncClient) -> None:
+    async def test__not_authenticated(self, async_client: AsyncClient) -> None:
         url = app.url_path_for("user_me")
         response = await async_client.delete(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_delete(
+    async def test__delete(
         self,
         async_session_db: AsyncSession,
         user: User,

@@ -10,7 +10,7 @@ from museflow.domain.exceptions import UserNotFound
 
 
 class TestAuthenticateUserUseCase:
-    async def test_authenticate__nominal(
+    async def test__authenticate__nominal(
         self,
         mock_uow: mock.AsyncMock,
         user: User,
@@ -28,7 +28,7 @@ class TestAuthenticateUserUseCase:
         assert user_auth is not None
         assert user_auth.email == user.email
 
-    async def test_authenticate__not_found(
+    async def test__authenticate__not_found(
         self,
         mock_uow: mock.AsyncMock,
         mock_user_repository: mock.AsyncMock,
@@ -47,7 +47,7 @@ class TestAuthenticateUserUseCase:
 
         mock_password_hasher.verify_simulate.assert_called_once_with("testtest")
 
-    async def test_authenticate__wrong_password(
+    async def test__authenticate__wrong_password(
         self,
         mock_uow: mock.AsyncMock,
         user: User,
@@ -67,7 +67,7 @@ class TestAuthenticateUserUseCase:
             )
 
     @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
-    async def test_authenticate__inactive(
+    async def test__authenticate__inactive(
         self,
         mock_uow: mock.AsyncMock,
         user: User,

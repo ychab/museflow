@@ -15,7 +15,7 @@ from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestUpdateUserUseCase:
-    async def test_update_email__nominal(
+    async def test__update_email__nominal(
         self,
         uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
@@ -38,7 +38,7 @@ class TestUpdateUserUseCase:
         assert user_db.email == user_update_data.email
         assert user_db.hashed_password == user.hashed_password
 
-    async def test_update_email__same_as_before(
+    async def test__update_email__same_as_before(
         self,
         uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
@@ -60,7 +60,7 @@ class TestUpdateUserUseCase:
 
         assert user_db.email == user_update_data.email == user.email
 
-    async def test_update_email__already_exists(
+    async def test__update_email__already_exists(
         self,
         uow: UnitOfWorkPort,
         user: User,
@@ -77,7 +77,7 @@ class TestUpdateUserUseCase:
                 password_hasher=password_hasher,
             )
 
-    async def test_update_password(
+    async def test__update_password(
         self,
         uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
