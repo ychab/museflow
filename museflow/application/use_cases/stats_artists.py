@@ -20,7 +20,7 @@ def _is_in_score_range(score: int | None, score_min: int | None, score_max: int 
     return True
 
 
-async def list_top_artists(
+async def get_top_artists(
     user_id: uuid.UUID,
     source: SourceFilter,
     score_min: int | None,
@@ -31,7 +31,7 @@ async def list_top_artists(
     uow: UnitOfWorkPort,
 ) -> list[ArtistStats]:
     async with uow:
-        all_tracks = await uow.tracks.list(
+        all_tracks = await uow.tracks.get_list(
             user_id=user_id,
             source=source.to_track_source(),
             limit=None,

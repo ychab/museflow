@@ -18,6 +18,67 @@ class TrackRepository(ABC):
     """A repository for managing `Track` entities."""
 
     @abstractmethod
+    async def get_list(
+        self,
+        user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
+        min_score: int | None = None,
+        max_score: int | None = None,
+        source: TrackSource | None = None,
+        unrated_only: bool = False,
+        exclude_skipped: bool = False,
+        score_skipped_only: bool = False,
+        artist_name: str | None = None,
+        played_first_min: date | None = None,
+        played_first_max: date | None = None,
+        played_last_min: date | None = None,
+        played_last_max: date | None = None,
+        exclude_ids: list[uuid.UUID] | None = None,
+        missing_fields: frozenset[EnrichField] | None = None,
+        genres: list[GenreTag] | None = None,
+        moods: list[MoodTag] | None = None,
+        locales: list[LocaleCode] | None = None,
+        order: TrackOrdering | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
+    ) -> list[Track]:
+        """Retrieves a list of tracks for a specific user.
+
+        Args:
+            user_id: The ID of the user whose tracks are to be retrieved.
+            provider: A provider to filter on.
+            order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
+                   Use RANDOM as the sole entry for random ordering. Nullable columns
+                   always sort NULLs last regardless of direction. Ignored when min_score is set
+                   and order is not explicitly provided (falls back to score descending).
+            offset: The number of tracks to skip before starting to collect the result set.
+            limit: The maximum number of tracks to return.
+            min_score: When set, only tracks with score >= min_score are returned. If order is
+                       not explicitly provided, results are ordered by score descending so the
+                       highest-rated tracks come first when limit is applied.
+            max_score: When set, only tracks with score <= max_score are returned.
+            source: When set, only tracks whose source bit includes this flag are returned.
+            unrated_only: When True, only tracks with no score are returned.
+            exclude_skipped: When True, tracks whose score_skipped is True are omitted.
+            score_skipped_only: When True, only tracks whose score_skipped is True are returned.
+            artist_name: When set, only tracks whose primary artist (first in the artists list)
+                         matches this name (case-insensitive) are returned.
+            played_first_min: When set, only tracks first played on or after this date are returned.
+            played_first_max: When set, only tracks first played on or before this date are returned.
+            played_last_min: When set, only tracks last played on or after this date are returned.
+            played_last_max: When set, only tracks last played on or before this date are returned.
+            exclude_ids: When set, tracks whose id is in this list are excluded.
+            missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
+            genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
+            moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
+            locales: When set, only tracks whose locales array overlaps (OR) with any listed code are returned.
+
+        Returns:
+            A list of `Track` entities.
+        """
+        ...
+
+    @abstractmethod
     async def get_known_identifiers(self, user_id: uuid.UUID, fingerprints: list[str]) -> TrackKnownIdentifiers:
         """
         Queries the database to find which of the provided fingerprints are already owned by the user.
@@ -130,67 +191,5 @@ class TrackRepository(ABC):
 
         Returns:
             The number of deleted tracks.
-        """
-        ...
-
-    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
-    @abstractmethod
-    async def list(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider | None = None,
-        min_score: int | None = None,
-        max_score: int | None = None,
-        source: TrackSource | None = None,
-        unrated_only: bool = False,
-        exclude_skipped: bool = False,
-        score_skipped_only: bool = False,
-        artist_name: str | None = None,
-        played_first_min: date | None = None,
-        played_first_max: date | None = None,
-        played_last_min: date | None = None,
-        played_last_max: date | None = None,
-        exclude_ids: list[uuid.UUID] | None = None,
-        missing_fields: frozenset[EnrichField] | None = None,
-        genres: list[GenreTag] | None = None,
-        moods: list[MoodTag] | None = None,
-        locales: list[LocaleCode] | None = None,
-        order: TrackOrdering | None = None,
-        offset: int | None = None,
-        limit: int | None = None,
-    ) -> list[Track]:
-        """Retrieves a list of tracks for a specific user.
-
-        Args:
-            user_id: The ID of the user whose tracks are to be retrieved.
-            provider: A provider to filter on.
-            order: Ordered list of (column, direction) tuples. Defaults to [(CREATED_AT, ASC)].
-                   Use RANDOM as the sole entry for random ordering. Nullable columns
-                   always sort NULLs last regardless of direction. Ignored when min_score is set
-                   and order is not explicitly provided (falls back to score descending).
-            offset: The number of tracks to skip before starting to collect the result set.
-            limit: The maximum number of tracks to return.
-            min_score: When set, only tracks with score >= min_score are returned. If order is
-                       not explicitly provided, results are ordered by score descending so the
-                       highest-rated tracks come first when limit is applied.
-            max_score: When set, only tracks with score <= max_score are returned.
-            source: When set, only tracks whose source bit includes this flag are returned.
-            unrated_only: When True, only tracks with no score are returned.
-            exclude_skipped: When True, tracks whose score_skipped is True are omitted.
-            score_skipped_only: When True, only tracks whose score_skipped is True are returned.
-            artist_name: When set, only tracks whose primary artist (first in the artists list)
-                         matches this name (case-insensitive) are returned.
-            played_first_min: When set, only tracks first played on or after this date are returned.
-            played_first_max: When set, only tracks first played on or before this date are returned.
-            played_last_min: When set, only tracks last played on or after this date are returned.
-            played_last_max: When set, only tracks last played on or before this date are returned.
-            exclude_ids: When set, tracks whose id is in this list are excluded.
-            missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
-            genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
-            moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.
-            locales: When set, only tracks whose locales array overlaps (OR) with any listed code are returned.
-
-        Returns:
-            A list of `Track` entities.
         """
         ...

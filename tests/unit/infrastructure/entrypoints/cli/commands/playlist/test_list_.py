@@ -97,7 +97,7 @@ class TestPlaylistListLogic:
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_playlist_repository.list.return_value = []
+        mock_playlist_repository.get_list.return_value = []
 
         result = await playlist_list_logic(email=user.email)
 
@@ -111,9 +111,9 @@ class TestPlaylistListLogic:
     ) -> None:
         playlists = PlaylistFactory.batch(2)
         mock_user_repository.get_by_email.return_value = user
-        mock_playlist_repository.list.return_value = playlists
+        mock_playlist_repository.get_list.return_value = playlists
 
         result = await playlist_list_logic(email=user.email)
 
         assert result == playlists
-        mock_playlist_repository.list.assert_awaited_once_with(user.id)
+        mock_playlist_repository.get_list.assert_awaited_once_with(user.id)

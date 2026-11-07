@@ -1,17 +1,17 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.playlist_list import list_playlists
+from museflow.application.use_cases.playlist_list import get_playlists
 from museflow.domain.entities.user import User
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 
 
-class TestListPlaylistsUseCase:
+class TestGetPlaylistsUseCase:
     async def test__empty(
         self,
         uow: UnitOfWorkPort,
         user: User,
     ) -> None:
-        result = await list_playlists(user=user, uow=uow)
+        result = await get_playlists(user=user, uow=uow)
 
         assert result == []
 
@@ -22,7 +22,7 @@ class TestListPlaylistsUseCase:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
 
-        result = await list_playlists(user=user, uow=uow)
+        result = await get_playlists(user=user, uow=uow)
 
         ids = [playlist.id for playlist in result]
         assert playlist_db.id in ids

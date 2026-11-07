@@ -35,7 +35,7 @@ class TestDeletePlaylistUseCase:
         count = await DeletePlaylistUseCase(user_id=user.id, uow=uow).purge(type=None, provider=None)
 
         assert count == 2
-        assert await playlist_repository.list(user.id) == []
+        assert await playlist_repository.get_list(user.id) == []
 
     @pytest.mark.wiremock("spotify")
     async def test__single_delete__include_remote__nominal(

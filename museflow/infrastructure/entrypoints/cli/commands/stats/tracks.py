@@ -5,7 +5,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.use_cases.stats_tracks import list_top_tracks
+from museflow.application.use_cases.stats_tracks import get_top_tracks
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.entities.track import Track
@@ -86,6 +86,6 @@ async def stats_tracks_logic(
     if not user:
         raise UserNotFoundError()
 
-    return await list_top_tracks(
+    return await get_top_tracks(
         user_id=user.id, score_min=score_min, score_max=score_max, sort=sort, limit=limit, uow=uow
     )

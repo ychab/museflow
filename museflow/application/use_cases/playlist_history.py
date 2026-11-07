@@ -35,9 +35,9 @@ async def create_history_playlist(
     async with uow:
         exclude_ids = None
         if not config.allow_duplicate:
-            exclude_ids = list(await uow.playlists.list_track_ids(user.id, type=PlaylistType.HISTORY))
+            exclude_ids = list(await uow.playlists.get_track_ids(user.id, type=PlaylistType.HISTORY))
 
-        tracks = await uow.tracks.list(
+        tracks = await uow.tracks.get_list(
             user_id=user.id,
             source=TrackSource.HISTORY,
             min_score=config.score_min,

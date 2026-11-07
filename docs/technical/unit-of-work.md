@@ -27,7 +27,7 @@ session, but transactions bounded by whatever repository happened to commit last
 ```python
 # Before: the use case receives repositories bound to the command's session.
 async def tracks_enrich(user, config, track_repository, track_enricher):
-    tracks = await track_repository.list(user_id=user.id, ...)  # autobegin: a transaction opens
+    tracks = await track_repository.get_list(user_id=user.id, ...)  # autobegin: a transaction opens
 
     for batch in batches:
         enrichments = await track_enricher.enrich_tracks(batch, ...)  # Gemini, seconds to minutes
@@ -135,7 +135,7 @@ LLM call. Each batch gets its own block, so a paid batch survives a later failur
 
 ```python
 async with self._uow as uow:
-    tracks = await uow.tracks.list(user_id=user.id, missing_fields=missing_fields, limit=config.limit)
+    tracks = await uow.tracks.get_list(user_id=user.id, missing_fields=missing_fields, limit=config.limit)
 
 for i, batch in enumerate(batches, start=1):
     enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)  # no block open
@@ -208,7 +208,7 @@ Nothing in the code prevents a remote call inside a block. Written by mistake, i
 
 ```python
 async with uow:
-    tracks = await uow.tracks.list(user_id=user.id, limit=50)
+    tracks = await uow.tracks.get_list(user_id=user.id, limit=50)
     enrichments = await track_enricher.enrich_tracks(tracks, fields=fields)  # ❌ LLM call inside the block
     await uow.tracks.bulk_update(enriched_tracks, fields=fields)
 ```

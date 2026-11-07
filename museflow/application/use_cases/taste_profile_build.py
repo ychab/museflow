@@ -49,7 +49,7 @@ class BuildTasteProfileUseCase:
     async def _build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # Select the most-listened tracks as seeds (best signal quality)
         async with self._uow as uow:
-            tracks = await uow.tracks.list(
+            tracks = await uow.tracks.get_list(
                 user_id=user.id,
                 min_score=0 if config.rated_only else None,
                 order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],

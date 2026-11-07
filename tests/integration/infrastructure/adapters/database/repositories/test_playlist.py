@@ -86,7 +86,7 @@ class TestPlaylistSQLRepository:
 
         assert len(saved.tracks) == 2
 
-    async def test__list__returns_playlists_ordered_desc(
+    async def test__get_list__returns_playlists_ordered_desc(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -94,7 +94,7 @@ class TestPlaylistSQLRepository:
         playlist_older = await PlaylistModelFactory.create_async(user_id=user.id)
         playlist_newer = await PlaylistModelFactory.create_async(user_id=user.id)
 
-        playlists = await playlist_repository.list(user.id)
+        playlists = await playlist_repository.get_list(user.id)
 
         assert len(playlists) >= 2
         ids = [p.id for p in playlists]
@@ -103,14 +103,14 @@ class TestPlaylistSQLRepository:
         # Newer should appear before older
         assert ids.index(playlist_newer.id) < ids.index(playlist_older.id)
 
-    async def test__list__returns_empty_for_unknown_user(
+    async def test__get_list__returns_empty_for_unknown_user(
         self,
         playlist_repository: PlaylistRepository,
     ) -> None:
-        playlists = await playlist_repository.list(uuid.uuid4())
+        playlists = await playlist_repository.get_list(uuid.uuid4())
         assert playlists == []
 
-    async def test__list__tracks_not_included(
+    async def test__get_list__tracks_not_included(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -119,7 +119,7 @@ class TestPlaylistSQLRepository:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])
 
-        playlists = await playlist_repository.list(user.id)
+        playlists = await playlist_repository.get_list(user.id)
 
         matching = [p for p in playlists if p.id == playlist_db.id]
         assert len(matching) == 1
@@ -171,7 +171,7 @@ class TestPlaylistSQLRepository:
         result = await playlist_repository.get(uuid.uuid4(), playlist_db.id)
         assert result is None
 
-    async def test__list_track_ids__filters_by_type_and_user(
+    async def test__get_track_ids__filters_by_type_and_user(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -190,11 +190,11 @@ class TestPlaylistSQLRepository:
             user_id=other_user_track_db.user_id, type=PlaylistType.HISTORY, track_ids=[other_user_track_db.id]
         )
 
-        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
 
         assert track_ids == frozenset({history_track_db.id})
 
-    async def test__list_track_ids__distinct_across_playlists(
+    async def test__get_track_ids__distinct_across_playlists(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -204,16 +204,16 @@ class TestPlaylistSQLRepository:
         await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
         await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
 
-        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
 
         assert track_ids == frozenset({track_db.id})
 
-    async def test__list_track_ids__empty_when_no_match(
+    async def test__get_track_ids__empty_when_no_match(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
     ) -> None:
-        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
         assert track_ids == frozenset()
 
     async def test__delete__deletes_playlist_and_returns_true(
@@ -273,7 +273,7 @@ class TestPlaylistSQLRepository:
         count = await playlist_repository.purge(user.id)
 
         assert count == 2
-        assert await playlist_repository.list(user.id) == []
+        assert await playlist_repository.get_list(user.id) == []
 
     async def test__purge__filters_by_type(
         self,

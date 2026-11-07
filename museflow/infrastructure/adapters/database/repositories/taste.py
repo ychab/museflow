@@ -18,6 +18,15 @@ class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def get_list(self, user_id: uuid.UUID) -> list[TasteProfile]:
+        stmt = (
+            select(TasteProfileModel)
+            .where(TasteProfileModel.user_id == user_id)
+            .order_by(TasteProfileModel.updated_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return [row.to_entity() for row in result.scalars()]
+
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None:
         stmt = select(TasteProfileModel).where(
             TasteProfileModel.user_id == user_id,
@@ -122,13 +131,3 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         if profile_db is None or profile_db.checkpoint_profile is None or profile_db.checkpoint_batch_index is None:
             return None
         return profile_db.checkpoint_profile, profile_db.checkpoint_batch_index
-
-    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
-    async def list(self, user_id: uuid.UUID) -> list[TasteProfile]:
-        stmt = (
-            select(TasteProfileModel)
-            .where(TasteProfileModel.user_id == user_id)
-            .order_by(TasteProfileModel.updated_at.desc())
-        )
-        result = await self.session.execute(stmt)
-        return [row.to_entity() for row in result.scalars()]

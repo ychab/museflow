@@ -96,10 +96,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
     run with `session.execute(insert/update/delete)` hit the database at once and need no flush.
   - `.returning()` instead of an extra SELECT; key returned rows by a column (e.g. fingerprint), never by position.
   - Upserts with `pg_insert(...).on_conflict_do_update(...)`.
-  - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
-  - A `list` method comes last in its class, in the port and the adapter: below it, `list` in an annotation would name
-    the method, not the builtin (mypy `valid-type`).
-- **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
+  - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.- **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `asyncio.run()` on a co-located `<command>_logic` function
@@ -126,7 +123,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 
 Functions and use case classes start with a verb, classes holding data are nouns; the object is the noun of the data
 (`enrichment`, `ratings`), the verb names the action only (`enrich`, `rate`). Use cases speak CRUD (`create`, `get`,
-`list`, `update`, `delete`) whenever it fits, a domain verb otherwise (`import`, `enrich`, `rate`): they display
+`update`, `delete`) whenever it fits, a domain verb otherwise (`import`, `enrich`, `rate`): they display
 nothing and other use cases reuse them. Entrypoints use the concrete user-facing verb (`taste view` calls
 `get_taste_profile`). Modules put the object first so that `ls` groups a feature, which also keeps the module name
 apart from its function (`user_create.create_user`).
@@ -135,12 +132,15 @@ apart from its function (`user_create.create_user`).
 |------|---------|---------|
 | Use case module | `<object>_<action>.py`, grouped by object | `ratings_import.py` |
 | Use case function / class | `<verb>_<object>` / `<Verb><Object>UseCase` | `import_ratings`, `EnrichTracksUseCase` |
-| Read use case | `get_` one item, `list_` a collection, `count_` a number | `list_taste_profiles` |
+| Read use case | `get_`, the plural says a collection; `count_` a number | `get_taste_profile`, `get_taste_profiles` |
 | Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise | `ImportRatingsResult` |
 | Entity write input | `<Entity><Action>Input` | `UserCreateInput` |
 | Flow config input | `<Verb><Object>ConfigInput` | `EnrichTracksConfigInput` |
 | Imported file entry | `<Noun>EntryInput` | `RatingEntryInput` |
-| Repository method | CRUD (`create`, `get` / `get_by_<field>`, `list`, `update`, `delete`), `bulk_<verb>` for a batch, `purge` to delete all of a user's rows, a domain verb when it fits better | `tracks.list`, `bulk_upsert`, `consume`, `blacklist.add_artist` |
+| Repository method | The repository names the object: `get` / `get_by_<field>` one, `get_list` a filterable collection, `get_<other>s` another object; `create`, `update`, `delete`, `bulk_<verb>` for a batch, `purge` all of a user's rows; a domain verb when it fits better | `tracks.get_list`, `get_track_ids`, `bulk_upsert`, `consume` |
+
+Never name a method after a builtin type (`list`, `dict`, `set`, `type`): in its class body it hides the builtin, and
+every annotation of the class that uses it (`list[Track]`) then names the method.
 
 ## Types & style
 - Strict type hints everywhere, tests included. `str | None`; IDs are `uuid.UUID`. No `Any` unless justified.

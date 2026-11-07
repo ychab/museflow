@@ -38,7 +38,7 @@ class TestDiscoverTasteUseCase:
         async def _bulk_upsert(tracks: list[Track], *, batch_size: int = 100) -> tuple[dict[str, uuid.UUID], int]:
             return {t.fingerprint: t.id for t in tracks}, len(tracks)
 
-        mock_track_repository.list.return_value = []
+        mock_track_repository.get_list.return_value = []
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture

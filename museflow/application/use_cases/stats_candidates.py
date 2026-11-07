@@ -7,7 +7,7 @@ from museflow.domain.enums import SourceFilter
 from museflow.domain.value_objects.stats import ArtistCandidate
 
 
-async def list_artist_candidates(
+async def get_artist_candidates(
     user_id: uuid.UUID,
     source: SourceFilter,
     max_tracks: int,
@@ -16,7 +16,7 @@ async def list_artist_candidates(
     uow: UnitOfWorkPort,
 ) -> list[ArtistCandidate]:
     async with uow:
-        all_tracks = await uow.tracks.list(
+        all_tracks = await uow.tracks.get_list(
             user_id=user_id,
             source=source.to_track_source(),
             limit=None,

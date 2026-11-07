@@ -102,7 +102,7 @@ class DiscoverTasteUseCase:
                 raise TasteProfileStatusNotReadyError()
 
             blacklist = await uow.blacklist.get(user.id)
-            liked_tracks = await uow.tracks.list(
+            liked_tracks = await uow.tracks.get_list(
                 user_id=user.id,
                 min_score=config.liked_tracks_score_threshold,
                 limit=config.liked_tracks_limit,
