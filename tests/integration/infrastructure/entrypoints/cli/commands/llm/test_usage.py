@@ -9,7 +9,7 @@ from tests.integration.factories.models.llm import LLMUsageModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 
 
-class TestUsageLogic:
+class TestLLMUsageLogic:
     async def test__nominal(self, user: User) -> None:
         await LLMUsageModelFactory.create_async(user_id=user.id, operation=LLMOperation.DISCOVER, cost=Decimal(1))
 

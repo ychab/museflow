@@ -16,7 +16,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.list_"
 
 
-class TestListParserCommand:
+class TestTasteListParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
@@ -46,7 +46,7 @@ class TestListParserCommand:
         assert expected_msg in clean_typer_text(result.output)
 
 
-class TestListCommand:
+class TestTasteListCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
@@ -86,7 +86,7 @@ class TestListCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_taste_profile_repository")
-class TestListLogic:
+class TestTasteListLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

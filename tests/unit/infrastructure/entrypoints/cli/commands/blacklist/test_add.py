@@ -17,7 +17,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blacklist.add"
 
 
-class TestAddArtistParserCommand:
+class TestBlacklistAddArtistParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_artist_logic", new_callable=mock.AsyncMock) as patched:
@@ -47,7 +47,7 @@ class TestAddArtistParserCommand:
         assert expected_msg in clean_typer_text(result.output)
 
 
-class TestAddArtistCommand:
+class TestBlacklistAddArtistCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_artist_logic", new_callable=mock.AsyncMock) as patched:
@@ -79,7 +79,7 @@ class TestAddArtistCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
-class TestAddArtistLogic:
+class TestBlacklistAddArtistLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
@@ -88,7 +88,7 @@ class TestAddArtistLogic:
             await add_artist_logic(email="unknown@example.com", artist_names=["Taylor Swift"])
 
 
-class TestAddTrackParserCommand:
+class TestBlacklistAddTrackParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_track_logic", new_callable=mock.AsyncMock) as patched:
@@ -124,7 +124,7 @@ class TestAddTrackParserCommand:
         assert expected_msg in clean_typer_text(result.output)
 
 
-class TestAddTrackCommand:
+class TestBlacklistAddTrackCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.add_track_logic", new_callable=mock.AsyncMock) as patched:
@@ -165,7 +165,7 @@ class TestAddTrackCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
-class TestAddTrackLogic:
+class TestBlacklistAddTrackLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

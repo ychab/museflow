@@ -23,7 +23,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.delete"
 
 
-class TestDeleteParserCommand:
+class TestPlaylistDeleteParserCommand:
     @pytest.fixture(autouse=True)
     def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
@@ -96,7 +96,7 @@ class TestDeleteParserCommand:
         assert "--type and --provider can only be used with --purge" in clean_typer_text(result.output)
 
 
-class TestDeleteCommand:
+class TestPlaylistDeleteCommand:
     @pytest.fixture(autouse=True)
     def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
@@ -187,7 +187,7 @@ class TestDeleteCommand:
     "mock_playlist_repository",
     "mock_get_provider_library",
 )
-class TestDeleteLogic:
+class TestPlaylistDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     @pytest.fixture

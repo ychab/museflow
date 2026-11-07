@@ -14,7 +14,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blacklist.purge"
 
 
-class TestPurgeParserCommand:
+class TestBlacklistPurgeParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.purge_logic", new_callable=mock.AsyncMock) as patched:
@@ -44,7 +44,7 @@ class TestPurgeParserCommand:
         assert expected_msg in clean_typer_text(result.output)
 
 
-class TestPurgeCommand:
+class TestBlacklistPurgeCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.purge_logic", new_callable=mock.AsyncMock) as patched:
@@ -86,7 +86,7 @@ class TestPurgeCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
-class TestPurgeLogic:
+class TestBlacklistPurgeLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

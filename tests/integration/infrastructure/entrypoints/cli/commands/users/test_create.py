@@ -6,7 +6,7 @@ from museflow.infrastructure.adapters.database.models import User as UserModel
 from museflow.infrastructure.entrypoints.cli.commands.users.create import create_logic
 
 
-class TestUserCreateLogic:
+class TestUsersCreateLogic:
     async def test__nominal(
         self,
         async_session_db: AsyncSession,

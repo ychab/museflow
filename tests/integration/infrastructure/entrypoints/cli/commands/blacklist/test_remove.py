@@ -6,7 +6,7 @@ from tests.integration.factories.models.blacklist import BlacklistedArtistModelF
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory
 
 
-class TestRemoveLogic:
+class TestBlacklistRemoveLogic:
     async def test__artist(self, user: User) -> None:
         artist_db = await BlacklistedArtistModelFactory.create_async(user_id=user.id)
 

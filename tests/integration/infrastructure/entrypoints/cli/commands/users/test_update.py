@@ -10,7 +10,7 @@ from museflow.infrastructure.adapters.database.models import User as UserModel
 from museflow.infrastructure.entrypoints.cli.commands.users.update import update_logic
 
 
-class TestUserUpdateLogic:
+class TestUsersUpdateLogic:
     async def test__nominal(
         self,
         async_session_db: AsyncSession,

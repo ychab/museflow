@@ -5,7 +5,7 @@ from museflow.infrastructure.entrypoints.cli.commands.taste.list_ import list_lo
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
 
-class TestListLogic:
+class TestTasteListLogic:
     async def test__nominal(self, user: User) -> None:
         await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
 

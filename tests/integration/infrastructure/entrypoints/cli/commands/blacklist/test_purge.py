@@ -6,7 +6,7 @@ from tests.integration.factories.models.blacklist import BlacklistedArtistModelF
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory
 
 
-class TestPurgeLogic:
+class TestBlacklistPurgeLogic:
     async def test__nominal(self, user: User) -> None:
         await BlacklistedArtistModelFactory.create_async(user_id=user.id)
         await BlacklistedTrackModelFactory.create_async(user_id=user.id)

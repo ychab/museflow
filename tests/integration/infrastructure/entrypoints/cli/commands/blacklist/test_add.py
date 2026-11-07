@@ -4,7 +4,7 @@ from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import add_t
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.list_ import list_logic
 
 
-class TestAddArtistsLogic:
+class TestBlacklistAddArtistLogic:
     async def test__nominal(self, user: User) -> None:
         await add_artist_logic(email=user.email, artist_names=["Taylor Swift", "Ed Sheeran"])
 
@@ -13,7 +13,7 @@ class TestAddArtistsLogic:
         assert {a.artist_name for a in result.artists} == {"Taylor Swift", "Ed Sheeran"}
 
 
-class TestAddTrackLogic:
+class TestBlacklistAddTrackLogic:
     async def test__nominal(self, user: User) -> None:
         await add_track_logic(email=user.email, name="Shake It Off", artist_name="Taylor Swift")
 
