@@ -9,10 +9,10 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.user_authenticate import user_authenticate
-from museflow.application.use_cases.user_create import user_create
-from museflow.application.use_cases.user_delete import user_delete
-from museflow.application.use_cases.user_update import user_update
+from museflow.application.use_cases.user_authenticate import authenticate_user
+from museflow.application.use_cases.user_create import create_user
+from museflow.application.use_cases.user_delete import delete_user
+from museflow.application.use_cases.user_update import update_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
@@ -37,7 +37,7 @@ async def register(
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
     try:
-        user = await user_create(
+        user = await create_user(
             user_data=user_data,
             uow=uow,
             password_hasher=password_hasher,
@@ -60,7 +60,7 @@ async def login(
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
     try:
-        user = await user_authenticate(
+        user = await authenticate_user(
             email=form_data.username,
             password=form_data.password,
             uow=uow,
@@ -93,7 +93,7 @@ async def update_current_user(
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
 ) -> UserResponse:
     try:
-        updated_user = await user_update(
+        updated_user = await update_user(
             user=current_user,
             user_data=user_data,
             uow=uow,
@@ -111,5 +111,5 @@ async def delete_current_user(
     current_user: User = Depends(get_current_user),
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
 ) -> None:
-    await user_delete(user_id=current_user.id, uow=uow)
+    await delete_user(user_id=current_user.id, uow=uow)
     return None

@@ -5,7 +5,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 
 
-async def oauth_redirect(
+async def build_oauth_redirect_url(
     user: User,
     provider: MusicProvider,
     uow: UnitOfWorkPort,

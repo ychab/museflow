@@ -1,18 +1,18 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.stats_tracks import top_tracks
+from museflow.application.use_cases.stats_tracks import list_top_tracks
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSortBy
 
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestTopTracksUseCase:
+class TestListTopTracksUseCase:
     async def test__nominal(self, uow: UnitOfWorkPort, user: User) -> None:
         track_a = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=8)
         track_b = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6)
         track_c = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10)
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE, uow=uow
         )
 
@@ -27,7 +27,7 @@ class TestTopTracksUseCase:
         track_b = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6, played_count=20)
         track_c = await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10, played_count=5)
 
-        result = await top_tracks(
+        result = await list_top_tracks(
             user_id=user.id, limit=20, score_min=None, score_max=None, sort=TrackSortBy.PLAYED_COUNT, uow=uow
         )
 

@@ -4,11 +4,11 @@ from datetime import datetime
 
 import pytest
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.playlist_history import playlist_history
+from museflow.application.use_cases.playlist_history import create_history_playlist
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
@@ -19,7 +19,7 @@ from tests.integration.factories.models.track import TrackModelFactory
 
 
 @pytest.mark.wiremock("spotify")
-class TestPlaylistHistoryUseCase:
+class TestCreateHistoryPlaylistUseCase:
     async def test__nominal__ordered_by_played_count(
         self,
         uow: UnitOfWorkPort,
@@ -30,9 +30,9 @@ class TestPlaylistHistoryUseCase:
         high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
         mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(limit=20),
+            config=CreateHistoryPlaylistConfigInput(limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -50,9 +50,9 @@ class TestPlaylistHistoryUseCase:
         high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
         low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=1)
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(limit=20, dry_run=True),
+            config=CreateHistoryPlaylistConfigInput(limit=20, dry_run=True),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -86,9 +86,9 @@ class TestPlaylistHistoryUseCase:
             artists=["Other Artist"],
         )
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(score_min=5, artist_name="Matching Artist", limit=20),
+            config=CreateHistoryPlaylistConfigInput(score_min=5, artist_name="Matching Artist", limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -105,18 +105,18 @@ class TestPlaylistHistoryUseCase:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
         second = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
 
-        first_result = await playlist_history(
+        first_result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(limit=1),
+            config=CreateHistoryPlaylistConfigInput(limit=1),
             uow=uow,
             provider_library=spotify_library,
         )
         assert first_result.playlist is not None
         assert len(first_result.playlist.tracks) == 1
 
-        second_result = await playlist_history(
+        second_result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(limit=20),
+            config=CreateHistoryPlaylistConfigInput(limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -135,9 +135,9 @@ class TestPlaylistHistoryUseCase:
         mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=6)
         unscored = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
+            config=CreateHistoryPlaylistConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -167,9 +167,9 @@ class TestPlaylistHistoryUseCase:
             played_at_first=None,
         )
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(
+            config=CreateHistoryPlaylistConfigInput(
                 played_first_min=date(2025, 1, 1),
                 played_first_max=date(2025, 12, 31),
                 limit=20,
@@ -203,9 +203,9 @@ class TestPlaylistHistoryUseCase:
             played_at_last=None,
         )
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(
+            config=CreateHistoryPlaylistConfigInput(
                 played_last_min=date(2026, 6, 21),
                 played_last_max=date(2026, 9, 22),
                 limit=20,
@@ -228,9 +228,9 @@ class TestPlaylistHistoryUseCase:
         )
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value])
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
+            config=CreateHistoryPlaylistConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -251,9 +251,9 @@ class TestPlaylistHistoryUseCase:
             user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.ENERGETIC.value]
         )
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(moods=[MoodTag.CHILL], limit=20),
+            config=CreateHistoryPlaylistConfigInput(moods=[MoodTag.CHILL], limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -270,9 +270,9 @@ class TestPlaylistHistoryUseCase:
         matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(locales=["fr"], limit=20),
+            config=CreateHistoryPlaylistConfigInput(locales=["fr"], limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -290,9 +290,9 @@ class TestPlaylistHistoryUseCase:
         en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["de"])
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(locales=["fr", "en"], limit=20),
+            config=CreateHistoryPlaylistConfigInput(locales=["fr", "en"], limit=20),
             uow=uow,
             provider_library=spotify_library,
         )
@@ -314,9 +314,9 @@ class TestPlaylistHistoryUseCase:
         )
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.JAZZ.value])
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
+            config=CreateHistoryPlaylistConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
             uow=uow,
             provider_library=spotify_library,
         )

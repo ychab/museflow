@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.provider_oauth_callback import oauth_callback
+from museflow.application.use_cases.provider_oauth_callback import handle_oauth_callback
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -20,7 +20,7 @@ from tests.integration.utils.wiremock import WireMockContext
 
 
 @pytest.mark.wiremock("spotify")
-class TestSpotifyOauthCallbackUseCase:
+class TestHandleSpotifyOAuthCallbackUseCase:
     async def test__token_payload__create(
         self,
         uow: UnitOfWorkPort,
@@ -43,7 +43,7 @@ class TestSpotifyOauthCallbackUseCase:
             },
         )
 
-        await oauth_callback(
+        await handle_oauth_callback(
             code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,
@@ -96,7 +96,7 @@ class TestSpotifyOauthCallbackUseCase:
             },
         )
 
-        await oauth_callback(
+        await handle_oauth_callback(
             code="test",
             user=user,
             provider=MusicProvider.SPOTIFY,

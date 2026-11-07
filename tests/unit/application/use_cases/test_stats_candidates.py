@@ -1,13 +1,13 @@
 from unittest import mock
 
-from museflow.application.use_cases.stats_candidates import artist_candidates
+from museflow.application.use_cases.stats_candidates import list_artist_candidates
 from museflow.domain.entities.user import User
 from museflow.domain.enums import SourceFilter
 
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestArtistCandidatesUseCase:
+class TestListArtistCandidatesUseCase:
     async def test__nominal(
         self,
         user: User,
@@ -19,7 +19,7 @@ class TestArtistCandidatesUseCase:
         low_score_track = TrackFactory.build(artists=["Mediocre"], score=4)
         mock_track_repository.get_list.return_value = [candidate_track] + popular_tracks + [low_score_track]
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -37,7 +37,7 @@ class TestArtistCandidatesUseCase:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -52,7 +52,7 @@ class TestArtistCandidatesUseCase:
         tracks = [TrackFactory.build(artists=["Popular Artist"], score=9) for _ in range(6)]
         mock_track_repository.get_list.return_value = tracks
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -67,7 +67,7 @@ class TestArtistCandidatesUseCase:
         track = TrackFactory.build(artists=["Mediocre Artist"], score=5)
         mock_track_repository.get_list.return_value = [track]
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -82,7 +82,7 @@ class TestArtistCandidatesUseCase:
         unrated = TrackFactory.build(artists=["Unknown Artist"], score=None)
         mock_track_repository.get_list.return_value = [unrated]
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -98,7 +98,7 @@ class TestArtistCandidatesUseCase:
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
         mock_track_repository.get_list.return_value = [track_a, track_b]
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -115,7 +115,7 @@ class TestArtistCandidatesUseCase:
         track_a = TrackFactory.build(artists=["Aaron"], score=9)
         mock_track_repository.get_list.return_value = [track_z, track_a]
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 
@@ -131,7 +131,7 @@ class TestArtistCandidatesUseCase:
         tracks = [TrackFactory.build(artists=[f"Artist {i}"], score=9) for i in range(5)]
         mock_track_repository.get_list.return_value = tracks
 
-        result = await artist_candidates(
+        result = await list_artist_candidates(
             user_id=user.id, limit=3, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
         )
 

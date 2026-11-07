@@ -9,8 +9,8 @@ from fastapi.responses import RedirectResponse
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.provider_oauth_callback import oauth_callback
-from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.application.use_cases.provider_oauth_callback import handle_oauth_callback
+from museflow.application.use_cases.provider_oauth_redirect import build_oauth_redirect_url
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
@@ -34,7 +34,7 @@ async def connect(
     provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
     state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
 ) -> RedirectResponse:
-    authorization_url = await oauth_redirect(
+    authorization_url = await build_oauth_redirect_url(
         user=current_user,
         uow=uow,
         provider=provider,
@@ -71,7 +71,7 @@ async def callback(
         raise HTTPException(status_code=400, detail="No authorization code received")
 
     try:
-        await oauth_callback(
+        await handle_oauth_callback(
             code=code,
             user=current_user,
             provider=provider,

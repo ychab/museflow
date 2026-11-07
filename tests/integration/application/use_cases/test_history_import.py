@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
-from museflow.application.inputs.history import StreamingHistoryImportConfigInput
+from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
@@ -65,7 +65,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         """
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(
+            config=ImportStreamingHistoryConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
             ),
@@ -99,7 +99,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(
+            config=ImportStreamingHistoryConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
                 purge=True,
@@ -150,7 +150,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(
+            config=ImportStreamingHistoryConfigInput(
                 directory=HISTORY_DIR,
                 min_ms_played=30_000,
             ),
@@ -175,7 +175,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         user: User,
         use_case: ImportStreamingHistoryUseCase,
     ) -> None:
-        config = StreamingHistoryImportConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
+        config = ImportStreamingHistoryConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
         reimport_fp = "reimport track|reimport artist"
         stmt = select(TrackModel).where(
             TrackModel.user_id == user.id,
@@ -235,7 +235,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await dup_use_case.import_history(
             user=user,
-            config=StreamingHistoryImportConfigInput(directory=tmp_path, min_ms_played=0),
+            config=ImportStreamingHistoryConfigInput(directory=tmp_path, min_ms_played=0),
         )
 
         assert report.unique_track_ids == 1

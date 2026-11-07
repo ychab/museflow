@@ -7,7 +7,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.track_rate import TrackRateUseCase
+from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -97,7 +97,7 @@ async def rate_history_logic(
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
-        use_case = TrackRateUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
+        use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         if reset:
             typer.confirm("This will clear all history track scores. Continue?", abort=True)

@@ -1,11 +1,11 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.playlist_view import playlist_view
+from museflow.application.use_cases.playlist_view import get_playlist
 from museflow.domain.entities.user import User
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 
 
-class TestPlaylistViewUseCase:
+class TestGetPlaylistUseCase:
     async def test__nominal(
         self,
         uow: UnitOfWorkPort,
@@ -13,7 +13,7 @@ class TestPlaylistViewUseCase:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
 
-        result = await playlist_view(
+        result = await get_playlist(
             user=user,
             playlist_id=playlist_db.id,
             uow=uow,
@@ -29,7 +29,7 @@ class TestPlaylistViewUseCase:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[])
 
-        result = await playlist_view(
+        result = await get_playlist(
             user=user,
             playlist_id=playlist_db.id,
             uow=uow,

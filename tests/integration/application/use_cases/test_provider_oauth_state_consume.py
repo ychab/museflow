@@ -6,7 +6,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 
 
-class TestConsumeOAuthState:
+class TestConsumeOAuthStateUseCase:
     async def test__nominal(
         self,
         uow: UnitOfWorkPort,

@@ -6,13 +6,13 @@ import pytest
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.user_create import user_create
+from museflow.application.use_cases.user_create import create_user
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 
 
-class TestUserCreateUseCase:
+class TestCreateUserUseCase:
     @pytest.fixture
     def user_create_data(self) -> UserCreateInput:
         return UserCreateInputFactory.build(password="testtest")
@@ -24,7 +24,7 @@ class TestUserCreateUseCase:
         uow: UnitOfWorkPort,
         password_hasher: PasswordHasherPort,
     ) -> None:
-        user = await user_create(user_create_data, uow, password_hasher)
+        user = await create_user(user_create_data, uow, password_hasher)
 
         stmt = select(UserModel).where(UserModel.id == user.id)
         result = await async_session_db.execute(stmt)

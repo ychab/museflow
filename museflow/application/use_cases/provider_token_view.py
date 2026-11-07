@@ -5,7 +5,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 
 
-async def view_provider_token(
+async def get_provider_token(
     user_id: uuid.UUID,
     provider: MusicProvider,
     uow: UnitOfWorkPort,

@@ -7,7 +7,7 @@ from museflow.domain.enums import SourceFilter
 from museflow.domain.value_objects.stats import ArtistCandidate
 
 
-async def artist_candidates(
+async def list_artist_candidates(
     user_id: uuid.UUID,
     source: SourceFilter,
     max_tracks: int,

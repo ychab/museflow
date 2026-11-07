@@ -1,5 +1,5 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.stats_artists import top_artists
+from museflow.application.use_cases.stats_artists import list_top_artists
 from museflow.domain.entities.user import User
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
@@ -7,7 +7,7 @@ from museflow.domain.enums import SourceFilter
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestTopArtistsUseCase:
+class TestListTopArtistsUseCase:
     async def test__nominal(self, uow: UnitOfWorkPort, user: User) -> None:
         # Artist A: 2 rated tracks (avg=7.0), Artist B: 1 rated track (avg=10.0)
         # played_count pinned to 1 per track, so plays_count == track_count here.
@@ -20,7 +20,7 @@ class TestTopArtistsUseCase:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6, played_count=1)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10, played_count=1)
 
-        result = await top_artists(
+        result = await list_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -46,7 +46,7 @@ class TestTopArtistsUseCase:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=8)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=None)
 
-        result = await top_artists(
+        result = await list_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -67,7 +67,7 @@ class TestTopArtistsUseCase:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=None)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=None)
 
-        result = await top_artists(
+        result = await list_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,
@@ -92,7 +92,7 @@ class TestTopArtistsUseCase:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=None, played_count=1)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=None, played_count=1)
 
-        result = await top_artists(
+        result = await list_top_artists(
             user_id=user.id,
             limit=20,
             source=SourceFilter.ALL,

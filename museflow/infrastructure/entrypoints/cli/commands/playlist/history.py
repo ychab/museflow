@@ -8,10 +8,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.playlist_history import PlaylistHistoryResult
-from museflow.application.use_cases.playlist_history import playlist_history as playlist_history_use_case
+from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
+from museflow.application.use_cases.playlist_history import create_history_playlist
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import GenreTag
@@ -99,10 +99,10 @@ def playlist_history(
         help="Preview matched tracks without creating a playlist",
     ),
     sort: PlaylistHistoryOrderBy = typer.Option(
-        PlaylistHistoryConfigInput.sort_by, "--sort", help="Sort tracks by this field"
+        CreateHistoryPlaylistConfigInput.sort_by, "--sort", help="Sort tracks by this field"
     ),
     limit: int = typer.Option(
-        PlaylistHistoryConfigInput.limit,
+        CreateHistoryPlaylistConfigInput.limit,
         "--limit",
         help="Maximum number of tracks in the playlist",
         min=1,
@@ -120,7 +120,7 @@ def playlist_history(
             playlist_history_logic(
                 email=email,
                 provider=provider,
-                config=PlaylistHistoryConfigInput(
+                config=CreateHistoryPlaylistConfigInput(
                     name_suffix=name_suffix,
                     score_min=score_min,
                     score_max=score_max,
@@ -189,8 +189,8 @@ def playlist_history(
 async def playlist_history_logic(
     email: EmailStr,
     provider: MusicProvider,
-    config: PlaylistHistoryConfigInput,
-) -> PlaylistHistoryResult:
+    config: CreateHistoryPlaylistConfigInput,
+) -> CreateHistoryPlaylistResult:
     """Creates a playlist from the user's history tracks.
 
     Args:
@@ -199,7 +199,7 @@ async def playlist_history_logic(
         config: The filters/limit/dedup configuration for the playlist.
 
     Returns:
-        A PlaylistHistoryResult with the created Playlist (or None if dry-run) and the tracks.
+        A CreateHistoryPlaylistResult with the created Playlist (or None if dry-run) and the tracks.
 
     Raises:
         UserNotFound: If the user with the given email is not found.
@@ -219,7 +219,7 @@ async def playlist_history_logic(
         if not config.dry_run:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 
-        return await playlist_history_use_case(
+        return await create_history_playlist(
             user=user,
             config=config,
             uow=uow,

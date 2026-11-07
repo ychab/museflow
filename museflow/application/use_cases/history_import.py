@@ -2,8 +2,8 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 
-from museflow.application.inputs.history import StreamingHistoryEntry
-from museflow.application.inputs.history import StreamingHistoryImportConfigInput
+from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.inputs.history import StreamingHistoryEntryInput
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import ProviderLink
@@ -49,7 +49,7 @@ class ImportStreamingHistoryUseCase:
     async def import_history(
         self,
         user: User,
-        config: StreamingHistoryImportConfigInput,
+        config: ImportStreamingHistoryConfigInput,
     ) -> ImportStreamingHistoryReport:
         # Validate directory
         if not config.directory.exists() or not config.directory.is_dir():
@@ -73,7 +73,7 @@ class ImportStreamingHistoryUseCase:
         # Collect all play events per track across all files, keyed by fingerprint.
         # When two provider_ids resolve to the same fingerprint, their play times are merged.
         # The first entry seen for a given fingerprint is kept as representative metadata.
-        track_metadata: dict[str, StreamingHistoryEntry] = {}  # fingerprint → representative entry
+        track_metadata: dict[str, StreamingHistoryEntryInput] = {}  # fingerprint → representative entry
         track_play_times: dict[str, list[datetime]] = {}  # fingerprint → all played_at timestamps
         items_read = items_skipped_no_timestamp = items_skipped_short_play = items_skipped_no_track_id = 0
 

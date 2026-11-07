@@ -9,7 +9,7 @@ from museflow.domain.types import LocaleCode
 
 
 @dataclass(frozen=True, kw_only=True)
-class PlaylistHistoryConfigInput:
+class CreateHistoryPlaylistConfigInput:
     name_suffix: str | None = None
     score_min: int | None = None
     score_max: int | None = None

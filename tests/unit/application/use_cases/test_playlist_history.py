@@ -5,8 +5,8 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.inputs.playlist import PlaylistHistoryConfigInput
-from museflow.application.use_cases.playlist_history import playlist_history
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
+from museflow.application.use_cases.playlist_history import create_history_playlist
 from museflow.domain.enums import PlaylistHistoryOrderBy
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import SortOrder
@@ -17,7 +17,7 @@ from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.entities.user import UserFactory
 
 
-class TestPlaylistHistoryUseCase:
+class TestCreateHistoryPlaylistUseCase:
     async def test__no_tracks_found__dedup_enabled__raises(
         self,
         mock_uow: mock.AsyncMock,
@@ -31,9 +31,9 @@ class TestPlaylistHistoryUseCase:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
-            await playlist_history(
+            await create_history_playlist(
                 user=user,
-                config=PlaylistHistoryConfigInput(),
+                config=CreateHistoryPlaylistConfigInput(),
                 uow=mock_uow,
                 provider_library=mock_provider_library,
             )
@@ -53,9 +53,9 @@ class TestPlaylistHistoryUseCase:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
-            await playlist_history(
+            await create_history_playlist(
                 user=user,
-                config=PlaylistHistoryConfigInput(allow_duplicate=True),
+                config=CreateHistoryPlaylistConfigInput(allow_duplicate=True),
                 uow=mock_uow,
                 provider_library=mock_provider_library,
             )
@@ -74,9 +74,9 @@ class TestPlaylistHistoryUseCase:
         track = TrackFactory.build()
         mock_track_repository.get_list.return_value = [track]
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(dry_run=True),
+            config=CreateHistoryPlaylistConfigInput(dry_run=True),
             uow=mock_uow,
             provider_library=mock_provider_library,
         )
@@ -94,9 +94,9 @@ class TestPlaylistHistoryUseCase:
         track = TrackFactory.build()
         mock_track_repository.get_list.return_value = [track]
 
-        result = await playlist_history(
+        result = await create_history_playlist(
             user=UserFactory.build(),
-            config=PlaylistHistoryConfigInput(dry_run=True),
+            config=CreateHistoryPlaylistConfigInput(dry_run=True),
             uow=mock_uow,
             provider_library=None,
         )
@@ -110,9 +110,9 @@ class TestPlaylistHistoryUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         with pytest.raises(ValueError, match="provider_library is required"):
-            await playlist_history(
+            await create_history_playlist(
                 user=UserFactory.build(),
-                config=PlaylistHistoryConfigInput(),
+                config=CreateHistoryPlaylistConfigInput(),
                 uow=mock_uow,
                 provider_library=None,
             )
@@ -136,9 +136,9 @@ class TestPlaylistHistoryUseCase:
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.save.return_value = playlist
 
-        await playlist_history(
+        await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(group_by_artists=True),
+            config=CreateHistoryPlaylistConfigInput(group_by_artists=True),
             uow=mock_uow,
             provider_library=mock_provider_library,
         )
@@ -164,9 +164,9 @@ class TestPlaylistHistoryUseCase:
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.save.return_value = playlist
 
-        await playlist_history(
+        await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, group_by_artists=True),
+            config=CreateHistoryPlaylistConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, group_by_artists=True),
             uow=mock_uow,
             provider_library=mock_provider_library,
         )
@@ -186,9 +186,9 @@ class TestPlaylistHistoryUseCase:
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.save.return_value = playlist
 
-        await playlist_history(
+        await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(name_suffix="My Mix"),
+            config=CreateHistoryPlaylistConfigInput(name_suffix="My Mix"),
             uow=mock_uow,
             provider_library=mock_provider_library,
         )
@@ -208,9 +208,9 @@ class TestPlaylistHistoryUseCase:
         playlist = mock_provider_library.create_playlist.return_value
         mock_playlist_repository.save.return_value = playlist
 
-        await playlist_history(
+        await create_history_playlist(
             user=user,
-            config=PlaylistHistoryConfigInput(),
+            config=CreateHistoryPlaylistConfigInput(),
             uow=mock_uow,
             provider_library=mock_provider_library,
         )
@@ -228,9 +228,9 @@ class TestPlaylistHistoryUseCase:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
-            await playlist_history(
+            await create_history_playlist(
                 user=user,
-                config=PlaylistHistoryConfigInput(
+                config=CreateHistoryPlaylistConfigInput(
                     played_first_min=date(2025, 1, 1),
                     played_first_max=date(2025, 12, 31),
                     played_last_min=date(2026, 1, 1),
@@ -256,9 +256,9 @@ class TestPlaylistHistoryUseCase:
         mock_track_repository.get_list.return_value = []
 
         with pytest.raises(PlaylistNoTracksError):
-            await playlist_history(
+            await create_history_playlist(
                 user=user,
-                config=PlaylistHistoryConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE),
+                config=CreateHistoryPlaylistConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE),
                 uow=mock_uow,
                 provider_library=mock_provider_library,
             )

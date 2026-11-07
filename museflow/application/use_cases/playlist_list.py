@@ -3,7 +3,7 @@ from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.user import User
 
 
-async def playlist_list(
+async def list_playlists(
     user: User,
     uow: UnitOfWorkPort,
 ) -> list[Playlist]:

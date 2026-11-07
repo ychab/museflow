@@ -17,7 +17,7 @@ from tests.integration.factories.models.track import TrackModelFactory
 
 
 @pytest.mark.wiremock("openrouter")
-class TestTracksEnrichUseCase:
+class TestEnrichTracksUseCase:
     async def test__nominal(
         self,
         async_session_db: AsyncSession,

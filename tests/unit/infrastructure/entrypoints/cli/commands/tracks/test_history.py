@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.inputs.history import StreamingHistoryImportConfigInput
+from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -251,7 +251,7 @@ class TestHistoryLogicCommand:
 
         report = await history_logic(
             email=user.email,
-            config=StreamingHistoryImportConfigInput(directory=tmp_path),
+            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
             provider=MusicProvider.SPOTIFY,
         )
 
@@ -264,6 +264,6 @@ class TestHistoryLogicCommand:
         with pytest.raises(UserNotFound):
             await history_logic(
                 email="test@example.com",
-                config=StreamingHistoryImportConfigInput(directory=Path("/tmp")),
+                config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
                 provider=MusicProvider.SPOTIFY,
             )

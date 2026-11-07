@@ -5,7 +5,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsException
 
 
-async def user_create(
+async def create_user(
     user_data: UserCreateInput,
     uow: UnitOfWorkPort,
     password_hasher: PasswordHasherPort,

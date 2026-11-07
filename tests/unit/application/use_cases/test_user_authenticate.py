@@ -2,14 +2,14 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.user_authenticate import user_authenticate
+from museflow.application.use_cases.user_authenticate import authenticate_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserInactive
 from museflow.domain.exceptions import UserInvalidCredentials
 from museflow.domain.exceptions import UserNotFound
 
 
-class TestUserService:
+class TestAuthenticateUserUseCase:
     async def test_authenticate__nominal(
         self,
         mock_uow: mock.AsyncMock,
@@ -19,7 +19,7 @@ class TestUserService:
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
-        user_auth = await user_authenticate(
+        user_auth = await authenticate_user(
             email=user.email,
             password="testtest",
             uow=mock_uow,
@@ -38,7 +38,7 @@ class TestUserService:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await user_authenticate(
+            await authenticate_user(
                 email="foo@example.com",
                 password="testtest",
                 uow=mock_uow,
@@ -59,7 +59,7 @@ class TestUserService:
         mock_password_hasher.verify.return_value = False
 
         with pytest.raises(UserInvalidCredentials):
-            await user_authenticate(
+            await authenticate_user(
                 email=user.email,
                 password="blahblah",
                 uow=mock_uow,
@@ -78,7 +78,7 @@ class TestUserService:
         mock_user_repository.get_by_email.return_value = user
 
         with pytest.raises(UserInactive):
-            await user_authenticate(
+            await authenticate_user(
                 email=user.email,
                 password="testtest",
                 uow=mock_uow,

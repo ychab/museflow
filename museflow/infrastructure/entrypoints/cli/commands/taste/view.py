@@ -13,7 +13,7 @@ from pydantic import TypeAdapter
 import typer
 from rich.pretty import Pretty
 
-from museflow.application.use_cases.taste_profile_view import view_taste_profile
+from museflow.application.use_cases.taste_profile_view import get_taste_profile
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
@@ -80,7 +80,7 @@ async def view_logic(email: EmailStr, name: str) -> TasteProfile:
     if not user:
         raise UserNotFound()
 
-    return await view_taste_profile(user_id=user.id, name=name, uow=uow)
+    return await get_taste_profile(user_id=user.id, name=name, uow=uow)
 
 
 def generate_profile_html_content(taste_profile: TasteProfile) -> str:

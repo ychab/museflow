@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.playlist_delete import PlaylistDeleteUseCase
+from museflow.application.use_cases.playlist_delete import DeletePlaylistUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
@@ -14,14 +14,14 @@ from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.user import UserFactory
 
 
-class TestPlaylistDeleteUseCase:
+class TestDeletePlaylistUseCase:
     @pytest.fixture
     def user(self) -> User:
         return UserFactory.build()
 
     @pytest.fixture
-    def use_case(self, user: User, mock_uow: mock.AsyncMock) -> PlaylistDeleteUseCase:
-        return PlaylistDeleteUseCase(user_id=user.id, uow=mock_uow)
+    def use_case(self, user: User, mock_uow: mock.AsyncMock) -> DeletePlaylistUseCase:
+        return DeletePlaylistUseCase(user_id=user.id, uow=mock_uow)
 
     @pytest.fixture
     def provider_libraries(self, mock_provider_library: mock.AsyncMock) -> dict[MusicProvider, ProviderLibraryPort]:
@@ -29,7 +29,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__find__not_found(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_playlist_repository.get.return_value = None
@@ -39,7 +39,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__find_matching__filters_applied(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
@@ -54,7 +54,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__delete__not_found(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
         mock_playlist_repository.delete.return_value = False
@@ -64,7 +64,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__delete_remote__own_provider_library(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
@@ -84,7 +84,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__delete_remote__local_delete_returns_false(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -100,7 +100,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__delete_remote__remote_error_propagates(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -116,7 +116,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__purge__nominal(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
@@ -133,7 +133,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__purge_remote__mixed_providers(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
     ) -> None:
@@ -154,7 +154,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__purge_remote__remote_failure_skipped(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         mock_playlist_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -170,7 +170,7 @@ class TestPlaylistDeleteUseCase:
 
     async def test__purge_remote__missing_library_not_swallowed(
         self,
-        use_case: PlaylistDeleteUseCase,
+        use_case: DeletePlaylistUseCase,
         user: User,
         provider_libraries: dict[MusicProvider, ProviderLibraryPort],
     ) -> None:

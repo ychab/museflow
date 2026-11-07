@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True, kw_only=True)
-class StreamingHistoryImportConfigInput:
+class ImportStreamingHistoryConfigInput:
     directory: Path
     min_ms_played: int = 90_000
     batch_size: int = 20
@@ -12,7 +12,7 @@ class StreamingHistoryImportConfigInput:
 
 
 @dataclass(frozen=True, kw_only=True)
-class StreamingHistoryEntry:
+class StreamingHistoryEntryInput:
     name: str
     artist: str
     album_name: str | None

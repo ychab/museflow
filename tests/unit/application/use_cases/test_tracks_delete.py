@@ -3,14 +3,14 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.tracks_delete import TracksDeleteUseCase
+from museflow.application.use_cases.tracks_delete import DeleteTracksUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestTracksDeleteUseCase:
+class TestDeleteTracksUseCase:
     @pytest.fixture
     def user_id(self) -> uuid.UUID:
         return uuid.uuid4()
@@ -25,12 +25,12 @@ class TestTracksDeleteUseCase:
         user_id: uuid.UUID,
         provider: MusicProvider | None,
         mock_uow: mock.AsyncMock,
-    ) -> TracksDeleteUseCase:
-        return TracksDeleteUseCase(user_id=user_id, provider=provider, uow=mock_uow)
+    ) -> DeleteTracksUseCase:
+        return DeleteTracksUseCase(user_id=user_id, provider=provider, uow=mock_uow)
 
     async def test__find__name_filter__case_insensitive(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         matching = TrackFactory.build(name="Creep")
@@ -43,7 +43,7 @@ class TestTracksDeleteUseCase:
     @pytest.mark.parametrize("provider", [MusicProvider.SPOTIFY], indirect=True)
     async def test__find__filters_passed_to_repository(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
@@ -60,7 +60,7 @@ class TestTracksDeleteUseCase:
 
     async def test__delete__no_provider__deletes_the_ids(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
@@ -76,7 +76,7 @@ class TestTracksDeleteUseCase:
     @pytest.mark.parametrize("provider", [MusicProvider.SPOTIFY], indirect=True)
     async def test__delete__provider__deletes_the_orphans_only(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
@@ -96,7 +96,7 @@ class TestTracksDeleteUseCase:
 
     async def test__delete_all__no_provider__deletes_every_track(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
@@ -111,7 +111,7 @@ class TestTracksDeleteUseCase:
     @pytest.mark.parametrize("provider", [MusicProvider.SPOTIFY], indirect=True)
     async def test__delete_all__provider__deletes_the_orphans_only(
         self,
-        use_case: TracksDeleteUseCase,
+        use_case: DeleteTracksUseCase,
         user_id: uuid.UUID,
         mock_track_repository: mock.AsyncMock,
     ) -> None:

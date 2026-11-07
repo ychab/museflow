@@ -8,9 +8,9 @@ from pydantic import EmailStr
 import typer
 from rich import get_console
 
-from museflow.application.use_cases.provider_oauth_redirect import oauth_redirect
+from museflow.application.use_cases.provider_oauth_redirect import build_oauth_redirect_url
 from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
-from museflow.application.use_cases.provider_token_view import view_provider_token
+from museflow.application.use_cases.provider_token_view import get_provider_token
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
@@ -75,10 +75,10 @@ async def connect_start_logic(email: EmailStr, provider: MusicProvider) -> Conne
     if not user:
         raise UserNotFound()
 
-    previous_token = await view_provider_token(user_id=user.id, provider=provider, uow=uow)
+    previous_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 
     async with get_provider_oauth(provider) as provider_oauth:
-        authorization_url = await oauth_redirect(
+        authorization_url = await build_oauth_redirect_url(
             user=user,
             uow=uow,
             provider=provider,
@@ -102,7 +102,7 @@ async def connect_wait_logic(start: ConnectStart, timeout: float, poll_interval:
         await asyncio.sleep(poll_interval)
 
         # Only a new token proves success: the API callback consumes the state even when the flow then fails.
-        token = await view_provider_token(user_id=start.user_id, provider=start.provider, uow=uow)
+        token = await get_provider_token(user_id=start.user_id, provider=start.provider, uow=uow)
         if token != start.previous_token:
             return
 

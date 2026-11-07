@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.track_rate import TrackRateUseCase
+from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
@@ -11,7 +11,7 @@ from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestTrackRateUseCase:
+class TestRateTrackUseCase:
     async def test__find_history(self, uow: UnitOfWorkPort, user: User) -> None:
         less_played_db = await TrackModelFactory.create_async(
             user_id=user.id, source=TrackSource.HISTORY, score=None, played_count=3
@@ -23,7 +23,7 @@ class TestTrackRateUseCase:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score_skipped=True)
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.DISCOVERY, score=None)
         await TrackModelFactory.create_async(source=TrackSource.HISTORY, score=None)
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         tracks = await use_case.find_history(limit=10, artist=None)
 
@@ -39,7 +39,7 @@ class TestTrackRateUseCase:
         await TrackModelFactory.create_async(
             user_id=user.id, source=TrackSource.HISTORY, score=None, artists=["Portishead"], played_count=20
         )
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         tracks = await use_case.find_history(limit=1, artist="radiohead")
 
@@ -50,7 +50,7 @@ class TestTrackRateUseCase:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.DISCOVERY, score=7)
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
         await TrackModelFactory.create_async(source=TrackSource.DISCOVERY, score=None)
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         tracks = await use_case.find_discovery(limit=10)
 
@@ -60,7 +60,7 @@ class TestTrackRateUseCase:
         rated_db = await TrackModelFactory.create_async(user_id=user.id, score=7)
         unrated_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[rated_db.id, unrated_db.id])
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         tracks = await use_case.find_playlist(playlist_id=playlist_db.id)
 
@@ -68,7 +68,7 @@ class TestTrackRateUseCase:
 
     async def test__rate(self, uow: UnitOfWorkPort, async_session_db: AsyncSession, user: User) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         await use_case.rate(track_id=track_db.id, score=8)
 
@@ -77,7 +77,7 @@ class TestTrackRateUseCase:
 
     async def test__skip(self, uow: UnitOfWorkPort, async_session_db: AsyncSession, user: User) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id, score=None)
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         await use_case.skip(track_id=track_db.id)
 
@@ -87,7 +87,7 @@ class TestTrackRateUseCase:
     async def test__reset_scores(self, uow: UnitOfWorkPort, user: User) -> None:
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=7)
         await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.DISCOVERY, score=7)
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         count = await use_case.reset_scores(source=TrackSource.HISTORY)
 
@@ -96,7 +96,7 @@ class TestTrackRateUseCase:
         assert await use_case.find_discovery(limit=10) == []
 
     async def test__blacklist(self, uow: UnitOfWorkPort, user: User) -> None:
-        use_case = TrackRateUseCase(user_id=user.id, provider=None, uow=uow)
+        use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
 
         await use_case.blacklist_track(name="Creep", artist_name="Radiohead")
         await use_case.blacklist_artist(artist_name="Portishead")

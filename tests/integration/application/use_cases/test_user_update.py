@@ -6,7 +6,7 @@ import pytest
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.user_update import user_update
+from museflow.application.use_cases.user_update import update_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsException
 from museflow.infrastructure.adapters.database.models import User as UserModel
@@ -14,7 +14,7 @@ from museflow.infrastructure.adapters.database.models import User as UserModel
 from tests.integration.factories.models.user import UserModelFactory
 
 
-class TestUserUpdateUseCase:
+class TestUpdateUserUseCase:
     async def test_update_email__nominal(
         self,
         uow: UnitOfWorkPort,
@@ -24,7 +24,7 @@ class TestUserUpdateUseCase:
     ) -> None:
         user_update_data = UserUpdateInput(email="foo@example.com")
 
-        await user_update(
+        await update_user(
             user=user,
             user_data=user_update_data,
             uow=uow,
@@ -47,7 +47,7 @@ class TestUserUpdateUseCase:
     ) -> None:
         user_update_data = UserUpdateInput(email=user.email)
 
-        await user_update(
+        await update_user(
             user=user,
             user_data=user_update_data,
             uow=uow,
@@ -70,7 +70,7 @@ class TestUserUpdateUseCase:
         user_update_data = UserUpdateInput(email=other_user_db.email)
 
         with pytest.raises(UserEmailAlreadyExistsException):
-            await user_update(
+            await update_user(
                 user=user,
                 user_data=user_update_data,
                 uow=uow,
@@ -87,7 +87,7 @@ class TestUserUpdateUseCase:
         password = "blahblah"
         user_update_data = UserUpdateInput(password=password)
 
-        user_updated = await user_update(
+        user_updated = await update_user(
             user=user,
             user_data=user_update_data,
             uow=uow,
