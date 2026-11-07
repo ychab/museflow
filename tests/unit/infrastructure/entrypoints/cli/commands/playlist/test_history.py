@@ -25,7 +25,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.history"
 
 
-class TestHistoryParserCommand:
+class TestPlaylistHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
@@ -260,7 +260,7 @@ class TestHistoryParserCommand:
         assert "--played-last-min cannot be after --played-last-max" in clean_typer_text(result.output)
 
 
-class TestHistoryCommand:
+class TestPlaylistHistoryCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
@@ -389,7 +389,7 @@ class TestHistoryCommand:
     "mock_playlist_repository",
     "mock_get_provider_library",
 )
-class TestHistoryLogic:
+class TestPlaylistHistoryLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     @pytest.fixture

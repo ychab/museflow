@@ -6,7 +6,7 @@ from tests.integration.factories.models.blacklist import BlacklistedArtistModelF
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory
 
 
-class TestListLogic:
+class TestBlacklistListLogic:
     async def test__empty(self, user: User) -> None:
         result = await list_logic(email=user.email)
         assert isinstance(result, UserBlacklist)

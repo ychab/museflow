@@ -16,7 +16,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.list_"
 
 
-class TestListParserCommand:
+class TestPlaylistListParserCommand:
     @pytest.fixture(autouse=True)
     def mock_list_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
@@ -33,7 +33,7 @@ class TestListParserCommand:
         assert "Invalid value for '--email'" in output
 
 
-class TestListCommand:
+class TestPlaylistListCommand:
     @pytest.fixture(autouse=True)
     def mock_list_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
@@ -81,7 +81,7 @@ class TestListCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_playlist_repository")
-class TestListLogic:
+class TestPlaylistListLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.list_"
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

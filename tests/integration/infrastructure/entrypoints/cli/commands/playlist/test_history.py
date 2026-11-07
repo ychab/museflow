@@ -13,7 +13,7 @@ from museflow.infrastructure.entrypoints.cli.commands.playlist.history import hi
 from tests.unit.factories.entities.playlist import PlaylistFactory
 
 
-class TestHistoryLogic:
+class TestPlaylistHistoryLogic:
     """
     The purpose of this test is to check that the user and the auth token are loaded correctly.
     Otherwise, we trust use case integration tests (test_playlist_history.py) and avoid duplication.

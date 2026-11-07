@@ -5,7 +5,7 @@ from museflow.infrastructure.entrypoints.cli.commands.playlist.list_ import list
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 
 
-class TestListLogic:
+class TestPlaylistListLogic:
     async def test__nominal(
         self,
         user: User,

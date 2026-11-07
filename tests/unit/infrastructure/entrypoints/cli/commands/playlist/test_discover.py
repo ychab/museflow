@@ -29,7 +29,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
 
 
-class TestDiscoverParserCommand:
+class TestPlaylistDiscoverParserCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = f"{TARGET_PATH}.discover_logic"
@@ -240,7 +240,7 @@ class TestDiscoverParserCommand:
         assert expected_msg in output
 
 
-class TestDiscoverCommand:
+class TestPlaylistDiscoverCommand:
     @pytest.fixture(autouse=True)
     def mock_discover_logic(self) -> Iterable[mock.Mock]:
         target_path = f"{TARGET_PATH}.discover_logic"
@@ -437,7 +437,7 @@ class TestDiscoverCommand:
     "mock_playlist_repository",
     "mock_get_provider_library",
 )
-class TestDiscoverLogic:
+class TestPlaylistDiscoverLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
 
     @pytest.fixture(autouse=True)

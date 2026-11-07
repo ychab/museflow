@@ -19,7 +19,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.view"
 
 
-class TestViewParserCommand:
+class TestPlaylistViewParserCommand:
     @pytest.fixture(autouse=True)
     def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
@@ -45,7 +45,7 @@ class TestViewParserCommand:
         assert "Invalid value for 'playlist_id'" in output
 
 
-class TestViewCommand:
+class TestPlaylistViewCommand:
     @pytest.fixture(autouse=True)
     def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
@@ -110,7 +110,7 @@ class TestViewCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_playlist_repository")
-class TestViewLogic:
+class TestPlaylistViewLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.view"
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

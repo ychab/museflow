@@ -5,7 +5,7 @@ from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestViewLogic:
+class TestPlaylistViewLogic:
     async def test__nominal(self, user: User) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, track_ids=[track_db.id])

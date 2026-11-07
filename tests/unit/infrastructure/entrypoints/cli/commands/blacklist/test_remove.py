@@ -16,7 +16,7 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blacklist.remove"
 
 
-class TestRemoveParserCommand:
+class TestBlacklistRemoveParserCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.remove_logic", new_callable=mock.AsyncMock) as patched:
@@ -33,7 +33,7 @@ class TestRemoveParserCommand:
         assert "not-a-uuid" in clean_typer_text(result.output)
 
 
-class TestRemoveCommand:
+class TestBlacklistRemoveCommand:
     @pytest.fixture(autouse=True)
     def mock_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.remove_logic", new_callable=mock.AsyncMock) as patched:
@@ -74,7 +74,7 @@ class TestRemoveCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
-class TestRemoveLogic:
+class TestBlacklistRemoveLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

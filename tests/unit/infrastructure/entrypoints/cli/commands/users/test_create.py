@@ -11,7 +11,7 @@ from museflow.infrastructure.entrypoints.cli.main import app
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestUserCreateParserCommand:
+class TestUsersCreateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_create_user_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.create_logic"
@@ -124,7 +124,7 @@ class TestUserCreateParserCommand:
         assert f"Invalid value for '--password': {expected_msg}" in result.output
 
 
-class TestUserCreateCommand:
+class TestUsersCreateCommand:
     @pytest.fixture
     def mock_create_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.users.create.create_logic"

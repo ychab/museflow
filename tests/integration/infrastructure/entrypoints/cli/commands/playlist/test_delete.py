@@ -6,7 +6,7 @@ from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import del
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 
 
-class TestDeleteLogic:
+class TestPlaylistDeleteLogic:
     async def test__single_delete__nominal(
         self,
         user: User,

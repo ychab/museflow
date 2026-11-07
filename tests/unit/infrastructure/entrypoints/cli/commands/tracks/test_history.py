@@ -19,7 +19,7 @@ from museflow.infrastructure.entrypoints.cli.main import app
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestHistoryParserCommand:
+class TestTracksHistoryParserCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
@@ -131,7 +131,7 @@ class TestHistoryParserCommand:
         assert expected_msg in output
 
 
-class TestHistoryCommand:
+class TestTracksHistoryCommand:
     @pytest.fixture(autouse=True)
     def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
@@ -231,7 +231,7 @@ class TestHistoryCommand:
     "mock_user_repository",
     "mock_track_repository",
 )
-class TestHistoryLogicCommand:
+class TestTracksHistoryLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tracks.history"
 
     @pytest.fixture

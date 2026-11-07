@@ -4,7 +4,7 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delet
 from tests.integration.factories.models.track import TrackModelFactory
 
 
-class TestDeleteLogic:
+class TestTracksDeleteLogic:
     async def test__nominal__by_artist(self, user: User) -> None:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Radiohead"])
         await TrackModelFactory.create_async(user_id=user.id, artists=["Portishead"])

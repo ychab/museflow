@@ -14,7 +14,7 @@ from museflow.infrastructure.entrypoints.cli.main import app
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 
-class TestUserUpdateParserCommand:
+class TestUsersUpdateParserCommand:
     @pytest.fixture(autouse=True)
     def mock_update_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.update_logic"
@@ -99,7 +99,7 @@ class TestUserUpdateParserCommand:
         assert f"Invalid value for '--password': {expected_msg}" in result.output
 
 
-class TestUserUpdateCommand:
+class TestUsersUpdateCommand:
     @pytest.fixture(autouse=True)
     def mock_update_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.update_logic"
@@ -164,7 +164,7 @@ class TestUserUpdateCommand:
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository")
-class TestUserUpdateLogic:
+class TestUsersUpdateLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.users.update"
 
     @pytest.fixture

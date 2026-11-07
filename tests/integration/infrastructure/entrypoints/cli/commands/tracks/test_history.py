@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
 
 
-class TestHistoryLogic:
+class TestTracksHistoryLogic:
     """
     The purpose of this test is to check that the user and the auth token are loaded correctly.
     Otherwise, we trust use case integration tests and prevent duplicate.
