@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.playlist.view import view_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.view import playlist_view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -21,8 +21,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.play
 
 class TestPlaylistViewParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_view_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_view_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = PlaylistFactory.build(tracks=[])
             yield patched
 
@@ -47,32 +47,32 @@ class TestPlaylistViewParserCommand:
 
 class TestPlaylistViewCommand:
     @pytest.fixture(autouse=True)
-    def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.view_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_view_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_view_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__nominal(self, mock_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__nominal(self, mock_playlist_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
         track_with_score = TrackFactory.build(score=8, artists=["Artist A"])
         track_without_score = TrackFactory.build(score=None, artists=["Artist B"])
-        mock_view_logic.return_value = PlaylistFactory.build(tracks=[track_with_score, track_without_score])
+        mock_playlist_view_logic.return_value = PlaylistFactory.build(tracks=[track_with_score, track_without_score])
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code == 0
 
-    def test__without_tracks(self, mock_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_view_logic.return_value = PlaylistFactory.build(tracks=[])
+    def test__without_tracks(self, mock_playlist_view_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_playlist_view_logic.return_value = PlaylistFactory.build(tracks=[])
 
         result = runner.invoke(app, ["playlist", "view", str(uuid.uuid4()), "--email", "test@example.com"])
         assert result.exit_code == 0
 
     def test__user_not_found(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_playlist_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = UserNotFound()
+        mock_playlist_view_logic.side_effect = UserNotFound()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
@@ -82,11 +82,11 @@ class TestPlaylistViewCommand:
 
     def test__playlist_not_found(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_playlist_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = PlaylistNotFoundError()
+        mock_playlist_view_logic.side_effect = PlaylistNotFoundError()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
@@ -96,11 +96,11 @@ class TestPlaylistViewCommand:
 
     def test__generic_exception(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_playlist_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = Exception("Boom")
+        mock_playlist_view_logic.side_effect = Exception("Boom")
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["playlist", "view", str(playlist_id), "--email", "test@example.com"])
@@ -118,7 +118,7 @@ class TestPlaylistViewLogic:
         playlist_id = uuid.uuid4()
 
         with pytest.raises(UserNotFound):
-            await view_logic(email="test@example.com", playlist_id=playlist_id)
+            await playlist_view_logic(email="test@example.com", playlist_id=playlist_id)
 
     async def test__playlist_not_found(
         self,
@@ -131,7 +131,7 @@ class TestPlaylistViewLogic:
         playlist_id = uuid.uuid4()
 
         with pytest.raises(PlaylistNotFoundError):
-            await view_logic(email=user.email, playlist_id=playlist_id)
+            await playlist_view_logic(email=user.email, playlist_id=playlist_id)
 
     async def test__nominal_with_tracks_with_score(
         self,
@@ -145,7 +145,7 @@ class TestPlaylistViewLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_playlist_repository.get.return_value = playlist
 
-        result = await view_logic(email=user.email, playlist_id=playlist.id)
+        result = await playlist_view_logic(email=user.email, playlist_id=playlist.id)
 
         assert result == playlist
         mock_playlist_repository.get.assert_awaited_once_with(user.id, playlist.id)

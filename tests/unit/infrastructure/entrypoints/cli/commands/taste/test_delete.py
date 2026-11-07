@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.taste.delete import delete_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.delete import taste_delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -28,41 +28,41 @@ class TestTasteDeleteParserCommand:
 
 class TestTasteDeleteCommand:
     @pytest.fixture(autouse=True)
-    def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_taste_delete_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.taste_delete_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__with_yes_flag(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__with_yes_flag(self, runner: CliRunner, mock_taste_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(
             app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "--yes"]
         )
         assert result.exit_code == 0
         assert "Taste profile 'my-profile' of test@example.com deleted." in result.output
-        mock_delete_logic.assert_awaited_once_with(email="test@example.com", name="my-profile")
+        mock_taste_delete_logic.assert_awaited_once_with(email="test@example.com", name="my-profile")
 
-    def test__confirmation_accepted(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__confirmation_accepted(self, runner: CliRunner, mock_taste_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(
             app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile"], input="y\n"
         )
         assert result.exit_code == 0
         assert "About to delete the taste profile 'my-profile' of test@example.com." in result.output
         assert "export it first with `taste export`" in result.output
-        mock_delete_logic.assert_awaited_once()
+        mock_taste_delete_logic.assert_awaited_once()
 
-    def test__confirmation_declined(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__confirmation_declined(self, runner: CliRunner, mock_taste_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(
             app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile"], input="n\n"
         )
         assert result.exit_code == 1
-        mock_delete_logic.assert_not_called()
+        mock_taste_delete_logic.assert_not_called()
 
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_taste_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = UserNotFound()
+        mock_taste_delete_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "-y"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -70,10 +70,10 @@ class TestTasteDeleteCommand:
     def test__profile_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_taste_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_delete_logic.side_effect = TasteProfileNotFoundException()
         result = runner.invoke(app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "-y"])
         assert result.exit_code != 0
         assert "Taste profile not found with name: my-profile" in clean_typer_text(result.output)
@@ -81,10 +81,10 @@ class TestTasteDeleteCommand:
     def test__exception(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_taste_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = Exception("Boom")
+        mock_taste_delete_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["taste", "delete", "--email", "test@example.com", "--name", "my-profile", "-y"])
         assert result.exit_code == 1
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -98,7 +98,7 @@ class TestTasteDeleteLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await delete_logic(email="unknown@example.com", name="my-profile")
+            await taste_delete_logic(email="unknown@example.com", name="my-profile")
 
     async def test__nominal(
         self,
@@ -107,7 +107,7 @@ class TestTasteDeleteLogic:
     ) -> None:
         mock_taste_profile_repository.delete.return_value = True
 
-        await delete_logic(email="test@example.com", name="my-profile")
+        await taste_delete_logic(email="test@example.com", name="my-profile")
 
         mock_taste_profile_repository.delete.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,

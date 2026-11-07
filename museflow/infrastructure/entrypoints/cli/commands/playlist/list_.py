@@ -15,12 +15,12 @@ console = Console()
 
 
 @app.command("list")
-def list_command(
+def playlist_list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     """List all playlists for a user."""
     try:
-        playlists = asyncio.run(list_logic(email=email))
+        playlists = asyncio.run(playlist_list_logic(email=email))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -54,7 +54,7 @@ def list_command(
     console.print(table)
 
 
-async def list_logic(email: str) -> list[Playlist]:
+async def playlist_list_logic(email: str) -> list[Playlist]:
     uow = get_unit_of_work()
 
     async with uow:

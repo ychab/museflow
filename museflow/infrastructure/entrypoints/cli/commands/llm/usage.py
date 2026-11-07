@@ -23,7 +23,7 @@ console = Console()
     "usage",
     help="Show what the LLM calls cost, grouped by operation, model, step, month, profile or user.",
 )
-def usage_command(
+def llm_usage_command(
     email: str | None = typer.Option(None, help="User email address (all the users when omitted)", parser=parse_email),
     group_by: LLMUsageGroupBy = typer.Option(LLMUsageGroupBy.OPERATION, "--by", help="Group the usage by"),
     since: date | None = typer.Option(
@@ -37,7 +37,7 @@ def usage_command(
         raise typer.BadParameter("--by user sums all the users: drop --email")
 
     try:
-        summary = asyncio.run(usage_logic(email=email, group_by=group_by, since=since))
+        summary = asyncio.run(llm_usage_logic(email=email, group_by=group_by, since=since))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -71,7 +71,7 @@ def usage_command(
     console.print(table)
 
 
-async def usage_logic(email: EmailStr | None, group_by: LLMUsageGroupBy, since: date | None) -> LLMUsageSummary:
+async def llm_usage_logic(email: EmailStr | None, group_by: LLMUsageGroupBy, since: date | None) -> LLMUsageSummary:
     uow = get_unit_of_work()
 
     user_id = None

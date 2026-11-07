@@ -32,7 +32,7 @@ class RateHistoryResult:
 
 
 @app.command("history", help="Interactively rate unrated history tracks ordered by play count.")
-def history_command(
+def rate_history_command(
     email: str = EMAIL_OPTION,
     limit: int = typer.Option(10, help="Maximum number of tracks to rate", min=1),
     reset: bool = typer.Option(False, "--reset", help="Clear all existing history track scores before rating"),
@@ -47,7 +47,7 @@ def history_command(
 
     try:
         result = asyncio.run(
-            history_logic(
+            rate_history_logic(
                 email=email,
                 limit=limit,
                 reset=reset,
@@ -79,7 +79,7 @@ def history_command(
     )
 
 
-async def history_logic(
+async def rate_history_logic(
     email: EmailStr,
     limit: int,
     reset: bool,

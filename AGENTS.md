@@ -104,9 +104,12 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
     (never a `_`-prefixed name). A command that must print between two steps runs them in one `asyncio.Runner`
     (`provider/connect.py`): a second `asyncio.run()` fails, as the pooled database connections are bound to the first
     event loop.
-  - The callback is `<command>_command`, its logic `<command>_logic`, one `<command>_<step>_logic` per step when the
-    command runs several (`connect_start_logic`). The decorator always names the command (`@app.command("history")`):
-    without it, Typer would derive `history-command` from the function name.
+  - The callback is `<group>_<command>_command`, its logic `<group>_<command>_logic`, one
+    `<group>_<command>_<step>_logic` per step when the command runs several (`provider_connect_start_logic`), with the
+    CLI names (dashes become underscores). The group looks redundant inside its module, but a reader skimming a test
+    or a search result sees which command it is (`playlist_history_logic`, not `history_logic`), and every name stays
+    unique. The decorator always names the command (`@app.command("history")`): without it, Typer would derive
+    `playlist-history-command` from the function name.
   - `*_logic` returns data or raises; it never prints. All output (messages, Rich tables) belongs in the
     `@app.command` callback. Exception: interactive prompts that drive the logic mid-loop.
   - Option order: filters (`--force`, `--provider`), then processing config (`--batch-size`), then the cap (`--limit`).

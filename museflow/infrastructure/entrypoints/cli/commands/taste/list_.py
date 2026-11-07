@@ -15,11 +15,11 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("list", help="List all taste profiles for a user.")
-def list_command(
+def taste_list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     try:
-        profiles = asyncio.run(list_logic(email=email))
+        profiles = asyncio.run(taste_list_logic(email=email))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -51,7 +51,7 @@ def list_command(
     console.print(table)
 
 
-async def list_logic(email: EmailStr) -> list[TasteProfile]:
+async def taste_list_logic(email: EmailStr) -> list[TasteProfile]:
     uow = get_unit_of_work()
 
     async with uow:

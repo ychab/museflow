@@ -11,7 +11,7 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import import_logic
+from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -21,8 +21,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestEnrichImportParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.import_logic"
+    def mock_enrich_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.enrich_import_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = ImportEnrichmentResult(imported_count=0, not_found_count=0)
             yield patched
@@ -62,8 +62,8 @@ class TestEnrichImportParserCommand:
 
 class TestEnrichImportCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.import_logic"
+    def mock_enrich_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.enrich.import_.enrich_import_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -101,12 +101,12 @@ class TestEnrichImportCommand:
 
     def test__user_not_found(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_enrich_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = UserNotFound()
+        mock_enrich_import_logic.side_effect = UserNotFound()
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 
@@ -121,12 +121,12 @@ class TestEnrichImportCommand:
 
     def test__generic_exception(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_enrich_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = Exception("Boom")
+        mock_enrich_import_logic.side_effect = Exception("Boom")
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 
@@ -141,11 +141,11 @@ class TestEnrichImportCommand:
 
     def test__nominal(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_enrich_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
-        mock_import_logic.return_value = ImportEnrichmentResult(imported_count=3, not_found_count=1)
+        mock_enrich_import_logic.return_value = ImportEnrichmentResult(imported_count=3, not_found_count=1)
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 
@@ -170,7 +170,7 @@ class TestEnrichImportLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await import_logic(email="test@example.com", data=[])
+            await enrich_import_logic(email="test@example.com", data=[])
 
     async def test__unknown_genres__silently_dropped(
         self,
@@ -184,7 +184,7 @@ class TestEnrichImportLogic:
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
-        result = await import_logic(
+        result = await enrich_import_logic(
             email="test@example.com",
             data=[{"fingerprint": fingerprint, "genres": ["rock", "INVALID_GENRE"], "moods": ["INVALID_MOOD"]}],
         )
@@ -206,7 +206,7 @@ class TestEnrichImportLogic:
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
-        result = await import_logic(
+        result = await enrich_import_logic(
             email="test@example.com",
             data=[{"fingerprint": fingerprint, "genres": "not-a-list", "moods": "not-a-list"}],
         )
@@ -228,7 +228,7 @@ class TestEnrichImportLogic:
             TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
         ]
 
-        result = await import_logic(
+        result = await enrich_import_logic(
             email="test@example.com",
             data=[{"fingerprint": fingerprint, "genres": ["rock", "indie-rock"], "moods": ["energetic"]}],
         )

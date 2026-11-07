@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import TracksDeleteResult
-from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import delete_logic
+from museflow.infrastructure.entrypoints.cli.commands.tracks.delete import tracks_delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -22,8 +22,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.trac
 
 class TestTracksDeleteParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_tracks_delete_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.tracks_delete_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = TracksDeleteResult()
             yield patched
 
@@ -63,19 +63,19 @@ class TestTracksDeleteParserCommand:
 
 class TestTracksDeleteCommand:
     @pytest.fixture(autouse=True)
-    def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_tracks_delete_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.tracks_delete_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = TracksDeleteResult(deleted_count=3)
             yield patched
 
-    def test__nominal(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__nominal(self, runner: CliRunner, mock_tracks_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--artist", "X", "--yes"])
         assert result.exit_code == 0
         assert "Deleted 3 track(s) of test@example.com." in result.output
-        mock_delete_logic.assert_called_once()
+        mock_tracks_delete_logic.assert_called_once()
 
-    def test__no_tracks__early_exit(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
-        mock_delete_logic.return_value = TracksDeleteResult(no_tracks=True)
+    def test__no_tracks__early_exit(self, runner: CliRunner, mock_tracks_delete_logic: mock.AsyncMock) -> None:
+        mock_tracks_delete_logic.return_value = TracksDeleteResult(no_tracks=True)
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--artist", "X", "--yes"])
         assert result.exit_code == 0
         assert "No tracks found" in result.output
@@ -83,10 +83,10 @@ class TestTracksDeleteCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_tracks_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = UserNotFound()
+        mock_tracks_delete_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--artist", "X", "--yes"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -94,10 +94,10 @@ class TestTracksDeleteCommand:
     def test__exception(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_tracks_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = Exception("Boom")
+        mock_tracks_delete_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["tracks", "delete", "--email", "test@example.com", "--artist", "X", "--yes"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -110,7 +110,7 @@ class TestTracksDeleteLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await delete_logic(email="unknown@example.com", artist="X", name=None, source=None, provider=None)
+            await tracks_delete_logic(email="unknown@example.com", artist="X", name=None, source=None, provider=None)
 
     async def test__no_tracks_found(
         self,
@@ -119,7 +119,7 @@ class TestTracksDeleteLogic:
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        result = await delete_logic(
+        result = await tracks_delete_logic(
             email="test@example.com",
             artist="X",
             name=None,
@@ -141,7 +141,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 3
 
-        await delete_logic(
+        await tracks_delete_logic(
             email="test@example.com",
             artist="Radiohead",
             name=None,
@@ -164,7 +164,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 3
 
-        await delete_logic(
+        await tracks_delete_logic(
             email="test@example.com",
             artist="Radiohead",
             name="Creep",
@@ -187,7 +187,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete_all.return_value = 3
 
-        result = await delete_logic(
+        result = await tracks_delete_logic(
             email="test@example.com",
             artist=None,
             name=None,
@@ -213,7 +213,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.unlink_provider.return_value = []
         mock_track_repository.delete.return_value = 0
 
-        await delete_logic(
+        await tracks_delete_logic(
             email="test@example.com",
             artist=None,
             name=None,
@@ -236,7 +236,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.get_list.return_value = tracks
         mock_track_repository.delete.return_value = 2
 
-        result = await delete_logic(
+        result = await tracks_delete_logic(
             email="test@example.com",
             artist=None,
             name=None,
@@ -265,7 +265,7 @@ class TestTracksDeleteLogic:
         mock_track_repository.delete.return_value = 2
         mock_typer_confirm.return_value = True
 
-        result = await delete_logic(
+        result = await tracks_delete_logic(
             email="test@example.com",
             artist="X",
             name=None,
@@ -292,7 +292,7 @@ class TestTracksDeleteLogic:
         mock_typer_confirm.side_effect = typer.Abort()
 
         with pytest.raises(typer.Abort):
-            await delete_logic(
+            await tracks_delete_logic(
                 email="test@example.com",
                 artist="X",
                 name=None,

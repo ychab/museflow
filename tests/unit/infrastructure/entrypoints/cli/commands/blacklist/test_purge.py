@@ -6,7 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.blacklist.purge import purge_logic
+from museflow.infrastructure.entrypoints.cli.commands.blacklist.purge import blacklist_purge_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -16,8 +16,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.blac
 
 class TestBlacklistPurgeParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.purge_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_blacklist_purge_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.blacklist_purge_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = 0
             yield patched
 
@@ -46,8 +46,8 @@ class TestBlacklistPurgeParserCommand:
 
 class TestBlacklistPurgeCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.purge_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_blacklist_purge_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.blacklist_purge_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = 3
             yield patched
 
@@ -56,30 +56,32 @@ class TestBlacklistPurgeCommand:
         assert result.exit_code == 0
         assert "Deleted 3 blacklist entries of test@example.com." in result.output
 
-    def test__confirmation_accepted(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__confirmation_accepted(self, runner: CliRunner, mock_blacklist_purge_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com"], input="y\n")
         assert result.exit_code == 0
         assert "Delete the entire blacklist of test@example.com?" in result.output
-        mock_logic.assert_called_once()
+        mock_blacklist_purge_logic.assert_called_once()
 
-    def test__confirmation_aborted(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__confirmation_aborted(self, runner: CliRunner, mock_blacklist_purge_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com"], input="n\n")
         assert result.exit_code != 0
-        mock_logic.assert_not_called()
+        mock_blacklist_purge_logic.assert_not_called()
 
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_logic: mock.AsyncMock,
+        mock_blacklist_purge_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_logic.side_effect = UserNotFound()
+        mock_blacklist_purge_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com", "--yes"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
-    def test__exceptions(self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner) -> None:
-        mock_logic.side_effect = Exception("Boom")
+    def test__exceptions(
+        self, runner: CliRunner, mock_blacklist_purge_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+    ) -> None:
+        mock_blacklist_purge_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["blacklist", "purge", "--email", "test@example.com", "--yes"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -92,4 +94,4 @@ class TestBlacklistPurgeLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await purge_logic(email="unknown@example.com")
+            await blacklist_purge_logic(email="unknown@example.com")

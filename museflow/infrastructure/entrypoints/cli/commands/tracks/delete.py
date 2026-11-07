@@ -22,7 +22,7 @@ class TracksDeleteResult:
 
 
 @app.command("delete", help="Delete tracks matching the given filters.")
-def delete_command(
+def tracks_delete_command(
     email: str = EMAIL_OPTION,
     artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name (case-insensitive)"),
     name: str | None = typer.Option(None, "--name", help="Filter by track name (case-insensitive)"),
@@ -40,7 +40,7 @@ def delete_command(
 
     try:
         result = asyncio.run(
-            delete_logic(
+            tracks_delete_logic(
                 email=email,
                 artist=artist,
                 name=name,
@@ -63,7 +63,7 @@ def delete_command(
     typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.GREEN)
 
 
-async def delete_logic(
+async def tracks_delete_logic(
     email: EmailStr,
     artist: str | None,
     name: str | None,

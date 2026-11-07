@@ -35,7 +35,7 @@ console = Console()
 
 
 @app.command("discover")
-def discover_command(
+def playlist_discover_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
     focus: DiscoveryFocus = typer.Option(default=DiscoverTasteConfigInput.focus, help="The discovery focus strategy"),
@@ -98,7 +98,7 @@ def discover_command(
     try:
         with spinner("Discovering tracks…"):
             result = asyncio.run(
-                discover_logic(
+                playlist_discover_logic(
                     email=email,
                     provider=provider,
                     model=model,
@@ -201,7 +201,7 @@ def discover_command(
         print_llm_usage(meter)
 
 
-async def discover_logic(
+async def playlist_discover_logic(
     email: EmailStr,
     provider: MusicProvider,
     config: DiscoverTasteConfigInput,

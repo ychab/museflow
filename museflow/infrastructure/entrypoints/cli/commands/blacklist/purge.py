@@ -12,7 +12,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("purge", help="Delete your entire blacklist. This cannot be undone.")
-def purge_command(
+def blacklist_purge_command(
     email: str = EMAIL_OPTION,
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
@@ -20,7 +20,7 @@ def purge_command(
         raise typer.Abort()
 
     try:
-        count = asyncio.run(purge_logic(email=email))
+        count = asyncio.run(blacklist_purge_logic(email=email))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -30,7 +30,7 @@ def purge_command(
     typer.secho(f"Deleted {count} blacklist {'entry' if count == 1 else 'entries'} of {email}.", fg=typer.colors.GREEN)
 
 
-async def purge_logic(email: EmailStr) -> int:
+async def blacklist_purge_logic(email: EmailStr) -> int:
     uow = get_unit_of_work()
 
     async with uow:

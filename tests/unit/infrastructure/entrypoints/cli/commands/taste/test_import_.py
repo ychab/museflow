@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import import_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import taste_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -22,8 +22,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestTasteImportParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.import_.import_logic"
+    def mock_taste_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.import_.taste_import_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = TasteProfileFactory.build()
             yield patched
@@ -59,8 +59,8 @@ class TestTasteImportParserCommand:
 
 class TestTasteImportCommand:
     @pytest.fixture(autouse=True)
-    def mock_import_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.import_.import_logic"
+    def mock_taste_import_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.import_.taste_import_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -98,12 +98,12 @@ class TestTasteImportCommand:
 
     def test__user_not_found(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_taste_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = UserNotFound()
+        mock_taste_import_logic.side_effect = UserNotFound()
         valid_yaml = tmp_path / "profile.yaml"
         valid_yaml.write_text("name: test-profile\n")
 
@@ -118,12 +118,12 @@ class TestTasteImportCommand:
 
     def test__generic_exception(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_taste_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_import_logic.side_effect = Exception("Boom")
+        mock_taste_import_logic.side_effect = Exception("Boom")
         valid_yaml = tmp_path / "profile.yaml"
         valid_yaml.write_text("name: test-profile\n")
 
@@ -138,12 +138,12 @@ class TestTasteImportCommand:
 
     def test__nominal(
         self,
-        mock_import_logic: mock.AsyncMock,
+        mock_taste_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
     ) -> None:
         taste_profile = TasteProfileFactory.build(name="my-profile")
-        mock_import_logic.return_value = taste_profile
+        mock_taste_import_logic.return_value = taste_profile
         valid_yaml = tmp_path / "profile.yaml"
         valid_yaml.write_text("name: my-profile\n")
 
@@ -175,7 +175,7 @@ class TestTasteImportLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
-        result = await import_logic(email="test@example.com", data=profile_data)
+        result = await taste_import_logic(email="test@example.com", data=profile_data)
 
         upserted: TasteProfile = mock_taste_profile_repository.upsert.call_args[0][0]
         assert upserted.user_id == user.id
@@ -186,7 +186,7 @@ class TestTasteImportLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await import_logic(email="test@example.com", data={})
+            await taste_import_logic(email="test@example.com", data={})
 
     async def test__invalid_data(
         self,
@@ -195,4 +195,4 @@ class TestTasteImportLogic:
         mock_user_repository.get_by_email.return_value = UserFactory.build()
 
         with pytest.raises(ValidationError):
-            await import_logic(email="test@example.com", data={"invalid": "data"})
+            await taste_import_logic(email="test@example.com", data={"invalid": "data"})

@@ -15,7 +15,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.playlist.history import history_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -27,8 +27,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.play
 
 class TestPlaylistHistoryParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_history_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = CreateHistoryPlaylistResult(playlist=PlaylistFactory.build(tracks=[]), tracks=[])
             yield patched
 
@@ -85,7 +85,7 @@ class TestPlaylistHistoryParserCommand:
 
     def test__name_suffix__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(
@@ -93,7 +93,7 @@ class TestPlaylistHistoryParserCommand:
             ["playlist", "history", "--email", "test@example.com", "--name-suffix", "My Mix"],
         )
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.name_suffix == "My Mix"
 
     def test__genre__invalid__fails(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -113,27 +113,27 @@ class TestPlaylistHistoryParserCommand:
 
     def test__genre__valid__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--genre", "hip-hop"])
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.genres == [GenreTag.HIP_HOP]
 
     def test__mood__valid__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--mood", "chill"])
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.moods == [MoodTag.CHILL]
 
     def test__multiple_genres__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(
@@ -141,32 +141,32 @@ class TestPlaylistHistoryParserCommand:
             ["playlist", "history", "--email", "test@example.com", "--genre", "hip-hop", "--genre", "rock"],
         )
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.genres == [GenreTag.HIP_HOP, GenreTag.ROCK]
 
     def test__locale__valid__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--locale", "fr"])
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.locales == ["fr"]
 
     def test__locale__uppercase__normalized_lowercase(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--locale", "FR"])
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.locales == ["fr"]
 
     def test__multiple_locales__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(
@@ -174,7 +174,7 @@ class TestPlaylistHistoryParserCommand:
             ["playlist", "history", "--email", "test@example.com", "--locale", "fr", "--locale", "en"],
         )
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.locales == ["fr", "en"]
 
     def test__score_min_greater_than_score_max__fails(
@@ -230,12 +230,12 @@ class TestPlaylistHistoryParserCommand:
 
     def test__dry_run__passed_to_config(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
-        config = mock_history_logic.call_args.kwargs["config"]
+        config = mock_playlist_history_logic.call_args.kwargs["config"]
         assert config.dry_run is True
 
     def test__played_last_min_after_max__fails(
@@ -262,28 +262,28 @@ class TestPlaylistHistoryParserCommand:
 
 class TestPlaylistHistoryCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_history_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_history_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = UserNotFound()
+        mock_playlist_history_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.stderr)
 
     def test__auth_token_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = ProviderAuthTokenNotFoundError()
+        mock_playlist_history_logic.side_effect = ProviderAuthTokenNotFoundError()
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
@@ -291,11 +291,11 @@ class TestPlaylistHistoryCommand:
 
     def test__no_tracks_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = PlaylistNoTracksError()
+        mock_playlist_history_logic.side_effect = PlaylistNoTracksError()
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
@@ -303,24 +303,24 @@ class TestPlaylistHistoryCommand:
 
     def test__generic_exception(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = Exception("Boom")
+        mock_playlist_history_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
     def test__output__playlist_created(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         track = TrackFactory.build(played_count=7)
         playlist = PlaylistFactory.build(name="History Playlist", tracks=[track])
-        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[track])
+        mock_playlist_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[track])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -332,14 +332,14 @@ class TestPlaylistHistoryCommand:
 
     def test__output__score_column_shown(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         track_scored = TrackFactory.build(score=8)
         track_unscored = TrackFactory.build(score=None)
         playlist = PlaylistFactory.build(tracks=[track_scored, track_unscored])
-        mock_history_logic.return_value = CreateHistoryPlaylistResult(
+        mock_playlist_history_logic.return_value = CreateHistoryPlaylistResult(
             playlist=playlist, tracks=[track_scored, track_unscored]
         )
 
@@ -353,12 +353,12 @@ class TestPlaylistHistoryCommand:
 
     def test__output__group_by_artists__header_shown(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         playlist = PlaylistFactory.build(tracks=[])
-        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[])
+        mock_playlist_history_logic.return_value = CreateHistoryPlaylistResult(playlist=playlist, tracks=[])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--group-by-artists"])
         assert result.exit_code == 0
@@ -366,12 +366,12 @@ class TestPlaylistHistoryCommand:
 
     def test__output__dry_run__no_playlist_created(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_playlist_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
         track = TrackFactory.build(played_count=7)
-        mock_history_logic.return_value = CreateHistoryPlaylistResult(playlist=None, tracks=[track])
+        mock_playlist_history_logic.return_value = CreateHistoryPlaylistResult(playlist=None, tracks=[track])
 
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
@@ -401,7 +401,7 @@ class TestPlaylistHistoryLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await history_logic(
+            await playlist_history_logic(
                 email="unknown@example.com",
                 provider=MusicProvider.SPOTIFY,
                 config=CreateHistoryPlaylistConfigInput(),
@@ -417,7 +417,7 @@ class TestPlaylistHistoryLogic:
         expected = CreateHistoryPlaylistResult(playlist=None, tracks=[TrackFactory.build()])
         mock_history_use_case.return_value = expected
 
-        result = await history_logic(
+        result = await playlist_history_logic(
             email=user.email,
             provider=MusicProvider.SPOTIFY,
             config=CreateHistoryPlaylistConfigInput(dry_run=True),

@@ -1,7 +1,7 @@
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.domain.entities.user import User
 from museflow.domain.enums import PlaylistType
-from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import delete_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import playlist_delete_logic
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 
@@ -14,7 +14,9 @@ class TestPlaylistDeleteLogic:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id)
 
-        count = await delete_logic(email=user.email, playlist_id=playlist_db.id, purge=False, type=None, provider=None)
+        count = await playlist_delete_logic(
+            email=user.email, playlist_id=playlist_db.id, purge=False, type=None, provider=None
+        )
 
         assert count == 1
         assert await playlist_repository.get(user.id, playlist_db.id) is None
@@ -27,7 +29,7 @@ class TestPlaylistDeleteLogic:
         await PlaylistModelFactory.create_async(user_id=user.id)
         await PlaylistModelFactory.create_async(user_id=user.id)
 
-        count = await delete_logic(email=user.email, playlist_id=None, purge=True, type=None, provider=None)
+        count = await playlist_delete_logic(email=user.email, playlist_id=None, purge=True, type=None, provider=None)
 
         assert count == 2
         assert await playlist_repository.list(user.id) == []
@@ -39,7 +41,7 @@ class TestPlaylistDeleteLogic:
     ) -> None:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.DISCOVERY)
 
-        count = await delete_logic(
+        count = await playlist_delete_logic(
             email=user.email, playlist_id=None, purge=True, type=PlaylistType.DISCOVERY, provider=None
         )
 

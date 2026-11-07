@@ -12,7 +12,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
-from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import playlist_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
@@ -36,7 +36,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await playlist_logic(email=user.email, playlist_id=playlist_db.id)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id)
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
@@ -53,7 +53,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "6"
         mock_typer_confirm.return_value = False
 
-        await playlist_logic(email=user.email, playlist_id=None)
+        await rate_playlist_logic(email=user.email, playlist_id=None)
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
@@ -73,7 +73,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await playlist_logic(email=user.email, playlist_id=playlist_db.id, provider=MusicProvider.SPOTIFY)
+        await rate_playlist_logic(email=user.email, playlist_id=playlist_db.id, provider=MusicProvider.SPOTIFY)
 
         mock_play_track.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
 

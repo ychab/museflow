@@ -16,7 +16,7 @@ from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import RateHistoryResult
-from museflow.infrastructure.entrypoints.cli.commands.rate.history import history_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -27,8 +27,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate
 
 class TestRateHistoryParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_rate_history_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.rate_history_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -62,48 +62,48 @@ class TestRateHistoryParserCommand:
     )
     def test__play_provider__resolved(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         extra_args: list[str],
         expected_provider: MusicProvider | None,
     ) -> None:
-        mock_history_logic.return_value = RateHistoryResult(no_tracks=True)
+        mock_rate_history_logic.return_value = RateHistoryResult(no_tracks=True)
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com", *extra_args])
 
         assert result.exit_code == 0
-        assert mock_history_logic.await_args_list[0].kwargs["provider"] == expected_provider
+        assert mock_rate_history_logic.await_args_list[0].kwargs["provider"] == expected_provider
 
 
 class TestRateHistoryCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.history_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_rate_history_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.rate_history_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__nominal(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.return_value = RateHistoryResult(
+        mock_rate_history_logic.return_value = RateHistoryResult(
             rated_count=2, blacklist_track_count=1, blacklist_artist_count=0
         )
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com"])
 
         assert result.exit_code == 0
-        mock_history_logic.assert_awaited_once()
+        mock_rate_history_logic.assert_awaited_once()
         assert "Saved 2 rating(s)" in clean_typer_text(result.output)
 
     def test__no_tracks(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.return_value = RateHistoryResult(no_tracks=True)
+        mock_rate_history_logic.return_value = RateHistoryResult(no_tracks=True)
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com"])
 
@@ -112,11 +112,11 @@ class TestRateHistoryCommand:
 
     def test__user_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = UserNotFound()
+        mock_rate_history_logic.side_effect = UserNotFound()
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -125,11 +125,11 @@ class TestRateHistoryCommand:
 
     def test__auth_token_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found")
+        mock_rate_history_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found")
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
@@ -138,11 +138,11 @@ class TestRateHistoryCommand:
 
     def test__premium_required(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
+        mock_rate_history_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
@@ -151,11 +151,11 @@ class TestRateHistoryCommand:
 
     def test__generic_exception(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_rate_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_history_logic.side_effect = Exception("Boom")
+        mock_rate_history_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["rate", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -182,7 +182,7 @@ class TestRateHistoryLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await history_logic(email="test@example.com", limit=10, reset=False)
+            await rate_history_logic(email="test@example.com", limit=10, reset=False)
 
     async def test__no_unrated_tracks(
         self,
@@ -193,7 +193,7 @@ class TestRateHistoryLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = []
 
-        result = await history_logic(email=user.email, limit=10, reset=False)
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.rate.assert_not_awaited()
         assert result.no_tracks is True
@@ -212,7 +212,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        result = await history_logic(email=user.email, limit=10, reset=False)
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
         assert result.rated_count == 1
@@ -230,7 +230,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.side_effect = ["8", "u", typer.Abort()]
 
         with pytest.raises(typer.Abort):
-            await history_logic(email=user.email, limit=10, reset=False)
+            await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=first.id, score=8)
         mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=second.id)
@@ -247,7 +247,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.return_value = "s"
 
-        await history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -263,7 +263,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.side_effect = ["abc", "s"]
 
-        await history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10, reset=False)
 
         assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -280,7 +280,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.side_effect = ["15", "s"]
 
-        await history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10, reset=False)
 
         assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -300,7 +300,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [True, True]
 
-        await history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_blacklist_repository.add_track.assert_awaited_once_with(
             user_id=user.id, name=track.name, artist_name="Artist A"
@@ -322,7 +322,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [False, False]
 
-        await history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_blacklist_repository.add_track.assert_not_awaited()
         mock_blacklist_repository.add_artist.assert_not_awaited()
@@ -339,7 +339,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = []
         mock_typer_confirm.return_value = True
 
-        await history_logic(email=user.email, limit=10, reset=True)
+        await rate_history_logic(email=user.email, limit=10, reset=True)
 
         mock_track_repository.reset_score.assert_awaited_once_with(user_id=user.id, source=TrackSource.HISTORY)
         mock_track_repository.get_list.assert_awaited_once()
@@ -359,7 +359,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         mock_provider_library.play_track.assert_awaited_once_with(track.get_provider_id(MusicProvider.SPOTIFY))
 
@@ -376,7 +376,7 @@ class TestRateHistoryLogic:
         mock_provider_library.play_track.side_effect = ProviderPremiumRequiredException()
 
         with pytest.raises(ProviderPremiumRequiredException):
-            await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+            await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -397,7 +397,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         assert mock_provider_library.play_track.await_count == 2
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
@@ -411,7 +411,7 @@ class TestRateHistoryLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = []
 
-        await history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
+        await rate_history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=user.id,
@@ -439,7 +439,7 @@ class TestRateHistoryLogic:
             ProviderNoActiveDeviceException(),
         ]
 
-        await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         assert mock_provider_library.play_track.await_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -463,7 +463,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.return_value = "s"
 
-        await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         mock_provider_library.play_track.assert_not_awaited()
         mock_track_repository.rate.assert_not_awaited()
@@ -480,7 +480,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.return_value = "u"
 
-        result = await history_logic(email=user.email, limit=10, reset=False)
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=track.id)
         mock_track_repository.rate.assert_not_awaited()
@@ -498,7 +498,7 @@ class TestRateHistoryLogic:
         mock_track_repository.get_list.return_value = [track]
         mock_typer_prompt.return_value = "U"
 
-        result = await history_logic(email=user.email, limit=10, reset=False)
+        result = await rate_history_logic(email=user.email, limit=10, reset=False)
 
         mock_track_repository.skip.assert_awaited_once_with(user_id=user.id, track_id=track.id)
         mock_track_repository.rate.assert_not_awaited()

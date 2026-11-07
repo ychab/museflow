@@ -9,7 +9,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.taste.view import generate_profile_html_content
-from museflow.infrastructure.entrypoints.cli.commands.taste.view import view_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.view import taste_view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
@@ -20,8 +20,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestTasteViewParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.view.view_logic"
+    def mock_taste_view_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.view.taste_view_logic"
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = TasteProfileFactory.build()
             yield patched
@@ -94,18 +94,18 @@ class TestTasteViewParserCommand:
 
 class TestTasteViewCommand:
     @pytest.fixture(autouse=True)
-    def mock_view_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.view.view_logic"
+    def mock_taste_view_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.view.taste_view_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_taste_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = UserNotFound()
+        mock_taste_view_logic.side_effect = UserNotFound()
 
         result = runner.invoke(app, ["taste", "view", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -115,11 +115,11 @@ class TestTasteViewCommand:
 
     def test__profile_not_found(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_taste_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_view_logic.side_effect = TasteProfileNotFoundException()
 
         result = runner.invoke(app, ["taste", "view", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -129,11 +129,11 @@ class TestTasteViewCommand:
 
     def test__generic_exception(
         self,
-        mock_view_logic: mock.AsyncMock,
+        mock_taste_view_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_view_logic.side_effect = Exception("Boom")
+        mock_taste_view_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["taste", "view", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -159,7 +159,7 @@ class TestTasteViewLogic:
         mock_user_repository.get_by_email.return_value = UserFactory.build()
         mock_taste_profile_repository.get.return_value = taste_profile
 
-        result = await view_logic(email="test@example.com", name="my-profile")
+        result = await taste_view_logic(email="test@example.com", name="my-profile")
 
         assert isinstance(result, TasteProfile)
         assert result == taste_profile
@@ -168,7 +168,7 @@ class TestTasteViewLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await view_logic(email="test@example.com", name="my-profile")
+            await taste_view_logic(email="test@example.com", name="my-profile")
 
 
 class TestGenerateProfileHtmlContent:

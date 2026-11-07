@@ -6,7 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.taste.list_ import list_logic
+from museflow.infrastructure.entrypoints.cli.commands.taste.list_ import taste_list_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -18,8 +18,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tast
 
 class TestTasteListParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_taste_list_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.taste_list_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -48,8 +48,8 @@ class TestTasteListParserCommand:
 
 class TestTasteListCommand:
     @pytest.fixture(autouse=True)
-    def mock_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.list_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_taste_list_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.taste_list_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -58,9 +58,9 @@ class TestTasteListCommand:
         assert result.exit_code == 0
         assert "No taste profiles found" in result.output
 
-    def test__with_profiles(self, runner: CliRunner, mock_logic: mock.AsyncMock) -> None:
+    def test__with_profiles(self, runner: CliRunner, mock_taste_list_logic: mock.AsyncMock) -> None:
         profile = TasteProfileFactory.build(name="my-profile", tracks_count=42)
-        mock_logic.return_value = [profile]
+        mock_taste_list_logic.return_value = [profile]
 
         result = runner.invoke(app, ["taste", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
@@ -70,16 +70,18 @@ class TestTasteListCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_logic: mock.AsyncMock,
+        mock_taste_list_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_logic.side_effect = UserNotFound()
+        mock_taste_list_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["taste", "list", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
 
-    def test__exception(self, runner: CliRunner, mock_logic: mock.AsyncMock, clean_typer_text: TextCleaner) -> None:
-        mock_logic.side_effect = Exception("Boom")
+    def test__exception(
+        self, runner: CliRunner, mock_taste_list_logic: mock.AsyncMock, clean_typer_text: TextCleaner
+    ) -> None:
+        mock_taste_list_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["taste", "list", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -92,7 +94,7 @@ class TestTasteListLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await list_logic(email="unknown@example.com")
+            await taste_list_logic(email="unknown@example.com")
 
     async def test__nominal(
         self,
@@ -104,7 +106,7 @@ class TestTasteListLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_taste_profile_repository.list.return_value = profiles
 
-        result = await list_logic(email=user.email)
+        result = await taste_list_logic(email=user.email)
 
         assert result == profiles
         mock_taste_profile_repository.list.assert_called_once_with(user_id=user.id)

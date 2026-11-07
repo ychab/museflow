@@ -1,7 +1,7 @@
 from museflow.domain.entities.user import User
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
-from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.artists import stats_artists_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -19,7 +19,7 @@ class TestStatsArtistsLogic:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist A"], score=6, played_count=1)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Artist B"], score=10, played_count=1)
 
-        result = await artists_logic(
+        result = await stats_artists_logic(
             email=user.email,
             limit=20,
             source=SourceFilter.ALL,

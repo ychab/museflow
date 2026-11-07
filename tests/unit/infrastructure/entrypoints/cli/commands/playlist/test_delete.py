@@ -14,7 +14,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import delete_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.delete import playlist_delete_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -25,8 +25,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.play
 
 class TestPlaylistDeleteParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_delete_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_delete_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = 1
             yield patched
 
@@ -98,32 +98,36 @@ class TestPlaylistDeleteParserCommand:
 
 class TestPlaylistDeleteCommand:
     @pytest.fixture(autouse=True)
-    def mock_delete_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.delete_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_delete_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_delete_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = 1
             yield patched
 
-    def test__single_delete__nominal(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__single_delete__nominal(self, runner: CliRunner, mock_playlist_delete_logic: mock.AsyncMock) -> None:
         result = runner.invoke(app, ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "Deleted 1 playlist(s) of test@example.com." in result.output
-        mock_delete_logic.assert_called_once()
+        mock_playlist_delete_logic.assert_called_once()
 
-    def test__purge__with_yes_flag(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
-        mock_delete_logic.return_value = 3
+    def test__purge__with_yes_flag(self, runner: CliRunner, mock_playlist_delete_logic: mock.AsyncMock) -> None:
+        mock_playlist_delete_logic.return_value = 3
         result = runner.invoke(app, ["playlist", "delete", "--purge", "--email", "test@example.com", "--yes"])
         assert result.exit_code == 0
         assert "Deleted 3 playlist(s) of test@example.com." in result.output
 
-    def test__purge__confirmation_accepted(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__purge__confirmation_accepted(
+        self, runner: CliRunner, mock_playlist_delete_logic: mock.AsyncMock
+    ) -> None:
         result = runner.invoke(app, ["playlist", "delete", "--purge", "--email", "test@example.com"], input="y\n")
         assert result.exit_code == 0
-        mock_delete_logic.assert_called_once()
+        mock_playlist_delete_logic.assert_called_once()
 
-    def test__purge__confirmation_declined(self, runner: CliRunner, mock_delete_logic: mock.AsyncMock) -> None:
+    def test__purge__confirmation_declined(
+        self, runner: CliRunner, mock_playlist_delete_logic: mock.AsyncMock
+    ) -> None:
         result = runner.invoke(app, ["playlist", "delete", "--purge", "--email", "test@example.com"], input="n\n")
         assert result.exit_code != 0
-        mock_delete_logic.assert_not_called()
+        mock_playlist_delete_logic.assert_not_called()
 
     def test__purge__confirmation_message_includes_filters(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -136,10 +140,10 @@ class TestPlaylistDeleteCommand:
     def test__user_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_playlist_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = UserNotFound()
+        mock_playlist_delete_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -147,9 +151,9 @@ class TestPlaylistDeleteCommand:
     def test__playlist_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_playlist_delete_logic: mock.AsyncMock,
     ) -> None:
-        mock_delete_logic.side_effect = PlaylistNotFoundError()
+        mock_playlist_delete_logic.side_effect = PlaylistNotFoundError()
         playlist_id = uuid.uuid4()
         result = runner.invoke(app, ["playlist", "delete", str(playlist_id), "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -158,10 +162,10 @@ class TestPlaylistDeleteCommand:
     def test__auth_token_not_found(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_playlist_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = ProviderAuthTokenNotFoundError()
+        mock_playlist_delete_logic.side_effect = ProviderAuthTokenNotFoundError()
         result = runner.invoke(
             app,
             ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com", "--include-remote"],
@@ -172,10 +176,10 @@ class TestPlaylistDeleteCommand:
     def test__exception(
         self,
         runner: CliRunner,
-        mock_delete_logic: mock.AsyncMock,
+        mock_playlist_delete_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_delete_logic.side_effect = Exception("Boom")
+        mock_playlist_delete_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["playlist", "delete", str(uuid.uuid4()), "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "Error: Boom" in clean_typer_text(result.stderr)
@@ -209,7 +213,7 @@ class TestPlaylistDeleteLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await delete_logic(
+            await playlist_delete_logic(
                 email="unknown@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
@@ -225,7 +229,7 @@ class TestPlaylistDeleteLogic:
         mock_playlist_repository.delete.return_value = True
         playlist_id = uuid.uuid4()
 
-        count = await delete_logic(
+        count = await playlist_delete_logic(
             email="test@example.com",
             playlist_id=playlist_id,
             purge=False,
@@ -246,7 +250,7 @@ class TestPlaylistDeleteLogic:
         mock_playlist_repository.delete.return_value = False
 
         with pytest.raises(PlaylistNotFoundError):
-            await delete_logic(
+            await playlist_delete_logic(
                 email="test@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
@@ -261,7 +265,7 @@ class TestPlaylistDeleteLogic:
     ) -> None:
         mock_playlist_repository.purge.return_value = 5
 
-        count = await delete_logic(
+        count = await playlist_delete_logic(
             email="test@example.com",
             playlist_id=None,
             purge=True,
@@ -285,7 +289,7 @@ class TestPlaylistDeleteLogic:
         mock_playlist_repository.get.return_value = playlist
         mock_playlist_repository.delete.return_value = True
 
-        count = await delete_logic(
+        count = await playlist_delete_logic(
             email="test@example.com",
             playlist_id=playlist.id,
             purge=False,
@@ -305,7 +309,7 @@ class TestPlaylistDeleteLogic:
         mock_playlist_repository.get.return_value = None
 
         with pytest.raises(PlaylistNotFoundError):
-            await delete_logic(
+            await playlist_delete_logic(
                 email="test@example.com",
                 playlist_id=uuid.uuid4(),
                 purge=False,
@@ -326,7 +330,7 @@ class TestPlaylistDeleteLogic:
         other_playlist = PlaylistFactory.build(provider="foo")
         mock_playlist_repository.list.return_value = [*spotify_playlists, other_playlist]
 
-        count = await delete_logic(
+        count = await playlist_delete_logic(
             email="test@example.com",
             playlist_id=None,
             purge=True,

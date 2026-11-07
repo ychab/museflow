@@ -50,8 +50,8 @@ museflow/application/use_cases/user_create.py
 ## CLI commands
 Each command has 3 unit classes (`TestXParserCommand`, `TestXCommand`, `TestXLogic`) and 1 integration `TestXLogic`
 (happy path only). Canonical: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
-- `X` is `<Group><Command>` (`TestPlaylistHistoryLogic` for `museflow playlist history`): the production functions
-  drop the group (`history_logic`), the test classes keep it so that a report names the command.
+- `X` is `<Group><Command>`, like the production names: `TestPlaylistHistoryLogic` tests `playlist_history_logic`
+  (`museflow playlist history`), patched by the fixture `mock_playlist_history_logic`.
 - `TestXParserCommand`: Typer parsing only; `TestXCommand`: the callback (output, try/except), with `*_logic` mocked;
   `TestXLogic`: the logic branches, with a `TARGET_PATH` class attribute pointing to the command module.
 - Error paths (user not found, …) belong in the unit `TestXLogic`, not in the integration one.

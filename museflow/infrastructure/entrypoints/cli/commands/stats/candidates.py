@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("candidates", help="Show artists to explore: few total tracks but high average score.")
-def candidates_command(
+def stats_candidates_command(
     email: str = EMAIL_OPTION,
     limit: int = typer.Option(20, help="Max rows in the table"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
@@ -25,7 +25,7 @@ def candidates_command(
 ) -> None:
     try:
         rows = asyncio.run(
-            candidates_logic(
+            stats_candidates_logic(
                 email=email,
                 limit=limit,
                 source=source,
@@ -60,7 +60,7 @@ def candidates_command(
     console.print(table)
 
 
-async def candidates_logic(
+async def stats_candidates_logic(
     email: EmailStr,
     limit: int,
     source: SourceFilter,

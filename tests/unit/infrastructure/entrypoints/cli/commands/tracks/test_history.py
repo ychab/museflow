@@ -13,7 +13,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFound
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.tracks.history import history_logic
+from museflow.infrastructure.entrypoints.cli.commands.tracks.history import tracks_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -21,8 +21,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestTracksHistoryParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
+    def mock_tracks_history_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.tracks_history_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -133,19 +133,19 @@ class TestTracksHistoryParserCommand:
 
 class TestTracksHistoryCommand:
     @pytest.fixture(autouse=True)
-    def mock_history_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.history_logic"
+    def mock_tracks_history_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.tracks.history.tracks_history_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__user_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_tracks_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_history_logic.side_effect = UserNotFound()
+        mock_tracks_history_logic.side_effect = UserNotFound()
 
         result = runner.invoke(
             app,
@@ -158,12 +158,12 @@ class TestTracksHistoryCommand:
 
     def test__directory_not_found(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_tracks_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_history_logic.side_effect = StreamingHistoryDirectoryNotFound("Directory not found: /bad/path")
+        mock_tracks_history_logic.side_effect = StreamingHistoryDirectoryNotFound("Directory not found: /bad/path")
 
         result = runner.invoke(
             app,
@@ -176,12 +176,12 @@ class TestTracksHistoryCommand:
 
     def test__generic_exception(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_tracks_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_history_logic.side_effect = Exception("Boom")
+        mock_tracks_history_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(
             app,
@@ -194,12 +194,12 @@ class TestTracksHistoryCommand:
 
     def test__nominal__output(
         self,
-        mock_history_logic: mock.AsyncMock,
+        mock_tracks_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_history_logic.return_value = ImportStreamingHistoryReport(
+        mock_tracks_history_logic.return_value = ImportStreamingHistoryReport(
             items_read=1000,
             items_skipped_no_timestamp=5,
             items_skipped_short_play=200,
@@ -249,7 +249,7 @@ class TestTracksHistoryLogic:
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
-        report = await history_logic(
+        report = await tracks_history_logic(
             email=user.email,
             config=ImportStreamingHistoryConfigInput(directory=tmp_path),
             provider=MusicProvider.SPOTIFY,
@@ -262,7 +262,7 @@ class TestTracksHistoryLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await history_logic(
+            await tracks_history_logic(
                 email="test@example.com",
                 config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
                 provider=MusicProvider.SPOTIFY,

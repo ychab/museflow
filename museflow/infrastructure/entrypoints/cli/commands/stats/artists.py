@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 
 @app.command("artists", help="Show top artists ranked by overall score (breadth x depth x quality).")
-def artists_command(
+def stats_artists_command(
     email: str = EMAIL_OPTION,
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
     score_min: int | None = typer.Option(
@@ -50,7 +50,7 @@ def artists_command(
 
     try:
         rows = asyncio.run(
-            artists_logic(
+            stats_artists_logic(
                 email=email,
                 limit=limit,
                 source=source,
@@ -99,7 +99,7 @@ def artists_command(
     console.print(table)
 
 
-async def artists_logic(
+async def stats_artists_logic(
     email: EmailStr,
     limit: int,
     source: SourceFilter,

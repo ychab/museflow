@@ -22,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")
-def history_command(
+def tracks_history_command(
     email: str = EMAIL_OPTION,
     directory: Path = typer.Option(
         ...,
@@ -57,7 +57,7 @@ def history_command(
 
     try:
         with spinner("Importing listening history…"):
-            report = asyncio.run(history_logic(email=email, config=config, provider=provider))
+            report = asyncio.run(tracks_history_logic(email=email, config=config, provider=provider))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except StreamingHistoryException as e:
@@ -89,7 +89,7 @@ def history_command(
     console.print(table)
 
 
-async def history_logic(
+async def tracks_history_logic(
     email: EmailStr,
     config: ImportStreamingHistoryConfigInput,
     provider: MusicProvider,

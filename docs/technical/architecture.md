@@ -72,7 +72,7 @@ The most connected command. It touches every port.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant CLI as CLI discover / discover_logic
+    participant CLI as CLI playlist_discover_logic
     participant DI as cli/dependencies.py
     participant UC as DiscoverTasteUseCase
     participant UoW as Unit of work (short SQL blocks)

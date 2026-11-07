@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.enums import TrackSortBy
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import tracks_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.tracks import stats_tracks_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -18,8 +18,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stat
 
 class TestStatsTracksParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_tracks_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.tracks_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_tracks_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_tracks_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -70,19 +70,19 @@ class TestStatsTracksParserCommand:
 
 class TestStatsTracksCommand:
     @pytest.fixture(autouse=True)
-    def mock_tracks_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.tracks_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_tracks_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_tracks_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__no_rated_tracks(self, mock_tracks_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_tracks_logic.return_value = []
+    def test__no_rated_tracks(self, mock_stats_tracks_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_stats_tracks_logic.return_value = []
         result = runner.invoke(app, ["stats", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No rated tracks found." in result.output
 
-    def test__with_tracks_table(self, mock_tracks_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_tracks_table(self, mock_stats_tracks_logic: mock.AsyncMock, runner: CliRunner) -> None:
         track = TrackFactory.build(name="Song A", artists=["Artist X"], score=9, played_count=42)
-        mock_tracks_logic.return_value = [track]
+        mock_stats_tracks_logic.return_value = [track]
 
         result = runner.invoke(app, ["stats", "tracks", "--email", "test@example.com"])
 
@@ -96,11 +96,11 @@ class TestStatsTracksCommand:
 
     def test__user_not_found(
         self,
-        mock_tracks_logic: mock.AsyncMock,
+        mock_stats_tracks_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_tracks_logic.side_effect = UserNotFound()
+        mock_stats_tracks_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["stats", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
@@ -108,11 +108,11 @@ class TestStatsTracksCommand:
 
     def test__generic_exception(
         self,
-        mock_tracks_logic: mock.AsyncMock,
+        mock_stats_tracks_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_tracks_logic.side_effect = Exception("Boom")
+        mock_stats_tracks_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["stats", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
@@ -126,6 +126,6 @@ class TestStatsTracksLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await tracks_logic(
+            await stats_tracks_logic(
                 email="test@example.com", limit=20, score_min=None, score_max=None, sort=TrackSortBy.SCORE
             )

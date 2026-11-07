@@ -9,7 +9,7 @@ from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFound
 from museflow.domain.value_objects.stats import ArtistStats
-from museflow.infrastructure.entrypoints.cli.commands.stats.artists import artists_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.artists import stats_artists_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -19,8 +19,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stat
 
 class TestStatsArtistsParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_artists_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.artists_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_artists_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_artists_logic", new_callable=mock.AsyncMock) as patched:
             patched.return_value = []
             yield patched
 
@@ -73,17 +73,17 @@ class TestStatsArtistsParserCommand:
 
 class TestStatsArtistsCommand:
     @pytest.fixture(autouse=True)
-    def mock_artists_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.artists_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_stats_artists_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.stats_artists_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__no_artists(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_artists_logic.return_value = []
+    def test__no_artists(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_stats_artists_logic.return_value = []
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No artist stats found." in result.output
 
-    def test__with_artists_table(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_artists_table(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistStats(
             artist="Artist X",
             quality_score=8.2,
@@ -93,7 +93,7 @@ class TestStatsArtistsCommand:
             track_count=5,
             plays_count=12,
         )
-        mock_artists_logic.return_value = [row]
+        mock_stats_artists_logic.return_value = [row]
 
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com"])
 
@@ -108,7 +108,9 @@ class TestStatsArtistsCommand:
         assert "Overall" in result.output
         assert "37.1" in result.output
 
-    def test__with_artists_table__rate_avg_sort(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_artists_table__rate_avg_sort(
+        self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner
+    ) -> None:
         row = ArtistStats(
             artist="Artist X",
             quality_score=8.2,
@@ -118,7 +120,7 @@ class TestStatsArtistsCommand:
             track_count=5,
             plays_count=12,
         )
-        mock_artists_logic.return_value = [row]
+        mock_stats_artists_logic.return_value = [row]
 
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com", "--sort", "rate_avg"])
 
@@ -127,7 +129,7 @@ class TestStatsArtistsCommand:
         assert "Overall" not in result.output
         assert "37.1" not in result.output
 
-    def test__with_unrated_artist(self, mock_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__with_unrated_artist(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
         row = ArtistStats(
             artist="Unrated Artist",
             quality_score=None,
@@ -137,7 +139,7 @@ class TestStatsArtistsCommand:
             track_count=5,
             plays_count=7,
         )
-        mock_artists_logic.return_value = [row]
+        mock_stats_artists_logic.return_value = [row]
 
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com"])
 
@@ -147,11 +149,11 @@ class TestStatsArtistsCommand:
 
     def test__user_not_found(
         self,
-        mock_artists_logic: mock.AsyncMock,
+        mock_stats_artists_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_artists_logic.side_effect = UserNotFound()
+        mock_stats_artists_logic.side_effect = UserNotFound()
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.output)
@@ -159,11 +161,11 @@ class TestStatsArtistsCommand:
 
     def test__generic_exception(
         self,
-        mock_artists_logic: mock.AsyncMock,
+        mock_stats_artists_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_artists_logic.side_effect = Exception("Boom")
+        mock_stats_artists_logic.side_effect = Exception("Boom")
         result = runner.invoke(app, ["stats", "artists", "--email", "test@example.com"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
@@ -177,7 +179,7 @@ class TestStatsArtistsLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFound):
-            await artists_logic(
+            await stats_artists_logic(
                 email="test@example.com",
                 limit=20,
                 source=SourceFilter.ALL,

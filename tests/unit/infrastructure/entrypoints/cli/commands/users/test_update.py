@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.domain.exceptions import UserNotFound
-from museflow.infrastructure.entrypoints.cli.commands.users.update import update_logic
+from museflow.infrastructure.entrypoints.cli.commands.users.update import users_update_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -16,8 +16,8 @@ from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 class TestUsersUpdateParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.update_logic"
+    def mock_users_update_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.users_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
@@ -101,14 +101,14 @@ class TestUsersUpdateParserCommand:
 
 class TestUsersUpdateCommand:
     @pytest.fixture(autouse=True)
-    def mock_update_logic(self) -> Iterable[mock.AsyncMock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.update_logic"
+    def mock_users_update_logic(self) -> Iterable[mock.AsyncMock]:
+        target_path = "museflow.infrastructure.entrypoints.cli.commands.users.update.users_update_logic"
         with mock.patch(target_path, new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__nominal(
         self,
-        mock_update_logic: mock.AsyncMock,
+        mock_users_update_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
@@ -122,7 +122,7 @@ class TestUsersUpdateCommand:
 
     def test__no_attribute_to_update(
         self,
-        mock_update_logic: mock.AsyncMock,
+        mock_users_update_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
@@ -135,11 +135,11 @@ class TestUsersUpdateCommand:
 
     def test__user_not_found(
         self,
-        mock_update_logic: mock.AsyncMock,
+        mock_users_update_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_update_logic.side_effect = UserNotFound()
+        mock_users_update_logic.side_effect = UserNotFound()
         user_id = uuid.uuid4()
 
         result = runner.invoke(app, ["users", "update", str(user_id), "--email", "new@example.com"])
@@ -150,11 +150,11 @@ class TestUsersUpdateCommand:
 
     def test__exceptions(
         self,
-        mock_update_logic: mock.AsyncMock,
+        mock_users_update_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_update_logic.side_effect = Exception("Boom")
+        mock_users_update_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["users", "update", str(uuid.uuid4()), "--email", "new@example.com"])
         assert result.exit_code != 0
@@ -181,4 +181,4 @@ class TestUsersUpdateLogic:
 
         user_id = uuid.uuid4()
         with pytest.raises(UserNotFound):
-            await update_logic(user_id, UserUpdateInput(email="new@example.com"))
+            await users_update_logic(user_id, UserUpdateInput(email="new@example.com"))

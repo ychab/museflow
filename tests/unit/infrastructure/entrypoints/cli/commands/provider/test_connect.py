@@ -12,8 +12,8 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import ConnectStart
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_start_logic
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import connect_wait_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_start_logic
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_wait_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -32,9 +32,9 @@ def connect_start() -> ConnectStart:
 
 
 @pytest.fixture
-def mock_connect_start_logic(connect_start: ConnectStart) -> Iterable[mock.AsyncMock]:
+def mock_provider_connect_start_logic(connect_start: ConnectStart) -> Iterable[mock.AsyncMock]:
     with mock.patch(
-        f"{TARGET_PATH}.connect_start_logic",
+        f"{TARGET_PATH}.provider_connect_start_logic",
         new_callable=mock.AsyncMock,
         return_value=connect_start,
     ) as patched:
@@ -42,8 +42,8 @@ def mock_connect_start_logic(connect_start: ConnectStart) -> Iterable[mock.Async
 
 
 @pytest.fixture
-def mock_connect_wait_logic() -> Iterable[mock.AsyncMock]:
-    with mock.patch(f"{TARGET_PATH}.connect_wait_logic", new_callable=mock.AsyncMock) as patched:
+def mock_provider_connect_wait_logic() -> Iterable[mock.AsyncMock]:
+    with mock.patch(f"{TARGET_PATH}.provider_connect_wait_logic", new_callable=mock.AsyncMock) as patched:
         yield patched
 
 
@@ -53,12 +53,12 @@ def mock_typer_launch() -> Iterable[mock.Mock]:
         yield patched
 
 
-@pytest.mark.usefixtures("mock_connect_start_logic", "mock_connect_wait_logic", "mock_typer_launch")
+@pytest.mark.usefixtures("mock_provider_connect_start_logic", "mock_provider_connect_wait_logic", "mock_typer_launch")
 class TestProviderConnectParserCommand:
     def test__nominal(
         self,
-        mock_connect_start_logic: mock.AsyncMock,
-        mock_connect_wait_logic: mock.AsyncMock,
+        mock_provider_connect_start_logic: mock.AsyncMock,
+        mock_provider_connect_wait_logic: mock.AsyncMock,
         connect_start: ConnectStart,
         runner: CliRunner,
     ) -> None:
@@ -78,8 +78,8 @@ class TestProviderConnectParserCommand:
             ],
         )
         assert result.exit_code == 0
-        mock_connect_start_logic.assert_awaited_once_with("test@example.com", MusicProvider.SPOTIFY)
-        mock_connect_wait_logic.assert_awaited_once_with(connect_start, 30.0, 0.5)
+        mock_provider_connect_start_logic.assert_awaited_once_with("test@example.com", MusicProvider.SPOTIFY)
+        mock_provider_connect_wait_logic.assert_awaited_once_with(connect_start, 30.0, 0.5)
 
     def test__provider__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com", "--provider", "foo"])
@@ -166,7 +166,7 @@ class TestProviderConnectParserCommand:
         assert expected_msg in output
 
 
-@pytest.mark.usefixtures("mock_connect_start_logic", "mock_connect_wait_logic", "mock_typer_launch")
+@pytest.mark.usefixtures("mock_provider_connect_start_logic", "mock_provider_connect_wait_logic", "mock_typer_launch")
 class TestProviderConnectCommand:
     def test__nominal(
         self,
@@ -185,11 +185,11 @@ class TestProviderConnectCommand:
 
     def test__user_not_found(
         self,
-        mock_connect_start_logic: mock.AsyncMock,
+        mock_provider_connect_start_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_connect_start_logic.side_effect = UserNotFound()
+        mock_provider_connect_start_logic.side_effect = UserNotFound()
 
         result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -199,11 +199,11 @@ class TestProviderConnectCommand:
 
     def test__timeout__exceed(
         self,
-        mock_connect_wait_logic: mock.AsyncMock,
+        mock_provider_connect_wait_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_connect_wait_logic.side_effect = TimeoutError()
+        mock_provider_connect_wait_logic.side_effect = TimeoutError()
 
         result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com", "--timeout", "10"])
         assert result.exit_code != 0
@@ -213,11 +213,11 @@ class TestProviderConnectCommand:
 
     def test__exception(
         self,
-        mock_connect_start_logic: mock.AsyncMock,
+        mock_provider_connect_start_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_connect_start_logic.side_effect = Exception("Boom")
+        mock_provider_connect_start_logic.side_effect = Exception("Boom")
 
         result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -238,7 +238,7 @@ class TestProviderConnectLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await connect_start_logic("test@example.com", MusicProvider.SPOTIFY)
+            await provider_connect_start_logic("test@example.com", MusicProvider.SPOTIFY)
 
     async def test__wait__failed_flow__no_token(
         self,
@@ -250,7 +250,7 @@ class TestProviderConnectLogic:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(TimeoutError):
-            await connect_wait_logic(connect_start, timeout=0.1, poll_interval=0.05)
+            await provider_connect_wait_logic(connect_start, timeout=0.1, poll_interval=0.05)
 
         mock_auth_state_repository.delete.assert_awaited_once_with(
             user_id=connect_start.user_id,
@@ -266,7 +266,7 @@ class TestProviderConnectLogic:
         mock_auth_token_repository.get.return_value = auth_token
 
         with pytest.raises(TimeoutError):
-            await connect_wait_logic(
+            await provider_connect_wait_logic(
                 replace(connect_start, previous_token=auth_token),
                 timeout=0.1,
                 poll_interval=0.05,
@@ -281,7 +281,7 @@ class TestProviderConnectLogic:
     ) -> None:
         mock_auth_token_repository.get.return_value = replace(auth_token, token_access="renewed")
 
-        await connect_wait_logic(
+        await provider_connect_wait_logic(
             replace(connect_start, previous_token=auth_token),
             timeout=2.0,
             poll_interval=0.01,

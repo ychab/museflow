@@ -1,6 +1,6 @@
 from museflow.domain.entities.user import User
 from museflow.domain.enums import SourceFilter
-from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import candidates_logic
+from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import stats_candidates_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -14,7 +14,7 @@ class TestStatsCandidatesLogic:
         await TrackModelFactory.create_batch_async(size=6, user_id=user.id, artists=["Big Name"], score=9)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Mediocre"], score=4)
 
-        result = await candidates_logic(
+        result = await stats_candidates_logic(
             email=user.email,
             limit=20,
             source=SourceFilter.ALL,

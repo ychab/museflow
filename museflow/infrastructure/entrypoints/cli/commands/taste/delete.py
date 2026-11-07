@@ -13,7 +13,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("delete", help="Delete a taste profile. Playlists built from it are kept.")
-def delete_command(
+def taste_delete_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
@@ -26,7 +26,7 @@ def delete_command(
         )
 
     try:
-        asyncio.run(delete_logic(email=email, name=name))
+        asyncio.run(taste_delete_logic(email=email, name=name))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundException as e:
@@ -38,7 +38,7 @@ def delete_command(
     typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.GREEN)
 
 
-async def delete_logic(email: EmailStr, name: str) -> None:
+async def taste_delete_logic(email: EmailStr, name: str) -> None:
     uow = get_unit_of_work()
 
     async with uow:

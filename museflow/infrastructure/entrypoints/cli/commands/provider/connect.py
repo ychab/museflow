@@ -30,7 +30,7 @@ class ConnectStart:
 
 
 @app.command("connect", help="Connect a user account to a music provider via OAuth.")
-def connect_command(
+def provider_connect_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider to connect"),
     timeout: float = typer.Option(60.0, help="Seconds to wait for authentication.", min=10),
@@ -45,13 +45,13 @@ def connect_command(
     try:
         # One event loop for both steps: the pooled database connections are bound to it.
         with asyncio.Runner() as runner:
-            start = runner.run(connect_start_logic(email, provider))
+            start = runner.run(provider_connect_start_logic(email, provider))
 
             typer.echo(f"Opening browser for authentication: {start.authorization_url}")
             typer.launch(start.authorization_url)
 
             with get_console().status("Waiting for authentication completion..."):
-                runner.run(connect_wait_logic(start, timeout, poll_interval))
+                runner.run(provider_connect_wait_logic(start, timeout, poll_interval))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TimeoutError as e:
@@ -68,7 +68,7 @@ def connect_command(
     typer.secho("Authentication successful! \u2705", fg=typer.colors.GREEN)
 
 
-async def connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
+async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)
@@ -94,7 +94,7 @@ async def connect_start_logic(email: EmailStr, provider: MusicProvider) -> Conne
     )
 
 
-async def connect_wait_logic(start: ConnectStart, timeout: float, poll_interval: float) -> None:
+async def provider_connect_wait_logic(start: ConnectStart, timeout: float, poll_interval: float) -> None:
     uow = get_unit_of_work()
     start_time = time.time()
 
