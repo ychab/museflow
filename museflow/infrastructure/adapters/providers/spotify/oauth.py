@@ -16,7 +16,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
-from museflow.domain.exceptions import ProviderRateLimitExceeded
+from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import HttpClientMixin
 from museflow.infrastructure.adapters.http import RateLimitRetry
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(
         exception,
-        (SpotifyTokenExpiredError, SpotifyRefreshTokenInvalidError, ProviderRateLimitExceeded, SpotifyApiError),
+        (SpotifyTokenExpiredError, SpotifyRefreshTokenInvalidError, ProviderRateLimitExceededError, SpotifyApiError),
     ):
         return False  # Let the Session handler deal with this!
 
@@ -208,7 +208,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                             "Spotify rate limit wait exceeds max, aborting",
                             extra={"retry_after": retry_after, "max_retry_wait": self.max_retry_wait},
                         )
-                        raise ProviderRateLimitExceeded(
+                        raise ProviderRateLimitExceededError(
                             f"Spotify rate limit {retry_after} exceeds max wait {self.max_retry_wait}"
                         ) from e
 

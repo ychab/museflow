@@ -5,7 +5,7 @@ import pytest
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.use_cases.user_create import create_user
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserAlreadyExistsException
+from museflow.domain.exceptions import UserAlreadyExistsError
 
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 
@@ -25,6 +25,6 @@ class TestCreateUserUseCase:
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
-        with pytest.raises(UserAlreadyExistsException) as exc_info:
+        with pytest.raises(UserAlreadyExistsError) as exc_info:
             await create_user(user_create_data, mock_uow, mock_password_hasher)
         assert "Email already registered" in str(exc_info.value)

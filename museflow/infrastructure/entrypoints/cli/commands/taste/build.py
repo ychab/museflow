@@ -8,9 +8,9 @@ import typer
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import TasteProfileBuildPausedException
-from museflow.domain.exceptions import TasteProfileNoSeedException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileBuildPausedError
+from museflow.domain.exceptions import TasteProfileNoSeedError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
@@ -78,12 +78,12 @@ def taste_build_command(
                     meter=meter,
                 )
             )
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except TasteProfileNoSeedException as e:
+    except TasteProfileNoSeedError as e:
         typer.secho("No tracks found for this user. Import your library first.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-    except TasteProfileBuildPausedException as e:
+    except TasteProfileBuildPausedError as e:
         typer.secho(
             f"Build paused at batch {e.batch_index}/{e.total_batches}: {e.reason}\nRun with --resume to continue.",
             fg=typer.colors.YELLOW,
@@ -129,7 +129,7 @@ async def taste_build_logic(
         async with uow:
             user = await uow.users.get_by_email(email)
         if user is None:
-            raise UserNotFound()
+            raise UserNotFoundError()
 
         use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter)
         config = BuildTasteProfileConfigInput(

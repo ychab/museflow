@@ -12,9 +12,9 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
-from museflow.domain.exceptions import ProviderPremiumRequiredException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import ProviderNoActiveDeviceError
+from museflow.domain.exceptions import ProviderPremiumRequiredError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import RatePlaylistResult
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -127,7 +127,7 @@ class TestRatePlaylistCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = UserNotFound()
+        mock_rate_playlist_logic.side_effect = UserNotFoundError()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
@@ -168,7 +168,7 @@ class TestRatePlaylistCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
+        mock_rate_playlist_logic.side_effect = ProviderPremiumRequiredError("Spotify Premium required")
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
@@ -209,7 +209,7 @@ class TestRatePlaylistLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await rate_playlist_logic(email="test@example.com", playlist_id=uuid.uuid4())
 
     async def test__playlist_not_found(
@@ -443,9 +443,9 @@ class TestRatePlaylistLogic:
         playlist = PlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_playlist_repository.get.return_value = playlist
-        mock_provider_library.play_track.side_effect = ProviderPremiumRequiredException()
+        mock_provider_library.play_track.side_effect = ProviderPremiumRequiredError()
 
-        with pytest.raises(ProviderPremiumRequiredException):
+        with pytest.raises(ProviderPremiumRequiredError):
             await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         mock_track_repository.rate.assert_not_awaited()
@@ -465,7 +465,7 @@ class TestRatePlaylistLogic:
         playlist = PlaylistFactory.build(user_id=user.id, tracks=[track])
         mock_user_repository.get_by_email.return_value = user
         mock_playlist_repository.get.return_value = playlist
-        mock_provider_library.play_track.side_effect = [ProviderNoActiveDeviceException(), mock.DEFAULT]
+        mock_provider_library.play_track.side_effect = [ProviderNoActiveDeviceError(), mock.DEFAULT]
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
@@ -488,8 +488,8 @@ class TestRatePlaylistLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_playlist_repository.get.return_value = playlist
         mock_provider_library.play_track.side_effect = [
-            ProviderNoActiveDeviceException(),
-            ProviderNoActiveDeviceException(),
+            ProviderNoActiveDeviceError(),
+            ProviderNoActiveDeviceError(),
         ]
 
         await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)

@@ -8,8 +8,8 @@ from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNotFoundError
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
-from museflow.domain.exceptions import RateScoreInvalidException
+from museflow.domain.exceptions import ProviderNoActiveDeviceError
+from museflow.domain.exceptions import RateScoreInvalidError
 
 from tests.unit.factories.entities.track import TrackFactory
 
@@ -69,9 +69,9 @@ class TestRateTrackUseCase:
         use_case: RateTrackUseCase,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
-        mock_provider_library.play_track.side_effect = ProviderNoActiveDeviceException()
+        mock_provider_library.play_track.side_effect = ProviderNoActiveDeviceError()
 
-        with pytest.raises(ProviderNoActiveDeviceException):
+        with pytest.raises(ProviderNoActiveDeviceError):
             await use_case.play(TrackFactory.build())
 
     async def test__play__without_library(self, user_id: uuid.UUID, mock_uow: mock.AsyncMock) -> None:
@@ -87,7 +87,7 @@ class TestRateTrackUseCase:
         mock_track_repository: mock.AsyncMock,
         score: int,
     ) -> None:
-        with pytest.raises(RateScoreInvalidException):
+        with pytest.raises(RateScoreInvalidError):
             await use_case.rate(track_id=uuid.uuid4(), score=score)
 
         mock_track_repository.rate.assert_not_awaited()

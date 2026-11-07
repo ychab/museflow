@@ -11,8 +11,8 @@ from pytest_httpx import HTTPXMock
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import PlaylistType
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
-from museflow.domain.exceptions import ProviderPremiumRequiredException
+from museflow.domain.exceptions import ProviderNoActiveDeviceError
+from museflow.domain.exceptions import ProviderPremiumRequiredError
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -89,7 +89,7 @@ class TestSpotifyLibrary:
             method="PUT",
             status_code=codes.NOT_FOUND,
         )
-        with pytest.raises(ProviderNoActiveDeviceException):
+        with pytest.raises(ProviderNoActiveDeviceError):
             await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
 
     async def test__premium_required(
@@ -103,7 +103,7 @@ class TestSpotifyLibrary:
             method="PUT",
             status_code=codes.FORBIDDEN,
         )
-        with pytest.raises(ProviderPremiumRequiredException):
+        with pytest.raises(ProviderPremiumRequiredError):
             await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
 
     async def test__unhandled_http_error__reraises(

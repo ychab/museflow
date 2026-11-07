@@ -7,7 +7,7 @@ import typer
 
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.use_cases.user_update import update_user
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -30,7 +30,7 @@ def users_update_command(
 
     try:
         asyncio.run(users_update_logic(user_id, user_data=user_data))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         typer.secho(f"User not found with ID {user_id}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -51,7 +51,7 @@ async def users_update_logic(
         user = await uow.users.get_by_id(user_id)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     await update_user(
         user=user,

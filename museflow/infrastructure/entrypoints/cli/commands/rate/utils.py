@@ -7,7 +7,7 @@ from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ProviderNoActiveDeviceException
+from museflow.domain.exceptions import ProviderNoActiveDeviceError
 from museflow.infrastructure.config.settings.app import app_settings
 
 
@@ -23,12 +23,12 @@ async def play_track(use_case: RateTrackUseCase, track: Track, provider: MusicPr
     """Plays the track, asking once to start a device; returns False when there is still none."""
     try:
         await use_case.play(track)
-    except ProviderNoActiveDeviceException:
+    except ProviderNoActiveDeviceError:
         typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
         input("Start playback on your device and press Enter to retry...")
         try:
             await use_case.play(track)
-        except ProviderNoActiveDeviceException:
+        except ProviderNoActiveDeviceError:
             typer.secho("Device still unavailable — stopping session.", fg=typer.colors.RED, err=True)
             return False
 

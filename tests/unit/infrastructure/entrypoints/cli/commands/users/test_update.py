@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.user import UserUpdateInput
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users.update import users_update_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -139,7 +139,7 @@ class TestUsersUpdateCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_users_update_logic.side_effect = UserNotFound()
+        mock_users_update_logic.side_effect = UserNotFoundError()
         user_id = uuid.uuid4()
 
         result = runner.invoke(app, ["users", "update", str(user_id), "--email", "new@example.com"])
@@ -180,5 +180,5 @@ class TestUsersUpdateLogic:
         mock_user_repository.get_by_id.return_value = None
 
         user_id = uuid.uuid4()
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await users_update_logic(user_id, UserUpdateInput(email="new@example.com"))

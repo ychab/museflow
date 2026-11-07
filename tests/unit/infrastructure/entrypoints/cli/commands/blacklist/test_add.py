@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import blacklist_add_artist_logic
 from museflow.infrastructure.entrypoints.cli.commands.blacklist.add import blacklist_add_track_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -66,7 +66,7 @@ class TestBlacklistAddArtistCommand:
         mock_blacklist_add_artist_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_blacklist_add_artist_logic.side_effect = UserNotFound()
+        mock_blacklist_add_artist_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["blacklist", "add-artist", "--email", "test@example.com", "Taylor Swift"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -86,7 +86,7 @@ class TestBlacklistAddArtistLogic:
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await blacklist_add_artist_logic(email="unknown@example.com", artist_names=["Taylor Swift"])
 
 
@@ -148,7 +148,7 @@ class TestBlacklistAddTrackCommand:
         mock_blacklist_add_track_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_blacklist_add_track_logic.side_effect = UserNotFound()
+        mock_blacklist_add_track_logic.side_effect = UserNotFoundError()
         result = runner.invoke(
             app,
             ["blacklist", "add-track", "--email", "test@example.com", "Shake It Off", "--artist", "Taylor Swift"],
@@ -174,7 +174,7 @@ class TestBlacklistAddTrackLogic:
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await blacklist_add_track_logic(
                 email="unknown@example.com", name="Shake It Off", artist_name="Taylor Swift"
             )

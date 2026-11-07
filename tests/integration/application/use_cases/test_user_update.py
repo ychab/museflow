@@ -8,7 +8,7 @@ from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_update import update_user
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserEmailAlreadyExistsException
+from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 from tests.integration.factories.models.user import UserModelFactory
@@ -69,7 +69,7 @@ class TestUpdateUserUseCase:
         other_user_db = await UserModelFactory.create_async()
         user_update_data = UserUpdateInput(email=other_user_db.email)
 
-        with pytest.raises(UserEmailAlreadyExistsException):
+        with pytest.raises(UserEmailAlreadyExistsError):
             await update_user(
                 user=user,
                 user_data=user_update_data,

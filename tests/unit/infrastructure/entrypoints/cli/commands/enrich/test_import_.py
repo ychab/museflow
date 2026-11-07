@@ -10,7 +10,7 @@ from museflow.application.use_cases.enrichment_import import ImportEnrichmentRes
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -106,7 +106,7 @@ class TestEnrichImportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_enrich_import_logic.side_effect = UserNotFound()
+        mock_enrich_import_logic.side_effect = UserNotFoundError()
         valid_yaml = tmp_path / "enrichments.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  genres: [rock]\n  moods: []\n")
 
@@ -169,7 +169,7 @@ class TestEnrichImportLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await enrich_import_logic(email="test@example.com", data=[])
 
     async def test__unknown_genres__silently_dropped(

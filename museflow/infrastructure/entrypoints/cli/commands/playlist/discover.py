@@ -15,11 +15,11 @@ from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import DiscoveryTrackNoNew
+from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import TasteProfileStatusNotReadyException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import TasteProfileStatusNotReadyError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
@@ -121,24 +121,24 @@ def playlist_discover_command(
                     meter=meter,
                 ),
             )
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except ProviderAuthTokenNotFoundError as e:
         typer.secho(
             f"Auth token not found with email: {email}. Did you forget to connect?", fg=typer.colors.RED, err=True
         )
         raise typer.Exit(code=1) from e
-    except TasteProfileNotFoundException as e:
+    except TasteProfileNotFoundError as e:
         typer.secho("No profile found. Run `museflow taste build --name <name>` first.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
-    except TasteProfileStatusNotReadyException as e:
+    except TasteProfileStatusNotReadyError as e:
         typer.secho(
             "Taste profile is still being built. Run `museflow taste build` to completion first.",
             fg=typer.colors.RED,
             err=True,
         )
         raise typer.Exit(code=1) from e
-    except DiscoveryTrackNoNew as e:
+    except DiscoveryTrackNoNewError as e:
         typer.secho("No new tracks found after all attempts", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -221,9 +221,9 @@ async def playlist_discover_logic(
         A DiscoverTasteResult with the playlist, strategy, reports, and final tracks.
 
     Raises:
-        UserNotFound: If the user with the given email is not found.
+        UserNotFoundError: If the user with the given email is not found.
         ProviderAuthTokenNotFoundError: If the user's auth token for the provider is not found.
-        TasteProfileNotFoundException: If no matching taste profile is found.
+        TasteProfileNotFoundError: If no matching taste profile is found.
     """
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
@@ -231,7 +231,7 @@ async def playlist_discover_logic(
         async with uow:
             user = await uow.users.get_by_email(email)
             if not user:
-                raise UserNotFound()
+                raise UserNotFoundError()
 
         provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 

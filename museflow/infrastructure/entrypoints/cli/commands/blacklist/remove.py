@@ -7,7 +7,7 @@ import typer
 
 from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistUseCase
 from museflow.domain.exceptions import BlacklistItemNotFoundError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -20,7 +20,7 @@ def blacklist_remove_command(
 ) -> None:
     try:
         asyncio.run(blacklist_remove_logic(email=email, item_ids=item_ids))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except BlacklistItemNotFoundError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -39,7 +39,7 @@ async def blacklist_remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> 
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     use_case = RemoveFromBlacklistUseCase(uow=uow)
     await use_case.remove(user_id=user.id, item_ids=item_ids)

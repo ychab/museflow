@@ -11,9 +11,9 @@ from pytest_httpx import HTTPXMock
 
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
-from museflow.domain.exceptions import EnricherRateLimitExceeded
-from museflow.domain.exceptions import EnricherUnavailableException
-from museflow.domain.exceptions import TrackEnrichmentException
+from museflow.domain.exceptions import EnricherRateLimitExceededError
+from museflow.domain.exceptions import EnricherUnavailableError
+from museflow.domain.exceptions import TrackEnrichmentError
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 
@@ -47,20 +47,20 @@ class TestOpenRouterTrackEnricherAdapter:
     @pytest.mark.parametrize(
         ("status_code", "metadata", "expected_exception"),
         [
-            pytest.param(codes.UNAUTHORIZED, None, EnricherUnavailableException, id="401_invalid_key"),
-            pytest.param(codes.PAYMENT_REQUIRED, None, EnricherUnavailableException, id="402_no_credits"),
-            pytest.param(codes.NOT_FOUND, None, EnricherUnavailableException, id="404_unknown_model"),
-            pytest.param(codes.SERVICE_UNAVAILABLE, None, EnricherUnavailableException, id="503_no_provider"),
-            pytest.param(codes.BAD_REQUEST, None, EnricherUnavailableException, id="400_request_refused"),
-            pytest.param(codes.FORBIDDEN, None, EnricherUnavailableException, id="403_key_limit"),
+            pytest.param(codes.UNAUTHORIZED, None, EnricherUnavailableError, id="401_invalid_key"),
+            pytest.param(codes.PAYMENT_REQUIRED, None, EnricherUnavailableError, id="402_no_credits"),
+            pytest.param(codes.NOT_FOUND, None, EnricherUnavailableError, id="404_unknown_model"),
+            pytest.param(codes.SERVICE_UNAVAILABLE, None, EnricherUnavailableError, id="503_no_provider"),
+            pytest.param(codes.BAD_REQUEST, None, EnricherUnavailableError, id="400_request_refused"),
+            pytest.param(codes.FORBIDDEN, None, EnricherUnavailableError, id="403_key_limit"),
             pytest.param(
                 codes.FORBIDDEN,
                 {"reasons": ["violence"], "flagged_input": "a title"},
-                TrackEnrichmentException,
+                TrackEnrichmentError,
                 id="403_moderation",
             ),
-            pytest.param(codes.REQUEST_ENTITY_TOO_LARGE, None, TrackEnrichmentException, id="413_batch_too_large"),
-            pytest.param(codes.UNPROCESSABLE_ENTITY, None, TrackEnrichmentException, id="422_batch_rejected"),
+            pytest.param(codes.REQUEST_ENTITY_TOO_LARGE, None, TrackEnrichmentError, id="413_batch_too_large"),
+            pytest.param(codes.UNPROCESSABLE_ENTITY, None, TrackEnrichmentError, id="422_batch_rejected"),
         ],
     )
     async def test__enrich_tracks__request_rejected__raises_by_scope(
@@ -93,7 +93,7 @@ class TestOpenRouterTrackEnricherAdapter:
             headers={"Retry-After": "6"},  # above max_retry_wait=5
         )
 
-        with pytest.raises(EnricherRateLimitExceeded, match="exceeds max wait"):
+        with pytest.raises(EnricherRateLimitExceededError, match="exceeds max wait"):
             await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
     async def test__enrich_tracks__network_error_after_retries__raises_unavailable(
@@ -104,7 +104,7 @@ class TestOpenRouterTrackEnricherAdapter:
     ) -> None:
         httpx_mock.add_exception(httpx.ConnectError("Connection refused"), url=URL, method="POST", is_reusable=True)
 
-        with pytest.raises(EnricherUnavailableException, match="unreachable"):
+        with pytest.raises(EnricherUnavailableError, match="unreachable"):
             await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
     async def test__enrich_tracks__no_choices__raises_batch_failure(
@@ -114,7 +114,7 @@ class TestOpenRouterTrackEnricherAdapter:
     ) -> None:
         httpx_mock.add_response(url=URL, method="POST", json={"choices": []})
 
-        with pytest.raises(TrackEnrichmentException, match="Invalid enrichment response"):
+        with pytest.raises(TrackEnrichmentError, match="Invalid enrichment response"):
             await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
     async def test__enrich_tracks__invalid_json__raises_batch_failure(
@@ -129,7 +129,7 @@ class TestOpenRouterTrackEnricherAdapter:
             is_reusable=True,
         )
 
-        with pytest.raises(TrackEnrichmentException, match="Invalid enrichment response"):
+        with pytest.raises(TrackEnrichmentError, match="Invalid enrichment response"):
             await openrouter_enricher.enrich_tracks(TrackFactory.batch(1), fields=frozenset(EnrichField))
 
         assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries

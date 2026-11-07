@@ -12,10 +12,10 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import EnricherRateLimitExceeded
-from museflow.domain.exceptions import EnricherUnavailableException
-from museflow.domain.exceptions import TrackEnrichmentAbortedException
-from museflow.domain.exceptions import TrackEnrichmentException
+from museflow.domain.exceptions import EnricherRateLimitExceededError
+from museflow.domain.exceptions import EnricherUnavailableError
+from museflow.domain.exceptions import TrackEnrichmentAbortedError
+from museflow.domain.exceptions import TrackEnrichmentError
 from museflow.domain.value_objects.track import TrackEnrichment
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -149,7 +149,7 @@ class TestEnrichTracksUseCase:
         ("error", "expected_message", "expected_traceback"),
         [
             pytest.param(
-                TrackEnrichmentException("Invalid enrichment response: LLM response truncated (length)"),
+                TrackEnrichmentError("Invalid enrichment response: LLM response truncated (length)"),
                 "Enrichment batch 1/2 failed: Invalid enrichment response: LLM response truncated (length)",
                 False,
                 id="batch_failure",
@@ -181,8 +181,8 @@ class TestEnrichTracksUseCase:
     @pytest.mark.parametrize(
         "error",
         [
-            pytest.param(EnricherUnavailableException("Insufficient credits"), id="unavailable"),
-            pytest.param(EnricherRateLimitExceeded("Insufficient credits"), id="rate_limit"),
+            pytest.param(EnricherUnavailableError("Insufficient credits"), id="unavailable"),
+            pytest.param(EnricherRateLimitExceededError("Insufficient credits"), id="rate_limit"),
         ],
     )
     async def test__enricher_unavailable__aborts_and_keeps_saved_batches(
@@ -203,7 +203,7 @@ class TestEnrichTracksUseCase:
             error,
         ]
 
-        with pytest.raises(TrackEnrichmentAbortedException, match="Insufficient credits") as exc_info:
+        with pytest.raises(TrackEnrichmentAbortedError, match="Insufficient credits") as exc_info:
             await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(batch_size=2))
 
         assert (exc_info.value.batch_index, exc_info.value.total_batches) == (2, 3)
@@ -221,9 +221,9 @@ class TestEnrichTracksUseCase:
         mock_enricher: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(5)
-        mock_enricher.enrich_tracks.side_effect = [[], [], TrackEnrichmentException("Flagged"), []]
+        mock_enricher.enrich_tracks.side_effect = [[], [], TrackEnrichmentError("Flagged"), []]
 
-        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
+        with pytest.raises(TrackEnrichmentAbortedError) as exc_info:
             await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
                 user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=3)
             )
@@ -249,9 +249,9 @@ class TestEnrichTracksUseCase:
         expected_last: str,
     ) -> None:
         mock_track_repository.get_list.return_value = TrackFactory.batch(2)
-        mock_enricher.enrich_tracks.side_effect = [TrackEnrichmentException("Flagged"), last_outcome]
+        mock_enricher.enrich_tracks.side_effect = [TrackEnrichmentError("Flagged"), last_outcome]
 
-        with pytest.raises(TrackEnrichmentAbortedException) as exc_info:
+        with pytest.raises(TrackEnrichmentAbortedError) as exc_info:
             await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(
                 user, EnrichTracksConfigInput(batch_size=1, max_consecutive_failures=2)
             )
@@ -269,7 +269,7 @@ class TestEnrichTracksUseCase:
         mock_track_repository.get_list.return_value = tracks
         mock_enricher.enrich_tracks.side_effect = [
             [],
-            TrackEnrichmentException("Flagged"),
+            TrackEnrichmentError("Flagged"),
             [TrackEnrichmentFactory.build(track_id=tracks[2].id)],
             [],
             [],

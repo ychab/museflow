@@ -4,9 +4,9 @@ import pytest
 
 from museflow.application.use_cases.user_authenticate import authenticate_user
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserInactive
-from museflow.domain.exceptions import UserInvalidCredentials
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserInactiveError
+from museflow.domain.exceptions import UserInvalidCredentialsError
+from museflow.domain.exceptions import UserNotFoundError
 
 
 class TestAuthenticateUserUseCase:
@@ -37,7 +37,7 @@ class TestAuthenticateUserUseCase:
     ) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await authenticate_user(
                 email="foo@example.com",
                 password="testtest",
@@ -58,7 +58,7 @@ class TestAuthenticateUserUseCase:
         mock_user_repository.get_by_email.return_value = user
         mock_password_hasher.verify.return_value = False
 
-        with pytest.raises(UserInvalidCredentials):
+        with pytest.raises(UserInvalidCredentialsError):
             await authenticate_user(
                 email=user.email,
                 password="blahblah",
@@ -77,7 +77,7 @@ class TestAuthenticateUserUseCase:
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
 
-        with pytest.raises(UserInactive):
+        with pytest.raises(UserInactiveError):
             await authenticate_user(
                 email=user.email,
                 password="testtest",

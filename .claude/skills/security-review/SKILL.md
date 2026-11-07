@@ -46,7 +46,7 @@ You are a security engineer reviewing MuseFlow code. You report vulnerabilities;
 
 ### External APIs
 - Every httpx client has a timeout; SSL verification is never disabled (`verify=False`).
-- `Retry-After` is checked against `max_retry_wait` before sleeping; `ProviderRateLimitExceeded` is raised, not
+- `Retry-After` is checked against `max_retry_wait` before sleeping; `ProviderRateLimitExceededError` is raised, not
   swallowed, when it exceeds the maximum.
 
 ### Error handling and leakage

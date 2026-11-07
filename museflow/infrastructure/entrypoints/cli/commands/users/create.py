@@ -7,7 +7,7 @@ import typer
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.use_cases.user_create import create_user
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserAlreadyExistsException
+from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -29,7 +29,7 @@ def users_create_command(
 ) -> None:
     try:
         asyncio.run(users_create_logic(email, password))
-    except UserAlreadyExistsException as e:
+    except UserAlreadyExistsError as e:
         typer.secho(f"User with email {email} already exists.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:

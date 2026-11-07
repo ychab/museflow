@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate.export import rate_export_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -75,7 +75,7 @@ class TestRateExportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_export_logic.side_effect = UserNotFound()
+        mock_rate_export_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(
             app,
@@ -134,5 +134,5 @@ class TestRateExportLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await rate_export_logic(email="test@example.com")

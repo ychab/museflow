@@ -7,8 +7,8 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.export import taste_export_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -78,7 +78,7 @@ class TestTasteExportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_export_logic.side_effect = UserNotFound()
+        mock_taste_export_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(
             app,
@@ -105,7 +105,7 @@ class TestTasteExportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_export_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_export_logic.side_effect = TasteProfileNotFoundError()
 
         result = runner.invoke(
             app,
@@ -196,7 +196,7 @@ class TestTasteExportLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await taste_export_logic(email="test@example.com", name="my-profile")
 
     async def test__profile__not_found(
@@ -207,5 +207,5 @@ class TestTasteExportLogic:
         mock_user_repository.get_by_email.return_value = UserFactory.build()
         mock_taste_profile_repository.get.return_value = None
 
-        with pytest.raises(TasteProfileNotFoundException):
+        with pytest.raises(TasteProfileNotFoundError):
             await taste_export_logic(email="test@example.com", name="my-profile")

@@ -10,7 +10,7 @@ import typer
 from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
 from museflow.application.use_cases.enrichment_import import import_enrichment
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -26,7 +26,7 @@ def enrich_import_command(
 
     try:
         result = asyncio.run(enrich_import_logic(email=email, data=data))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -47,6 +47,6 @@ async def enrich_import_logic(email: EmailStr, data: list[Any]) -> ImportEnrichm
         user = await uow.users.get_by_email(email)
 
     if user is None:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     return await import_enrichment(user_id=user.id, entries=entries, uow=uow)

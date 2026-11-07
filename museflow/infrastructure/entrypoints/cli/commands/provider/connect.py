@@ -13,7 +13,7 @@ from museflow.application.use_cases.provider_oauth_state_discard import discard_
 from museflow.application.use_cases.provider_token_view import get_provider_token
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
@@ -52,7 +52,7 @@ def provider_connect_command(
 
             with get_console().status("Waiting for authentication completion..."):
                 runner.run(provider_connect_wait_logic(start, timeout, poll_interval))
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TimeoutError as e:
         typer.secho(
@@ -73,7 +73,7 @@ async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider)
     async with uow:
         user = await uow.users.get_by_email(email)
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     previous_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 

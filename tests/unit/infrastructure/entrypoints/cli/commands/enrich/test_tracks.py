@@ -8,8 +8,8 @@ from typer.testing import CliRunner
 
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.enums import EnrichField
-from museflow.domain.exceptions import TrackEnrichmentAbortedException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TrackEnrichmentAbortedError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_tracks_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -101,7 +101,7 @@ class TestEnrichTracksCommand:
     def test__aborted__usage_printed(self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock) -> None:
         async def enrich(**kwargs: Any) -> EnrichTracksReport:
             spend(kwargs["meter"])
-            raise TrackEnrichmentAbortedException(4, 12, 600, reason="Insufficient credits")
+            raise TrackEnrichmentAbortedError(4, 12, 600, reason="Insufficient credits")
 
         mock_enrich_tracks_logic.side_effect = enrich
 
@@ -136,7 +136,7 @@ class TestEnrichTracksCommand:
         mock_enrich_tracks_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_enrich_tracks_logic.side_effect = UserNotFound()
+        mock_enrich_tracks_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -156,9 +156,7 @@ class TestEnrichTracksCommand:
         args: list[str],
         expected_hint: str,
     ) -> None:
-        mock_enrich_tracks_logic.side_effect = TrackEnrichmentAbortedException(
-            4, 12, 600, reason="Insufficient credits"
-        )
+        mock_enrich_tracks_logic.side_effect = TrackEnrichmentAbortedError(4, 12, 600, reason="Insufficient credits")
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", *args])
         assert result.exit_code == 1
 
@@ -189,7 +187,7 @@ class TestEnrichTracksLogic:
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await enrich_tracks_logic(email="unknown@example.com")
 
     async def test__model_and_meter__forwarded_to_enricher(

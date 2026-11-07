@@ -9,7 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.use_cases.ratings_import import ImportRatingsResult
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import rate_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -104,7 +104,7 @@ class TestRateImportCommand:
         tmp_path: Path,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_import_logic.side_effect = UserNotFound()
+        mock_rate_import_logic.side_effect = UserNotFoundError()
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -179,5 +179,5 @@ class TestRateImportLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await rate_import_logic(email="test@example.com", data=[])

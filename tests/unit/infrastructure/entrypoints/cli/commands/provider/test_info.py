@@ -5,7 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -75,7 +75,7 @@ class TestProviderInfoCommand:
         mock_provider_info_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_provider_info_logic.side_effect = UserNotFound()
+        mock_provider_info_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["provider", "info", "--email", "test@example.com"])
 
         output = clean_typer_text(result.stderr)

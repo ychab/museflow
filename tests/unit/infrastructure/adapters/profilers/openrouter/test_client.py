@@ -7,8 +7,8 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.exceptions import TasteProfileBuildException
-from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import _format_tracks
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
@@ -138,7 +138,7 @@ class TestOpenRouterTasteProfileAdapter:
             headers={"Retry-After": "6"},  # above max_retry_wait=5
         )
 
-        with pytest.raises(TasteProfilerRateLimitExceeded, match="exceeds max wait"):
+        with pytest.raises(TasteProfilerRateLimitExceededError, match="exceeds max wait"):
             await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
 
     async def test__request_rejected__raises_build_exception(
@@ -153,7 +153,7 @@ class TestOpenRouterTasteProfileAdapter:
             json={"error": {"code": 402, "message": "Insufficient credits"}},
         )
 
-        with pytest.raises(TasteProfileBuildException, match="Insufficient credits"):
+        with pytest.raises(TasteProfileBuildError, match="Insufficient credits"):
             await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
 
     async def test__invalid_response__raises_build_exception(
@@ -168,7 +168,7 @@ class TestOpenRouterTasteProfileAdapter:
             is_reusable=True,
         )
 
-        with pytest.raises(TasteProfileBuildException, match="Invalid taste profile response"):
+        with pytest.raises(TasteProfileBuildError, match="Invalid taste profile response"):
             await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
 
         assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries

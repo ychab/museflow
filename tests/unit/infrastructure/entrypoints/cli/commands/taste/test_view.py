@@ -6,8 +6,8 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import TasteProfileNotFoundException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileNotFoundError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.view import generate_profile_html_content
 from museflow.infrastructure.entrypoints.cli.commands.taste.view import taste_view_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -105,7 +105,7 @@ class TestTasteViewCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_view_logic.side_effect = UserNotFound()
+        mock_taste_view_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(app, ["taste", "view", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -119,7 +119,7 @@ class TestTasteViewCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_view_logic.side_effect = TasteProfileNotFoundException()
+        mock_taste_view_logic.side_effect = TasteProfileNotFoundError()
 
         result = runner.invoke(app, ["taste", "view", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -167,7 +167,7 @@ class TestTasteViewLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await taste_view_logic(email="test@example.com", name="my-profile")
 
 

@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import ConnectStart
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_start_logic
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_wait_logic
@@ -189,7 +189,7 @@ class TestProviderConnectCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_provider_connect_start_logic.side_effect = UserNotFound()
+        mock_provider_connect_start_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(app, ["provider", "connect", "--email", "test@example.com"])
         assert result.exit_code != 0
@@ -237,7 +237,7 @@ class TestProviderConnectLogic:
     async def test__start__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await provider_connect_start_logic("test@example.com", MusicProvider.SPOTIFY)
 
     async def test__wait__failed_flow__no_token(

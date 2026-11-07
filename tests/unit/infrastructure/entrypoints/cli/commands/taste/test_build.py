@@ -8,9 +8,9 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.exceptions import TasteProfileBuildPausedException
-from museflow.domain.exceptions import TasteProfileNoSeedException
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import TasteProfileBuildPausedError
+from museflow.domain.exceptions import TasteProfileNoSeedError
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import taste_build_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -189,7 +189,7 @@ class TestTasteBuildCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_build_logic.side_effect = UserNotFound()
+        mock_taste_build_logic.side_effect = UserNotFoundError()
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code != 0
@@ -203,7 +203,7 @@ class TestTasteBuildCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_build_logic.side_effect = TasteProfileNoSeedException()
+        mock_taste_build_logic.side_effect = TasteProfileNoSeedError()
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -217,7 +217,7 @@ class TestTasteBuildCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_build_logic.side_effect = TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
+        mock_taste_build_logic.side_effect = TasteProfileBuildPausedError(4, 25, "rate limit exceeded")
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
@@ -251,7 +251,7 @@ class TestTasteBuildCommand:
     ) -> None:
         async def build(**kwargs: Any) -> TasteProfile:
             spend(kwargs["meter"])
-            raise TasteProfileBuildPausedException(4, 25, "rate limit exceeded")
+            raise TasteProfileBuildPausedError(4, 25, "rate limit exceeded")
 
         mock_taste_build_logic.side_effect = build
 
@@ -341,7 +341,7 @@ class TestTasteBuildLogic:
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await taste_build_logic(
                 email="test@example.com",
                 name="my-profile",

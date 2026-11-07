@@ -9,7 +9,7 @@ from museflow.application.use_cases.tracks_delete import DeleteTracksUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -50,7 +50,7 @@ def tracks_delete_command(
                 yes=yes,
             )
         )
-    except UserNotFound as e:
+    except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -78,7 +78,7 @@ async def tracks_delete_logic(
         user = await uow.users.get_by_email(email)
 
     if not user:
-        raise UserNotFound()
+        raise UserNotFoundError()
 
     use_case = DeleteTracksUseCase(user_id=user.id, provider=provider, uow=uow)
     tracks = await use_case.find(artist=artist, name=name, source=source)

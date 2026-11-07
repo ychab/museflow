@@ -30,7 +30,7 @@ class RateLimitRetry(Exception):
     """Signal to retry after honouring a provider's rate-limit delay.
 
     Deliberately not a `tenacity.TryAgain`: since tenacity 9.2, `reraise=True` unwraps an exhausted `TryAgain` into its
-    cause (the raw HTTP 429), which would bypass the `*RateLimitExceeded` conversion done by the callers.
+    cause (the raw HTTP 429), which would bypass the `*RateLimitExceededError` conversion done by the callers.
     """
 
 

@@ -8,7 +8,7 @@ import ijson
 from museflow.application.inputs.history import StreamingHistoryEntryInput
 from museflow.application.inputs.history import StreamingHistoryFileStats
 from museflow.application.ports.providers.history import StreamingHistoryPort
-from museflow.domain.exceptions import StreamingHistoryInvalidFormat
+from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
                         )
                     )
         except Exception as exc:
-            raise StreamingHistoryInvalidFormat(f"Failed to parse {path}: {exc}") from exc
+            raise StreamingHistoryInvalidFormatError(f"Failed to parse {path}: {exc}") from exc
 
         return track_entries, StreamingHistoryFileStats(
             items_read=items_read,

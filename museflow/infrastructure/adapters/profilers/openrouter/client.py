@@ -11,8 +11,8 @@ from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import MoodTag
-from museflow.domain.exceptions import TasteProfileBuildException
-from museflow.domain.exceptions import TasteProfilerRateLimitExceeded
+from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
@@ -113,11 +113,11 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
                 adapter=f"profiler {step}",
             )
         except LLMRateLimitError as e:
-            raise TasteProfilerRateLimitExceeded(str(e)) from e
+            raise TasteProfilerRateLimitExceededError(str(e)) from e
         except LLMRequestError as e:
-            raise TasteProfileBuildException(str(e)) from e
+            raise TasteProfileBuildError(str(e)) from e
         except LLMResponseError as e:
-            raise TasteProfileBuildException(f"Invalid taste profile response: {e}") from e
+            raise TasteProfileBuildError(f"Invalid taste profile response: {e}") from e
 
         return cast(TasteProfileData, content.model_dump())
 

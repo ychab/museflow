@@ -16,7 +16,7 @@ from pydantic import HttpUrl
 import pytest
 from pytest_httpx import HTTPXMock
 
-from museflow.domain.exceptions import ProviderRateLimitExceeded
+from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
@@ -447,7 +447,7 @@ class TestSpotifyOAuthAdapter:
                 headers={"Retry-After": f"{retry_after}"},
             )
 
-            with pytest.raises(ProviderRateLimitExceeded):
+            with pytest.raises(ProviderRateLimitExceededError):
                 await client.make_api_call(
                     method="GET",
                     endpoint="/foo/bar",

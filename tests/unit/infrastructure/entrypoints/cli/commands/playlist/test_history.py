@@ -14,7 +14,7 @@ from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNoTracksError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -272,7 +272,7 @@ class TestPlaylistHistoryCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_history_logic.side_effect = UserNotFound()
+        mock_playlist_history_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.stderr)
@@ -400,7 +400,7 @@ class TestPlaylistHistoryLogic:
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await playlist_history_logic(
                 email="unknown@example.com",
                 provider=MusicProvider.SPOTIFY,

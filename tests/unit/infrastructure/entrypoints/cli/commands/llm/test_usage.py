@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.enums import LLMUsageGroupBy
-from museflow.domain.exceptions import UserNotFound
+from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
@@ -130,7 +130,7 @@ class TestLLMUsageCommand:
         mock_llm_usage_logic: mock.AsyncMock,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_llm_usage_logic.side_effect = UserNotFound()
+        mock_llm_usage_logic.side_effect = UserNotFoundError()
         result = runner.invoke(app, ["llm", "usage", "--email", "test@example.com"])
         assert result.exit_code != 0
         assert "User not found with email: test@example.com" in clean_typer_text(result.output)
@@ -150,5 +150,5 @@ class TestLLMUsageLogic:
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
-        with pytest.raises(UserNotFound):
+        with pytest.raises(UserNotFoundError):
             await llm_usage_logic(email="unknown@example.com", group_by=LLMUsageGroupBy.OPERATION, since=None)
