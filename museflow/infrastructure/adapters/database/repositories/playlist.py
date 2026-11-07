@@ -18,7 +18,7 @@ class PlaylistSQLRepository(PlaylistRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def save(self, playlist: Playlist) -> Playlist:
+    async def create(self, playlist: Playlist) -> Playlist:
         playlist_db = PlaylistDB.from_entity(playlist)
         self.session.add(playlist_db)
 
@@ -29,11 +29,6 @@ class PlaylistSQLRepository(PlaylistRepository):
         await self.session.refresh(playlist_db)
 
         return replace(playlist_db.to_entity(), tracks=playlist.tracks)
-
-    async def list(self, user_id: uuid.UUID) -> list[Playlist]:
-        stmt = select(PlaylistDB).where(PlaylistDB.user_id == user_id).order_by(PlaylistDB.created_at.desc())
-        result = await self.session.execute(stmt)
-        return [row.to_entity() for row in result.scalars()]
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
         stmt = (
@@ -52,7 +47,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         tracks = [track_db.to_entity() for _, track_db in rows if track_db is not None]
         return replace(playlist_db.to_entity(), tracks=tracks)
 
-    async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
+    async def list_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
         stmt = (
             select(PlaylistTrackDB.track_id)
             .join(PlaylistDB, PlaylistDB.id == PlaylistTrackDB.playlist_id)
@@ -87,3 +82,9 @@ class PlaylistSQLRepository(PlaylistRepository):
         result = await self.session.execute(stmt.returning(PlaylistDB.id))
         deleted_ids = result.scalars().all()
         return len(deleted_ids)
+
+    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
+    async def list(self, user_id: uuid.UUID) -> list[Playlist]:
+        stmt = select(PlaylistDB).where(PlaylistDB.user_id == user_id).order_by(PlaylistDB.created_at.desc())
+        result = await self.session.execute(stmt)
+        return [row.to_entity() for row in result.scalars()]

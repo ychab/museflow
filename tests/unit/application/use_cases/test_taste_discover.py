@@ -38,7 +38,7 @@ class TestDiscoverTasteUseCase:
         async def _bulk_upsert(tracks: list[Track], *, batch_size: int = 100) -> tuple[dict[str, uuid.UUID], int]:
             return {t.fingerprint: t.id for t in tracks}, len(tracks)
 
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture
@@ -52,8 +52,8 @@ class TestDiscoverTasteUseCase:
         mock_reconciler: mock.Mock,
         track_roundtrip: None,
     ) -> DiscoverTasteUseCase:
-        mock_blacklist_repository.get_all.return_value = UserBlacklist()
-        mock_playlist_repository.save.side_effect = lambda p: p
+        mock_blacklist_repository.get.return_value = UserBlacklist()
+        mock_playlist_repository.create.side_effect = lambda p: p
 
         return DiscoverTasteUseCase(
             uow=mock_uow,
@@ -221,7 +221,7 @@ class TestDiscoverTasteUseCase:
             )
 
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=profile.name)
-        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert (record.operation, record.playlist_id) == (LLMOperation.DISCOVER, None)
 
     async def test__dry_run(
@@ -615,7 +615,7 @@ class TestDiscoverTasteUseCase:
         """When blacklist has entries, advisor receives populated artist and track lists."""
         artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift")
         track_entry = BlacklistedTrackFactory.build(name="Shake It Off", artist_name="Taylor Swift")
-        mock_blacklist_repository.get_all.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
+        mock_blacklist_repository.get.return_value = UserBlacklist(artists=[artist], tracks=[track_entry])
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
@@ -649,7 +649,7 @@ class TestDiscoverTasteUseCase:
         """Tracks from a blacklisted artist are removed before filtering known tracks."""
         artist = BlacklistedArtistFactory.build(artist_name="Taylor Swift", fingerprint="")
 
-        mock_blacklist_repository.get_all.return_value = UserBlacklist(artists=[artist])
+        mock_blacklist_repository.get.return_value = UserBlacklist(artists=[artist])
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
         blacklisted_track = TrackFactory.build(artists=["Taylor Swift"])
@@ -686,7 +686,7 @@ class TestDiscoverTasteUseCase:
         """Tracks whose fingerprint matches the blacklist are removed."""
         blacklisted_track = TrackFactory.build(name="Shake It Off", artists=["Taylor Swift"])
         track_entry = BlacklistedTrackFactory.build(fingerprint=blacklisted_track.fingerprint)
-        mock_blacklist_repository.get_all.return_value = UserBlacklist(tracks=[track_entry])
+        mock_blacklist_repository.get.return_value = UserBlacklist(tracks=[track_entry])
 
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -732,7 +732,7 @@ class TestDiscoverTasteUseCase:
             )
 
         mock_track_repository.bulk_upsert.assert_not_awaited()
-        mock_playlist_repository.save.assert_not_awaited()
+        mock_playlist_repository.create.assert_not_awaited()
 
     async def test__discovery_tracks_upserted_to_museflow_track(
         self,

@@ -191,7 +191,7 @@ class TestRateHistoryLogic:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         result = await rate_history_logic(email=user.email, limit=10, reset=False)
 
@@ -208,7 +208,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
@@ -226,7 +226,7 @@ class TestRateHistoryLogic:
     ) -> None:
         first, second, third = TrackFactory.batch(3)
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [first, second, third]
+        mock_track_repository.list.return_value = [first, second, third]
         mock_typer_prompt.side_effect = ["8", "u", typer.Abort()]
 
         with pytest.raises(typer.Abort):
@@ -244,7 +244,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "s"
 
         await rate_history_logic(email=user.email, limit=10, reset=False)
@@ -260,7 +260,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.side_effect = ["abc", "s"]
 
         await rate_history_logic(email=user.email, limit=10, reset=False)
@@ -277,7 +277,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.side_effect = ["15", "s"]
 
         await rate_history_logic(email=user.email, limit=10, reset=False)
@@ -296,7 +296,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [True, True]
 
@@ -318,7 +318,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [False, False]
 
@@ -336,13 +336,13 @@ class TestRateHistoryLogic:
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.reset_score.return_value = 5
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
         mock_typer_confirm.return_value = True
 
         await rate_history_logic(email=user.email, limit=10, reset=True)
 
         mock_track_repository.reset_score.assert_awaited_once_with(user_id=user.id, source=TrackSource.HISTORY)
-        mock_track_repository.get_list.assert_awaited_once()
+        mock_track_repository.list.assert_awaited_once()
 
     async def test__play__calls_play_track(
         self,
@@ -355,7 +355,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
@@ -372,7 +372,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_provider_library.play_track.side_effect = ProviderPremiumRequiredError()
 
         with pytest.raises(ProviderPremiumRequiredError):
@@ -392,7 +392,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_provider_library.play_track.side_effect = [ProviderNoActiveDeviceError(), mock.DEFAULT]
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
@@ -409,11 +409,11 @@ class TestRateHistoryLogic:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await rate_history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
 
-        mock_track_repository.get_list.assert_awaited_once_with(
+        mock_track_repository.list.assert_awaited_once_with(
             user_id=user.id,
             source=TrackSource.HISTORY,
             unrated_only=True,
@@ -433,7 +433,7 @@ class TestRateHistoryLogic:
     ) -> None:
         tracks = [TrackFactory.build(), TrackFactory.build()]
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         mock_provider_library.play_track.side_effect = [
             ProviderNoActiveDeviceError(),
             ProviderNoActiveDeviceError(),
@@ -460,7 +460,7 @@ class TestRateHistoryLogic:
         track.id = uuid.uuid4()
         track.primary_artist = "Artist A"
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "s"
 
         await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
@@ -477,7 +477,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "u"
 
         result = await rate_history_logic(email=user.email, limit=10, reset=False)
@@ -495,7 +495,7 @@ class TestRateHistoryLogic:
     ) -> None:
         track = TrackFactory.build()
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "U"
 
         result = await rate_history_logic(email=user.email, limit=10, reset=False)

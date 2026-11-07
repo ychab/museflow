@@ -58,7 +58,7 @@ class EnrichTracksUseCase:
         missing_fields = None if config.force else config.fields
 
         async with self._uow as uow:
-            tracks = await uow.tracks.get_list(
+            tracks = await uow.tracks.list(
                 user_id=user.id,
                 missing_fields=missing_fields,
                 limit=config.limit,

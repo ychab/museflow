@@ -195,7 +195,7 @@ class TestEnrichTracksLogic:
         mock_track_repository: mock.AsyncMock,
         spy_get_enricher: mock.MagicMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
         meter = LLMUsageMeter()
 
         await enrich_tracks_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
@@ -207,7 +207,7 @@ class TestEnrichTracksLogic:
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await enrich_tracks_logic(
             email="test@example.com",
@@ -216,7 +216,7 @@ class TestEnrichTracksLogic:
             limit=100,
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(
+        mock_track_repository.list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
             missing_fields=None,
             limit=100,
@@ -227,14 +227,14 @@ class TestEnrichTracksLogic:
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await enrich_tracks_logic(
             email="test@example.com",
             only_locale=True,
         )
 
-        mock_track_repository.get_list.assert_awaited_once_with(
+        mock_track_repository.list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
             missing_fields=frozenset({EnrichField.LOCALE}),
             limit=None,
@@ -245,11 +245,11 @@ class TestEnrichTracksLogic:
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await enrich_tracks_logic(email="test@example.com")
 
-        mock_track_repository.get_list.assert_awaited_once_with(
+        mock_track_repository.list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
             missing_fields=frozenset(EnrichField),
             limit=None,

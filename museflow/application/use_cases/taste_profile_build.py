@@ -49,7 +49,7 @@ class BuildTasteProfileUseCase:
     async def _build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # Select the most-listened tracks as seeds (best signal quality)
         async with self._uow as uow:
-            tracks = await uow.tracks.get_list(
+            tracks = await uow.tracks.list(
                 user_id=user.id,
                 min_score=0 if config.rated_only else None,
                 order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
@@ -98,7 +98,7 @@ class BuildTasteProfileUseCase:
 
                 # One block per batch: a paid batch survives a later failure.
                 async with self._uow as uow:
-                    await uow.taste_profiles.save_checkpoint(
+                    await uow.taste_profiles.upsert_checkpoint(
                         user_id=user.id,
                         name=config.name,
                         logic_version=self._profiler.logic_version,

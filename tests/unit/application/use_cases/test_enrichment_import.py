@@ -13,7 +13,7 @@ class TestImportEnrichmentUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         result = await import_enrichment(
             user_id=user.id,

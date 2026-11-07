@@ -11,12 +11,7 @@ class PlaylistRepository(ABC):
     """Port for persisting and querying playlists."""
 
     @abstractmethod
-    async def save(self, playlist: Playlist) -> Playlist: ...
-
-    @abstractmethod
-    async def list(self, user_id: uuid.UUID) -> list[Playlist]:
-        """Return playlists for the user ordered by creation date descending. tracks=[] in all results."""
-        ...
+    async def create(self, playlist: Playlist) -> Playlist: ...
 
     @abstractmethod
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
@@ -24,7 +19,7 @@ class PlaylistRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
+    async def list_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:
         """Return the distinct track IDs across all of the user's playlists of the given type."""
         ...
 
@@ -41,4 +36,10 @@ class PlaylistRepository(ABC):
         provider: MusicProvider | None = None,
     ) -> int:
         """Delete playlists matching the given filters. Returns the number of playlists deleted."""
+        ...
+
+    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
+    @abstractmethod
+    async def list(self, user_id: uuid.UUID) -> list[Playlist]:
+        """Return playlists for the user ordered by creation date descending. tracks=[] in all results."""
         ...

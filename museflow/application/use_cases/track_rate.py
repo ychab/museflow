@@ -38,7 +38,7 @@ class RateTrackUseCase:
     async def find_history(self, limit: int, artist: str | None) -> list[Track]:
         """Lists the unrated history tracks not skipped for good, most played first."""
         async with self._uow as uow:
-            return await uow.tracks.get_list(
+            return await uow.tracks.list(
                 user_id=self._user_id,
                 source=TrackSource.HISTORY,
                 unrated_only=True,
@@ -51,7 +51,7 @@ class RateTrackUseCase:
     async def find_discovery(self, limit: int) -> list[Track]:
         """Lists the unrated discovery tracks, newest first."""
         async with self._uow as uow:
-            return await uow.tracks.get_list(
+            return await uow.tracks.list(
                 user_id=self._user_id,
                 source=TrackSource.DISCOVERY,
                 unrated_only=True,

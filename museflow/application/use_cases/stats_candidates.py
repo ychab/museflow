@@ -16,7 +16,7 @@ async def list_artist_candidates(
     uow: UnitOfWorkPort,
 ) -> list[ArtistCandidate]:
     async with uow:
-        all_tracks = await uow.tracks.get_list(
+        all_tracks = await uow.tracks.list(
             user_id=user_id,
             source=source.to_track_source(),
             limit=None,

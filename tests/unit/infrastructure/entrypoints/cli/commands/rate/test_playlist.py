@@ -386,7 +386,7 @@ class TestRatePlaylistLogic:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         await rate_playlist_logic(email=user.email, playlist_id=None)
 
@@ -402,7 +402,7 @@ class TestRatePlaylistLogic:
     ) -> None:
         track = TrackFactory.build(artists=["Artist A"])
         mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 

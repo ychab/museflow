@@ -19,7 +19,7 @@ from tests.unit.factories.entities.playlist import PlaylistFactory
 
 
 class TestPlaylistSQLRepository:
-    async def test__save__creates_playlist_and_tracks(
+    async def test__create__creates_playlist_and_tracks(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -40,7 +40,7 @@ class TestPlaylistSQLRepository:
             tracks=[track],
         )
 
-        saved = await playlist_repository.save(playlist)
+        saved = await playlist_repository.create(playlist)
 
         assert saved.id == playlist.id
         assert saved.user_id == user.id
@@ -62,7 +62,7 @@ class TestPlaylistSQLRepository:
         ).scalar()
         assert track_count == 1
 
-    async def test__save__includes_tracks_in_result(
+    async def test__create__includes_tracks_in_result(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -82,7 +82,7 @@ class TestPlaylistSQLRepository:
             tracks=[track_1, track_2],
         )
 
-        saved = await playlist_repository.save(playlist)
+        saved = await playlist_repository.create(playlist)
 
         assert len(saved.tracks) == 2
 
@@ -171,7 +171,7 @@ class TestPlaylistSQLRepository:
         result = await playlist_repository.get(uuid.uuid4(), playlist_db.id)
         assert result is None
 
-    async def test__get_track_ids__filters_by_type_and_user(
+    async def test__list_track_ids__filters_by_type_and_user(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -190,11 +190,11 @@ class TestPlaylistSQLRepository:
             user_id=other_user_track_db.user_id, type=PlaylistType.HISTORY, track_ids=[other_user_track_db.id]
         )
 
-        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
 
         assert track_ids == frozenset({history_track_db.id})
 
-    async def test__get_track_ids__distinct_across_playlists(
+    async def test__list_track_ids__distinct_across_playlists(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
@@ -204,16 +204,16 @@ class TestPlaylistSQLRepository:
         await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
         await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY, track_ids=[track_db.id])
 
-        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
 
         assert track_ids == frozenset({track_db.id})
 
-    async def test__get_track_ids__empty_when_no_match(
+    async def test__list_track_ids__empty_when_no_match(
         self,
         user: User,
         playlist_repository: PlaylistRepository,
     ) -> None:
-        track_ids = await playlist_repository.get_track_ids(user.id, type=PlaylistType.HISTORY)
+        track_ids = await playlist_repository.list_track_ids(user.id, type=PlaylistType.HISTORY)
         assert track_ids == frozenset()
 
     async def test__delete__deletes_playlist_and_returns_true(

@@ -20,7 +20,7 @@ class DeleteTracksUseCase:
     async def find(self, artist: str | None, name: str | None, source: TrackSource | None) -> list[Track]:
         """Lists the tracks matching the filters, so the caller can confirm before passing them to `delete`."""
         async with self._uow as uow:
-            tracks = await uow.tracks.get_list(
+            tracks = await uow.tracks.list(
                 user_id=self._user_id,
                 artist_name=artist,
                 source=source,
@@ -50,4 +50,4 @@ class DeleteTracksUseCase:
                 orphan_ids = await uow.tracks.unlink_provider(user_id=self._user_id, provider=self._provider)
                 return await uow.tracks.delete(user_id=self._user_id, track_ids=orphan_ids)
 
-            return await uow.tracks.delete_all(user_id=self._user_id)
+            return await uow.tracks.purge(user_id=self._user_id)

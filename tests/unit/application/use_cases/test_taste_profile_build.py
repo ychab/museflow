@@ -173,7 +173,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 7 tracks → 3 batches (3 / 3 / 1)
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
         for _ in range(6):
@@ -204,7 +204,7 @@ class TestBuildTasteProfileUseCase:
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         blocks_open: list[bool] = []
 
         def respond(request: httpx.Request) -> httpx.Response:
@@ -246,7 +246,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         # 2 tracks → 1 batch → 1 build_profile_segment + 1 reflect_on_profile (no merge)
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         for _ in range(2):
             httpx_mock.add_response(
@@ -283,7 +283,7 @@ class TestBuildTasteProfileUseCase:
             batch_size=3,
             throttling_sleep_seconds=1.0,
         )
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -315,7 +315,7 @@ class TestBuildTasteProfileUseCase:
         mock_sleep: mock.AsyncMock,
     ) -> None:
         # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -337,7 +337,7 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
@@ -348,13 +348,13 @@ class TestBuildTasteProfileUseCase:
         use_case: BuildTasteProfileUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, rated_only=True)
 
         with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
 
-        mock_track_repository.get_list.assert_called_once_with(
+        mock_track_repository.list.assert_called_once_with(
             user_id=user.id,
             order=mock.ANY,
             limit=10,
@@ -376,7 +376,7 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 1)
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -390,7 +390,7 @@ class TestBuildTasteProfileUseCase:
         await use_case.build_profile(user=user, config=config)
 
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
-        assert mock_taste_profile_repository.save_checkpoint.call_count == 2
+        assert mock_taste_profile_repository.upsert_checkpoint.call_count == 2
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
     async def test__resume__no_checkpoint(
@@ -406,7 +406,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = None
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -442,7 +442,7 @@ class TestBuildTasteProfileUseCase:
         reason: str,
     ) -> None:
         # Batch 1 fails: the build pauses at once, no checkpoint saved
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
@@ -450,7 +450,7 @@ class TestBuildTasteProfileUseCase:
         assert exc_info.value.batch_index == 1
         assert exc_info.value.total_batches == 3
         assert exc_info.value.reason == reason
-        mock_taste_profile_repository.save_checkpoint.assert_not_called()
+        mock_taste_profile_repository.upsert_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -467,13 +467,13 @@ class TestBuildTasteProfileUseCase:
         usage = LLMUsageFactory.build()
         profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
         profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError):
             await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler).build_profile(user=user, config=config)
 
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=config.name)
-        (record,) = mock_llm_usage_repository.add_many.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert (record.operation, record.usage) == (LLMOperation.TASTE_BUILD, usage)
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -489,7 +489,7 @@ class TestBuildTasteProfileUseCase:
         mock_segment: mock.AsyncMock,
     ) -> None:
         # Batch 1 succeeds (checkpoint saved), batch 2 fails: pauses at 2/3, upsert never called
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         mock_segment.side_effect = [profile_data, TasteProfilerRateLimitExceededError("rate limit")]
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
@@ -498,7 +498,7 @@ class TestBuildTasteProfileUseCase:
         assert exc_info.value.batch_index == 2
         assert exc_info.value.total_batches == 3
         assert exc_info.value.reason == "rate limit"
-        mock_taste_profile_repository.save_checkpoint.assert_called_once()
+        mock_taste_profile_repository.upsert_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -523,7 +523,7 @@ class TestBuildTasteProfileUseCase:
         mock_reflect: mock.AsyncMock,
         reason: str,
     ) -> None:
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
@@ -531,7 +531,7 @@ class TestBuildTasteProfileUseCase:
         assert exc_info.value.batch_index == 3
         assert exc_info.value.total_batches == 3
         assert exc_info.value.reason == reason
-        assert mock_taste_profile_repository.save_checkpoint.call_count == 3
+        assert mock_taste_profile_repository.upsert_checkpoint.call_count == 3
         mock_taste_profile_repository.upsert.assert_not_called()
 
     @pytest.mark.parametrize("tracks", [7], indirect=True)
@@ -549,7 +549,7 @@ class TestBuildTasteProfileUseCase:
         mock_reflect: mock.AsyncMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 3)
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_reflect.side_effect = None
@@ -560,5 +560,5 @@ class TestBuildTasteProfileUseCase:
         mock_segment.assert_not_called()
         mock_merge.assert_not_called()
         mock_reflect.assert_awaited_once_with(profile_data)
-        mock_taste_profile_repository.save_checkpoint.assert_not_called()
+        mock_taste_profile_repository.upsert_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_called_once()

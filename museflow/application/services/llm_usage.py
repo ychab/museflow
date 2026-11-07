@@ -29,7 +29,7 @@ async def record_llm_usage(
     try:
         async with uow:
             profile = await uow.taste_profiles.get(user_id=user_id, name=profile_name) if profile_name else None
-            await uow.llm_usage.add_many(
+            await uow.llm_usage.bulk_create(
                 [
                     LLMUsageRecord(
                         user_id=user_id,

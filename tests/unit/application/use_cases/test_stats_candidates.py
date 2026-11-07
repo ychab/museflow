@@ -17,7 +17,7 @@ class TestListArtistCandidatesUseCase:
         candidate_track = TrackFactory.build(artists=["Hidden Gem"], score=9)
         popular_tracks = [TrackFactory.build(artists=["Big Name"], score=9) for _ in range(6)]
         low_score_track = TrackFactory.build(artists=["Mediocre"], score=4)
-        mock_track_repository.get_list.return_value = [candidate_track] + popular_tracks + [low_score_track]
+        mock_track_repository.list.return_value = [candidate_track] + popular_tracks + [low_score_track]
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -35,7 +35,7 @@ class TestListArtistCandidatesUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_repository.list.return_value = []
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -50,7 +50,7 @@ class TestListArtistCandidatesUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         tracks = [TrackFactory.build(artists=["Popular Artist"], score=9) for _ in range(6)]
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -65,7 +65,7 @@ class TestListArtistCandidatesUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         track = TrackFactory.build(artists=["Mediocre Artist"], score=5)
-        mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.list.return_value = [track]
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -80,7 +80,7 @@ class TestListArtistCandidatesUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         unrated = TrackFactory.build(artists=["Unknown Artist"], score=None)
-        mock_track_repository.get_list.return_value = [unrated]
+        mock_track_repository.list.return_value = [unrated]
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -96,7 +96,7 @@ class TestListArtistCandidatesUseCase:
     ) -> None:
         track_a = TrackFactory.build(artists=["Artist A"], score=8)
         track_b = TrackFactory.build(artists=["Artist B"], score=10)
-        mock_track_repository.get_list.return_value = [track_a, track_b]
+        mock_track_repository.list.return_value = [track_a, track_b]
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -113,7 +113,7 @@ class TestListArtistCandidatesUseCase:
     ) -> None:
         track_z = TrackFactory.build(artists=["Zara"], score=9)
         track_a = TrackFactory.build(artists=["Aaron"], score=9)
-        mock_track_repository.get_list.return_value = [track_z, track_a]
+        mock_track_repository.list.return_value = [track_z, track_a]
 
         result = await list_artist_candidates(
             user_id=user.id, limit=20, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow
@@ -129,7 +129,7 @@ class TestListArtistCandidatesUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         tracks = [TrackFactory.build(artists=[f"Artist {i}"], score=9) for i in range(5)]
-        mock_track_repository.get_list.return_value = tracks
+        mock_track_repository.list.return_value = tracks
 
         result = await list_artist_candidates(
             user_id=user.id, limit=3, source=SourceFilter.ALL, max_tracks=5, min_avg=7.0, uow=mock_uow

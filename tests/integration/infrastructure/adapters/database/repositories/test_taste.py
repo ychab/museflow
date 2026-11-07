@@ -114,7 +114,7 @@ class TestTasteProfileSQLRepository:
         deleted = await taste_profile_repository.delete(user_id=user.id, name="my-profile")
         assert deleted is False
 
-    async def test__save_checkpoint__creates_and_updates(
+    async def test__upsert_checkpoint__creates_and_updates(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -122,7 +122,7 @@ class TestTasteProfileSQLRepository:
     ) -> None:
         profile_data = TasteProfileDataFactory.build()
 
-        await taste_profile_repository.save_checkpoint(
+        await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
             logic_version="v1.0",
@@ -141,7 +141,7 @@ class TestTasteProfileSQLRepository:
         assert row.checkpoint_profile is not None
 
         # Second call updates the checkpoint
-        await taste_profile_repository.save_checkpoint(
+        await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
             logic_version="v1.0",
@@ -161,7 +161,7 @@ class TestTasteProfileSQLRepository:
     ) -> None:
         profile_data = TasteProfileDataFactory.build()
 
-        await taste_profile_repository.save_checkpoint(
+        await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
             logic_version="v1.0",
@@ -193,7 +193,7 @@ class TestTasteProfileSQLRepository:
     ) -> None:
         profile_data = TasteProfileDataFactory.build()
 
-        await taste_profile_repository.save_checkpoint(
+        await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
             logic_version="v1.0",

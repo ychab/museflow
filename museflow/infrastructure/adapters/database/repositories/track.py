@@ -44,108 +44,6 @@ class TrackSQLRepository(TrackRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_list(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider | None = None,
-        min_score: int | None = None,
-        max_score: int | None = None,
-        source: TrackSource | None = None,
-        unrated_only: bool = False,
-        exclude_skipped: bool = False,
-        score_skipped_only: bool = False,
-        artist_name: str | None = None,
-        played_first_min: date | None = None,
-        played_first_max: date | None = None,
-        played_last_min: date | None = None,
-        played_last_max: date | None = None,
-        exclude_ids: list[uuid.UUID] | None = None,
-        missing_fields: frozenset[EnrichField] | None = None,
-        genres: list[GenreTag] | None = None,
-        moods: list[MoodTag] | None = None,
-        locales: list[LocaleCode] | None = None,
-        order: TrackOrdering | None = None,
-        offset: int | None = None,
-        limit: int | None = None,
-    ) -> list[Track]:
-        stmt = select(TrackModel).where(TrackModel.user_id == user_id)
-
-        # Filtering
-        if provider is not None:
-            stmt = stmt.where(
-                text(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
-                    "WHERE elem->>'provider' = :provider)"
-                ).bindparams(provider=provider.value)
-            )
-        if min_score is not None:
-            stmt = stmt.where(TrackModel.score >= min_score)
-        if max_score is not None:
-            stmt = stmt.where(TrackModel.score <= max_score)
-        if source is not None:
-            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
-        if unrated_only:
-            stmt = stmt.where(TrackModel.score.is_(None))
-        if exclude_skipped:
-            stmt = stmt.where(TrackModel.score_skipped.is_(False))
-        if score_skipped_only:
-            stmt = stmt.where(TrackModel.score_skipped.is_(True))
-        if artist_name is not None:
-            stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
-        if played_first_min is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_first) >= played_first_min)
-        if played_first_max is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_first) <= played_first_max)
-        if played_last_min is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_last) >= played_last_min)
-        if played_last_max is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
-        if exclude_ids:
-            stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
-        if missing_fields:
-            conditions = []
-            if EnrichField.GENRE in missing_fields:
-                conditions.append(func.array_length(TrackModel.genres, 1).is_(None))
-            if EnrichField.MOOD in missing_fields:
-                conditions.append(func.array_length(TrackModel.moods, 1).is_(None))
-            if EnrichField.LOCALE in missing_fields:
-                conditions.append(TrackModel.locales.is_(None))
-            stmt = stmt.where(or_(*conditions))
-        if genres is not None:
-            stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
-        if moods is not None:
-            stmt = stmt.where(TrackModel.moods.overlap([m.value for m in moods]))
-        if locales is not None:
-            stmt = stmt.where(TrackModel.locales.overlap(locales))
-
-        # Ordering
-        if order is None and min_score is not None:
-            stmt = stmt.order_by(TrackModel.score.desc().nulls_last())
-        else:
-            for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:
-                if order_by == TrackOrderBy.RANDOM:
-                    stmt = stmt.order_by(func.random())
-                    break  # RANDOM cannot be combined with further columns
-
-                column = getattr(TrackModel, order_by.value)
-                if order_by.nullable:
-                    stmt = stmt.order_by(
-                        column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
-                    )
-                elif sort_order == SortOrder.DESC:
-                    stmt = stmt.order_by(column.desc())
-                else:
-                    stmt = stmt.order_by(column.asc())
-
-        # Pagination
-        if offset is not None:
-            stmt = stmt.offset(offset)
-        if limit is not None:
-            stmt = stmt.limit(limit)
-
-        results = await self.session.execute(stmt)
-        return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
-
     async def get_known_identifiers(
         self,
         user_id: uuid.UUID,
@@ -298,8 +196,111 @@ class TrackSQLRepository(TrackRepository):
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
 
-    async def delete_all(self, user_id: uuid.UUID) -> int:
+    async def purge(self, user_id: uuid.UUID) -> int:
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
+
+    # Last in the class: below this method, `list` in an annotation would name it, not the builtin.
+    async def list(
+        self,
+        user_id: uuid.UUID,
+        provider: MusicProvider | None = None,
+        min_score: int | None = None,
+        max_score: int | None = None,
+        source: TrackSource | None = None,
+        unrated_only: bool = False,
+        exclude_skipped: bool = False,
+        score_skipped_only: bool = False,
+        artist_name: str | None = None,
+        played_first_min: date | None = None,
+        played_first_max: date | None = None,
+        played_last_min: date | None = None,
+        played_last_max: date | None = None,
+        exclude_ids: list[uuid.UUID] | None = None,
+        missing_fields: frozenset[EnrichField] | None = None,
+        genres: list[GenreTag] | None = None,
+        moods: list[MoodTag] | None = None,
+        locales: list[LocaleCode] | None = None,
+        order: TrackOrdering | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
+    ) -> list[Track]:
+        stmt = select(TrackModel).where(TrackModel.user_id == user_id)
+
+        # Filtering
+        if provider is not None:
+            stmt = stmt.where(
+                text(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+                    "WHERE elem->>'provider' = :provider)"
+                ).bindparams(provider=provider.value)
+            )
+        if min_score is not None:
+            stmt = stmt.where(TrackModel.score >= min_score)
+        if max_score is not None:
+            stmt = stmt.where(TrackModel.score <= max_score)
+        if source is not None:
+            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+        if unrated_only:
+            stmt = stmt.where(TrackModel.score.is_(None))
+        if exclude_skipped:
+            stmt = stmt.where(TrackModel.score_skipped.is_(False))
+        if score_skipped_only:
+            stmt = stmt.where(TrackModel.score_skipped.is_(True))
+        if artist_name is not None:
+            stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
+        if played_first_min is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_first) >= played_first_min)
+        if played_first_max is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_first) <= played_first_max)
+        if played_last_min is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_last) >= played_last_min)
+        if played_last_max is not None:
+            stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
+        if exclude_ids:
+            stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
+        if missing_fields:
+            conditions = []
+            if EnrichField.GENRE in missing_fields:
+                conditions.append(func.array_length(TrackModel.genres, 1).is_(None))
+            if EnrichField.MOOD in missing_fields:
+                conditions.append(func.array_length(TrackModel.moods, 1).is_(None))
+            if EnrichField.LOCALE in missing_fields:
+                conditions.append(TrackModel.locales.is_(None))
+            stmt = stmt.where(or_(*conditions))
+        if genres is not None:
+            stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
+        if moods is not None:
+            stmt = stmt.where(TrackModel.moods.overlap([m.value for m in moods]))
+        if locales is not None:
+            stmt = stmt.where(TrackModel.locales.overlap(locales))
+
+        # Ordering
+        if order is None and min_score is not None:
+            stmt = stmt.order_by(TrackModel.score.desc().nulls_last())
+        else:
+            for order_by, sort_order in order or [(TrackOrderBy.CREATED_AT, SortOrder.ASC)]:
+                if order_by == TrackOrderBy.RANDOM:
+                    stmt = stmt.order_by(func.random())
+                    break  # RANDOM cannot be combined with further columns
+
+                column = getattr(TrackModel, order_by.value)
+                if order_by.nullable:
+                    stmt = stmt.order_by(
+                        column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
+                    )
+                elif sort_order == SortOrder.DESC:
+                    stmt = stmt.order_by(column.desc())
+                else:
+                    stmt = stmt.order_by(column.asc())
+
+        # Pagination
+        if offset is not None:
+            stmt = stmt.offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        results = await self.session.execute(stmt)
+        return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
