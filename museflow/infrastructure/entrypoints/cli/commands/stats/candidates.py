@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("candidates", help="Show artists to explore: few total tracks but high average score.")
-def stats_candidates(
+def candidates_command(
     email: str = EMAIL_OPTION,
     limit: int = typer.Option(20, help="Max rows in the table"),
     source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),

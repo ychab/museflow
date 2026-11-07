@@ -13,7 +13,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("delete", help="Delete a taste profile. Playlists built from it are kept.")
-def delete(
+def delete_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),

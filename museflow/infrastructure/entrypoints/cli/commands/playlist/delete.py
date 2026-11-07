@@ -22,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
     "delete",
     help="Delete a playlist. Pass --include-remote to also unfollow it on the provider (e.g. Spotify).",
 )
-def delete(
+def delete_command(
     playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist ID (required unless --purge is used)"),
     email: str = EMAIL_OPTION,
     purge: bool = typer.Option(False, "--purge", help="Delete all matching playlists instead of a single one"),

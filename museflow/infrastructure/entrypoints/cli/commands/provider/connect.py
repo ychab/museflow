@@ -30,7 +30,7 @@ class ConnectStart:
 
 
 @app.command("connect", help="Connect a user account to a music provider via OAuth.")
-def connect(
+def connect_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider to connect"),
     timeout: float = typer.Option(60.0, help="Seconds to wait for authentication.", min=10),

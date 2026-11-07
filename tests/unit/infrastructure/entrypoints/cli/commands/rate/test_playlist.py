@@ -16,7 +16,7 @@ from museflow.domain.exceptions import ProviderNoActiveDeviceException
 from museflow.domain.exceptions import ProviderPremiumRequiredException
 from museflow.domain.exceptions import UserNotFound
 from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import RatePlaylistResult
-from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import rate_playlist_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.playlist import playlist_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -28,8 +28,8 @@ TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate
 
 class TestRatePlaylistParserCommand:
     @pytest.fixture(autouse=True)
-    def mock_rate_playlist_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.rate_playlist_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
     def test__playlist_id__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
@@ -45,10 +45,10 @@ class TestRatePlaylistParserCommand:
         output = clean_typer_text(result.output)
         assert "Invalid value for '--email'" in output
 
-    def test__without_playlist_id(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+    def test__without_playlist_id(self, mock_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com"])
         assert result.exit_code == 0
-        mock_rate_playlist_logic.assert_awaited_once()
+        mock_playlist_logic.assert_awaited_once()
 
     def test__play_provider__without_play(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
@@ -75,27 +75,27 @@ class TestRatePlaylistParserCommand:
     )
     def test__play_provider__resolved(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         extra_args: list[str],
         expected_provider: MusicProvider | None,
     ) -> None:
-        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+        mock_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", *extra_args])
 
         assert result.exit_code == 0
-        assert mock_rate_playlist_logic.await_args_list[0].kwargs["provider"] == expected_provider
+        assert mock_playlist_logic.await_args_list[0].kwargs["provider"] == expected_provider
 
 
 class TestRatePlaylistCommand:
     @pytest.fixture(autouse=True)
-    def mock_rate_playlist_logic(self) -> Iterable[mock.AsyncMock]:
-        with mock.patch(f"{TARGET_PATH}.rate_playlist_logic", new_callable=mock.AsyncMock) as patched:
+    def mock_playlist_logic(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.playlist_logic", new_callable=mock.AsyncMock) as patched:
             yield patched
 
-    def test__nominal(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_rate_playlist_logic.return_value = RatePlaylistResult(
+    def test__nominal(self, mock_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_playlist_logic.return_value = RatePlaylistResult(
             rated_count=3,
             blacklist_track_count=1,
             blacklist_artist_count=0,
@@ -104,17 +104,17 @@ class TestRatePlaylistCommand:
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
         assert result.exit_code == 0
         assert "Saved 3 rating(s)" in result.output
-        mock_rate_playlist_logic.assert_awaited_once()
+        mock_playlist_logic.assert_awaited_once()
 
-    def test__no_unrated_tracks(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+    def test__no_unrated_tracks(self, mock_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No unrated discovery tracks" in result.output
 
-    def test__playlist_without_tracks(self, mock_rate_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_rate_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
+    def test__playlist_without_tracks(self, mock_playlist_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_playlist_logic.return_value = RatePlaylistResult(no_tracks=True)
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
@@ -123,11 +123,11 @@ class TestRatePlaylistCommand:
 
     def test__user_not_found(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = UserNotFound()
+        mock_playlist_logic.side_effect = UserNotFound()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
@@ -137,11 +137,11 @@ class TestRatePlaylistCommand:
 
     def test__playlist_not_found(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = PlaylistNotFoundError()
+        mock_playlist_logic.side_effect = PlaylistNotFoundError()
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
@@ -151,11 +151,11 @@ class TestRatePlaylistCommand:
 
     def test__auth_token_not_found(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found")
+        mock_playlist_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found")
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
@@ -164,11 +164,11 @@ class TestRatePlaylistCommand:
 
     def test__premium_required(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
+        mock_playlist_logic.side_effect = ProviderPremiumRequiredException("Spotify Premium required")
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
@@ -177,11 +177,11 @@ class TestRatePlaylistCommand:
 
     def test__generic_exception(
         self,
-        mock_rate_playlist_logic: mock.AsyncMock,
+        mock_playlist_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = Exception("Boom")
+        mock_playlist_logic.side_effect = Exception("Boom")
         playlist_id = uuid.uuid4()
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", str(playlist_id)])
@@ -210,7 +210,7 @@ class TestRatePlaylistLogic:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFound):
-            await rate_playlist_logic(email="test@example.com", playlist_id=uuid.uuid4())
+            await playlist_logic(email="test@example.com", playlist_id=uuid.uuid4())
 
     async def test__playlist_not_found(
         self,
@@ -222,7 +222,7 @@ class TestRatePlaylistLogic:
         mock_playlist_repository.get.return_value = None
 
         with pytest.raises(PlaylistNotFoundError):
-            await rate_playlist_logic(email=user.email, playlist_id=uuid.uuid4())
+            await playlist_logic(email=user.email, playlist_id=uuid.uuid4())
 
     async def test__playlist_without_tracks(
         self,
@@ -234,7 +234,7 @@ class TestRatePlaylistLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_playlist_repository.get.return_value = playlist
 
-        result = await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        result = await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         assert result.no_tracks is True
 
@@ -254,7 +254,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
 
@@ -273,7 +273,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.side_effect = ["8", typer.Abort()]
 
         with pytest.raises(typer.Abort):
-            await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+            await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=first.id, score=8)
 
@@ -291,7 +291,7 @@ class TestRatePlaylistLogic:
         mock_playlist_repository.get.return_value = playlist
         mock_typer_prompt.return_value = "s"
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -309,7 +309,7 @@ class TestRatePlaylistLogic:
         mock_playlist_repository.get.return_value = playlist
         mock_typer_prompt.side_effect = ["abc", "s"]
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -328,7 +328,7 @@ class TestRatePlaylistLogic:
         mock_playlist_repository.get.return_value = playlist
         mock_typer_prompt.side_effect = ["15", "s"]
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         assert mock_typer_prompt.call_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -350,7 +350,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [True, True]
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_blacklist_repository.add_track.assert_awaited_once_with(
             user_id=user.id, name=track.name, artist_name="Artist A"
@@ -374,7 +374,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "2"
         mock_typer_confirm.side_effect = [False, False]
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id)
+        await playlist_logic(email=user.email, playlist_id=playlist.id)
 
         mock_blacklist_repository.add_track.assert_not_awaited()
         mock_blacklist_repository.add_artist.assert_not_awaited()
@@ -388,7 +388,7 @@ class TestRatePlaylistLogic:
         mock_user_repository.get_by_email.return_value = user
         mock_track_repository.get_list.return_value = []
 
-        await rate_playlist_logic(email=user.email, playlist_id=None)
+        await playlist_logic(email=user.email, playlist_id=None)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -406,7 +406,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_playlist_logic(email=user.email, playlist_id=None)
+        await playlist_logic(email=user.email, playlist_id=None)
 
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
 
@@ -427,7 +427,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+        await playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         mock_provider_library.play_track.assert_awaited_once_with(track.get_provider_id(MusicProvider.SPOTIFY))
 
@@ -446,7 +446,7 @@ class TestRatePlaylistLogic:
         mock_provider_library.play_track.side_effect = ProviderPremiumRequiredException()
 
         with pytest.raises(ProviderPremiumRequiredException):
-            await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+            await playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         mock_track_repository.rate.assert_not_awaited()
 
@@ -469,7 +469,7 @@ class TestRatePlaylistLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+        await playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         assert mock_provider_library.play_track.await_count == 2
         mock_track_repository.rate.assert_awaited_once_with(user_id=user.id, track_id=track.id, score=7)
@@ -492,7 +492,7 @@ class TestRatePlaylistLogic:
             ProviderNoActiveDeviceException(),
         ]
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+        await playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         assert mock_provider_library.play_track.await_count == 2
         mock_track_repository.rate.assert_not_awaited()
@@ -518,7 +518,7 @@ class TestRatePlaylistLogic:
         mock_playlist_repository.get.return_value = playlist
         mock_typer_prompt.return_value = "s"
 
-        await rate_playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
+        await playlist_logic(email=user.email, playlist_id=playlist.id, provider=MusicProvider.SPOTIFY)
 
         mock_provider_library.play_track.assert_not_awaited()
         mock_track_repository.rate.assert_not_awaited()

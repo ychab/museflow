@@ -15,7 +15,7 @@ from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export track enrichment data (genres and moods) to a YAML file.")
-def export(
+def export_command(
     email: str = EMAIL_OPTION,
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:

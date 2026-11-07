@@ -17,7 +17,7 @@ console = Console()
 
 
 @app.command("list", help="List all your blacklisted artists and tracks.")
-def list_(
+def list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     try:

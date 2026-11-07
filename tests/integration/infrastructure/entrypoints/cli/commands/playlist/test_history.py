@@ -8,7 +8,7 @@ from museflow.application.use_cases.playlist_history import CreateHistoryPlaylis
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.entrypoints.cli.commands.playlist.history import playlist_history_logic
+from museflow.infrastructure.entrypoints.cli.commands.playlist.history import history_logic
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 
@@ -36,7 +36,7 @@ class TestHistoryLogic:
         mock_playlist_history.return_value = expected_result
         config = CreateHistoryPlaylistConfigInput(limit=5)
 
-        result = await playlist_history_logic(email=user.email, provider=MusicProvider.SPOTIFY, config=config)
+        result = await history_logic(email=user.email, provider=MusicProvider.SPOTIFY, config=config)
 
         assert result == expected_result
         mock_playlist_history.assert_awaited_once()

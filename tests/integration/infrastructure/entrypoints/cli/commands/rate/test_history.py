@@ -12,7 +12,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
-from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.history import history_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -34,7 +34,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False)
+        await history_logic(email=user.email, limit=10, reset=False)
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
@@ -56,7 +56,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
+        await history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
 
         stmt_target = select(TrackModel).where(TrackModel.id == target_db.id)
         stmt_other = select(TrackModel).where(TrackModel.id == other_db.id)
@@ -78,7 +78,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
 
         mock_play_track.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
 

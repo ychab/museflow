@@ -18,7 +18,7 @@ console = Console()
 
 
 @app.command("view")
-def view(
+def view_command(
     playlist_id: uuid.UUID = typer.Argument(..., help="Playlist ID"),
     email: str = EMAIL_OPTION,
 ) -> None:

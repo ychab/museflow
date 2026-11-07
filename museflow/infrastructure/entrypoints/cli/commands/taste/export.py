@@ -17,7 +17,7 @@ from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export a taste profile to a YAML file.")
-def export(
+def export_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., help="Profile name (unique per user)"),
     output: Path = typer.Option(..., help="Path to the output YAML file"),

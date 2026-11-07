@@ -22,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
-def build(
+def build_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
     resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),

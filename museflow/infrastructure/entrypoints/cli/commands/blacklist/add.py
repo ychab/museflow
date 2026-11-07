@@ -14,12 +14,12 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("add-artist", help="Add one or more artists to your blacklist.")
-def add_artist(
+def add_artist_command(
     email: str = EMAIL_OPTION,
     artist_names: list[str] = typer.Argument(..., help="Artist name(s) to blacklist"),
 ) -> None:
     try:
-        entries = asyncio.run(add_artists_logic(email=email, artist_names=artist_names))
+        entries = asyncio.run(add_artist_logic(email=email, artist_names=artist_names))
     except UserNotFound as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -30,7 +30,7 @@ def add_artist(
         typer.secho(f"Blacklisted artist: {entry.artist_name} (id: {entry.id})", fg=typer.colors.GREEN)
 
 
-async def add_artists_logic(email: EmailStr, artist_names: list[str]) -> list[BlacklistedArtist]:
+async def add_artist_logic(email: EmailStr, artist_names: list[str]) -> list[BlacklistedArtist]:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)
@@ -43,7 +43,7 @@ async def add_artists_logic(email: EmailStr, artist_names: list[str]) -> list[Bl
 
 
 @app.command("add-track", help="Add a track to your blacklist.")
-def add_track(
+def add_track_command(
     email: str = EMAIL_OPTION,
     name: str = typer.Argument(..., help="Track name"),
     artist: str = typer.Option(..., "--artist", help="Artist name"),

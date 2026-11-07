@@ -14,7 +14,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
 @app.command("remove", help="Remove one or more blacklist entries by their ID.")
-def remove(
+def remove_command(
     email: str = EMAIL_OPTION,
     item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `museflow blacklist list`)"),
 ) -> None:
