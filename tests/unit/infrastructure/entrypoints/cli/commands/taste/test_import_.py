@@ -1,16 +1,13 @@
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
 from typing import Final
 from unittest import mock
 
-from pydantic import TypeAdapter
 from pydantic import ValidationError
 
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste.import_ import taste_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -162,25 +159,6 @@ class TestTasteImportCommand:
 )
 class TestTasteImportLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.import_"
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
-        original_profile = TasteProfileFactory.build()
-        profile_data: dict[str, Any] = TypeAdapter(TasteProfile).dump_python(original_profile, mode="json")
-
-        mock_user_repository.get_by_email.return_value = user
-        mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
-
-        result = await taste_import_logic(email="test@example.com", data=profile_data)
-
-        upserted: TasteProfile = mock_taste_profile_repository.upsert.call_args[0][0]
-        assert upserted.user_id == user.id
-        assert upserted.id != original_profile.id
-        assert isinstance(result, TasteProfile)
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

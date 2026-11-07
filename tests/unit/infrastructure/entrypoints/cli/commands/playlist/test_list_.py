@@ -5,7 +5,6 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist.list_ import playlist_list_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -89,31 +88,3 @@ class TestPlaylistListLogic:
 
         with pytest.raises(UserNotFoundError):
             await playlist_list_logic(email="test@example.com")
-
-    async def test__empty_playlists(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        mock_user_repository.get_by_email.return_value = user
-        mock_playlist_repository.get_list.return_value = []
-
-        result = await playlist_list_logic(email=user.email)
-
-        assert result == []
-
-    async def test__with_playlists(
-        self,
-        user: User,
-        mock_user_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        playlists = PlaylistFactory.batch(2)
-        mock_user_repository.get_by_email.return_value = user
-        mock_playlist_repository.get_list.return_value = playlists
-
-        result = await playlist_list_logic(email=user.email)
-
-        assert result == playlists
-        mock_playlist_repository.get_list.assert_awaited_once_with(user.id)

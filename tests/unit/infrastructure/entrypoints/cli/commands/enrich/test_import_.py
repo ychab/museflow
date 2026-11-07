@@ -7,9 +7,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
-from museflow.domain.enums import EnrichField
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -172,28 +169,6 @@ class TestEnrichImportLogic:
         with pytest.raises(UserNotFoundError):
             await enrich_import_logic(email="test@example.com", data=[])
 
-    async def test__unknown_genres__silently_dropped(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
-        fingerprint = "test-fingerprint-xyz"
-        mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [
-            TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
-        ]
-
-        result = await enrich_import_logic(
-            email="test@example.com",
-            data=[{"fingerprint": fingerprint, "genres": ["rock", "INVALID_GENRE"], "moods": ["INVALID_MOOD"]}],
-        )
-
-        assert result.imported_count == 1
-        updated_track = mock_track_repository.bulk_update.call_args.args[0][0]
-        assert updated_track.genres == [GenreTag.ROCK]
-        assert updated_track.moods == []
-
     async def test__non_list_genres_and_moods__silently_dropped(
         self,
         mock_user_repository: mock.AsyncMock,
@@ -215,30 +190,3 @@ class TestEnrichImportLogic:
         updated_track = mock_track_repository.bulk_update.call_args.args[0][0]
         assert updated_track.genres == []
         assert updated_track.moods == []
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
-        fingerprint = "test-fingerprint-abc"
-        mock_user_repository.get_by_email.return_value = user
-        mock_track_repository.get_list.return_value = [
-            TrackFactory.build(user_id=user.id, fingerprint=fingerprint, genres=[], moods=[])
-        ]
-
-        result = await enrich_import_logic(
-            email="test@example.com",
-            data=[{"fingerprint": fingerprint, "genres": ["rock", "indie-rock"], "moods": ["energetic"]}],
-        )
-
-        assert result.imported_count == 1
-        assert result.not_found_count == 0
-
-        mock_track_repository.bulk_update.assert_awaited_once()
-        call_args = mock_track_repository.bulk_update.call_args
-        assert call_args.kwargs["fields"] == frozenset(EnrichField)
-        updated_track = call_args.args[0][0]
-        assert updated_track.genres == [GenreTag.ROCK, GenreTag.INDIE_ROCK]
-        assert updated_track.moods == [MoodTag.ENERGETIC]

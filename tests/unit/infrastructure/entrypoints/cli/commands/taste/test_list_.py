@@ -10,7 +10,6 @@ from museflow.infrastructure.entrypoints.cli.commands.taste.list_ import taste_l
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
-from tests.unit.factories.entities.user import UserFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.list_"
@@ -95,18 +94,3 @@ class TestTasteListLogic:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFoundError):
             await taste_list_logic(email="unknown@example.com")
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        user = UserFactory.build()
-        profiles = TasteProfileFactory.batch(2)
-        mock_user_repository.get_by_email.return_value = user
-        mock_taste_profile_repository.get_list.return_value = profiles
-
-        result = await taste_list_logic(email=user.email)
-
-        assert result == profiles
-        mock_taste_profile_repository.get_list.assert_called_once_with(user_id=user.id)

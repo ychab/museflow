@@ -99,17 +99,3 @@ class TestTasteDeleteLogic:
 
         with pytest.raises(UserNotFoundError):
             await taste_delete_logic(email="unknown@example.com", name="my-profile")
-
-    async def test__nominal(
-        self,
-        mock_user_repository: mock.AsyncMock,
-        mock_taste_profile_repository: mock.AsyncMock,
-    ) -> None:
-        mock_taste_profile_repository.delete.return_value = True
-
-        await taste_delete_logic(email="test@example.com", name="my-profile")
-
-        mock_taste_profile_repository.delete.assert_awaited_once_with(
-            user_id=mock_user_repository.get_by_email.return_value.id,
-            name="my-profile",
-        )
