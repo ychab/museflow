@@ -10,8 +10,8 @@ from rich.status import Status
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
-from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 class TestSpinner:

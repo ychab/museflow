@@ -18,7 +18,7 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.utils import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")

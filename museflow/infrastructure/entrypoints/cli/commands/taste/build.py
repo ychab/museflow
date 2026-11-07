@@ -17,8 +17,8 @@ from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.utils import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
+from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
