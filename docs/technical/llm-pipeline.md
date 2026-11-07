@@ -17,7 +17,7 @@ Every LLM call goes through [OpenRouter](https://openrouter.ai), an OpenAI-compa
 
 Each request carries:
 
-- **A strict JSON schema** (`response_format: json_schema`, `strict: true`), built with `JsonSchemaProperty` ([`common/llm/json_schema.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/json_schema.py)): `additionalProperties: false` on every object, every property required, optional values expressed as nullable types. Strict mode forbids free-form keys, so the profile's `{tag: weight}` maps travel as lists of `{key, value}` pairs, one list per vocabulary tier (`genre_macro`, `genre_meso`, `genre_micro`, `mood`); the merge and reflect prompts embed the profile in that same shape, so the model reads what it must write back.
+- **A strict JSON schema** (`response_format: json_schema`, `strict: true`), built with `JsonSchemaProperty` ([`common/llm/json_schema.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/json_schema.py)): `additionalProperties: false` on every object, every property required, optional values expressed as nullable types. Strict mode forbids free-form keys, so the profile's `{tag: weight}` maps travel as lists of `{key, value}` pairs, one list per vocabulary tier (`genre_macro`, `genre_meso`, `genre_micro`, `mood`); the reflect prompt embeds the profile in that same shape, so the model reads what it must write back.
 - **Provider preferences**: `require_parameters: true`, so OpenRouter only routes to endpoints that support structured outputs and every tuning parameter the step sends; `zdr: true` (Zero Data Retention, `OPENROUTER_ZDR`, on by default) and `data_collection: deny`, see [Privacy and data](privacy-and-data.md).
 - **Fallback models**, tried in order by OpenRouter when the main model fails. The model that actually answered is logged at DEBUG.
 
@@ -48,7 +48,7 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 | Step | Setting | Default model | Volume | Why this tier |
 |---|---|---|---|---|
 | Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per batch (15 for the default 3,000 seeds in batches of 200) | High volume, narrow task: classify a batch of tracks into tags and weights against a closed vocabulary. A small, cheap model is enough |
-| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Needs to follow arithmetic and structural rules over a growing JSON document without drifting. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
+| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Judges whether a segment continues the last era, and names an era when the timeline is full: a few eras in, two fields out, the code assembling the profile. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
 | Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
 | Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
@@ -63,7 +63,7 @@ The principle is to spend model capability where one call has outsized influence
 ```mermaid
 flowchart TD
     A["Seed tracks: most played first, limit 3000 by default"] --> B["Re-sort chronologically by last played"]
-    B --> C["Split into batches (200 by default)"]
+    B --> C["Split into batches (200 by default), a trailing batch under half a batch folded into the previous one"]
     C --> D{"Resume and checkpoint exists?"}
     D -- yes --> E["Load partial profile, skip finished batches"]
     D -- no --> F["Batch 1"]
@@ -71,7 +71,7 @@ flowchart TD
     F --> G["Segment: batch to partial profile (lite model)"]
     G --> H{"First batch?"}
     H -- yes --> I["Partial profile becomes the foundation"]
-    H -- no --> J["Merge: foundation + segment (mid model)"]
+    H -- no --> J["Merge: the model decides the timeline (mid model), the code assembles the profile"]
     I --> K["Save checkpoint, status BUILDING"]
     J --> K
     K --> L{"More batches?"}
@@ -89,11 +89,12 @@ Design decisions:
 
 - **Map, then fold, then reflect.** A 3,000-track history does not fit comfortably in one prompt and a single huge prompt is fragile. Each batch is summarised independently (segment), then folded into a running profile (merge). The final reflection sees only the profile, never raw tracks.
 - **Chronological batches.** Seeds are selected by play count (best signal) and then re-sorted by last-played date, so each batch covers a coherent period and the model can describe it as a "taste era" with a time range.
-- **Merge rules are explicit in the prompt**, not left to the model: if a new segment is more than 80% similar to the last era and fits its label, it extends that era's end date and keeps the label (a label broadened at each merge would absorb every later segment), otherwise it adds an era, aiming at 6 to 15 distinct eras; the timeline is capped at 15 eras by merging the oldest; an era label names the music, never dates or the processing ("batch"), since dates live in `time_range` and a merge would make them stale; `core_identity` is a weighted average (foundation 0.7, segment 0.3); `current_vibe` is replaced wholesale. The weights encode a product opinion: long-term identity moves slowly, current mood does not. On validation, every weight is rounded to 3 decimals and those that round to 0 are dropped, so later prompts do not carry noise.
+- **The model judges, the code merges** ([`domain/utils/taste.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/utils/taste.py)). The merge prompt carries only the last era and the segment's era, and the model answers one question: does the segment continue that era (more than 80% similar and already described by its label)? If so, the code extends the era's end date and keeps its label (a label broadened at each merge would absorb every later segment); otherwise it appends the segment's era. Past 15 eras, the code merges the two oldest (spanning time range, averaged fingerprint, moods of both), under a label the model names when the timeline is full. An era label names the music, never dates or the processing ("batch"), since dates live in `time_range` and a merge would make them stale. `core_identity` is a weighted average (foundation 0.7, segment 0.3) and `current_vibe` is replaced wholesale: arithmetic the model used to do while rewriting the whole profile at every merge, which made the merge most of a build's cost. The weights encode a product opinion: long-term identity moves slowly, current mood does not. Every weight is rounded to 3 decimals and those that round to 0 are dropped, so later prompts do not carry noise.
+- **No short trailing batch.** A trailing batch under half the batch size is folded into the previous one (1,005 seeds in batches of 200: 4 × 200 + 205): every batch weighs the same in the merge, so a handful of tracks would otherwise replace the current vibe and add an era of their own (#136).
 - **User ratings are part of the signal.** Each track line carries first / last played, play count and, if rated, the score. The prompt tells the model to treat high scores as confirmed anchors and minimum scores as anti-preferences.
 - **Checkpoint and pause.** After every batch the partial profile and batch index are persisted ([Data model](data-model.md#taste-profile)). A rate-limit overrun or an unusable reply raises `TasteProfileBuildPausedError` instead of losing the run; `taste build --resume` continues from the next batch. `TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS` can space out batches to stay under a quota.
 - **The reflect step is resumable.** The reflection result itself is not checkpointed, but the merged profile is saved after the last batch. A rate-limit overrun or unusable reply in the final call also raises `TasteProfileBuildPausedError` (reported as batch N/N), and `--resume` skips every batch and repeats only that final call.
-- **Reproducibility metadata.** `logic_version` (currently `v2.0`) and, in `profiler_metadata`, the gateway and the settings of each step (model, fallbacks, reasoning effort, max tokens, temperature) are stored with the profile.
+- **Reproducibility metadata.** `logic_version` (currently `v2.1`, the merge assembled in code) and, in `profiler_metadata`, the gateway and the settings of each step (model, fallbacks, reasoning effort, max tokens, temperature) are stored with the profile.
 
 ## Advisor: guided discovery
 

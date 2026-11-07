@@ -64,6 +64,8 @@ class TestBuildTasteProfileUseCase:
             **profile_data,
             "core_identity": split_weights(profile_data["core_identity"]),
             "current_vibe": split_weights(profile_data["current_vibe"]),
+            # One reply serves every step: the merge reads its decision, the other steps ignore it
+            "absorb": False,
         }
 
         return {
@@ -158,7 +160,7 @@ class TestBuildTasteProfileUseCase:
         ) as mocked:
             yield mocked
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__nominal__multiple_batches(
         self,
         user: User,
@@ -172,7 +174,7 @@ class TestBuildTasteProfileUseCase:
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        # 7 tracks → 3 batches (3 / 3 / 1)
+        # 8 tracks → 3 batches (3 / 3 / 2)
         mock_track_repository.get_list.return_value = tracks
 
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
@@ -192,7 +194,7 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert.assert_called_once()
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__profiler_calls__run_outside_any_block(
         self,
         user: User,
@@ -263,7 +265,7 @@ class TestBuildTasteProfileUseCase:
         assert profile.user_id == user.id
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__throttling(
         self,
         user: User,
@@ -277,7 +279,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
         mock_sleep: mock.AsyncMock,
     ) -> None:
-        # 7 tracks → 3 batches (3 / 3 / 1) — sleep called twice (between batch 1→2 and 2→3, not after last)
+        # 8 tracks → 3 batches (3 / 3 / 2) — sleep called twice (between batch 1→2 and 2→3, not after last)
         config = BuildTasteProfileConfigInputFactory.build(
             track_limit=10,
             batch_size=3,
@@ -299,7 +301,7 @@ class TestBuildTasteProfileUseCase:
         assert mock_sleep.call_count == 2
         mock_sleep.assert_called_with(1.0)
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__no_throttling(
         self,
         user: User,
@@ -361,7 +363,7 @@ class TestBuildTasteProfileUseCase:
             min_score=0,
         )
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__resume__checkpoint_found(
         self,
         user: User,
@@ -392,7 +394,7 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
         assert mock_taste_profile_repository.upsert_checkpoint.call_count == 2
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__resume__no_checkpoint(
         self,
         user: User,
@@ -421,7 +423,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     @pytest.mark.parametrize(
         ("mock_segment", "reason"),
         [
@@ -453,7 +455,7 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__paused__usage_recorded(
         self,
         user: User,
@@ -476,7 +478,7 @@ class TestBuildTasteProfileUseCase:
         (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert (record.operation, record.usage) == (LLMOperation.TASTE_BUILD, usage)
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__batch_fail__pauses__checkpoint_preserved(
         self,
         user: User,
@@ -501,7 +503,7 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     @pytest.mark.parametrize(
         ("mock_reflect", "reason"),
         [
@@ -534,7 +536,7 @@ class TestBuildTasteProfileUseCase:
         assert mock_taste_profile_repository.upsert_checkpoint.call_count == 3
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [7], indirect=True)
+    @pytest.mark.parametrize("tracks", [8], indirect=True)
     @pytest.mark.parametrize("mock_reflect", [None], indirect=True)
     async def test__resume__checkpoint_at_last_batch__only_reflects(
         self,

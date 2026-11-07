@@ -5,10 +5,10 @@
     "urlPath": "/chat/completions",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$.response_format.json_schema[?(@.name == 'TasteProfileResponse')]"
+        "matchesJsonPath": "$.response_format.json_schema[?(@.name == 'TimelineMergeResponse')]"
       },
       {
-        "contains": "evolving a Master Taste Profile"
+        "contains": "extending the taste timeline"
       }
     ]
   },

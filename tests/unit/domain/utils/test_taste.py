@@ -1,16 +1,20 @@
 import pytest
 
+from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.utils.taste import behavioral_traits_summary
+from museflow.domain.utils.taste import blend_weights
 from museflow.domain.utils.taste import core_identity_summary
 from museflow.domain.utils.taste import current_era_label
 from museflow.domain.utils.taste import current_vibe_summary
 from museflow.domain.utils.taste import era_sort_key
+from museflow.domain.utils.taste import merge_taste_profiles
 from museflow.domain.utils.taste import oldest_era_label
 from museflow.domain.utils.taste import personality_archetype
 from museflow.domain.utils.taste import timeline_summary
 
 from tests.unit.factories.entities.taste import TasteEraFactory
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
+from tests.unit.factories.entities.taste import TechnicalFingerprintFactory
 
 
 class TestEraSortKey:
@@ -123,3 +127,53 @@ class TestCurrentEraLabel:
     def test__empty_timeline(self) -> None:
         profile = TasteProfileDataFactory.build(taste_timeline=[])
         assert current_era_label(profile) == "current era"
+
+
+class TestBlendWeights:
+    def test__tag_on_one_side__zero_dropped(self) -> None:
+        blended = blend_weights({"jazz": 0.5, "rock": 0.0}, {"soul": 1.0}, 0.3)
+        assert blended == {"jazz": 0.35, "soul": 0.3}
+
+
+class TestMergeTasteProfiles:
+    def test__absorb__undated_range_kept(self) -> None:
+        foundation = TasteProfileDataFactory.build(
+            taste_timeline=[TasteEraFactory.build(era_label="Jazz Nights", time_range="unknown period")]
+        )
+        segment = TasteProfileDataFactory.build(
+            taste_timeline=[TasteEraFactory.build(time_range="2021-01-01 to 2021-03-31")]
+        )
+
+        merged = merge_taste_profiles(foundation, segment, absorb=True, oldest_label=None)
+
+        assert [(era["era_label"], era["time_range"]) for era in merged["taste_timeline"]] == [
+            ("Jazz Nights", "unknown period to 2021-03-31")
+        ]
+
+    def test__timeline_full__oldest_combined__older_label_kept(self) -> None:
+        eras = [
+            TasteEraFactory.build(
+                era_label="Jazz Nights",
+                time_range="2019-01-01 to 2019-06-30",
+                dominant_moods=["calm", "melancholic"],
+            ),
+            TasteEraFactory.build(
+                era_label="Soul Mornings",
+                time_range="2019-07-01 to 2019-12-31",
+                dominant_moods=["melancholic", "upbeat"],
+            ),
+        ] + [TasteEraFactory.build() for _ in range(TASTE_TIMELINE_MAX_ERAS - 2)]
+        foundation = TasteProfileDataFactory.build(taste_timeline=eras)
+        # Set after the build: the factories regenerate a nested fingerprint passed as a keyword
+        foundation["taste_timeline"][0]["technical_fingerprint"] = TechnicalFingerprintFactory.build(energy=0.2)
+        foundation["taste_timeline"][1]["technical_fingerprint"] = TechnicalFingerprintFactory.build(energy=0.6)
+        segment = TasteProfileDataFactory.build(taste_timeline=[TasteEraFactory.build()])
+
+        merged = merge_taste_profiles(foundation, segment, absorb=False, oldest_label=None)
+
+        oldest = merged["taste_timeline"][0]
+        assert len(merged["taste_timeline"]) == TASTE_TIMELINE_MAX_ERAS
+        assert oldest["era_label"] == "Jazz Nights"
+        assert oldest["time_range"] == "2019-01-01 to 2019-12-31"
+        assert oldest["technical_fingerprint"]["energy"] == 0.4
+        assert oldest["dominant_moods"] == ["calm", "melancholic", "upbeat"]

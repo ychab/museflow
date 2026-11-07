@@ -6,6 +6,7 @@ from httpx import codes
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
@@ -14,6 +15,7 @@ from museflow.infrastructure.adapters.profilers.openrouter.client import _format
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
+from tests.unit.factories.entities.taste import TasteEraFactory
 from tests.unit.factories.entities.track import TrackFactory
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -46,7 +48,7 @@ class TestOpenRouterTasteProfileAdapter:
         assert openrouter_profiler.display_name == "OpenRouter"
 
     def test__logic_version(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
-        assert openrouter_profiler.logic_version == "v2.0"
+        assert openrouter_profiler.logic_version == "v2.1"
 
     def test__profiler_metadata(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
         metadata = openrouter_profiler.profiler_metadata
@@ -97,18 +99,76 @@ class TestOpenRouterTasteProfileAdapter:
     async def test__merge_profiles__merge_model(
         self,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
-        completion: dict[str, Any],
         profile_data: TasteProfileData,
         httpx_mock: HTTPXMock,
     ) -> None:
-        httpx_mock.add_response(url=URL, method="POST", json=completion)
+        foundation = TasteProfileDataFactory.build(
+            taste_timeline=[
+                TasteEraFactory.build(era_label="Early Days"),
+                TasteEraFactory.build(era_label="Late-Night Indie", time_range="2021-01-01 to 2021-06-30"),
+            ]
+        )
+        segment = TasteProfileDataFactory.build(
+            taste_timeline=[TasteEraFactory.build(era_label="More Indie", time_range="2021-07-01 to 2021-12-31")]
+        )
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            json={"choices": [{"message": {"content": '{"absorb": true, "oldest_label": null}'}}]},
+        )
 
-        await openrouter_profiler.merge_profiles(profile_data, profile_data)
+        profile = await openrouter_profiler.merge_profiles(foundation, segment)
 
         body = json.loads(httpx_mock.get_requests()[0].content)
         assert body["model"] == "google/gemini-2.5-flash"
         assert "reasoning" not in body
-        assert '"genre_meso": [{"key": "indie-rock", "value": 0.8}]' in body["messages"][0]["content"]
+        prompt = body["messages"][0]["content"]
+        assert "Late-Night Indie" in prompt
+        assert "More Indie" in prompt
+        assert "Early Days" not in prompt  # only the last era is compared while the timeline has room
+        assert '- "oldest_label": null' in prompt
+        assert [(era["era_label"], era["time_range"]) for era in profile["taste_timeline"]] == [
+            ("Early Days", foundation["taste_timeline"][0]["time_range"]),
+            ("Late-Night Indie", "2021-01-01 to 2021-12-31"),
+        ]
+
+    async def test__merge_profiles__timeline_full(
+        self,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        eras = [TasteEraFactory.build(era_label=f"Era {i}") for i in range(TASTE_TIMELINE_MAX_ERAS)]
+        foundation = TasteProfileDataFactory.build(taste_timeline=eras)
+        segment = TasteProfileDataFactory.build(taste_timeline=[TasteEraFactory.build(era_label="New Era")])
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            json={"choices": [{"message": {"content": '{"absorb": false, "oldest_label": "Formative Years"}'}}]},
+        )
+
+        profile = await openrouter_profiler.merge_profiles(foundation, segment)
+
+        prompt = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
+        assert "Era 0" in prompt
+        assert "Era 1" in prompt
+        assert "Name the era covering both" in prompt
+        labels = [era["era_label"] for era in profile["taste_timeline"]]
+        assert len(labels) == TASTE_TIMELINE_MAX_ERAS
+        assert labels[0] == "Formative Years"
+        assert labels[-1] == "New Era"
+
+    async def test__merge_profiles__empty_foundation_timeline__no_call(
+        self,
+        openrouter_profiler: OpenRouterTasteProfileAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        foundation = TasteProfileDataFactory.build(taste_timeline=[])
+        segment = TasteProfileDataFactory.build(taste_timeline=[TasteEraFactory.build()])
+
+        profile = await openrouter_profiler.merge_profiles(foundation, segment)
+
+        assert not httpx_mock.get_requests()
+        assert profile["taste_timeline"] == segment["taste_timeline"]
 
     async def test__reflect_on_profile__reflect_model(
         self,

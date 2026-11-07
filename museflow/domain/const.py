@@ -5,6 +5,13 @@ OAUTH_STATE_TTL_SECONDS: int = 60 * 10
 DISCOVERY_TRACK_SCORE_MIN: int = 0
 DISCOVERY_TRACK_SCORE_MAX: int = 10
 
+# Share of each new segment in the profile's core identity: older listening fades without being erased
+TASTE_SEGMENT_WEIGHT: float = 0.3
+# Past this many eras, the two oldest become one: a long library keeps a readable timeline
+TASTE_TIMELINE_MAX_ERAS: int = 15
+# Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
+TASTE_WEIGHT_DECIMALS: int = 3
+
 GENRE_MACRO_TAGS: tuple[GenreTag, ...] = (
     GenreTag.HIP_HOP,
     GenreTag.ELECTRONIC,

@@ -11,6 +11,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import record_llm_usage
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import SortOrder
@@ -21,6 +22,18 @@ from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 
 logger = logging.getLogger(__name__)
+
+
+def _split_batches(tracks: list[Track], batch_size: int) -> list[list[Track]]:
+    """Splits the tracks into batches, folding a trailing batch of less than half a batch into the previous one.
+
+    Every batch weighs the same in the merge: a few trailing tracks would otherwise replace the current vibe and add
+    an era of their own.
+    """
+    batches = [list(batch) for batch in itertools.batched(tracks, batch_size, strict=False)]
+    if len(batches) > 1 and len(batches[-1]) < batch_size / 2:
+        batches[-2].extend(batches.pop())
+    return batches
 
 
 class BuildTasteProfileUseCase:
@@ -63,7 +76,7 @@ class BuildTasteProfileUseCase:
         tracks = sorted(tracks, key=lambda t: t.played_at_last or max_dt)
         logger.debug(f"Taste profile seeds: {len(tracks)} tracks (most played, chronological order)")
 
-        batches = list(itertools.batched(tracks, config.batch_size, strict=False))
+        batches = _split_batches(tracks, config.batch_size)
 
         # Load checkpoint if resuming
         start_batch_index = 0
@@ -86,10 +99,11 @@ class BuildTasteProfileUseCase:
 
                 step = i
                 logger.info(
-                    f"Processing taste profile batch {i} ({min(i * config.batch_size, len(tracks))} / {len(tracks)} tracks)"
+                    f"Processing taste profile batch {i} "
+                    f"({sum(len(done) for done in batches[:i])} / {len(tracks)} tracks)"
                 )
 
-                segment = await self._profiler.build_profile_segment(list(batch))
+                segment = await self._profiler.build_profile_segment(batch)
                 current_profile = (
                     segment
                     if current_profile is None
