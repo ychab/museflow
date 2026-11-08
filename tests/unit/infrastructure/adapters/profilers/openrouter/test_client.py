@@ -17,6 +17,8 @@ from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteEraFactory
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.taste import ListeningPeriodFactory
+from tests.unit.factories.value_objects.taste import PeriodTrackFactory
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -48,7 +50,7 @@ class TestOpenRouterTasteProfileAdapter:
         assert openrouter_profiler.display_name == "OpenRouter"
 
     def test__logic_version(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
-        assert openrouter_profiler.logic_version == "v2.1"
+        assert openrouter_profiler.logic_version == "v2.2"
 
     def test__profiler_metadata(self, openrouter_profiler: OpenRouterTasteProfileAdapter) -> None:
         metadata = openrouter_profiler.profiler_metadata
@@ -75,7 +77,7 @@ class TestOpenRouterTasteProfileAdapter:
     ) -> None:
         httpx_mock.add_response(url=URL, method="POST", json=completion)
 
-        profile = await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
+        profile = await openrouter_profiler.build_profile_segment(ListeningPeriodFactory.build())
 
         assert profile["behavioral_traits"] == {}
         assert profile["core_identity"] == profile_data["core_identity"]
@@ -83,18 +85,6 @@ class TestOpenRouterTasteProfileAdapter:
         assert body["model"] == "google/gemini-2.5-flash-lite"
         assert body["response_format"]["json_schema"]["name"] == "TasteProfileResponse"
         assert [message["role"] for message in body["messages"]] == ["user"]
-
-    async def test__build_profile_segment__no_dates(
-        self,
-        openrouter_profiler: OpenRouterTasteProfileAdapter,
-        completion: dict[str, Any],
-        httpx_mock: HTTPXMock,
-    ) -> None:
-        httpx_mock.add_response(url=URL, method="POST", json=completion)
-
-        await openrouter_profiler.build_profile_segment(TrackFactory.batch(2, played_at_last=None))
-
-        assert "[unknown period]" in httpx_mock.get_requests()[0].content.decode()
 
     async def test__merge_profiles__merge_model(
         self,
@@ -199,7 +189,7 @@ class TestOpenRouterTasteProfileAdapter:
         )
 
         with pytest.raises(TasteProfilerRateLimitExceededError, match="exceeds max wait"):
-            await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
+            await openrouter_profiler.build_profile_segment(ListeningPeriodFactory.build())
 
     async def test__request_rejected__raises_build_exception(
         self,
@@ -214,7 +204,7 @@ class TestOpenRouterTasteProfileAdapter:
         )
 
         with pytest.raises(TasteProfileBuildError, match="Insufficient credits"):
-            await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
+            await openrouter_profiler.build_profile_segment(ListeningPeriodFactory.build())
 
     async def test__invalid_response__raises_build_exception(
         self,
@@ -229,20 +219,20 @@ class TestOpenRouterTasteProfileAdapter:
         )
 
         with pytest.raises(TasteProfileBuildError, match="Invalid taste profile response"):
-            await openrouter_profiler.build_profile_segment(TrackFactory.batch(2))
+            await openrouter_profiler.build_profile_segment(ListeningPeriodFactory.build())
 
         assert len(httpx_mock.get_requests()) == 3  # initial call + 2 self-healing retries
 
 
 class TestFormatTracks:
     def test__unrated_track__no_score_field(self) -> None:
-        track = TrackFactory.build(score=None)
-        assert "score:" not in _format_tracks([track])
+        period_track = PeriodTrackFactory.build(track=TrackFactory.build(score=None))
+        assert "score:" not in _format_tracks([period_track])
 
     def test__score_zero__shown(self) -> None:
-        track = TrackFactory.build(score=0)
-        assert "score:0" in _format_tracks([track])
+        period_track = PeriodTrackFactory.build(track=TrackFactory.build(score=0))
+        assert "score:0" in _format_tracks([period_track])
 
-    def test__scored_track__shown(self) -> None:
-        track = TrackFactory.build(score=8)
-        assert "score:8" in _format_tracks([track])
+    def test__period_plays__shown_not_total(self) -> None:
+        period_track = PeriodTrackFactory.build(plays=7, track=TrackFactory.build(score=8, played_count=40))
+        assert _format_tracks([period_track]).startswith("plays:7 | score:8 | ")

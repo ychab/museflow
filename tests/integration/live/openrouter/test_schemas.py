@@ -6,10 +6,13 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
+from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.taste import ListeningPeriodFactory
+from tests.unit.factories.value_objects.taste import PeriodTrackFactory
 
 # One model per family next to the defaults (None): each must accept the real response schemas
 _SONNET = "anthropic/claude-sonnet-4.5"
@@ -22,6 +25,11 @@ def tracks() -> list[Track]:
         TrackFactory.build(name="Bohemian Rhapsody", artists=["Queen"]),
         TrackFactory.build(name="Lose Yourself", artists=["Eminem"]),
     ]
+
+
+@pytest.fixture
+def period(tracks: list[Track]) -> ListeningPeriod:
+    return ListeningPeriodFactory.build(tracks=[PeriodTrackFactory.build(track=track) for track in tracks])
 
 
 @pytest.mark.openrouter_live
@@ -51,9 +59,9 @@ class TestOpenRouterSchemasLive:
     @pytest.mark.parametrize(
         "model", [None, "google/gemini-3.5-flash", "google/gemini-3.1-pro-preview", _SONNET, _GPT]
     )
-    async def test__profiler_segment(self, model: str | None, tracks: list[Track]) -> None:
+    async def test__profiler_segment(self, model: str | None, period: ListeningPeriod) -> None:
         async with get_profiler(segment_model=model) as profiler:
-            segment = await profiler.build_profile_segment(tracks)
+            segment = await profiler.build_profile_segment(period)
 
         assert segment["core_identity"]
         valid_keys = {t.value for t in GenreTag} | {m.value for m in MoodTag}

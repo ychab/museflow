@@ -13,11 +13,12 @@ from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.entities.taste import TasteEra
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.track import Track
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.domain.utils.taste import merge_taste_profiles
+from museflow.domain.value_objects.taste import ListeningPeriod
+from museflow.domain.value_objects.taste import PeriodTrack
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
@@ -40,17 +41,14 @@ _ERA_LABEL_RULE = (
 )
 
 
-def _format_tracks(tracks: list[Track]) -> str:
+def _format_tracks(tracks: list[PeriodTrack]) -> str:
     lines = []
 
-    for track in tracks:
-        first = track.played_at_first.date() if track.played_at_first else "?"
-        last = track.played_at_last.date() if track.played_at_last else "?"
+    for period_track in tracks:
+        track = period_track.track
         artists = " & ".join(track.artists)
         score_part = f" | score:{track.score}" if track.score is not None else ""
-        lines.append(
-            f"first:{first} | last:{last} | plays:{track.played_count}{score_part} | {artists} - {track.name}"
-        )
+        lines.append(f"plays:{period_track.plays}{score_part} | {artists} - {track.name}")
 
     return "\n".join(lines)
 
@@ -102,7 +100,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
 
     @property
     def logic_version(self) -> str:
-        return "v2.1"
+        return "v2.2"
 
     @property
     def profiler_metadata(self) -> dict[str, Any]:
@@ -144,17 +142,11 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         content = await self._complete(prompt, TasteProfileResponse, TASTE_PROFILE_SCHEMA, llm, step)
         return cast(TasteProfileData, content.model_dump())
 
-    async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
-        dates = [t.played_at_last for t in tracks if t.played_at_last]
-        if dates:
-            min_date = min(dates).date()
-            max_date = max(dates).date()
-            date_range = f"{min_date} to {max_date}"
-        else:
-            date_range = "unknown period"
-
+    async def build_profile_segment(self, period: ListeningPeriod) -> TasteProfileData:
+        date_range = f"{period.start.date()} to {period.end.date()}"
         prompt = (
-            f"Analyze these {len(tracks)} tracks from [{date_range}]. Build a musical taste profile segment.\n"
+            f"Analyze these {len(period.tracks)} tracks, the most played from [{date_range}] "
+            f"({period.plays} plays in this period). Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
             f'- "taste_timeline": one TasteEra covering these tracks, with time_range "{date_range}". '
             f"{_ERA_LABEL_RULE}\n"
@@ -177,12 +169,12 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             "- rhythmic_complexity: Jazz/Math-rock/Polyrhythmic → high (~0.8); 4/4 Pop/EDM → low (~0.2-0.4)\n"
             "- atmospheric: Ambient/Shoegaze/Post-rock → high (~0.8-0.9); Punk/Trap → low (~0.1-0.2)\n"
             "- instrumentalness: Instrumental/Classical/Jazz → high (~0.8-0.9); Rap/Pop with lyrics → low (~0.05-0.2)\n"
-            f"\nTrack format: first=first listen date | last=last listen date | plays=total play count "
+            f"\nTrack format: plays=play count during this period "
             f"| score=explicit user rating ({DISCOVERY_TRACK_SCORE_MIN}=actively disliked, {DISCOVERY_TRACK_SCORE_MAX}=loved, absent=not yet rated). "
             "Treat high-scored tracks as confirmed taste anchors; treat min-score tracks as anti-preferences; "
             "infer preference from play count for unrated tracks.\n"
             "\nTracks:\n"
-            f"{_format_tracks(tracks)}"
+            f"{_format_tracks(period.tracks)}"
         )
         return await self._complete_profile(prompt, self._segment_llm, "segment")
 

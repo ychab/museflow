@@ -1,20 +1,15 @@
 import pytest
 
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.track import Track
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteEraFactory
-from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.taste import ListeningPeriodFactory
 
 
 @pytest.mark.wiremock("openrouter")
 class TestOpenRouterTasteProfileAdapter:
-    @pytest.fixture
-    def tracks(self) -> list[Track]:
-        return TrackFactory.batch(3)
-
     @pytest.fixture
     def profile_data(self) -> TasteProfileData:
         return TasteProfileDataFactory.build(
@@ -24,10 +19,9 @@ class TestOpenRouterTasteProfileAdapter:
 
     async def test__build_profile_segment__nominal(
         self,
-        tracks: list[Track],
         openrouter_profiler: OpenRouterTasteProfileAdapter,
     ) -> None:
-        profile = await openrouter_profiler.build_profile_segment(tracks)
+        profile = await openrouter_profiler.build_profile_segment(ListeningPeriodFactory.build())
 
         assert profile == TasteProfileData(
             taste_timeline=[
