@@ -107,7 +107,7 @@ app-shell: up ## Connect to the application shell
 # Database
 ##########
 
-.PHONY: db-upgrade db-downgrade db-revision db-shell db-dump db-restore
+.PHONY: db-upgrade db-downgrade db-revision db-shell db-dump db-restore db-backup db-rebuild
 
 db-upgrade: up-db  ## Upgrade database
 	uv run alembic upgrade head
@@ -134,6 +134,13 @@ db-restore: down up-db  ## Restore latest backup (or FILE=path)
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB" > /dev/null' && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null' && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" > /dev/null' < "$$FILE"
+
+
+db-backup: up-db  ## Export ratings, blacklist, enrichment, profiles, LLM usage, account to external_data/backups/TIMESTAMP/ (or DIR=path)
+	@DIR="$(DIR)" EMAIL="$(EMAIL)" ./scripts/db.sh backup
+
+db-rebuild: up-db  ## Reset the DB, migrate, re-import history and restore the latest db-backup (or DIR=path, HISTORY=path)
+	@DIR="$(DIR)" HISTORY="$(HISTORY)" EMAIL="$(EMAIL)" ./scripts/db.sh rebuild
 
 
 ################

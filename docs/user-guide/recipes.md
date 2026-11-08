@@ -105,6 +105,19 @@ Ratings and enrichment are matched by track fingerprint, so tracks missing from 
     *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
     dump and prints its path.
 
+From a clone of the repository, two Make targets chain all of this for the `MUSEFLOW_CLI_DEFAULT_EMAIL` user
+(or `EMAIL=...`):
+
+- `make db-backup` writes the exports above, every taste profile, the `llm usage` reports, the account rows (user
+  and provider token, so no new OAuth flow is needed) and a full SQL dump to `external_data/backups/<timestamp>/`
+  (or `DIR=path`).
+- `make db-rebuild` asks for confirmation, drops the database, runs the migrations, restores the account,
+  re-imports the history from `external_data/spotify_history` (or `HISTORY=path`), then imports the latest backup
+  directory (or `DIR=path`).
+
+Saved playlists are not backed up, and the ratings of discovered tracks missing from the history are skipped on
+import (reported as "not found").
+
 ## Find artists worth exploring
 
 ```bash
