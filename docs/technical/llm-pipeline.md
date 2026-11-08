@@ -50,7 +50,7 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 | Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per listening period (15 for the default 3,000 seeds in periods of 200, 20 for 10,000 seeds) | High volume, narrow task: classify the tracks of a period into tags and weights against a closed vocabulary. A small, cheap model is enough |
 | Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per period after the first | Judges whether a segment continues the last era, and names an era when the timeline is full: a few eras in, two fields out, the code assembling the profile. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
-| Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
+| Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `DISCOVERY_MAX_ATTEMPTS` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
 | Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
 
 The principle is to spend model capability where one call has outsized influence on the result (the single reflection pass, the merge that every later step builds on) and use the cheapest tier where the work is high-volume and constrained. The defaults stay on Gemini, as before the gateway, but on 3.x models: the 2.5 Flash and Flash Lite models MuseFlow used have no Zero Data Retention endpoint, so ZDR routing refuses them. They were not benchmarked against other vendors, so treat the tiering as a reasoned default, not a measured optimum. Comparing models is now a `--model` flag away.
@@ -99,14 +99,14 @@ Design decisions:
 
 ## Advisor: guided discovery
 
-`get_discovery_strategy` returns a `DiscoveryTasteStrategy`: a reasoning paragraph, a strategy label, a list of recommended tracks each with a confidence score, and a playlist name. The prompt is assembled in [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py), as a system message (the role and rules) and a user message (the session's focus and hints), from:
+`get_discovery_strategy` returns a `DiscoveryTasteStrategy`: a reasoning paragraph, a strategy label, a list of recommended tracks each with a confidence score, and a playlist name. The prompt is assembled in [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py), as a system message (the role and rules) and a user message (the session's focus and prompt), from:
 
 | Input | Source | Purpose |
 |---|---|---|
 | Profile summaries | Archetype, core identity, current vibe, behavioural traits and era timeline rendered by pure helpers in `domain/utils/taste.py` | Who the listener is |
 | Risk calibration | Derived from the `openness` and `adventurousness` traits: both below 0.4 means stay in the comfort zone, either above 0.7 means push into adjacent territory | How far to stray |
-| Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`; the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
-| Genre and mood hints, custom instructions | Optional CLI flags | Per-session steering |
+| Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
+| Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words |
 | Exclusion list | Everything suggested in earlier attempts of the same run | Avoid repeats across attempts |
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
 | Liked tracks | Tracks rated 7 or more, at most 200 | Concrete taste anchors beyond statistics |
@@ -115,14 +115,14 @@ Design decisions:
 
 ## Reconciler: from suggestion to catalogue track
 
-An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`--reconciler-limit` candidates) and asks the `Reconciler` to pick the best candidate:
+An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates) and asks the `Reconciler` to pick the best candidate:
 
 1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes).
 2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz).
 3. If either component is below `RECONCILER_MATCH_THRESHOLD` (80), the candidate scores 0.
 4. Otherwise the composite is `0.6 * track + 0.4 * artist`. A candidate scoring 0 is never accepted, so scores are either 0 or between the threshold and 100. The best non-zero candidate is accepted and its score divided by 100 becomes the **match confidence**.
 
-Two scores therefore travel with each track: the advisor's confidence ("is this a good pick for the listener?") and the reconciler's confidence ("is this the track the advisor meant?"). The final order uses both: advisor score rounded down to a band of 0.05, then match confidence inside the band, so a marginally higher advisor score cannot outrank a clearly more certain catalogue match. A per-artist cap (`--max-tracks-per-artist`, default 3) is applied after sorting so one artist cannot dominate a playlist.
+Two scores therefore travel with each track: the advisor's confidence ("is this a good pick for the listener?") and the reconciler's confidence ("is this the track the advisor meant?"). The final order uses both: advisor score rounded down to a band of 0.05, then match confidence inside the band, so a marginally higher advisor score cannot outrank a clearly more certain catalogue match. A per-artist cap (`DISCOVERY_MAX_TRACKS_PER_ARTIST`, default 3) is applied after sorting so one artist cannot dominate a playlist.
 
 Fuzzy matching is deliberately a domain service: it is pure, deterministic and cheap to test with table-driven cases, and it is the guard against the most visible LLM failure mode, a plausible-sounding track that does not exist.
 

@@ -5,8 +5,6 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 
@@ -30,11 +28,9 @@ class AdvisorPort(ABC):
     async def get_discovery_strategy(
         self,
         profile: TasteProfile,
-        focus: DiscoveryFocus,
         advisor_limit: int,
-        genre: GenreTag | None = None,
-        mood: MoodTag | None = None,
-        custom_instructions: str | None = None,
+        prompt: str | None = None,
+        focus: DiscoveryFocus | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,

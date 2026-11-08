@@ -19,10 +19,8 @@ class Playlist(BaseProviderEntity):
     # Discovery-specific — nullable, populated by the use case that creates a PlaylistType.DISCOVERY playlist.
     profile_id: uuid.UUID | None = None
     reasoning: str | None = None
+    prompt: str | None = None
     focus: DiscoveryFocus | None = None
-    genre: str | None = None
-    mood: str | None = None
-    custom_instructions: str | None = None
 
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))

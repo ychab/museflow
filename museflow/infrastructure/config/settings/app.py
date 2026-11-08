@@ -49,6 +49,11 @@ class AppSettings(BaseSettings):
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
+    # About 30% of the advisor suggestions are lost to reconciliation and known tracks: ask for more than the target.
+    DISCOVERY_ADVISOR_LIMIT_RATIO: float = 1.5
+    DISCOVERY_RECONCILER_LIMIT: int = 10
+    DISCOVERY_MAX_ATTEMPTS: int = 3
+    DISCOVERY_MAX_TRACKS_PER_ARTIST: int = 3
     DISCOVERY_SCORE_BAND_WIDTH: float = 0.05
     DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3
     DISCOVERY_LIKED_SCORE_THRESHOLD: int = 7

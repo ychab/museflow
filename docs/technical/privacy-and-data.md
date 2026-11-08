@@ -23,7 +23,7 @@ Everything runs on the user's own machine; the only outbound traffic is to OpenR
 |---|---|---|
 | Tracks: name, artists, album, provider id, aggregated play stats, rating, tags | `museflow_track` | One row per track, not per play ([Data model](data-model.md)) |
 | Taste profiles | `museflow_taste_profile` | LLM-generated JSON, including a narrative summary of the listener |
-| Playlists and membership | `museflow_playlist`, `museflow_playlist_track` | Includes the reasoning and custom instructions used |
+| Playlists and membership | `museflow_playlist`, `museflow_playlist_track` | Includes the reasoning and the prompt used |
 | Blacklist | `museflow_blacklisted_*` | Artists and tracks the user excluded |
 | LLM usage | `museflow_llm_usage` | Calls, tokens and cost per command run, step and model; no prompt or reply content |
 | User | `museflow_user` | Email and Argon2 password hash |
@@ -60,10 +60,10 @@ A model with no compliant endpoint is refused rather than routed to a retaining 
 |---|---|
 | Profile segment | Up to `--track-limit` tracks (default 3,000), one line each: first-played date, last-played date, play count, rating if any, artists and title |
 | Profile merge, reflect | The profile JSON built so far (tags, weights, eras, traits) |
-| Advisor | Text summaries derived from the profile, up to 200 highly rated tracks (artist and title), the exclusion list for the session, blacklisted artists and tracks, and any `--genre`, `--mood` and `--custom-instructions` the user typed |
+| Advisor | Text summaries derived from the profile, up to 200 highly rated tracks (artist and title), the exclusion list for the session, blacklisted artists and tracks, and the prompt the user typed, if any |
 | Enricher | A list of `{index, title, primary_artist}` |
 
-Two properties to be aware of. First, the listening history itself is sent (as artist-and-title lines with dates), because that is the input the profile is built from; a taste profile is also a behavioural summary of its owner. Second, `--custom-instructions` is free text forwarded verbatim, so what the user writes there leaves the machine too.
+Two properties to be aware of. First, the listening history itself is sent (as artist-and-title lines with dates), because that is the input the profile is built from; a taste profile is also a behavioural summary of its owner. Second, the `playlist discover` prompt is free text forwarded verbatim, so what the user writes there leaves the machine too.
 
 ### To Spotify
 

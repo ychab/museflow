@@ -29,17 +29,7 @@ class PlaylistModelFactory(BaseModelFactory[PlaylistModel]):
 
     @post_generated
     @classmethod
-    def genre(cls, type: PlaylistType) -> str | None:
-        return cls.__faker__.word() if type == PlaylistType.DISCOVERY else None
-
-    @post_generated
-    @classmethod
-    def mood(cls, type: PlaylistType) -> str | None:
-        return cls.__faker__.word() if type == PlaylistType.DISCOVERY else None
-
-    @post_generated
-    @classmethod
-    def custom_instructions(cls, type: PlaylistType) -> str | None:
+    def prompt(cls, type: PlaylistType) -> str | None:
         return cls.__faker__.sentence() if type == PlaylistType.DISCOVERY else None
 
     @classmethod

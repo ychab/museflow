@@ -45,10 +45,8 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         default=None,
     )
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    prompt: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     focus: Mapped[DiscoveryFocus | None] = mapped_column(Enum(DiscoveryFocus), nullable=True, default=None)
-    genre: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
-    mood: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
-    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     @classmethod
     def from_entity(cls, entity: PlaylistEntity) -> Playlist:
@@ -62,10 +60,8 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             name=entity.name,
             profile_id=entity.profile_id,
             reasoning=entity.reasoning,
+            prompt=entity.prompt,
             focus=entity.focus,
-            genre=entity.genre,
-            mood=entity.mood,
-            custom_instructions=entity.custom_instructions,
         )
 
     def to_entity(self) -> PlaylistEntity:
@@ -79,10 +75,8 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             name=self.name,
             profile_id=self.profile_id,
             reasoning=self.reasoning,
+            prompt=self.prompt,
             focus=self.focus,
-            genre=self.genre,
-            mood=self.mood,
-            custom_instructions=self.custom_instructions,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
