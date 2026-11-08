@@ -22,12 +22,14 @@ def plays_summary() -> LateralFromClause:
 
     Joined with `.join(plays, true())`, PostgreSQL runs this LATERAL subquery once per track row, with that row's
     `museflow_track.id` in scope: one pass over the track's plays in the `(track_id, played_at)` index gives the
-    three values. An aggregate without GROUP BY always returns one row, so a track without plays keeps its row, with
+    three values, without reading the table (index-only scan). Unlike a join on plays grouped by track, it only
+    computes the tracks the query loads, whatever the number of plays of the other users. An aggregate without GROUP BY always returns one row, so a track without plays keeps its row, with
     a count of 0 and no dates.
     """
     return (
         select(
-            func.count(TrackPlayModel.id).label("played_count"),
+            # count(*), not count(id): the id is not in the index, which would send every count to the table
+            func.count().label("played_count"),
             func.min(TrackPlayModel.played_at).label("played_at_first"),
             func.max(TrackPlayModel.played_at).label("played_at_last"),
         )

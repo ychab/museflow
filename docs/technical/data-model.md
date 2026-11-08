@@ -123,9 +123,9 @@ when it was played, unique on `(track_id, played_at)`).
 | Level | Rows for the author's history | What it serves |
 |---|---|---|
 | Track | ~11,300 after filtering | Everything about a song: identity, rating, enrichment, playlists |
-| Play | ~228,000 after filtering | When each track was listened to: play counts, first and last play, listening per period |
+| Play | ~118,000 after filtering (~237,000 read) | When each track was listened to: play counts, first and last play, listening per period |
 
-The ~228k and ~11k figures come from the author's own export (see [What my data taught me](../product/insights.md)). Two
+The figures come from the author's own export (see [What my data taught me](../product/insights.md)). Two
 import filters shrink the data: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds)
 are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
 
