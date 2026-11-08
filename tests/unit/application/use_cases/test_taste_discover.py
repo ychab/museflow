@@ -12,6 +12,8 @@ from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderRateLimitExceededError
@@ -569,6 +571,85 @@ class TestDiscoverTasteUseCase:
         excluded = second_call_kwargs["excluded_tracks"]
         assert excluded is not None
         assert len(excluded) == 60
+
+    async def test__known_tracks__passed_apart_from_excluded(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+    ) -> None:
+        """A suggestion dropped because the user knew it goes to known_tracks, not to excluded_tracks."""
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+
+        suggested_known, suggested_unreconciled = TrackSuggestedFactory.batch(2, score=0.9)
+        known_track = TrackFactory.build()
+        new_track = TrackFactory.build()
+        mock_advisor.get_discovery_strategy.side_effect = [
+            DiscoveryTasteStrategyFactory.build(recommended_tracks=[suggested_known, suggested_unreconciled]),
+            DiscoveryTasteStrategyFactory.build(recommended_tracks=[TrackSuggestedFactory.build(score=0.9)]),
+        ]
+        mock_reconciler.reconcile.side_effect = [(known_track, 0.9), None, (new_track, 0.9)]
+        mock_provider_library.search_tracks.return_value = []
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(
+            is_known=mock.Mock(side_effect=lambda track: track is known_track)
+        )
+        mock_provider_library.create_playlist.return_value = PlaylistFactory.build()
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, max_attempts=2),
+        )
+
+        first_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[0].kwargs
+        assert first_call_kwargs["known_tracks"] is None
+
+        second_call_kwargs = mock_advisor.get_discovery_strategy.call_args_list[1].kwargs
+        assert second_call_kwargs["excluded_tracks"] == [suggested_unreconciled]
+        assert second_call_kwargs["known_tracks"] == [suggested_known]
+
+    async def test__disliked_tracks__passed_to_advisor(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+        discovery_taste_strategy: DiscoveryTasteStrategy,
+    ) -> None:
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        liked_tracks = TrackFactory.batch(2, score=9)
+        disliked_tracks = TrackFactory.batch(2, score=1)
+        mock_track_repository.get_list.side_effect = [liked_tracks, disliked_tracks]
+        mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
+        reconciled_track = TrackFactory.build()
+        mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(
+                playlist_limit=1,
+                disliked_tracks_score_threshold=2,
+                disliked_tracks_limit=20,
+                dry_run=True,
+            ),
+        )
+
+        disliked_call_kwargs = mock_track_repository.get_list.call_args_list[1].kwargs
+        assert disliked_call_kwargs["max_score"] == 2
+        assert disliked_call_kwargs["exclude_skipped"] is True
+        assert disliked_call_kwargs["order"] == [(TrackOrderBy.SCORE, SortOrder.ASC)]
+        assert disliked_call_kwargs["limit"] == 20
+
+        advisor_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
+        assert advisor_kwargs["liked_tracks"] == liked_tracks
+        assert advisor_kwargs["disliked_tracks"] == disliked_tracks
 
     async def test__blacklist_empty__advisor_receives_none(
         self,

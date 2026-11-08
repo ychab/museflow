@@ -20,6 +20,8 @@ class DiscoverTasteConfigInput:
         max_tracks_per_artist: Maximum tracks per artist in the final playlist.
         liked_tracks_score_threshold: Minimum user score for a track to be sent to the advisor as a positive example.
         liked_tracks_limit: Maximum number of liked tracks to send (top-scored first).
+        disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
+        disliked_tracks_limit: Maximum number of disliked tracks to send (lowest-scored first).
         dry_run: If True, skip playlist creation.
     """
 
@@ -38,6 +40,9 @@ class DiscoverTasteConfigInput:
 
     liked_tracks_score_threshold: int = 7
     liked_tracks_limit: int = 200
+
+    disliked_tracks_score_threshold: int = 3
+    disliked_tracks_limit: int = 50
 
     dry_run: bool = False
 

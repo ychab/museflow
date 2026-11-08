@@ -107,9 +107,11 @@ Design decisions:
 | Risk calibration | Derived from the `openness` and `adventurousness` traits: both below 0.4 means stay in the comfort zone, either above 0.7 means push into adjacent territory | How far to stray |
 | Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
 | Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words |
-| Exclusion list | Everything suggested in earlier attempts of the same run | Avoid repeats across attempts |
+| Exclusion list | The suggestions of earlier attempts of the same run, except those the user already knew | Avoid repeats across attempts |
+| Known tracks | The suggestions of earlier attempts dropped because they were already in the library | Avoid repeats, and dig deeper: the picks were too obvious |
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
-| Liked tracks | Tracks rated 7 or more, at most 200 | Concrete taste anchors beyond statistics |
+| Liked tracks | Tracks rated 7 or more, at most 200, highest first; not filtered on the prompt | Concrete taste anchors beyond statistics |
+| Disliked tracks | Tracks rated 3 or less, at most 50, lowest first (`DISCOVERY_DISLIKED_SCORE_THRESHOLD`, `DISCOVERY_DISLIKED_TRACKS_LIMIT`) | What to steer away from, beyond the blacklist |
 
 **Quality over quantity** is stated in the prompt: only return a track if confidence would be at least 0.7, and return fewer than the requested limit rather than pad. This is an instruction to the model, not a post-filter in code; the confidence values are used afterwards for ranking. The prompt also asks for real, released recordings only, with their exact title and the primary artist first: the catalogue search filters on that artist, and an invented title finds no candidate, so the suggestion is lost. The strategy response is constrained by a strict JSON schema and validated into Pydantic models.
 

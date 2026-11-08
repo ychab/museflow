@@ -171,6 +171,48 @@ class TestOpenRouterAdvisorAdapter:
         assert "The Beatles" in body
         assert "Hey Jude" in body
 
+    async def test__get_discovery_strategy__with_disliked_tracks_builds_disliked_block(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        taste_profile: TasteProfile,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+        disliked: list[Track] = [TrackFactory.build(name="Plastic Anthem", artists=["The Fictional Band"])]
+
+        await openrouter_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            advisor_limit=5,
+            disliked_tracks=disliked,
+        )
+
+        system_message = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
+        assert "### DISLIKED TRACKS\n" in system_message
+        assert "- The Fictional Band: Plastic Anthem" in system_message
+
+    async def test__get_discovery_strategy__with_known_tracks_builds_known_block(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        taste_profile: TasteProfile,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+
+        await openrouter_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            advisor_limit=5,
+            excluded_tracks=[TrackSuggested(name="Unreconciled Song", artists=["Some Artist"], score=0.9)],
+            known_tracks=[TrackSuggested(name="Known Song", artists=["Known Artist"], score=0.9)],
+        )
+
+        system_message = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
+        exclusion_list, known_list = system_message.split("### ALREADY KNOWN BY THE USER")
+        assert "- Some Artist: Unreconciled Song" in exclusion_list
+        assert "Dig deeper" in known_list
+        assert "- Known Artist: Known Song" in known_list
+
     @pytest.mark.parametrize(
         ("traits", "expected"),
         [

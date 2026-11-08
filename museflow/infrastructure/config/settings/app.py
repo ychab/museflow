@@ -58,6 +58,8 @@ class AppSettings(BaseSettings):
     DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3
     DISCOVERY_LIKED_SCORE_THRESHOLD: int = 7
     DISCOVERY_LIKED_TRACKS_LIMIT: int = 200  # 200 is a quality cap, not a technical constraint (higher is noise)
+    DISCOVERY_DISLIKED_SCORE_THRESHOLD: int = 3
+    DISCOVERY_DISLIKED_TRACKS_LIMIT: int = 50
 
     STATS_BAYESIAN_CONFIDENCE: int = 5
 

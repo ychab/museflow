@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class TrackScored:
     track: Track
+    # The advisor's suggestion the track was reconciled from, as the advisor spelled it.
+    suggested: TrackSuggested
     advisor_score: ScoreAdvisor
     reconciler_score: ScoreReconciler
 
@@ -46,6 +48,7 @@ async def reconcile_tracks(
             tracks_reconciled.append(
                 TrackScored(
                     track=best_match,
+                    suggested=track_suggested,
                     advisor_score=track_suggested.score,
                     reconciler_score=reconciler_score,
                 )

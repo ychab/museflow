@@ -60,7 +60,7 @@ A model with no compliant endpoint is refused rather than routed to a retaining 
 |---|---|
 | Profile segment | Up to `--track-limit` tracks (default 3,000), one line each: first-played date, last-played date, play count, rating if any, artists and title |
 | Profile merge, reflect | The profile JSON built so far (tags, weights, eras, traits) |
-| Advisor | Text summaries derived from the profile, up to 200 highly rated tracks (artist and title), the exclusion list for the session, blacklisted artists and tracks, and the prompt the user typed, if any |
+| Advisor | Text summaries derived from the profile, up to 200 highly rated and 50 low-rated tracks (artist and title), the exclusion and already-known lists for the session, blacklisted artists and tracks, and the prompt the user typed, if any |
 | Enricher | A list of `{index, title, primary_artist}` |
 
 Two properties to be aware of. First, the listening history itself is sent (as artist-and-title lines with dates), because that is the input the profile is built from; a taste profile is also a behavioural summary of its owner. Second, the `playlist discover` prompt is free text forwarded verbatim, so what the user writes there leaves the machine too.

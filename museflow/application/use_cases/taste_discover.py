@@ -23,6 +23,8 @@ from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
+from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import TasteProfileNotFoundError
@@ -107,11 +109,18 @@ class DiscoverTasteUseCase:
                 min_score=config.liked_tracks_score_threshold,
                 limit=config.liked_tracks_limit,
             )
+            disliked_tracks = await uow.tracks.get_list(
+                user_id=user.id,
+                max_score=config.disliked_tracks_score_threshold,
+                exclude_skipped=True,
+                order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
+                limit=config.disliked_tracks_limit,
+            )
 
         # What the advisor spent is saved whatever the outcome: a failed discovery was billed too.
         playlist_id: uuid.UUID | None = None
         try:
-            result = await self._discover(user, config, profile, blacklist, liked_tracks)
+            result = await self._discover(user, config, profile, blacklist, liked_tracks, disliked_tracks)
             playlist_id = result.playlist.id if result.playlist else None
         finally:
             await record_llm_usage(
@@ -131,12 +140,15 @@ class DiscoverTasteUseCase:
         profile: TasteProfile,
         blacklist: UserBlacklist,
         liked_tracks: list[Track],
+        disliked_tracks: list[Track],
     ) -> DiscoverTasteResult:
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
 
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []
+        # The suggestions dropped because the user knew them: told apart, so the next attempt digs deeper.
+        tracks_known: list[TrackSuggested] = []
         reports: list[DiscoverTasteAttemptReport] = []
         strategy: DiscoveryTasteStrategy | None = None
 
@@ -149,10 +161,12 @@ class DiscoverTasteUseCase:
                 advisor_limit=config.advisor_limit,
                 prompt=config.prompt,
                 focus=config.focus,
-                excluded_tracks=list(tracks_suggested) or None,
+                excluded_tracks=[t for t in tracks_suggested if t not in tracks_known] or None,
+                known_tracks=list(tracks_known) or None,
                 blacklisted_artists=blacklisted_artists,
                 blacklisted_tracks=blacklisted_tracks,
                 liked_tracks=liked_tracks,
+                disliked_tracks=disliked_tracks,
             )
             tracks_suggested.extend(strategy.recommended_tracks)
             logger.info(
@@ -185,6 +199,8 @@ class DiscoverTasteUseCase:
                 uow=self._uow,
             )
             logger.info(f"Tracks after filtering known: {len(tracks_survived)}")
+            survived_fps = {ts.track.fingerprint for ts in tracks_survived}
+            tracks_known.extend(ts.suggested for ts in tracks_all if ts.track.fingerprint not in survived_fps)
 
             # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
             existing_fps = {ts.track.fingerprint for ts in tracks_scores}
