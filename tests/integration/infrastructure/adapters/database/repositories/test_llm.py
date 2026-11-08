@@ -1,11 +1,9 @@
-import dataclasses
 import uuid
 from datetime import UTC
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from decimal import Decimal
-from unittest import mock
 
 from sqlalchemy import delete
 from sqlalchemy import select
@@ -36,7 +34,11 @@ class TestLLMUsageSQLRepository:
         user: User,
         llm_usage_repository: LLMUsageRepository,
     ) -> None:
-        records = LLMUsageRecordFactory.batch(2, user_id=user.id)
+        # A record keeps its date: an imported row is dated by its run, not by the import.
+        records = [
+            LLMUsageRecordFactory.build(user_id=user.id, created_at=datetime(2026, 1, 15, 10, 30, tzinfo=UTC)),
+            LLMUsageRecordFactory.build(user_id=user.id),
+        ]
 
         await llm_usage_repository.bulk_create(records)
 
@@ -44,10 +46,18 @@ class TestLLMUsageSQLRepository:
             await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
         ).scalars()
         saved = sorted((row.to_entity() for row in rows), key=lambda record: record.id)
-        expected = sorted(
-            (dataclasses.replace(record, created_at=mock.ANY) for record in records), key=lambda record: record.id
-        )
-        assert saved == expected
+        assert saved == sorted(records, key=lambda record: record.id)
+
+    async def test__get_list__nominal(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        other_user_db = await UserModelFactory.create_async()
+        newer = LLMUsageRecordFactory.build(user_id=user.id, created_at=datetime(2026, 2, 1, tzinfo=UTC))
+        older = LLMUsageRecordFactory.build(user_id=user.id, created_at=datetime(2026, 1, 1, tzinfo=UTC))
+        foreign = LLMUsageRecordFactory.build(user_id=other_user_db.id)
+        await llm_usage_repository.bulk_create([newer, older, foreign])
+
+        records = await llm_usage_repository.get_list(user_id=user.id)
+
+        assert records == [older, newer]
 
     async def test__profile_deleted__history_kept(
         self,

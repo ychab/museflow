@@ -76,7 +76,7 @@ See [`blacklist`](commands/blacklist.md).
 
 ## Back up and restore your data
 
-Ratings, the blacklist and LLM results are the only data that cannot be recomputed from the Spotify export for free.
+Ratings, the blacklist, LLM results and their cost history are the only data that cannot be recomputed from the Spotify export for free.
 Ratings and the blacklist are your own work, and the taste profile is the most expensive export: recreating it means a
 full paid build. Export them to YAML:
 
@@ -85,6 +85,7 @@ museflow rate export      --output backup/ratings.yaml
 museflow blacklist export --output backup/blacklist.yaml
 museflow enrich export    --output backup/enrichment.yaml
 museflow taste export     --output backup/taste.yaml
+museflow llm export       --output backup/llm-usage.yaml
 ```
 
 After a database reset, re-import the history first, then restore (no LLM call, no cost):
@@ -95,6 +96,7 @@ museflow rate import      --input backup/ratings.yaml
 museflow blacklist import --input backup/blacklist.yaml
 museflow enrich import    --input backup/enrichment.yaml
 museflow taste import     --input backup/taste.yaml
+museflow llm import       --input backup/llm-usage.yaml
 ```
 
 Ratings and enrichment are matched by track fingerprint, so tracks missing from the library are reported as
@@ -107,7 +109,7 @@ Ratings and enrichment are matched by track fingerprint, so tracks missing from 
 
 From a clone of the repository, the Make targets chain this:
 
-1. `make backup-export`, with the code you have installed: a full SQL dump (`db.sql`) and the four exports above,
+1. `make backup-export`, with the code you have installed: a full SQL dump (`db.sql`) and the five exports above,
    in a new dated directory under `external_data/backups/` (or `BACKUP_DIR=path`).
 2. Switch to the new code, then `make reset` and `make up`, which recreate an empty database and start the API.
 3. `museflow users create --email <email>`.

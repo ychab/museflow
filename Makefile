@@ -152,11 +152,12 @@ db-restore: down up-db  ## Restore the latest dump, same schema only (or FILE=pa
 
 .PHONY: backup-export backup-import
 
-backup-export: db-dump  ## Dump the database, then export ratings, blacklist, enrichment and taste profiles next to it
+backup-export: db-dump  ## Dump the database, then export ratings, blacklist, enrichment, taste profiles and LLM usage next to it
 	@uv run museflow rate export --output "$(NEW_BACKUP_DIR)/ratings.yaml"
 	@uv run museflow blacklist export --output "$(NEW_BACKUP_DIR)/blacklist.yaml"
 	@uv run museflow enrich export --output "$(NEW_BACKUP_DIR)/enrichment.yaml"
 	@uv run museflow taste export --output "$(NEW_BACKUP_DIR)/taste.yaml"
+	@uv run museflow llm export --output "$(NEW_BACKUP_DIR)/llm-usage.yaml"
 	@echo "Backup written to $(NEW_BACKUP_DIR)"
 
 backup-import: db-upgrade  ## Migrate, import the streaming history (HISTORY_DIR), then the latest backup (or BACKUP_DIR)
@@ -167,6 +168,7 @@ backup-import: db-upgrade  ## Migrate, import the streaming history (HISTORY_DIR
 	uv run museflow blacklist import --input "$(LATEST_BACKUP_DIR)/blacklist.yaml"
 	uv run museflow enrich import --input "$(LATEST_BACKUP_DIR)/enrichment.yaml"
 	uv run museflow taste import --input "$(LATEST_BACKUP_DIR)/taste.yaml"
+	uv run museflow llm import --input "$(LATEST_BACKUP_DIR)/llm-usage.yaml"
 
 
 ################

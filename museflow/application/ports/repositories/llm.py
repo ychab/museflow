@@ -12,6 +12,11 @@ class LLMUsageRepository(ABC):
     """Port for the history of what the LLM calls cost."""
 
     @abstractmethod
+    async def get_list(self, user_id: uuid.UUID) -> list[LLMUsageRecord]:
+        """Every usage row of the user, oldest first."""
+        ...
+
+    @abstractmethod
     async def bulk_create(self, records: list[LLMUsageRecord]) -> None: ...
 
     @abstractmethod

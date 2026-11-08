@@ -32,6 +32,14 @@ class LLMUsageSQLRepository(LLMUsageRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def get_list(self, user_id: uuid.UUID) -> list[LLMUsageRecord]:
+        stmt = (
+            select(LLMUsageModel)
+            .where(LLMUsageModel.user_id == user_id)
+            .order_by(LLMUsageModel.created_at, LLMUsageModel.run_id, LLMUsageModel.step, LLMUsageModel.model)
+        )
+        return [row.to_entity() for row in (await self.session.execute(stmt)).scalars()]
+
     async def bulk_create(self, records: list[LLMUsageRecord]) -> None:
         self.session.add_all([LLMUsageModel.from_entity(record) for record in records])
         await self.session.flush()
