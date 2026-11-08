@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import logging
+import math
 from datetime import UTC
 from datetime import datetime
 from typing import cast
@@ -9,6 +10,8 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import record_llm_usage
+from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
+from museflow.domain.const import TASTE_BATCH_SIZE_MIN
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.track import Track
@@ -24,18 +27,6 @@ from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 logger = logging.getLogger(__name__)
 
 
-def _split_batches(tracks: list[Track], batch_size: int) -> list[list[Track]]:
-    """Splits the tracks into batches, folding a trailing batch of less than half a batch into the previous one.
-
-    Every batch weighs the same in the merge: a few trailing tracks would otherwise replace the current vibe and add
-    an era of their own.
-    """
-    batches = [list(batch) for batch in itertools.batched(tracks, batch_size, strict=False)]
-    if len(batches) > 1 and len(batches[-1]) < batch_size / 2:
-        batches[-2].extend(batches.pop())
-    return batches
-
-
 class BuildTasteProfileUseCase:
     def __init__(
         self,
@@ -44,6 +35,20 @@ class BuildTasteProfileUseCase:
     ) -> None:
         self._uow = uow
         self._profiler = profiler
+
+    @staticmethod
+    def _split_batches(tracks: list[Track], batch_size: int | None) -> list[list[Track]]:
+        """Splits the tracks into batches, folding a trailing batch of less than half a batch into the previous one.
+
+        Without a batch size, a small library gets batches of `TASTE_BATCH_SIZE_MIN` tracks and a large one about
+        `TASTE_BATCH_COUNT_TARGET` batches. The trailing tracks would otherwise replace the current vibe and add an era
+        of their own.
+        """
+        size = batch_size or max(TASTE_BATCH_SIZE_MIN, math.ceil(len(tracks) / TASTE_BATCH_COUNT_TARGET))
+        batches = [list(batch) for batch in itertools.batched(tracks, size, strict=False)]
+        if len(batches) > 1 and len(batches[-1]) < size / 2:
+            batches[-2].extend(batches.pop())
+        return batches
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # What the profiler spent is saved whatever the outcome: a paused build was billed too.
@@ -76,7 +81,8 @@ class BuildTasteProfileUseCase:
         tracks = sorted(tracks, key=lambda t: t.played_at_last or max_dt)
         logger.debug(f"Taste profile seeds: {len(tracks)} tracks (most played, chronological order)")
 
-        batches = _split_batches(tracks, config.batch_size)
+        batches = self._split_batches(tracks, config.batch_size)
+        logger.debug(f"Taste profile batches: {len(batches)} of about {len(batches[0])} tracks")
 
         # Load checkpoint if resuming
         start_batch_index = 0
@@ -98,16 +104,15 @@ class BuildTasteProfileUseCase:
                     continue
 
                 step = i
-                logger.info(
-                    f"Processing taste profile batch {i} "
-                    f"({sum(len(done) for done in batches[:i])} / {len(tracks)} tracks)"
-                )
+                processed = sum(len(done) for done in batches[:i])
+                logger.info(f"Processing taste profile batch {i} ({processed} / {len(tracks)} tracks)")
 
                 segment = await self._profiler.build_profile_segment(batch)
+                # Weighted by tracks, the core identity is the mean over every seed so far, whatever the batch size
                 current_profile = (
                     segment
                     if current_profile is None
-                    else await self._profiler.merge_profiles(current_profile, segment)
+                    else await self._profiler.merge_profiles(current_profile, segment, len(batch) / processed)
                 )
 
                 # One block per batch: a paid batch survives a later failure.

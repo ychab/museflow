@@ -31,8 +31,17 @@ class TasteProfilerPort(ABC):
         """Analyze a batch of tracks and return a partial taste profile."""
 
     @abstractmethod
-    async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
-        """Merge new_segment into the existing foundation profile."""
+    async def merge_profiles(
+        self,
+        foundation: TasteProfileData,
+        new_segment: TasteProfileData,
+        segment_weight: float,
+    ) -> TasteProfileData:
+        """Merge new_segment into the existing foundation profile.
+
+        Args:
+            segment_weight: the segment's share of the core identity, between 0 and 1.
+        """
 
     @abstractmethod
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:

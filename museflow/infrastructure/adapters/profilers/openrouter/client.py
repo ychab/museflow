@@ -186,13 +186,20 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         )
         return await self._complete_profile(prompt, self._segment_llm, "segment")
 
-    async def merge_profiles(self, foundation: TasteProfileData, new_segment: TasteProfileData) -> TasteProfileData:
+    async def merge_profiles(
+        self,
+        foundation: TasteProfileData,
+        new_segment: TasteProfileData,
+        segment_weight: float,
+    ) -> TasteProfileData:
         # The code merges the weights and assembles the timeline: the model only takes the decisions that need
         # judgment, so it reads and writes a few eras instead of the whole profile.
         timeline = foundation["taste_timeline"]
         segment_eras = new_segment["taste_timeline"]
         if not timeline or not segment_eras:
-            return merge_taste_profiles(foundation, new_segment, absorb=False, oldest_label=None)
+            return merge_taste_profiles(
+                foundation, new_segment, segment_weight=segment_weight, absorb=False, oldest_label=None
+            )
 
         prompt = (
             "You are a precise music curator extending the taste timeline of a listener.\n\n"
@@ -216,7 +223,11 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
 
         decision = await self._complete(prompt, TimelineMergeResponse, TIMELINE_MERGE_SCHEMA, self._merge_llm, "merge")
         return merge_taste_profiles(
-            foundation, new_segment, absorb=decision.absorb, oldest_label=decision.oldest_label
+            foundation,
+            new_segment,
+            segment_weight=segment_weight,
+            absorb=decision.absorb,
+            oldest_label=decision.oldest_label,
         )
 
     async def reflect_on_profile(self, profile: TasteProfileData) -> TasteProfileData:

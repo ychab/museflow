@@ -117,7 +117,7 @@ class TestOpenRouterTasteProfileAdapter:
             json={"choices": [{"message": {"content": '{"absorb": true, "oldest_label": null}'}}]},
         )
 
-        profile = await openrouter_profiler.merge_profiles(foundation, segment)
+        profile = await openrouter_profiler.merge_profiles(foundation, segment, 0.3)
 
         body = json.loads(httpx_mock.get_requests()[0].content)
         assert body["model"] == "google/gemini-2.5-flash"
@@ -146,7 +146,7 @@ class TestOpenRouterTasteProfileAdapter:
             json={"choices": [{"message": {"content": '{"absorb": false, "oldest_label": "Formative Years"}'}}]},
         )
 
-        profile = await openrouter_profiler.merge_profiles(foundation, segment)
+        profile = await openrouter_profiler.merge_profiles(foundation, segment, 0.3)
 
         prompt = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
         assert "Era 0" in prompt
@@ -165,7 +165,7 @@ class TestOpenRouterTasteProfileAdapter:
         foundation = TasteProfileDataFactory.build(taste_timeline=[])
         segment = TasteProfileDataFactory.build(taste_timeline=[TasteEraFactory.build()])
 
-        profile = await openrouter_profiler.merge_profiles(foundation, segment)
+        profile = await openrouter_profiler.merge_profiles(foundation, segment, 0.3)
 
         assert not httpx_mock.get_requests()
         assert profile["taste_timeline"] == segment["taste_timeline"]

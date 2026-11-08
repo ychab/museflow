@@ -66,7 +66,7 @@ class TestOpenRouterTasteProfileAdapter:
         )
 
         # The stubbed model answers absorb: false, so the segment's era is appended
-        profile_merged = await openrouter_profiler.merge_profiles(foundation, segment)
+        profile_merged = await openrouter_profiler.merge_profiles(foundation, segment, 0.3)
 
         assert profile_merged == TasteProfileData(
             taste_timeline=[foundation["taste_timeline"][0], segment["taste_timeline"][0]],

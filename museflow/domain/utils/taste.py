@@ -1,7 +1,6 @@
 import re
 from typing import TYPE_CHECKING
 
-from museflow.domain.const import TASTE_SEGMENT_WEIGHT
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.const import TASTE_WEIGHT_DECIMALS
 
@@ -62,12 +61,14 @@ def merge_taste_profiles(
     foundation: TasteProfileData,
     segment: TasteProfileData,
     *,
+    segment_weight: float,
     absorb: bool,
     oldest_label: str | None,
 ) -> TasteProfileData:
     """Merges a segment into the foundation, the timeline per the decisions a profiler took on it.
 
     Args:
+        segment_weight: the segment's share of the core identity.
         absorb: the segment continues the foundation's last era, which is extended to the segment's end date
             (label, fingerprint and moods unchanged); otherwise the segment's era is appended.
         oldest_label: the label of the era the two oldest become, when the timeline outgrows its limit; the older
@@ -87,7 +88,7 @@ def merge_taste_profiles(
 
     merged: TasteProfileData = {
         "taste_timeline": timeline,
-        "core_identity": blend_weights(foundation["core_identity"], segment["core_identity"], TASTE_SEGMENT_WEIGHT),
+        "core_identity": blend_weights(foundation["core_identity"], segment["core_identity"], segment_weight),
         "current_vibe": dict(segment["current_vibe"]),
         "personality_archetype": None,
         "life_phase_insights": [],
