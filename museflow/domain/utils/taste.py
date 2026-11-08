@@ -12,35 +12,6 @@ if TYPE_CHECKING:  # pragma: no cover
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
-def _span_time_range(first: str, last: str) -> str:
-    """From the start of `first` to the end of `last`; a range without dates is kept as written."""
-    starts = _DATE_PATTERN.findall(first)
-    ends = _DATE_PATTERN.findall(last)
-    return f"{starts[0] if starts else first} to {ends[-1] if ends else last}"
-
-
-def _mean(first: float, second: float) -> float:
-    return round((first + second) / 2, TASTE_WEIGHT_DECIMALS)
-
-
-def _combine_eras(older: TasteEra, newer: TasteEra, label: str | None) -> TasteEra:
-    older_fp = older["technical_fingerprint"]
-    newer_fp = newer["technical_fingerprint"]
-    fingerprint: TechnicalFingerprint = {
-        "energy": _mean(older_fp["energy"], newer_fp["energy"]),
-        "acousticness": _mean(older_fp["acousticness"], newer_fp["acousticness"]),
-        "rhythmic_complexity": _mean(older_fp["rhythmic_complexity"], newer_fp["rhythmic_complexity"]),
-        "atmospheric": _mean(older_fp["atmospheric"], newer_fp["atmospheric"]),
-        "instrumentalness": _mean(older_fp["instrumentalness"], newer_fp["instrumentalness"]),
-    }
-    return {
-        "era_label": label or older["era_label"],
-        "time_range": _span_time_range(older["time_range"], newer["time_range"]),
-        "technical_fingerprint": fingerprint,
-        "dominant_moods": list(dict.fromkeys(older["dominant_moods"] + newer["dominant_moods"])),
-    }
-
-
 def blend_weights(
     foundation: dict[str, float],
     segment: dict[str, float],
@@ -143,3 +114,32 @@ def current_vibe_summary(profile: TasteProfileData, top_n: int = 5) -> str:
     vibe = profile.get("current_vibe", {})
     top = sorted(vibe.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
     return ", ".join(f"{k} ({v:.2f})" for k, v in top) or "unknown"
+
+
+def _span_time_range(first: str, last: str) -> str:
+    """From the start of `first` to the end of `last`; a range without dates is kept as written."""
+    starts = _DATE_PATTERN.findall(first)
+    ends = _DATE_PATTERN.findall(last)
+    return f"{starts[0] if starts else first} to {ends[-1] if ends else last}"
+
+
+def _mean(first: float, second: float) -> float:
+    return round((first + second) / 2, TASTE_WEIGHT_DECIMALS)
+
+
+def _combine_eras(older: TasteEra, newer: TasteEra, label: str | None) -> TasteEra:
+    older_fp = older["technical_fingerprint"]
+    newer_fp = newer["technical_fingerprint"]
+    fingerprint: TechnicalFingerprint = {
+        "energy": _mean(older_fp["energy"], newer_fp["energy"]),
+        "acousticness": _mean(older_fp["acousticness"], newer_fp["acousticness"]),
+        "rhythmic_complexity": _mean(older_fp["rhythmic_complexity"], newer_fp["rhythmic_complexity"]),
+        "atmospheric": _mean(older_fp["atmospheric"], newer_fp["atmospheric"]),
+        "instrumentalness": _mean(older_fp["instrumentalness"], newer_fp["instrumentalness"]),
+    }
+    return {
+        "era_label": label or older["era_label"],
+        "time_range": _span_time_range(older["time_range"], newer["time_range"]),
+        "technical_fingerprint": fingerprint,
+        "dominant_moods": list(dict.fromkeys(older["dominant_moods"] + newer["dominant_moods"])),
+    }

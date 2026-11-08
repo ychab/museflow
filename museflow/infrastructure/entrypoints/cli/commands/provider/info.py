@@ -17,11 +17,6 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
-def _mask(secret: str) -> str:
-    # The last characters tell two tokens apart, e.g. after a rotation
-    return f"****{secret[-4:]}"
-
-
 @app.command("info", help="Show the stored provider auth token of a user.")
 def provider_info_command(
     email: str = EMAIL_OPTION,
@@ -56,3 +51,8 @@ async def provider_info_logic(email: EmailStr, provider: MusicProvider) -> OAuth
         raise UserNotFoundError(f"User with email '{email}' not found.")
 
     return await get_provider_token(user_id=user.id, provider=provider, uow=uow)
+
+
+def _mask(secret: str) -> str:
+    # The last characters tell two tokens apart, e.g. after a rotation
+    return f"****{secret[-4:]}"

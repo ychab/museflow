@@ -16,6 +16,28 @@ _RAW_PREVIEW_LENGTH = 200
 _DETAIL_LENGTH = 500
 
 
+def parse_completion[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[T], adapter: str) -> T:
+    """Turns the reply of a chat completion into `response_model`.
+
+    Fails early and explicitly on provider errors, empty, refused, truncated (`length`), non-JSON or schema-violating
+    replies. Every failure is logged as a WARNING; the start of the reply only at DEBUG, since it may quote the user's
+    taste.
+
+    Raises:
+        LLMResponseError: If the reply is unusable.
+    """
+    try:
+        return _parse(envelope, response_model, adapter)
+    except LLMResponseError as e:
+        extra = {"adapter": adapter, "failure_kind": e.failure_kind.value, "finish_reason": e.finish_reason}
+        logger.warning(f"LLM {adapter} response unusable ({e.failure_kind})", extra=extra)
+        logger.debug(
+            f"LLM {adapter} unusable response preview",
+            extra={**extra, "raw_preview": e.raw_text[:_RAW_PREVIEW_LENGTH]},
+        )
+        raise
+
+
 def _summarize_validation_error(error: ValidationError) -> str:
     return "; ".join(
         f"{'.'.join(str(part) for part in err['loc']) or '<root>'}: {err['msg']}"
@@ -91,25 +113,3 @@ def _parse[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[
         raise _invalid_response(
             adapter, LLMFailureKind.SCHEMA_VIOLATION, _summarize_validation_error(e), raw_text, finish_reason
         ) from e
-
-
-def parse_completion[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[T], adapter: str) -> T:
-    """Turns the reply of a chat completion into `response_model`.
-
-    Fails early and explicitly on provider errors, empty, refused, truncated (`length`), non-JSON or schema-violating
-    replies. Every failure is logged as a WARNING; the start of the reply only at DEBUG, since it may quote the user's
-    taste.
-
-    Raises:
-        LLMResponseError: If the reply is unusable.
-    """
-    try:
-        return _parse(envelope, response_model, adapter)
-    except LLMResponseError as e:
-        extra = {"adapter": adapter, "failure_kind": e.failure_kind.value, "finish_reason": e.finish_reason}
-        logger.warning(f"LLM {adapter} response unusable ({e.failure_kind})", extra=extra)
-        logger.debug(
-            f"LLM {adapter} unusable response preview",
-            extra={**extra, "raw_preview": e.raw_text[:_RAW_PREVIEW_LENGTH]},
-        )
-        raise
