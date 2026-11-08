@@ -3,6 +3,7 @@ from dataclasses import replace
 
 from sqlalchemy import delete
 from sqlalchemy import select
+from sqlalchemy import true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.playlist import PlaylistRepository
@@ -12,6 +13,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistDB
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackDB
 from museflow.infrastructure.adapters.database.models.track import Track as TrackDB
+from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
 
 
 class PlaylistSQLRepository(PlaylistRepository):
@@ -36,10 +38,12 @@ class PlaylistSQLRepository(PlaylistRepository):
         return [row.to_entity() for row in result.scalars()]
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
+        plays = plays_summary()
         stmt = (
-            select(PlaylistDB, TrackDB)
+            select(PlaylistDB, TrackDB, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
             .outerjoin(PlaylistTrackDB, PlaylistTrackDB.playlist_id == PlaylistDB.id)
             .outerjoin(TrackDB, TrackDB.id == PlaylistTrackDB.track_id)
+            .join(plays, true())
             .where(PlaylistDB.id == playlist_id, PlaylistDB.user_id == user_id)
             .order_by(PlaylistTrackDB.position)
         )
@@ -48,8 +52,12 @@ class PlaylistSQLRepository(PlaylistRepository):
         if not rows:
             return None
 
-        playlist_db, _ = rows[0]
-        tracks = [track_db.to_entity() for _, track_db in rows if track_db is not None]
+        playlist_db: PlaylistDB = rows[0][0]
+        tracks = [
+            track_db.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
+            for _, track_db, played_count, first, last in rows
+            if track_db is not None
+        ]
         return replace(playlist_db.to_entity(), tracks=tracks)
 
     async def get_track_ids(self, user_id: uuid.UUID, type: PlaylistType) -> frozenset[uuid.UUID]:

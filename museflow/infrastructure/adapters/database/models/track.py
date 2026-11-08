@@ -1,22 +1,16 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
 from typing import TypedDict
 
 from sqlalchemy import Boolean
-from sqlalchemy import ColumnElement
 from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
-from sqlalchemy import ScalarSelect
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
-from sqlalchemy import func
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import column_property
 from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.track import ProviderLink
@@ -89,12 +83,6 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     moods: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default_factory=list)
     locales: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=None)
 
-    if TYPE_CHECKING:  # pragma: no cover
-        # Computed from the plays and mapped after the class, below: read like columns, never written.
-        played_at_first: Mapped[datetime | None] = mapped_column(init=False)
-        played_at_last: Mapped[datetime | None] = mapped_column(init=False)
-        played_count: Mapped[int] = mapped_column(init=False)
-
     @classmethod
     def from_entity(cls, entity: TrackEntity) -> Track:
         return cls(
@@ -115,7 +103,14 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             locales=entity.locales,
         )
 
-    def to_entity(self) -> TrackEntity:
+    def to_entity(
+        self,
+        *,
+        played_count: int,
+        played_at_first: datetime | None,
+        played_at_last: datetime | None,
+    ) -> TrackEntity:
+        """The play data is not on the track: the query that loads it computes it from the plays (`plays_summary`)."""
         return TrackEntity(
             id=self.id,
             user_id=self.user_id,
@@ -127,9 +122,9 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             artists=self.artists,
             album_name=self.album_name,
             fingerprint=self.fingerprint,
-            played_at_first=self.played_at_first,
-            played_at_last=self.played_at_last,
-            played_count=self.played_count,
+            played_at_first=played_at_first,
+            played_at_last=played_at_last,
+            played_count=played_count,
             source=TrackSource(self.source),
             score=self.score,
             score_skipped=self.score_skipped,
@@ -137,14 +132,3 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             moods=[MoodTag(m) for m in self.moods],
             locales=self.locales,
         )
-
-
-# The play data of a track is computed from its plays at every load, so it never drifts from them: `to_entity`, the
-# filters and the ordering read these like columns. Mapped after the class, as the subqueries need its own `id`.
-def _plays_aggregate[T](aggregate: ColumnElement[T]) -> ScalarSelect[T]:
-    return select(aggregate).where(TrackPlay.track_id == Track.id).correlate_except(TrackPlay).scalar_subquery()
-
-
-Track.played_at_first = column_property(_plays_aggregate(func.min(TrackPlay.played_at)))
-Track.played_at_last = column_property(_plays_aggregate(func.max(TrackPlay.played_at)))
-Track.played_count = column_property(_plays_aggregate(func.count(TrackPlay.id)))

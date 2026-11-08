@@ -29,8 +29,7 @@ class TestPlaylistSQLRepository:
         taste_profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
         # Create a real Track in museflow_track first (FK constraint)
-        track_db = await TrackModelFactory.create_async(user_id=user.id)
-        track = track_db.to_entity()
+        track = await TrackModelFactory.create_entity_async(user_id=user.id)
 
         playlist_id = uuid.uuid4()
         playlist = PlaylistFactory.build(
@@ -69,10 +68,8 @@ class TestPlaylistSQLRepository:
     ) -> None:
         taste_profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
-        track_db_1 = await TrackModelFactory.create_async(user_id=user.id)
-        track_db_2 = await TrackModelFactory.create_async(user_id=user.id)
-        track_1 = track_db_1.to_entity()
-        track_2 = track_db_2.to_entity()
+        track_1 = await TrackModelFactory.create_entity_async(user_id=user.id)
+        track_2 = await TrackModelFactory.create_entity_async(user_id=user.id)
 
         playlist_id = uuid.uuid4()
         playlist = PlaylistFactory.build(
