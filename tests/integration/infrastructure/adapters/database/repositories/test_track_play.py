@@ -69,7 +69,13 @@ class TestTrackPlaySQLRepository:
                 4,
                 [("replayed", 2), (names[min(tracks_db["early"].id, tracks_db["rated"].id)], 1)],
             ),
-            (datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 4, tzinfo=UTC), 4, [("replayed", 2), ("late", 2)]),
+            # `replayed` and `late` tie: the lower id comes first
+            (
+                datetime(2022, 1, 1, tzinfo=UTC),
+                datetime(2022, 1, 4, tzinfo=UTC),
+                4,
+                sorted([("replayed", 2), ("late", 2)], key=lambda track: tracks_db[track[0]].id),
+            ),
         ]
         # The tracks carry their play data over the whole history, not the period's
         replayed = periods[0].tracks[0].track
