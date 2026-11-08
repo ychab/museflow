@@ -16,6 +16,7 @@ class TestImportRatingsUseCase:
     ) -> None:
         track = TrackFactory.build(user_id=user.id, fingerprint="test-fingerprint-noop", score_skipped=False)
         mock_track_repository.get_list.return_value = [track]
+        mock_track_repository.bulk_upsert.return_value = ({}, 0)
 
         result = await import_ratings(
             user_id=user.id,
