@@ -33,7 +33,7 @@ from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
-from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
+from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 
 
 class TrackSQLRepository(TrackRepository):
@@ -70,7 +70,7 @@ class TrackSQLRepository(TrackRepository):
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
-        plays = plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary()
         stmt = (
             select(TrackModel, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
             .join(plays, true())

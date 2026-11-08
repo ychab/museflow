@@ -110,7 +110,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         played_at_first: datetime | None,
         played_at_last: datetime | None,
     ) -> TrackEntity:
-        """The play data is not on the track: the query that loads it computes it from the plays (`plays_summary`)."""
+        """The play data is not on the track: the query that loads it computes it from the plays (`TrackPlaySQLRepository.plays_summary`)."""
         return TrackEntity(
             id=self.id,
             user_id=self.user_id,

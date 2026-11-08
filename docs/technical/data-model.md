@@ -130,7 +130,7 @@ import filters shrink the data: plays shorter than the minimum duration (`--min-
 are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
 
 **The plays are the only source of play data.** A track has no play column: every query that loads tracks joins
-`plays_summary()` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track_play.py)),
+`TrackPlaySQLRepository.plays_summary()` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track_play.py)),
 a `JOIN LATERAL` subquery that counts each track's plays and takes the first and last, in one pass over the
 `(track_id, played_at)` index; its columns also serve the date filters and the ordering. The model's `to_entity`
 requires the three values, so a query that forgets the join does not type-check. The `Track` entity carries them as
