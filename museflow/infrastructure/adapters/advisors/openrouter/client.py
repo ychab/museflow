@@ -37,9 +37,11 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         prompt: str | None = None,
         focus: DiscoveryFocus | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
+        known_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
+        disliked_tracks: list[Track] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -82,6 +84,14 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "You MUST suggest DIFFERENT tracks and avoid these artists where possible:\n"
                 f"{formatted}"
             )
+        if known_tracks:
+            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in known_tracks)
+            exclusion_parts.append(
+                "### ALREADY KNOWN BY THE USER (DO NOT SUGGEST THESE)\n"
+                "These suggestions of this session were already in the user's library: the picks were too obvious. "
+                "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
+                f"{formatted}"
+            )
         if blacklisted_artists:
             formatted = "\n".join(f"- {a}" for a in blacklisted_artists)
             exclusion_parts.append(
@@ -98,6 +108,9 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             )
         exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
 
+        # The liked anchors are the global top, not filtered on the prompt: a free-text theme does not map to the
+        # enriched genres without interpreting it, so the advisor picks the relevant anchors itself (#146). If the
+        # playlists drift off theme, filter them here (see #137).
         liked_tracks_block = ""
         if liked_tracks:
             formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in liked_tracks)
@@ -106,6 +119,16 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "These are tracks the user has explicitly enjoyed and rated highly. "
                 "Use them as concrete taste anchors when shaping your recommendations — "
                 "they reveal what this user genuinely responds to beyond statistical patterns.\n"
+                f"{formatted}\n\n"
+            )
+
+        disliked_tracks_block = ""
+        if disliked_tracks:
+            formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in disliked_tracks)
+            disliked_tracks_block = (
+                "### DISLIKED TRACKS\n"
+                "These are tracks the user rated low. Steer away from what they share (sound, style, production), "
+                "not only from these exact tracks.\n"
                 f"{formatted}\n\n"
             )
 
@@ -122,6 +145,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             f"{risk_calibration}\n\n"
             f"{exclusion_block}"
             f"{liked_tracks_block}"
+            f"{disliked_tracks_block}"
             f"{focus_block}"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"

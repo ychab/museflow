@@ -32,10 +32,21 @@ class AdvisorPort(ABC):
         prompt: str | None = None,
         focus: DiscoveryFocus | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
+        known_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
-    ) -> DiscoveryTasteStrategy: ...
+        disliked_tracks: list[Track] | None = None,
+    ) -> DiscoveryTasteStrategy:
+        """Asks for new tracks matching the profile.
+
+        Args:
+            excluded_tracks: Earlier suggestions of the session, not to be suggested again.
+            known_tracks: Earlier suggestions of the session the user already knew: the next picks should dig deeper.
+            liked_tracks: Tracks the user rated high, as taste anchors.
+            disliked_tracks: Tracks the user rated low, as what to steer away from.
+        """
+        ...
 
     @abstractmethod
     async def close(self) -> None:
