@@ -13,6 +13,7 @@ from sqlalchemy import literal_column
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import text
+from sqlalchemy import true
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -32,6 +33,7 @@ from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
 
 
 class TrackSQLRepository(TrackRepository):
@@ -68,7 +70,12 @@ class TrackSQLRepository(TrackRepository):
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
-        stmt = select(TrackModel).where(TrackModel.user_id == user_id)
+        plays = plays_summary()
+        stmt = (
+            select(TrackModel, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
+            .join(plays, true())
+            .where(TrackModel.user_id == user_id)
+        )
 
         # Filtering
         if provider is not None:
@@ -93,13 +100,13 @@ class TrackSQLRepository(TrackRepository):
         if artist_name is not None:
             stmt = stmt.where(func.lower(TrackModel.artists[0].as_string()) == artist_name.lower())
         if played_first_min is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_first) >= played_first_min)
+            stmt = stmt.where(func.date(plays.c.played_at_first) >= played_first_min)
         if played_first_max is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_first) <= played_first_max)
+            stmt = stmt.where(func.date(plays.c.played_at_first) <= played_first_max)
         if played_last_min is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_last) >= played_last_min)
+            stmt = stmt.where(func.date(plays.c.played_at_last) >= played_last_min)
         if played_last_max is not None:
-            stmt = stmt.where(func.date(TrackModel.played_at_last) <= played_last_max)
+            stmt = stmt.where(func.date(plays.c.played_at_last) <= played_last_max)
         if exclude_ids:
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
         if missing_fields:
@@ -127,7 +134,8 @@ class TrackSQLRepository(TrackRepository):
                     stmt = stmt.order_by(func.random())
                     break  # RANDOM cannot be combined with further columns
 
-                column = getattr(TrackModel, order_by.value)
+                # The play data comes from the plays, the other fields from the track
+                column = plays.c[order_by.value] if order_by.value in plays.c else getattr(TrackModel, order_by.value)
                 if order_by.nullable:
                     stmt = stmt.order_by(
                         column.asc().nulls_last() if sort_order == SortOrder.ASC else column.desc().nulls_last()
@@ -143,8 +151,11 @@ class TrackSQLRepository(TrackRepository):
         if limit is not None:
             stmt = stmt.limit(limit)
 
-        results = await self.session.execute(stmt)
-        return [tracks_db.to_entity() for tracks_db in results.scalars().all()]
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            track_db.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
+            for track_db, played_count, first, last in rows
+        ]
 
     async def get_known_identifiers(
         self,

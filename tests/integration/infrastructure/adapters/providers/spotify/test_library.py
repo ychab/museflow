@@ -15,11 +15,9 @@ class TestSpotifyLibrary:
     @pytest.fixture
     async def playlist_tracks(self) -> list[Track]:
         return [
-            (
-                await TrackModelFactory.create_async(
-                    provider_links=[{"provider": MusicProvider.SPOTIFY.value, "provider_id": track_id}]
-                )
-            ).to_entity()
+            await TrackModelFactory.create_entity_async(
+                provider_links=[{"provider": MusicProvider.SPOTIFY.value, "provider_id": track_id}]
+            )
             for track_id in ["7J5pB49l9ycy9ImB6D9hu0", "1Fp4njyRHJYyMTKP899c0q", "7eOSOc9z6gcsGBznsg5mk3"]
         ]
 

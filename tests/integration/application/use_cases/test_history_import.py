@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
@@ -128,8 +129,8 @@ class TestImportStreamingHistorySpotifyUseCase:
 
     async def test__known_tracks__plays_added(
         self,
-        async_session_db: AsyncSession,
         user: User,
+        track_repository: TrackRepository,
         sample_fingerprints: dict[str, str],
         track_ids: list[str],
         use_case: ImportStreamingHistoryUseCase,
@@ -163,19 +164,12 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert report.tracks_created == 0
         assert report.plays_created == 4
 
-        results = await async_session_db.execute(
-            select(TrackModel)
-            .where(
-                TrackModel.user_id == user.id,
-                TrackModel.fingerprint.in_(list(sample_fingerprints.values())),
-            )
-            .execution_options(populate_existing=True)  # the factory loaded the play data before the import
-        )
-        tracks_by_provider_id = {t.provider_links[0]["provider_id"]: t for t in results.scalars().all()}
+        tracks = await track_repository.get_list(user_id=user.id)
+        tracks_by_provider_id = {track.get_provider_id(MusicProvider.SPOTIFY): track for track in tracks}
         for track_id, expected in expected_played_at.items():
-            track_db = tracks_by_provider_id[track_id]
+            track = tracks_by_provider_id[track_id]
             # The earlier play is kept, the imported one added
-            assert (track_db.played_count, track_db.played_at_first, track_db.played_at_last) == (
+            assert (track.played_count, track.played_at_first, track.played_at_last) == (
                 2,
                 old_played_at,
                 expected,
@@ -183,34 +177,28 @@ class TestImportStreamingHistorySpotifyUseCase:
 
     async def test__reimport__plays_not_doubled(
         self,
-        async_session_db: AsyncSession,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
+        track_repository: TrackRepository,
     ) -> None:
         config = ImportStreamingHistoryConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
-        reimport_fp = "reimport track|reimport artist"
-        stmt = (
-            select(TrackModel)
-            .where(TrackModel.user_id == user.id, TrackModel.fingerprint == reimport_fp)
-            .execution_options(populate_existing=True)
-        )
 
         first_report = await use_case.import_history(user=user, config=config)
         assert first_report.tracks_created == 1
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_count == 3
+        [track] = await track_repository.get_list(user_id=user.id)
+        assert track.played_count == 3
 
         second_report = await use_case.import_history(user=user, config=config)
         assert second_report.tracks_already_known == 1
         assert second_report.tracks_created == 0
         assert second_report.plays_created == 0
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_count == 3
+        [track] = await track_repository.get_list(user_id=user.id)
+        assert track.played_count == 3
 
     async def test__same_fingerprint__different_provider_ids__deduplicates(
         self,
-        async_session_db: AsyncSession,
         user: User,
+        track_repository: TrackRepository,
         use_case: ImportStreamingHistoryUseCase,
         tmp_path: Path,
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
@@ -254,12 +242,8 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert report.tracks_created == 1
         assert report.plays_total == 2
 
-        fp = "duplicate song|duplicate artist"
-        results = await async_session_db.execute(
-            select(TrackModel).where(TrackModel.user_id == user.id, TrackModel.fingerprint == fp)
-        )
-        rows = results.scalars().all()
-        assert len(rows) == 1
-        assert rows[0].played_count == 2
-        assert rows[0].played_at_first == datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
-        assert rows[0].played_at_last == datetime(2024, 1, 2, 10, 0, 0, tzinfo=UTC)
+        [track] = await track_repository.get_list(user_id=user.id)
+        assert track.fingerprint == "duplicate song|duplicate artist"
+        assert track.played_count == 2
+        assert track.played_at_first == datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
+        assert track.played_at_last == datetime(2024, 1, 2, 10, 0, 0, tzinfo=UTC)

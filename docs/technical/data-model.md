@@ -129,10 +129,12 @@ The ~228k and ~11k figures come from the author's own export (see [What my data 
 import filters shrink the data: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds)
 are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
 
-**The plays are the only source of play data.** A track has no play column: `played_count`, `played_at_first` and
-`played_at_last` are correlated subqueries over its plays (`column_property` on the model), loaded with every track
-and usable in filters and ordering like columns, but never written. The `Track` entity carries them as read-only
-fields. An earlier design stored them as columns, merged at each import: two sources of truth, and a timeline reduced
+**The plays are the only source of play data.** A track has no play column: every query that loads tracks joins
+`plays_summary()` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track_play.py)),
+a `JOIN LATERAL` subquery that counts each track's plays and takes the first and last, in one pass over the
+`(track_id, played_at)` index; its columns also serve the date filters and the ordering. The model's `to_entity`
+requires the three values, so a query that forgets the join does not type-check. The `Track` entity carries them as
+read-only fields: computed when loaded, never written. An earlier design stored them as columns, merged at each import: two sources of truth, and a timeline reduced
 to the last play, which dated a track replayed years later by its last listen only (#139). A track with no play,
 such as a discovery never listened to, has a count of 0 and no dates.
 

@@ -6,16 +6,23 @@ from typing import Any
 from typing import cast
 
 from sqlalchemy import select
+from sqlalchemy import true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from polyfactory import Use
 
+from museflow.domain.entities.track import Track as TrackEntity
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track
 from museflow.infrastructure.adapters.database.models import TrackPlay
+from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
+
+
+class TrackPlayModelFactory(BaseModelFactory[TrackPlay]):
+    __model__ = TrackPlay
 
 
 class TrackModelFactory(BaseModelFactory[Track]):
@@ -48,10 +55,10 @@ class TrackModelFactory(BaseModelFactory[Track]):
         played_at_last: datetime | None = None,
         **kwargs: Any,
     ) -> Track:
-        """Creates the track, then the plays that give it the play data asked for, as the track has no such columns.
+        """Creates the track, then the plays that give it the play data asked for: the track has no such columns.
 
-        The plays fall on the first and last dates given, the others a second apart from the first (or before the
-        last); no play data asked for means no play.
+        One play falls on each date given, the others a second apart after the first date (before the last one when
+        only the last is given). No play data asked for means no play.
         """
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
@@ -60,21 +67,32 @@ class TrackModelFactory(BaseModelFactory[Track]):
         track = await super().create_async(**kwargs)
 
         played_at = sorted({moment for moment in (played_at_first, played_at_last) if moment is not None})
-        anchor, step = datetime(2024, 1, 1, tzinfo=UTC), 1
-        if played_at_first is not None:
-            anchor = played_at_first
-        elif played_at_last is not None:
-            anchor, step = played_at_last, -1
+        anchor, step = (played_at_last, -1) if played_at_first is None and played_at_last else (played_at_first, 1)
+        anchor = anchor or datetime(2024, 1, 1, tzinfo=UTC)
         offset = 1
-        while len(played_at) < (played_count if played_count is not None else len(played_at)):
+        while played_count is not None and len(played_at) < played_count:
             played_at.append(anchor + timedelta(seconds=step * offset))
             offset += 1
 
-        session = cast(AsyncSession, cls.__async_session__)
-        session.add_all([TrackPlay(track_id=track.id, played_at=moment) for moment in played_at])
-        await session.flush()
-        await session.refresh(track)  # loads the play data computed from the plays
+        for moment in played_at:
+            await TrackPlayModelFactory.create_async(track_id=track.id, played_at=moment)
         return track
+
+    @classmethod
+    async def create_entity_async(cls, **kwargs: Any) -> TrackEntity:
+        """Creates the track and its plays, as `create_async`, and returns it as the repositories load it."""
+        track = await cls.create_async(**kwargs)
+        session = cast(AsyncSession, cls.__async_session__)
+        plays = plays_summary()
+        played_count, first, last = (
+            await session.execute(
+                select(plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
+                .select_from(Track)
+                .join(plays, true())
+                .where(Track.id == track.id)
+            )
+        ).one()
+        return track.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
 
     @classmethod
     async def create_batch_async(cls, size: int, **kwargs: Any) -> list[Track]:

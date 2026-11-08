@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import operator
 import uuid
+from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
 
@@ -34,16 +35,12 @@ from tests.unit.factories.entities.track import TrackFactory
 class TestTrackSQLRepository:
     @pytest.fixture
     async def tracks(self, user: User) -> list[Track]:
-        tracks_db = await TrackModelFactory.create_batch_async(
-            size=10,
-            user_id=user.id,
-        )
-        return [track_db.to_entity() for track_db in tracks_db]
+        return [await TrackModelFactory.create_entity_async(user_id=user.id) for _ in range(10)]
 
     @pytest.fixture
     async def tracks_other(self) -> list[Track]:
-        tracks_db = await TrackModelFactory.create_batch_async(size=2)
-        return [track_db.to_entity() for track_db in tracks_db]
+        other_user_db = await UserModelFactory.create_async()
+        return [await TrackModelFactory.create_entity_async(user_id=other_user_db.id) for _ in range(2)]
 
     @pytest.fixture
     def tracks_create(self, user: User) -> list[Track]:
@@ -232,29 +229,29 @@ class TestTrackSQLRepository:
         tracks_other: list[Track],
         track_repository: TrackRepository,
     ) -> None:
-        t1 = await TrackModelFactory.create_async(user_id=user.id)
-        await asyncio.sleep(0.01)
+        # Play counts in another order than the creation, so each ordering gives a different list
+        played_counts = [2, 5, 1]
+        tracks: list[TrackModel] = []
+        for played_count in played_counts:
+            tracks.append(await TrackModelFactory.create_async(user_id=user.id, played_count=played_count))
+            await asyncio.sleep(0.01)
 
-        t2 = await TrackModelFactory.create_async(user_id=user.id)
-        await asyncio.sleep(0.01)
+        def played_count_of(track: TrackModel) -> int:
+            return played_counts[tracks.index(track)]
 
-        t3 = await TrackModelFactory.create_async(user_id=user.id)
-
-        tracks = [t1, t2, t3]
-
-        key_func: operator.attrgetter[object]
+        key_func: Callable[[TrackModel], object]
         match order_by:
             case TrackOrderBy.CREATED_AT:
                 key_func = operator.attrgetter("created_at")
             case TrackOrderBy.UPDATED_AT:
                 key_func = operator.attrgetter("updated_at")
             case TrackOrderBy.PLAYED_COUNT:
-                key_func = operator.attrgetter("played_count")
+                key_func = played_count_of
             case _:
                 pytest.fail(f"Unhandled sort key: {order_by}")
                 return
 
-        expected_tracks = sorted(tracks, key=key_func, reverse=(sort_order == SortOrder.DESC))  # type: ignore[arg-type]
+        expected_tracks = sorted(tracks, key=key_func, reverse=(sort_order == SortOrder.DESC))
 
         track_list = await track_repository.get_list(user.id, order=[(order_by, sort_order)])
 
