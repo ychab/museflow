@@ -15,7 +15,7 @@ from museflow.domain.entities.track import Track as TrackEntity
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track
 from museflow.infrastructure.adapters.database.models import TrackPlay
-from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
+from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
@@ -83,7 +83,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
         """Creates the track and its plays, as `create_async`, and returns it as the repositories load it."""
         track = await cls.create_async(**kwargs)
         session = cast(AsyncSession, cls.__async_session__)
-        plays = plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary()
         played_count, first, last = (
             await session.execute(
                 select(plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)

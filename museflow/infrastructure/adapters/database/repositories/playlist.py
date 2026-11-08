@@ -13,7 +13,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistDB
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackDB
 from museflow.infrastructure.adapters.database.models.track import Track as TrackDB
-from museflow.infrastructure.adapters.database.repositories.track_play import plays_summary
+from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 
 
 class PlaylistSQLRepository(PlaylistRepository):
@@ -38,7 +38,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         return [row.to_entity() for row in result.scalars()]
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
-        plays = plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary()
         stmt = (
             select(PlaylistDB, TrackDB, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
             .outerjoin(PlaylistTrackDB, PlaylistTrackDB.playlist_id == PlaylistDB.id)
