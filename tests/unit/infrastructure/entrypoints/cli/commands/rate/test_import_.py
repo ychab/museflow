@@ -22,7 +22,9 @@ class TestRateImportParserCommand:
     def mock_rate_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.rate.import_.rate_import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = ImportRatingsResult(imported_count=0, skipped_count=0, not_found_count=0)
+            patched.return_value = ImportRatingsResult(
+                imported_count=0, skipped_count=0, created_count=0, not_found_count=0
+            )
             yield patched
 
     @pytest.mark.parametrize(
@@ -142,8 +144,11 @@ class TestRateImportCommand:
         mock_rate_import_logic: mock.AsyncMock,
         runner: CliRunner,
         tmp_path: Path,
+        clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_import_logic.return_value = ImportRatingsResult(imported_count=3, skipped_count=0, not_found_count=1)
+        mock_rate_import_logic.return_value = ImportRatingsResult(
+            imported_count=3, skipped_count=0, created_count=2, not_found_count=1
+        )
         valid_yaml = tmp_path / "rates.yaml"
         valid_yaml.write_text("- fingerprint: abc\n  score: 5\n")
 
@@ -152,8 +157,10 @@ class TestRateImportCommand:
             ["rate", "import", "--email", "test@example.com", "--input", str(valid_yaml)],
         )
         assert result.exit_code == 0
-        assert "3" in result.output
-        assert "1" in result.output
+        assert (
+            "Imported 3 score(s) and 0 permanent skip(s), recreated 2 missing track(s) "
+            "(1 fingerprints not found in DB)." in clean_typer_text(result.output)
+        )
 
 
 @pytest.mark.usefixtures(

@@ -33,7 +33,8 @@ def rate_import_command(
         raise typer.Exit(code=1) from e
 
     typer.secho(
-        f"Imported {result.imported_count} score(s) and {result.skipped_count} permanent skip(s) "
+        f"Imported {result.imported_count} score(s) and {result.skipped_count} permanent skip(s), "
+        f"recreated {result.created_count} missing track(s) "
         f"({result.not_found_count} fingerprints not found in DB).",
         fg=typer.colors.GREEN,
     )

@@ -11,6 +11,14 @@ class TestRateExportLogic:
 
         result = await rate_export_logic(email=user.email)
 
-        assert len(result) == 1
-        assert result[0]["fingerprint"] == rated_db.fingerprint
-        assert result[0]["score"] == 7
+        assert result == [
+            {
+                "fingerprint": rated_db.fingerprint,
+                "name": rated_db.name,
+                "artists": rated_db.artists,
+                "album_name": rated_db.album_name,
+                "source": rated_db.source,
+                "provider_links": rated_db.provider_links,
+                "score": 7,
+            }
+        ]

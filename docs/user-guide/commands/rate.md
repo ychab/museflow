@@ -83,7 +83,8 @@ museflow rate playlist 3f2b8c1e-0000-4000-8000-000000000000
 ## `rate export`
 
 Exports ratings (and permanent skips) to a YAML file. Tracks are identified by fingerprint, so the file can be
-restored after a database reset.
+restored after a database reset. Each entry also holds what recreates its track (name, artists, album, source,
+provider links): a discovered track never played comes back on import, even though the streaming history lacks it.
 
 ```bash
 museflow rate export [--email <email>] --output <path>
@@ -109,6 +110,8 @@ museflow rate import [--email <email>] --input <path>
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--input` | required | Path to the input YAML file. |
 
-Tracks must already exist in the library (import the history first).
+A track missing from the library is recreated from its entry, so import the history first: a track it brings back
+keeps its plays. An entry from an older export, holding only the fingerprint, rates only a track already there.
 
-**Output.** `Imported N score(s) and M permanent skip(s) (K fingerprints not found in DB).`.
+**Output.** `Imported N score(s) and M permanent skip(s), recreated C missing track(s) (K fingerprints not found in
+DB).`.
