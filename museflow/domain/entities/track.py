@@ -26,9 +26,11 @@ class Track(BaseEntity):
 
     provider_links: list[ProviderLink] = field(default_factory=list)
 
+    # Read-only: computed from the track's plays (`TrackPlay`) when loaded, never saved with the track.
+    # A track is written without them; its plays are saved on their own.
     played_at_first: datetime | None = None
     played_at_last: datetime | None = None
-    played_count: int = 1
+    played_count: int = 0
 
     source: TrackSource = TrackSource.HISTORY
     score: int | None = None

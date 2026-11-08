@@ -33,9 +33,9 @@ museflow tracks history --directory ~/Downloads/MySpotifyData --min-duration-pla
 
 **Output.** A green `Import successful in <n>s!` line and an _Import Streaming History Results_ table with
 these rows: items read; items skipped (no timestamp, short play, no track ID); unique track IDs; tracks already
-known; tracks play data updated; total play events; tracks created.
+known; total play events; play events created (each play is saved once); tracks created.
 
-The import can be re-run with newer exports: existing tracks get their play data updated. Use `--purge` to
+The import can be re-run with newer exports: only the plays not saved yet are added, so the play counts stay exact. Use `--purge` to
 start from a clean library instead (this removes existing tracks of the provider first).
 
 ## `tracks delete`

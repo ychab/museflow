@@ -745,7 +745,7 @@ class TestDiscoverTasteUseCase:
         mock_reconciler: mock.Mock,
         discovery_taste_strategy: DiscoveryTasteStrategy,
     ) -> None:
-        """Discovered tracks are upserted into museflow_track with source=DISCOVERY and played_count=0."""
+        """Discovered tracks are upserted into museflow_track with source=DISCOVERY."""
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
 
@@ -764,4 +764,3 @@ class TestDiscoverTasteUseCase:
         upserted_tracks = mock_track_repository.bulk_upsert.call_args[0][0]
         assert len(upserted_tracks) == 1
         assert upserted_tracks[0].source == TrackSource.DISCOVERY
-        assert upserted_tracks[0].played_count == 0

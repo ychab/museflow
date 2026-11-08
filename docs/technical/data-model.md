@@ -14,6 +14,7 @@ erDiagram
     USER ||--o{ LLM_USAGE : spent
     PLAYLIST ||--o{ PLAYLIST_TRACK : contains
     TRACK ||--o{ PLAYLIST_TRACK : appears_in
+    TRACK ||--o{ TRACK_PLAY : played
     TASTE_PROFILE |o--o{ PLAYLIST : guided
     TASTE_PROFILE |o--o{ LLM_USAGE : cost
     PLAYLIST |o--o{ LLM_USAGE : cost
@@ -32,15 +33,17 @@ erDiagram
         string album_name
         string fingerprint
         jsonb provider_links
-        int played_count
-        timestamp played_at_first
-        timestamp played_at_last
         int source
         int score
         bool score_skipped
         array genres
         array moods
         array locales
+    }
+    TRACK_PLAY {
+        int id PK
+        uuid track_id FK
+        timestamp played_at
     }
     PLAYLIST {
         uuid id PK
@@ -111,27 +114,37 @@ erDiagram
 
 The diagram omits audit columns (`created_at`, `updated_at`, provided by a mixin) and a few Playlist columns (`snapshot_id`, `genre`, `mood`, `custom_instructions`). Models live in [`museflow/infrastructure/adapters/database/models/`](https://github.com/ychab/museflow/tree/main/museflow/infrastructure/adapters/database/models); the matching frozen-dataclass entities live in [`museflow/domain/entities/`](https://github.com/ychab/museflow/tree/main/museflow/domain/entities).
 
-## Track: one row per distinct track, not per play
+## Track and its plays
 
-A streaming-history export is an event log: one line per play. MuseFlow aggregates it at import time into **one row per track** carrying `played_count`, `played_at_first` and `played_at_last`.
+A streaming-history export is an event log: one line per play. MuseFlow keeps both levels: **one row per track**
+(`museflow_track`: name, artists, rating, enrichment) and **one row per play** (`museflow_track_play`: the track and
+when it was played, unique on `(track_id, played_at)`).
 
-| Option | Rows for the author's history | Trade-off |
+| Level | Rows for the author's history | What it serves |
 |---|---|---|
-| One row per play | ~228,000 | Keeps full time series; every query aggregates; far too much for an LLM prompt |
-| **One row per track (chosen)** | ~11,300 after filtering | Loses the exact play timeline, keeps what the product needs: how much, since when, until when |
+| Track | ~11,300 after filtering | Everything about a song: identity, rating, enrichment, playlists |
+| Play | ~228,000 after filtering | When each track was listened to: play counts, first and last play, listening per period |
 
-The ~228k and ~11k figures come from the author's own export (see [What my data taught me](../product/insights.md)). The aggregation is also what makes the history small enough to send to an LLM in batches (see [LLM pipeline](llm-pipeline.md)). Two import filters shrink the data further: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds) are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
+The ~228k and ~11k figures come from the author's own export (see [What my data taught me](../product/insights.md)). Two
+import filters shrink the data: plays shorter than the minimum duration (`--min-duration-played`, default 90 seconds)
+are skipped, and so are entries with no timestamp or no Spotify track id (counted in the import report).
 
-Re-import is idempotent. `TrackRepository.bulk_upsert` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track.py)) uses `INSERT ... ON CONFLICT (user_id, fingerprint) DO UPDATE` with per-column merge rules:
+**The plays are the only source of play data.** A track has no play column: `played_count`, `played_at_first` and
+`played_at_last` are correlated subqueries over its plays (`column_property` on the model), loaded with every track
+and usable in filters and ordering like columns, but never written. The `Track` entity carries them as read-only
+fields. An earlier design stored them as columns, merged at each import: two sources of truth, and a timeline reduced
+to the last play, which dated a track replayed years later by its last listen only (#139). A track with no play,
+such as a discovery never listened to, has a count of 0 and no dates.
+
+Re-import is idempotent. The plays are inserted with `ON CONFLICT DO NOTHING`, so the same files add none.
+`TrackRepository.bulk_upsert` ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track.py))
+uses `INSERT ... ON CONFLICT (user_id, fingerprint) DO UPDATE` with per-column merge rules:
 
 | Column | On conflict |
 |---|---|
-| `played_at_last` | `GREATEST(existing, incoming)` |
-| `played_at_first` | `LEAST(existing, incoming)` |
 | `source` | bitwise OR, so a track found in history and later suggested keeps both flags |
 | `score` | keep existing unless null (`COALESCE`), a re-import never overwrites a rating |
 | `provider_links` | JSONB concatenation |
-| `played_count` | replaced by the incoming count (the import recomputes it from the files) |
 | `score_skipped`, `genres`, `moods`, `locales` | **never updated**, so user decisions and enrichment survive a re-import |
 
 The last row is a deliberate asymmetry: derived data from the import may be refreshed, human or LLM-added data may not. The restore path for ratings and enrichment is the `rate` and `enrich` export / import commands, not the importer.
@@ -160,7 +173,7 @@ The cost is false merges (two different songs with the same normalised title and
 | `score_skipped` | The user chose not to rate this track and not to be asked again |
 | `genres`, `moods`, `locales` | Enrichment output (below). Postgres `ARRAY(String)` for the lists; `locales` holds ISO 639-1 codes of every sung language. `locales` is nullable and the distinction matters: `NULL` means never enriched (or the call failed) so the track is eligible for enrichment, `[]` means the model answered that there is no sung language (instrumental, or no reliable signal) so the track is not re-sent unless `--force` |
 
-Discovery tracks are written to the same table (with zeroed play data) so they are excluded from later sessions by the same fingerprint check as played tracks.
+Discovery tracks are written to the same table (without plays) so they are excluded from later sessions by the same fingerprint check as played tracks.
 
 ### Genre and mood vocabularies
 

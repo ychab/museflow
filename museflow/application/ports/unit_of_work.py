@@ -10,6 +10,7 @@ from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.application.ports.repositories.users import UserRepository
 
 
@@ -25,6 +26,7 @@ class UnitOfWorkPort(ABC):
     auth_states: OAuthProviderStateRepository
     auth_tokens: OAuthProviderTokenRepository
     tracks: TrackRepository
+    track_plays: TrackPlayRepository
     taste_profiles: TasteProfileRepository
     blacklist: BlacklistRepository
     playlists: PlaylistRepository

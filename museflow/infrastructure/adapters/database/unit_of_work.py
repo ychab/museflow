@@ -12,6 +12,7 @@ from museflow.infrastructure.adapters.database.repositories.llm import LLMUsageS
 from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 
 
@@ -35,6 +36,7 @@ class SQLUnitOfWork(UnitOfWorkPort):
         self.auth_states = OAuthProviderStateSQLRepository(session)
         self.auth_tokens = OAuthProviderTokenSQLRepository(session)
         self.tracks = TrackSQLRepository(session)
+        self.track_plays = TrackPlaySQLRepository(session)
         self.taste_profiles = TasteProfileSQLRepository(session)
         self.blacklist = BlacklistSQLRepository(session)
         self.playlists = PlaylistSQLRepository(session)

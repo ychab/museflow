@@ -1,8 +1,10 @@
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackPlay as TrackPlayModel
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.track import TrackPlayFactory
 
 
 class TestTrackModel:
@@ -27,3 +29,10 @@ class TestTrackModel:
         assert len(model.provider_links) == len(entity.provider_links)
         assert model.provider_links[0]["provider"] == MusicProvider.SPOTIFY.value
         assert model.provider_links[0]["provider_id"] == entity.provider_links[0].provider_id
+
+
+class TestTrackPlayModel:
+    def test__from_entity__to_entity__round_trip(self) -> None:
+        play = TrackPlayFactory.build()
+
+        assert TrackPlayModel.from_entity(play).to_entity() == play
