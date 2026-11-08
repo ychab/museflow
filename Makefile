@@ -107,6 +107,15 @@ app-shell: up ## Connect to the application shell
 # Database
 ##########
 
+# A backup is a dated directory holding the full SQL dump (db-dump) and the YAML exports (backup-export).
+# Each value can be overridden on the command line or by an environment variable.
+BACKUPS_ROOT ?= external_data/backups
+BACKUP_DIR ?=
+HISTORY_DIR ?= external_data/spotify_history
+# Computed once per make call: the dump and the exports of one backup-export share the directory.
+NEW_BACKUP_DIR := $(or $(BACKUP_DIR),$(BACKUPS_ROOT)/$(shell date +%Y%m%d-%H%M%S))
+LATEST_BACKUP_DIR = $(or $(BACKUP_DIR),$(patsubst %/,%,$(firstword $(shell ls -td $(BACKUPS_ROOT)/*/ 2>/dev/null))))
+
 .PHONY: db-upgrade db-downgrade db-revision db-shell db-dump db-restore
 
 db-upgrade: up-db  ## Upgrade database
@@ -121,15 +130,14 @@ db-revision: up-db ## Create a new migration
 db-shell: up-db ## Connect to the database shell
 	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
-db-dump: up-db  ## Dump database to external_data/backups/TIMESTAMP.sql
-	@mkdir -p external_data/backups
-	@FILE="external_data/backups/$$(date +%Y%m%d-%H%M%S).sql" && \
-	docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$$FILE" && \
-	echo "Database dumped to $$FILE"
+db-dump: up-db  ## Dump database to BACKUP_DIR/db.sql (default: a new dated directory)
+	@mkdir -p "$(NEW_BACKUP_DIR)"
+	@docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" --no-acl --no-owner "$$POSTGRES_DB"' > "$(NEW_BACKUP_DIR)/db.sql"
+	@echo "Database dumped to $(NEW_BACKUP_DIR)/db.sql"
 
-db-restore: down up-db  ## Restore latest backup (or FILE=path)
-	@FILE=$${FILE:-$$(ls -t external_data/backups/*.sql 2>/dev/null | head -1)} && \
-	test -n "$$FILE" || (echo "No backup found in external_data/backups/" && exit 1) && \
+db-restore: down up-db  ## Restore the latest dump, same schema only (or FILE=path)
+	@FILE=$${FILE:-$$(ls -t $(BACKUPS_ROOT)/*/db.sql 2>/dev/null | head -1)} && \
+	test -n "$$FILE" || (echo "No dump found in $(BACKUPS_ROOT)/" && exit 1) && \
 	echo "Restoring $$FILE" && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB" > /dev/null' && \
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null' && \
@@ -140,42 +148,25 @@ db-restore: down up-db  ## Restore latest backup (or FILE=path)
 # Backups
 #########
 
-# A schema change resets the database: export what a reset loses, reset, then import it back.
-# Each value can be overridden on the command line or by an environment variable.
-BACKUPS_ROOT ?= external_data/backups
-BACKUP_DIR ?=
-HISTORY_DIR ?= external_data/spotify_history
-MUSEFLOW_CLI_DEFAULT_EMAIL ?= $(shell grep -E '^MUSEFLOW_CLI_DEFAULT_EMAIL=' .env 2>/dev/null | cut -d= -f2-)
+# A schema change resets the database: export with the current code, reset, then import with the new one.
 
-.PHONY: backup-export backup-import db-reset
+.PHONY: backup-export backup-import
 
-backup-export: up-db  ## Export ratings, blacklist, enrichment and taste profiles to BACKUP_DIR (default: a new dated directory)
-	@DIR="$(BACKUP_DIR)"; DIR="$${DIR:-$(BACKUPS_ROOT)/$$(date +%Y%m%d-%H%M%S)}" && \
-	mkdir -p "$$DIR" && \
-	uv run museflow rate export --output "$$DIR/ratings.yaml" && \
-	uv run museflow blacklist export --output "$$DIR/blacklist.yaml" && \
-	uv run museflow enrich export --output "$$DIR/enrichment.yaml" && \
-	uv run museflow taste export --output "$$DIR/taste.yaml" && \
-	echo "Backup written to $$DIR"
+backup-export: db-dump  ## Dump the database, then export ratings, blacklist, enrichment and taste profiles next to it
+	@uv run museflow rate export --output "$(NEW_BACKUP_DIR)/ratings.yaml"
+	@uv run museflow blacklist export --output "$(NEW_BACKUP_DIR)/blacklist.yaml"
+	@uv run museflow enrich export --output "$(NEW_BACKUP_DIR)/enrichment.yaml"
+	@uv run museflow taste export --output "$(NEW_BACKUP_DIR)/taste.yaml"
+	@echo "Backup written to $(NEW_BACKUP_DIR)"
 
-db-reset: up-db  ## Drop and recreate the database, migrate, then create the user and connect the provider
-	@test -n "$(MUSEFLOW_CLI_DEFAULT_EMAIL)" || (echo "No email: set MUSEFLOW_CLI_DEFAULT_EMAIL in .env" && exit 1)
-	@printf "Drop the database and everything in it? [y/N] " && read answer && [ "$$answer" = "y" ] || (echo "Aborted." && exit 1)
-	@docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB WITH (FORCE)" > /dev/null'
-	@docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null'
-	uv run alembic upgrade head
-	uv run museflow users create --email "$(MUSEFLOW_CLI_DEFAULT_EMAIL)"
-	uv run museflow provider connect --email "$(MUSEFLOW_CLI_DEFAULT_EMAIL)"
-
-backup-import: up-db  ## Import the streaming history (HISTORY_DIR), then BACKUP_DIR (default: the latest backup)
-	@DIR="$(BACKUP_DIR)"; DIR="$${DIR:-$$(ls -td $(BACKUPS_ROOT)/*/ 2>/dev/null | head -1)}"; DIR="$${DIR%/}" && \
-	test -n "$$DIR" || (echo "No backup found in $(BACKUPS_ROOT)/" && exit 1) && \
-	echo "Importing $$DIR" && \
-	uv run museflow tracks history --directory "$(HISTORY_DIR)" && \
-	uv run museflow rate import --input "$$DIR/ratings.yaml" && \
-	uv run museflow blacklist import --input "$$DIR/blacklist.yaml" && \
-	uv run museflow enrich import --input "$$DIR/enrichment.yaml" && \
-	uv run museflow taste import --input "$$DIR/taste.yaml"
+backup-import: db-upgrade  ## Migrate, import the streaming history (HISTORY_DIR), then the latest backup (or BACKUP_DIR)
+	@test -n "$(LATEST_BACKUP_DIR)" || (echo "No backup found in $(BACKUPS_ROOT)/" && exit 1)
+	@echo "Importing $(LATEST_BACKUP_DIR)"
+	uv run museflow tracks history --directory "$(HISTORY_DIR)"
+	uv run museflow rate import --input "$(LATEST_BACKUP_DIR)/ratings.yaml"
+	uv run museflow blacklist import --input "$(LATEST_BACKUP_DIR)/blacklist.yaml"
+	uv run museflow enrich import --input "$(LATEST_BACKUP_DIR)/enrichment.yaml"
+	uv run museflow taste import --input "$(LATEST_BACKUP_DIR)/taste.yaml"
 
 
 ################

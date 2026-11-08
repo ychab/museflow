@@ -105,14 +105,19 @@ Ratings and enrichment are matched by track fingerprint, so tracks missing from 
     *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
     dump and prints its path.
 
-From a clone of the repository, three Make targets chain all of this, in this order:
+From a clone of the repository, the Make targets chain this:
 
-1. `make backup-export`, with the code you have installed: the four exports above, to a new dated directory under
-   `external_data/backups/` (or `BACKUP_DIR=path`).
-2. Switch to the new code, then `make db-reset`: after a confirmation, drops and recreates the database, runs the
-   migrations, creates the `MUSEFLOW_CLI_DEFAULT_EMAIL` user and connects Spotify.
-3. `make backup-import`: re-imports the history from `external_data/spotify_history` (or `HISTORY_DIR=path`), then
-   the latest backup directory (or `BACKUP_DIR=path`).
+1. `make backup-export`, with the code you have installed: a full SQL dump (`db.sql`) and the four exports above,
+   in a new dated directory under `external_data/backups/` (or `BACKUP_DIR=path`).
+2. Switch to the new code, then `make reset` and `make up`, which recreate an empty database and start the API.
+3. `museflow users create --email <email>`.
+4. `make backup-import`: runs the migrations, re-imports the history from `external_data/spotify_history` (or
+   `HISTORY_DIR=path`), then the latest backup directory (or `BACKUP_DIR=path`).
+5. `museflow provider connect`, needed by `playlist discover` and `rate --play` only.
+
+If an import fails, go back to the previous code and run `make db-restore`: it restores the latest `db.sql` (or
+`FILE=path`), user and provider token included. A dump only fits the schema it was taken from, so it is the way
+back, never the way forward.
 
 Saved playlists are not backed up: they stay on Spotify.
 
