@@ -84,7 +84,7 @@ full paid build. Export them to YAML:
 museflow rate export      --output backup/ratings.yaml
 museflow blacklist export --output backup/blacklist.yaml
 museflow enrich export    --output backup/enrichment.yaml
-museflow taste export     --name my-profile --output backup/my-profile.yaml
+museflow taste export     --output backup/taste.yaml
 ```
 
 After a database reset, re-import the history first, then restore (no LLM call, no cost):
@@ -94,7 +94,7 @@ museflow tracks history   --directory ~/Downloads/MySpotifyData
 museflow rate import      --input backup/ratings.yaml
 museflow blacklist import --input backup/blacklist.yaml
 museflow enrich import    --input backup/enrichment.yaml
-museflow taste import     --input backup/my-profile.yaml
+museflow taste import     --input backup/taste.yaml
 ```
 
 Ratings and enrichment are matched by track fingerprint, so tracks missing from the library are reported as
@@ -104,6 +104,17 @@ Ratings and enrichment are matched by track fingerprint, so tracks missing from 
     A new MuseFlow version may require a database reset. Run the exports with the version you have installed,
     *before* upgrading, then import them with the new one. As a safety net, `make db-dump` also writes a full SQL
     dump and prints its path.
+
+From a clone of the repository, three Make targets chain all of this, in this order:
+
+1. `make backup-export`, with the code you have installed: the four exports above, to a new dated directory under
+   `external_data/backups/` (or `BACKUP_DIR=path`).
+2. Switch to the new code, then `make db-reset`: after a confirmation, drops and recreates the database, runs the
+   migrations, creates the `MUSEFLOW_CLI_DEFAULT_EMAIL` user and connects Spotify.
+3. `make backup-import`: re-imports the history from `external_data/spotify_history` (or `HISTORY_DIR=path`), then
+   the latest backup directory (or `BACKUP_DIR=path`).
+
+Saved playlists are not backed up: they stay on Spotify.
 
 ## Find artists worth exploring
 

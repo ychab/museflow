@@ -21,7 +21,7 @@ class TestTasteExportParserCommand:
     def mock_taste_export_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.export.taste_export_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = TasteProfileFactory.build()
+            patched.return_value = [TasteProfileFactory.build()]
             yield patched
 
     @pytest.fixture(autouse=True)
@@ -158,7 +158,7 @@ class TestTasteExportCommand:
         tmp_path: Path,
     ) -> None:
         taste_profile = TasteProfileFactory.build(name="my-profile")
-        mock_taste_export_logic.return_value = taste_profile
+        mock_taste_export_logic.return_value = [taste_profile]
         output_path = tmp_path / "out.yaml"
 
         result = runner.invoke(
