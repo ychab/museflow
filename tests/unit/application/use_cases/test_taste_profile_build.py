@@ -194,6 +194,30 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert.assert_called_once()
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
+    @pytest.mark.parametrize("mock_reflect", [None], indirect=True)
+    async def test__no_batch_size__sized_from_seeds__merge_weighted_by_tracks(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        profile_data: TasteProfileData,
+        mock_track_repository: mock.AsyncMock,
+        mock_segment: mock.AsyncMock,
+        mock_merge: mock.AsyncMock,
+        mock_reflect: mock.AsyncMock,
+    ) -> None:
+        # 450 seeds: batches of the 200 minimum, the trailing 50 folded into the second batch (200 / 250)
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=450, batch_size=None)
+        mock_track_repository.get_list.return_value = TrackFactory.batch(
+            450, user_id=user.id, played_at_last=datetime(2020, 1, 1, tzinfo=UTC)
+        )
+        mock_reflect.side_effect = None
+        mock_reflect.return_value = profile_data
+
+        await use_case.build_profile(user=user, config=config)
+
+        assert [len(call.args[0]) for call in mock_segment.call_args_list] == [200, 250]
+        mock_merge.assert_awaited_once_with(profile_data, profile_data, 250 / 450)
+
     @pytest.mark.parametrize("tracks", [8], indirect=True)
     async def test__profiler_calls__run_outside_any_block(
         self,

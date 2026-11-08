@@ -144,7 +144,7 @@ class TestMergeTasteProfiles:
             taste_timeline=[TasteEraFactory.build(time_range="2021-01-01 to 2021-03-31")]
         )
 
-        merged = merge_taste_profiles(foundation, segment, absorb=True, oldest_label=None)
+        merged = merge_taste_profiles(foundation, segment, segment_weight=0.3, absorb=True, oldest_label=None)
 
         assert [(era["era_label"], era["time_range"]) for era in merged["taste_timeline"]] == [
             ("Jazz Nights", "unknown period to 2021-03-31")
@@ -169,7 +169,7 @@ class TestMergeTasteProfiles:
         foundation["taste_timeline"][1]["technical_fingerprint"] = TechnicalFingerprintFactory.build(energy=0.6)
         segment = TasteProfileDataFactory.build(taste_timeline=[TasteEraFactory.build()])
 
-        merged = merge_taste_profiles(foundation, segment, absorb=False, oldest_label=None)
+        merged = merge_taste_profiles(foundation, segment, segment_weight=0.3, absorb=False, oldest_label=None)
 
         oldest = merged["taste_timeline"][0]
         assert len(merged["taste_timeline"]) == TASTE_TIMELINE_MAX_ERAS

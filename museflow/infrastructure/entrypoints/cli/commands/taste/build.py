@@ -7,6 +7,8 @@ import typer
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
+from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
+from museflow.domain.const import TASTE_BATCH_SIZE_MIN
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
@@ -38,10 +40,13 @@ def taste_build_command(
         min=1,
         max=20000,
     ),
-    batch_size: int = typer.Option(
+    batch_size: int | None = typer.Option(
         BuildTasteProfileConfigInput.batch_size,
         "--batch-size",
-        help="Batch sizes for profiles",
+        help=(
+            f"Tracks per batch. Default: {TASTE_BATCH_SIZE_MIN}, or the seeds split into about "
+            f"{TASTE_BATCH_COUNT_TARGET} batches for a larger library"
+        ),
         min=1,
         max=1000,
     ),
@@ -112,7 +117,7 @@ async def taste_build_logic(
     email: EmailStr,
     name: str,
     track_limit: int,
-    batch_size: int,
+    batch_size: int | None,
     resume: bool,
     rated_only: bool,
     segment_model: str | None = None,
