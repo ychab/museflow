@@ -41,7 +41,7 @@ class DiscoverTasteConfigInput:
     liked_tracks_score_threshold: int = 7
     liked_tracks_limit: int = 200
 
-    disliked_tracks_score_threshold: int = 3
+    disliked_tracks_score_threshold: int = 2
     disliked_tracks_limit: int = 50
 
     dry_run: bool = False
