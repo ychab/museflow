@@ -1,7 +1,8 @@
 # MuseFlow agent guidelines
 
 The single instruction file for coding agents. Claude Code reads it natively: never add a `CLAUDE.md` or
-`CLAUDE.local.md`, which would replace it. Testing rules live in `tests/AGENTS.md`, loaded when working under `tests/`.
+`CLAUDE.local.md`, which would replace it. Testing rules live in `tests/AGENTS.md`, loaded when working under `tests/`;
+schema change rules in `migrations/AGENTS.md`.
 Claude Code skills (`/arch-review`, `/security-review`) and the `test` agent live in `.claude/`.
 
 ## Stack & tools
@@ -85,6 +86,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 
 ## Infrastructure
 - **Models** (canonical: `database/models/track.py`):
+  - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).
   - Always both `from_entity(cls, entity)` and `to_entity(self)`, symmetric. Repositories build rows with
     `from_entity`, never field by field.
