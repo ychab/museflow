@@ -14,7 +14,7 @@ museflow taste build [--email <email>] --name <name> [OPTIONS]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | required | Profile name (unique per user). |
+| `--name` | every profile | Profile name (unique per user). |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10): the periods are cut from their plays only. |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000), capped by the tracks played at least once. A track played in several periods takes a seed in each. |
@@ -77,7 +77,7 @@ museflow taste view [--email <email>] --name <name> [--format json|python|html]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | required | Profile name (unique per user). |
+| `--name` | every profile | Profile name (unique per user). |
 | `--format` | `json` | Output format: `json`, `python`, or `html` (browser). |
 
 **Example**
@@ -99,7 +99,7 @@ museflow taste delete [--email <email>] --name <name> [--yes]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | required | Profile name (unique per user). |
+| `--name` | every profile | Profile name (unique per user). |
 | `--yes`, `-y` | `false` | Skip the confirmation prompt. |
 
 **Output.** `Taste profile '<name>' of <email> deleted.`, or an error if no profile has that name. Discovery playlists built from
@@ -110,23 +110,25 @@ the profile are kept; they only lose their link to it. A paused build is deleted
 
 ## `taste export`
 
-Exports a profile to a YAML file, for backup or transfer.
+Exports taste profiles to a YAML file, for backup or transfer: every profile of the user, or one with `--name`.
 
 ```bash
-museflow taste export [--email <email>] --name <name> --output <path>
+museflow taste export [--email <email>] [--name <name>] --output <path>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | required | Profile name (unique per user). |
+| `--name` | every profile | Profile name (unique per user). |
 | `--output` | required | Path to the output YAML file. |
 
-**Output.** `Taste profile '<name>' exported to <path>`.
+**Output.** `Exported <n> taste profile(s) to <path>: '<name>', ...`. The file is a list of profiles, even for one.
 
 ## `taste import`
 
-Imports a profile from a YAML file produced by `taste export`.
+Imports the profiles of a YAML file produced by `taste export`, in one transaction: all of them or none. A profile with
+the same name is overwritten. A file holding a single profile (exported before the multi-profile export) is accepted
+too.
 
 ```bash
 museflow taste import [--email <email>] --input <path>
@@ -137,4 +139,4 @@ museflow taste import [--email <email>] --input <path>
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--input` | required | Path to the input YAML file. |
 
-**Output.** `Taste profile '<name>' imported successfully.`. A missing file or invalid YAML ends with an error.
+**Output.** `Imported <n> taste profile(s): '<name>', ...`. A missing file or invalid YAML ends with an error.

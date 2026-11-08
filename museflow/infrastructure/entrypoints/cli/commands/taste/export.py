@@ -6,6 +6,7 @@ from pydantic import TypeAdapter
 
 import typer
 
+from museflow.application.use_cases.taste_profile_list import get_taste_profiles
 from museflow.application.use_cases.taste_profile_view import get_taste_profile
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundError
@@ -16,14 +17,14 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
-@app.command("export", help="Export a taste profile to a YAML file.")
+@app.command("export", help="Export taste profiles to a YAML file.")
 def taste_export_command(
     email: str = EMAIL_OPTION,
-    name: str = typer.Option(..., help="Profile name (unique per user)"),
+    name: str | None = typer.Option(None, help="Profile name (unique per user); every profile when omitted"),
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:
-        taste_profile = asyncio.run(taste_export_logic(email=email, name=name))
+        taste_profiles = asyncio.run(taste_export_logic(email=email, name=name))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundError as e:
@@ -32,12 +33,13 @@ def taste_export_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    write_yaml(output, TypeAdapter(TasteProfile).dump_python(taste_profile, mode="json"))
+    write_yaml(output, TypeAdapter(list[TasteProfile]).dump_python(taste_profiles, mode="json"))
 
-    typer.secho(f"Taste profile '{name}' exported to {output}", fg=typer.colors.GREEN)
+    names = ", ".join(f"'{profile.name}'" for profile in taste_profiles)
+    typer.secho(f"Exported {len(taste_profiles)} taste profile(s) to {output}: {names}", fg=typer.colors.GREEN)
 
 
-async def taste_export_logic(email: EmailStr, name: str) -> TasteProfile:
+async def taste_export_logic(email: EmailStr, name: str | None = None) -> list[TasteProfile]:
     uow = get_unit_of_work()
     async with uow:
         user = await uow.users.get_by_email(email)
@@ -45,5 +47,8 @@ async def taste_export_logic(email: EmailStr, name: str) -> TasteProfile:
     if user is None:
         raise UserNotFoundError()
 
-    # Exporting reads the profile exactly as viewing it does.
-    return await get_taste_profile(user_id=user.id, name=name, uow=uow)
+    if name is None:
+        return await get_taste_profiles(user_id=user.id, uow=uow)
+
+    # Exporting one profile reads it exactly as viewing it does.
+    return [await get_taste_profile(user_id=user.id, name=name, uow=uow)]

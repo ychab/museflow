@@ -22,7 +22,7 @@ class TestTasteImportParserCommand:
     def mock_taste_import_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = "museflow.infrastructure.entrypoints.cli.commands.taste.import_.taste_import_logic"
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = TasteProfileFactory.build()
+            patched.return_value = [TasteProfileFactory.build()]
             yield patched
 
     @pytest.mark.parametrize(
@@ -140,7 +140,7 @@ class TestTasteImportCommand:
         tmp_path: Path,
     ) -> None:
         taste_profile = TasteProfileFactory.build(name="my-profile")
-        mock_taste_import_logic.return_value = taste_profile
+        mock_taste_import_logic.return_value = [taste_profile]
         valid_yaml = tmp_path / "profile.yaml"
         valid_yaml.write_text("name: my-profile\n")
 

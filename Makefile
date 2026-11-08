@@ -136,6 +136,48 @@ db-restore: down up-db  ## Restore latest backup (or FILE=path)
 	docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" > /dev/null' < "$$FILE"
 
 
+#########
+# Backups
+#########
+
+# A schema change resets the database: export what a reset loses, reset, then import it back.
+# Each value can be overridden on the command line or by an environment variable.
+BACKUPS_ROOT ?= external_data/backups
+BACKUP_DIR ?=
+HISTORY_DIR ?= external_data/spotify_history
+MUSEFLOW_CLI_DEFAULT_EMAIL ?= $(shell grep -E '^MUSEFLOW_CLI_DEFAULT_EMAIL=' .env 2>/dev/null | cut -d= -f2-)
+
+.PHONY: backup-export backup-import db-reset
+
+backup-export: up-db  ## Export ratings, blacklist, enrichment and taste profiles to BACKUP_DIR (default: a new dated directory)
+	@DIR="$(BACKUP_DIR)"; DIR="$${DIR:-$(BACKUPS_ROOT)/$$(date +%Y%m%d-%H%M%S)}" && \
+	mkdir -p "$$DIR" && \
+	uv run museflow rate export --output "$$DIR/ratings.yaml" && \
+	uv run museflow blacklist export --output "$$DIR/blacklist.yaml" && \
+	uv run museflow enrich export --output "$$DIR/enrichment.yaml" && \
+	uv run museflow taste export --output "$$DIR/taste.yaml" && \
+	echo "Backup written to $$DIR"
+
+db-reset: up-db  ## Drop and recreate the database, migrate, then create the user and connect the provider
+	@test -n "$(MUSEFLOW_CLI_DEFAULT_EMAIL)" || (echo "No email: set MUSEFLOW_CLI_DEFAULT_EMAIL in .env" && exit 1)
+	@printf "Drop the database and everything in it? [y/N] " && read answer && [ "$$answer" = "y" ] || (echo "Aborted." && exit 1)
+	@docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $$POSTGRES_DB WITH (FORCE)" > /dev/null'
+	@docker compose exec -T db sh -c 'psql -q -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE $$POSTGRES_DB" > /dev/null'
+	uv run alembic upgrade head
+	uv run museflow users create --email "$(MUSEFLOW_CLI_DEFAULT_EMAIL)"
+	uv run museflow provider connect --email "$(MUSEFLOW_CLI_DEFAULT_EMAIL)"
+
+backup-import: up-db  ## Import the streaming history (HISTORY_DIR), then BACKUP_DIR (default: the latest backup)
+	@DIR="$(BACKUP_DIR)"; DIR="$${DIR:-$$(ls -td $(BACKUPS_ROOT)/*/ 2>/dev/null | head -1)}"; DIR="$${DIR%/}" && \
+	test -n "$$DIR" || (echo "No backup found in $(BACKUPS_ROOT)/" && exit 1) && \
+	echo "Importing $$DIR" && \
+	uv run museflow tracks history --directory "$(HISTORY_DIR)" && \
+	uv run museflow rate import --input "$$DIR/ratings.yaml" && \
+	uv run museflow blacklist import --input "$$DIR/blacklist.yaml" && \
+	uv run museflow enrich import --input "$$DIR/enrichment.yaml" && \
+	uv run museflow taste import --input "$$DIR/taste.yaml"
+
+
 ################
 # Testing
 ################
