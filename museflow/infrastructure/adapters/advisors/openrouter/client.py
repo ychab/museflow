@@ -3,8 +3,6 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import AdvisorRateLimitExceededError
 from museflow.domain.exceptions import DiscoveryTasteStrategyError
 from museflow.domain.utils import taste as taste_utils
@@ -35,11 +33,9 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
     async def get_discovery_strategy(
         self,
         profile: TasteProfile,
-        focus: DiscoveryFocus,
         advisor_limit: int,
-        genre: GenreTag | None = None,
-        mood: MoodTag | None = None,
-        custom_instructions: str | None = None,
+        prompt: str | None = None,
+        focus: DiscoveryFocus | None = None,
         excluded_tracks: list[TrackSuggested] | None = None,
         blacklisted_artists: list[str] | None = None,
         blacklisted_tracks: list[str] | None = None,
@@ -72,6 +68,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             DiscoveryFocus.ROOTS_REVIVAL: f"Find modern tracks replicating the technical fingerprint of the oldest era ({oldest_era}).",
             DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
         }
+
+        focus_block = ""
+        if focus:
+            focus_block = f"### FOCUS STRATEGY: {focus.value}\n{focus_descriptions[focus]}\n\n"
 
         exclusion_parts: list[str] = []
         if excluded_tracks:
@@ -122,14 +122,12 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             f"{risk_calibration}\n\n"
             f"{exclusion_block}"
             f"{liked_tracks_block}"
-            "### FOCUS STRATEGIES\n"
-            f"- expansion: {focus_descriptions[DiscoveryFocus.EXPANSION]}\n"
-            f"- roots_revival: {focus_descriptions[DiscoveryFocus.ROOTS_REVIVAL]}\n"
-            f"- cultural_bridge: {focus_descriptions[DiscoveryFocus.CULTURAL_BRIDGE]}\n\n"
+            f"{focus_block}"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
             "- recommended_tracks MUST NOT appear in any exclusion or blacklist section above.\n"
+            "- A user request, when given, sets the playlist theme: every recommended track MUST fit it.\n"
             "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
             "- Every recommended track MUST be a real, released recording you are certain exists in the streaming\n"
             "  catalogues. Never invent or guess a title: if you are unsure a song exists, pick another one.\n"
@@ -142,14 +140,12 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "- Keep suggested_playlist_name creative and thematic.\n"
         )
 
-        user_parts = [f"Apply the '{focus.value}' focus strategy."]
-        if genre:
-            user_parts.append(f"Preferred genre: {genre}.")
-        if mood:
-            user_parts.append(f"Desired mood: {mood}.")
-        if custom_instructions:
-            user_parts.append(f"Additional instructions: {custom_instructions}")
-        user_message = " ".join(user_parts)
+        user_parts: list[str] = []
+        if focus:
+            user_parts.append(f"Apply the '{focus.value}' focus strategy.")
+        if prompt:
+            user_parts.append(f"User request: {prompt}")
+        user_message = " ".join(user_parts) or "Recommend new tracks for this user."
 
         try:
             content = await self._client.complete(

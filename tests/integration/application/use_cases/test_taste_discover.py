@@ -44,6 +44,7 @@ class TestDiscoverTasteUseCase:
         result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
+                prompt="lo-fi jazz and soul for focus",
                 playlist_limit=1,
                 advisor_limit=5,
                 dry_run=False,
@@ -52,6 +53,8 @@ class TestDiscoverTasteUseCase:
 
         assert result.playlist is not None
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert result.playlist.prompt == "lo-fi jazz and soul for focus"
+        assert result.playlist.focus is None
         assert len(result.playlist.tracks) == len(result.tracks)
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"

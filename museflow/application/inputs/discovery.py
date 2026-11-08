@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -10,11 +8,10 @@ class DiscoverTasteConfigInput:
     """Configuration for the AI taste-driven discovery process.
 
     Attributes:
-        focus: The discovery focus strategy.
+        prompt: Optional freeform request for the advisor (genres, moods, themes, in the user's words).
+        focus: The discovery focus strategy. Without a prompt it defaults to `expansion`; with a prompt it stays
+            unset unless given, as a focus would pull the advisor away from the requested theme.
         profile_name: Optional profile name; if omitted the latest profile is used.
-        genre: Optional genre tag hint passed to the advisor agent.
-        mood: Optional mood tag hint passed to the advisor agent.
-        custom_instructions: Optional freeform instructions for the advisor agent.
         advisor_limit: Number of recommended tracks to request from the advisor.
         reconciler_limit: Maximum number of search candidates per suggestion.
         score_band_width: Width of advisor score bands for tiebreaking by reconciler confidence.
@@ -26,13 +23,11 @@ class DiscoverTasteConfigInput:
         dry_run: If True, skip playlist creation.
     """
 
-    focus: DiscoveryFocus = DiscoveryFocus.EXPANSION
+    prompt: str | None = None
+    focus: DiscoveryFocus | None = None
     profile_name: str | None = None
-    genre: GenreTag | None = None
-    mood: MoodTag | None = None
-    custom_instructions: str | None = None
 
-    advisor_limit: int = 10
+    advisor_limit: int = 15
     reconciler_limit: int = 10
     playlist_limit: int = 10
 
@@ -49,3 +44,5 @@ class DiscoverTasteConfigInput:
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
+        if self.focus is None and not self.prompt:
+            object.__setattr__(self, "focus", DiscoveryFocus.EXPANSION)

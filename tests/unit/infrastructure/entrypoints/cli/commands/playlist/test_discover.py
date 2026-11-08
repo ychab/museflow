@@ -38,24 +38,34 @@ class TestPlaylistDiscoverParserCommand:
             patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
             yield patched
 
-    def test__nominal(self, runner: CliRunner) -> None:
+    def test__nominal(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
         # fmt: off
         result = runner.invoke(
             app,
             [
-                "playlist", "discover",
+                "playlist", "discover", "lo-fi jazz and soul for focus",
                 "--email", "test@example.com",
                 "--provider", MusicProvider.SPOTIFY,
                 "--focus", DiscoveryFocus.EXPANSION,
-                "--advisor-limit", "10",
-                "--reconciler-limit", "10",
-                "--playlist-limit", "15",
-                "--max-attempts", "3",
-                "--max-tracks-per-artist", "3",
+                "--limit", "15",
             ],
         )
         # fmt: on
         assert result.exit_code == 0
+
+        config = mock_playlist_discover_logic.call_args.kwargs["config"]
+        assert config.prompt == "lo-fi jazz and soul for focus"
+        assert config.focus == DiscoveryFocus.EXPANSION
+        assert config.playlist_limit == 15
+        assert config.advisor_limit == 23
+
+    def test__prompt__omitted(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
+        assert result.exit_code == 0
+
+        config = mock_playlist_discover_logic.call_args.kwargs["config"]
+        assert config.prompt is None
+        assert config.focus == DiscoveryFocus.EXPANSION
 
     def test__model__passed_to_logic(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
         runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--model", "openai/gpt-5-mini"])
@@ -113,126 +123,24 @@ class TestPlaylistDiscoverParserCommand:
         assert f"Invalid value for '--focus': 'foo' is not one of {choices}" in output
 
     @pytest.mark.parametrize(
-        ("advisor_limit", "expected_msg"),
+        ("limit", "expected_msg"),
         [
-            pytest.param(0, "Invalid value for '--advisor-limit': 0 is not in the range", id="zero"),
-            pytest.param(-15, "Invalid value for '--advisor-limit': -15 is not in the range", id="min_exceed"),
-            pytest.param(25, "Invalid value for '--advisor-limit': 25 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--advisor-limit': 'foo' is not a valid int range", id="string"),
+            pytest.param(0, "Invalid value for '--limit': 0 is not in the range", id="zero"),
+            pytest.param(-5, "Invalid value for '--limit': -5 is not in the range", id="min_exceed"),
+            pytest.param(31, "Invalid value for '--limit': 31 is not in the range", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--limit': 'foo' is not a valid int range", id="string"),
         ],
     )
-    def test__advisor_limit__invalid(
+    def test__limit__invalid(
         self,
         runner: CliRunner,
-        advisor_limit: Any,
+        limit: Any,
         expected_msg: str,
         clean_typer_text: TextCleaner,
     ) -> None:
         result = runner.invoke(
             app,
-            ["playlist", "discover", "--email", "test@example.com", "--advisor-limit", advisor_limit],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert expected_msg in output
-
-    @pytest.mark.parametrize(
-        ("reconciler_limit", "expected_msg"),
-        [
-            pytest.param(0, "Invalid value for '--reconciler-limit': 0 is not in the range", id="zero"),
-            pytest.param(-15, "Invalid value for '--reconciler-limit': -15 is not in the range", id="min_exceed"),
-            pytest.param(25, "Invalid value for '--reconciler-limit': 25 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--reconciler-limit': 'foo' is not a valid int range", id="string"),
-        ],
-    )
-    def test__reconciler_limit__invalid(
-        self,
-        runner: CliRunner,
-        reconciler_limit: Any,
-        expected_msg: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        result = runner.invoke(
-            app,
-            ["playlist", "discover", "--email", "test@example.com", "--reconciler-limit", reconciler_limit],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert expected_msg in output
-
-    @pytest.mark.parametrize(
-        ("playlist_limit", "expected_msg"),
-        [
-            pytest.param(0, "Invalid value for '--playlist-limit': 0 is not in the range", id="zero"),
-            pytest.param(-5, "Invalid value for '--playlist-limit': -5 is not in the range", id="min_exceed"),
-            pytest.param(31, "Invalid value for '--playlist-limit': 31 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--playlist-limit': 'foo' is not a valid int range", id="string"),
-        ],
-    )
-    def test__playlist_limit__invalid(
-        self,
-        runner: CliRunner,
-        playlist_limit: Any,
-        expected_msg: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        result = runner.invoke(
-            app,
-            ["playlist", "discover", "--email", "test@example.com", "--playlist-limit", playlist_limit],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert expected_msg in output
-
-    @pytest.mark.parametrize(
-        ("max_attempts", "expected_msg"),
-        [
-            pytest.param(0, "Invalid value for '--max-attempts': 0 is not in the range", id="zero"),
-            pytest.param(-1, "Invalid value for '--max-attempts': -1 is not in the range", id="min_exceed"),
-            pytest.param(11, "Invalid value for '--max-attempts': 11 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--max-attempts': 'foo' is not a valid int range", id="string"),
-        ],
-    )
-    def test__max_attempts__invalid(
-        self,
-        runner: CliRunner,
-        max_attempts: Any,
-        expected_msg: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        result = runner.invoke(
-            app,
-            ["playlist", "discover", "--email", "test@example.com", "--max-attempts", max_attempts],
-        )
-        assert result.exit_code != 0
-
-        output = clean_typer_text(result.output)
-        assert expected_msg in output
-
-    @pytest.mark.parametrize(
-        ("max_tracks_per_artist", "expected_msg"),
-        [
-            pytest.param(0, "Invalid value for '--max-tracks-per-artist': 0 is not in the range", id="zero"),
-            pytest.param(-1, "Invalid value for '--max-tracks-per-artist': -1 is not in the range", id="min_exceed"),
-            pytest.param(11, "Invalid value for '--max-tracks-per-artist': 11 is not in the range", id="max_exceed"),
-            pytest.param(
-                "foo", "Invalid value for '--max-tracks-per-artist': 'foo' is not a valid int range", id="string"
-            ),
-        ],
-    )
-    def test__max_tracks_per_artist__invalid(
-        self,
-        runner: CliRunner,
-        max_tracks_per_artist: Any,
-        expected_msg: str,
-        clean_typer_text: TextCleaner,
-    ) -> None:
-        result = runner.invoke(
-            app,
-            ["playlist", "discover", "--email", "test@example.com", "--max-tracks-per-artist", max_tracks_per_artist],
+            ["playlist", "discover", "--email", "test@example.com", "--limit", limit],
         )
         assert result.exit_code != 0
 

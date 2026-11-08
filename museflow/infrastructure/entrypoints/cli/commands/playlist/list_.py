@@ -35,9 +35,8 @@ def playlist_list_command(
     table.add_column("ID")
     table.add_column("Name")
     table.add_column("Type")
+    table.add_column("Prompt", max_width=40, overflow="ellipsis", no_wrap=True)
     table.add_column("Focus")
-    table.add_column("Genre")
-    table.add_column("Mood")
     table.add_column("Created")
 
     for playlist in playlists:
@@ -45,9 +44,8 @@ def playlist_list_command(
             str(playlist.id),
             playlist.name,
             playlist.type.value,
+            playlist.prompt or "—",
             playlist.focus.value if playlist.focus else "—",
-            playlist.genre or "—",
-            playlist.mood or "—",
             playlist.created_at.strftime("%Y-%m-%d %H:%M"),
         )
 

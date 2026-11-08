@@ -41,10 +41,10 @@ museflow playlist history --mood chill --genre jazz --locale en --dry-run
 `--genre`, `--mood` and `--locale` can be repeated and match any of the given values (OR logic) within the
 same filter, while different filters are combined (AND). Remove `--dry-run` once the preview looks right.
 
-For new music instead, give the advisor a hint:
+For new music instead, tell the advisor what you want in your own words:
 
 ```bash
-museflow playlist discover --genre electronic --mood energetic
+museflow playlist discover "energetic electronic, house and techno"
 ```
 
 ## Preview before creating

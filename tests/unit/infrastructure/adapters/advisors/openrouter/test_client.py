@@ -11,8 +11,6 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import AdvisorRateLimitExceededError
 from museflow.domain.exceptions import DiscoveryTasteStrategyError
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -52,11 +50,9 @@ class TestOpenRouterAdvisorAdapter:
 
         strategy = await openrouter_advisor.get_discovery_strategy(
             profile=taste_profile,
-            focus=DiscoveryFocus.EXPANSION,
             advisor_limit=5,
-            genre=GenreTag.METAL,
-            mood=MoodTag.MELANCHOLIC,
-            custom_instructions="avoid pop",
+            prompt="lo-fi jazz and soul for focus",
+            focus=DiscoveryFocus.EXPANSION,
         )
 
         assert strategy.strategy_label == "Horizon"
@@ -67,13 +63,47 @@ class TestOpenRouterAdvisorAdapter:
         system_message, user_message = body["messages"]
         assert system_message["role"] == "system"
         assert "MuseFlow Navigator" in system_message["content"]
+        assert "### FOCUS STRATEGY: expansion" in system_message["content"]
         assert user_message == {
             "role": "user",
-            "content": (
-                "Apply the 'expansion' focus strategy. Preferred genre: metal. Desired mood: melancholic. "
-                "Additional instructions: avoid pop"
-            ),
+            "content": "Apply the 'expansion' focus strategy. User request: lo-fi jazz and soul for focus",
         }
+
+    @pytest.mark.parametrize(
+        ("prompt", "focus", "expected_message"),
+        [
+            pytest.param("lo-fi jazz", None, "User request: lo-fi jazz", id="prompt_only"),
+            pytest.param(
+                None,
+                DiscoveryFocus.ROOTS_REVIVAL,
+                "Apply the 'roots_revival' focus strategy.",
+                id="focus_only",
+            ),
+            pytest.param(None, None, "Recommend new tracks for this user.", id="neither"),
+        ],
+    )
+    async def test__get_discovery_strategy__user_message(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        taste_profile: TasteProfile,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+        prompt: str | None,
+        focus: DiscoveryFocus | None,
+        expected_message: str,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+
+        await openrouter_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            advisor_limit=5,
+            prompt=prompt,
+            focus=focus,
+        )
+
+        system_message, user_message = json.loads(httpx_mock.get_requests()[0].content)["messages"]
+        assert ("### FOCUS STRATEGY" in system_message["content"]) is (focus is not None)
+        assert user_message["content"] == expected_message
 
     async def test__get_discovery_strategy__with_excluded_tracks_builds_exclusion_block(
         self,

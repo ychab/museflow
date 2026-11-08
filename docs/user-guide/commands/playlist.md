@@ -17,25 +17,24 @@ Discovers new tracks guided by the taste profile, matches them on the music prov
 playlist.
 
 ```bash
-museflow playlist discover [--email <email>] [OPTIONS]
+museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 ```
 
-| Option | Default | Description |
+| Argument / option | Default | Description |
 | --- | --- | --- |
+| `PROMPT` | none | Optional freeform request for the advisor: genres, moods, a theme, in your own words (several genres or moods fit in one sentence). Without it, the advisor follows the profile and the focus. |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to use. |
-| `--focus` | `expansion` | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. |
 | `--name` | latest profile | Taste profile name (defaults to latest). |
-| `--genre` | none | Optional genre hint for the advisor ([values](#genre-and-mood-values)). |
-| `--mood` | none | Optional mood hint for the advisor ([values](#genre-and-mood-values)). |
-| `--custom-instructions` | none | Optional freeform instructions for the advisor. |
-| `--advisor-limit` | `10` | Number of recommended tracks to request from the advisor (1 to 20). |
-| `--reconciler-limit` | `10` | Maximum search candidates per suggestion (1 to 20). |
-| `--playlist-limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
-| `--max-attempts` | `3` | Maximum number of advisor calls before stopping (1 to 10). |
-| `--max-tracks-per-artist` | `3` | Maximum tracks per artist in the final playlist (1 to 10). |
+| `--focus` | `expansion` without a prompt, none with one | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. With a prompt, no focus is applied unless given: it would pull the advisor away from the requested theme. |
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
+| `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
+
+The tuning lives in settings: the advisor is asked for `--limit` × `DISCOVERY_ADVISOR_LIMIT_RATIO` (1.5) tracks per
+call, as about 30% of the suggestions are lost to matching and known tracks, `DISCOVERY_MAX_ATTEMPTS` (3) calls at
+most, `DISCOVERY_RECONCILER_LIMIT` (10) search candidates per suggestion, and `DISCOVERY_MAX_TRACKS_PER_ARTIST` (3)
+tracks per artist.
 
 **Focus strategies**
 
@@ -49,14 +48,15 @@ museflow playlist discover [--email <email>] [OPTIONS]
 - A connected Spotify account ([`provider connect`](provider.md#provider-connect)).
 - An OpenRouter API key (`OPENROUTER_API_KEY`).
 
-The advisor is called up to `--max-attempts` times until `--playlist-limit` new tracks are found. Tracks
+The advisor is called up to `DISCOVERY_MAX_ATTEMPTS` times until `--limit` new tracks are found. Tracks
 already in the library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are excluded.
 
 **Examples**
 
 ```bash
-museflow playlist discover --focus expansion --playlist-limit 15
-museflow playlist discover --genre jazz --mood chill --dry-run
+museflow playlist discover --limit 15
+museflow playlist discover "chill jazz and soul, mostly instrumental" --dry-run
+museflow playlist discover --focus roots_revival
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
 
@@ -158,7 +158,7 @@ museflow playlist list [--email <email>]
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 
-**Output.** A table with ID, name, type (`discovery` or `history`), focus, genre, mood and creation date, or a
+**Output.** A table with ID, name, type (`discovery` or `history`), prompt, focus and creation date, or a
 notice when there is no playlist.
 
 ## `playlist view`

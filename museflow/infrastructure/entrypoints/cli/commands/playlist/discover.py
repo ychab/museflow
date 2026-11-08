@@ -1,4 +1,5 @@
 import asyncio
+import math
 from contextlib import AsyncExitStack
 
 from pydantic import EmailStr
@@ -12,8 +13,6 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.enums import DiscoveryFocus
-from museflow.domain.enums import GenreTag
-from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -36,51 +35,19 @@ console = Console()
 
 @app.command("discover")
 def playlist_discover_command(
+    prompt: str | None = typer.Argument(
+        None,
+        help="Optional freeform request for the advisor: genres, moods, a theme (e.g. 'lo-fi jazz and soul for focus')",
+        show_default=False,
+    ),
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
-    focus: DiscoveryFocus = typer.Option(default=DiscoverTasteConfigInput.focus, help="The discovery focus strategy"),
     name: str | None = typer.Option(None, "--name", help="Taste profile name (defaults to latest)"),
-    genre: GenreTag | None = typer.Option(None, "--genre", help="Optional genre hint for the advisor"),
-    mood: MoodTag | None = typer.Option(None, "--mood", help="Optional mood hint for the advisor"),
-    custom_instructions: str | None = typer.Option(
+    focus: DiscoveryFocus | None = typer.Option(
         None,
-        "--custom-instructions",
-        help="Optional freeform instructions for the advisor",
-    ),
-    advisor_limit: int = typer.Option(
-        DiscoverTasteConfigInput.advisor_limit,
-        "--advisor-limit",
-        help="Number of recommended tracks to request from the advisor",
-        min=1,
-        max=20,
-    ),
-    reconciler_limit: int = typer.Option(
-        DiscoverTasteConfigInput.reconciler_limit,
-        "--reconciler-limit",
-        help="Maximum search candidates per suggestion",
-        min=1,
-        max=20,
-    ),
-    playlist_limit: int = typer.Option(
-        DiscoverTasteConfigInput.playlist_limit,
-        "--playlist-limit",
-        help="Target number of tracks in the generated playlist",
-        min=1,
-        max=30,
-    ),
-    max_attempts: int = typer.Option(
-        DiscoverTasteConfigInput.max_attempts,
-        "--max-attempts",
-        help="Maximum number of advisor calls before stopping",
-        min=1,
-        max=10,
-    ),
-    max_tracks_per_artist: int = typer.Option(
-        DiscoverTasteConfigInput.max_tracks_per_artist,
-        "--max-tracks-per-artist",
-        help="Maximum tracks per artist in the final playlist",
-        min=1,
-        max=10,
+        "--focus",
+        help="The discovery focus strategy (defaults to expansion without a prompt, none with one)",
+        show_default=False,
     ),
     model: str | None = typer.Option(
         None,
@@ -91,6 +58,13 @@ def playlist_discover_command(
         False,
         "--dry-run",
         help="Discover tracks without creating a playlist (still searches the provider catalogue)",
+    ),
+    limit: int = typer.Option(
+        DiscoverTasteConfigInput.playlist_limit,
+        "--limit",
+        help="Target number of tracks in the generated playlist",
+        min=1,
+        max=30,
     ),
 ) -> None:
     """Discover new tracks guided by your AI taste profile."""
@@ -103,19 +77,17 @@ def playlist_discover_command(
                     provider=provider,
                     model=model,
                     config=DiscoverTasteConfigInput(
+                        prompt=prompt,
                         focus=focus,
                         profile_name=name,
-                        genre=genre,
-                        mood=mood,
-                        custom_instructions=custom_instructions,
-                        advisor_limit=advisor_limit,
-                        reconciler_limit=reconciler_limit,
+                        advisor_limit=math.ceil(limit * app_settings.DISCOVERY_ADVISOR_LIMIT_RATIO),
+                        reconciler_limit=app_settings.DISCOVERY_RECONCILER_LIMIT,
                         score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
                         liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
                         liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
-                        playlist_limit=playlist_limit,
-                        max_attempts=max_attempts,
-                        max_tracks_per_artist=max_tracks_per_artist,
+                        playlist_limit=limit,
+                        max_attempts=app_settings.DISCOVERY_MAX_ATTEMPTS,
+                        max_tracks_per_artist=app_settings.DISCOVERY_MAX_TRACKS_PER_ARTIST,
                         dry_run=dry_run,
                     ),
                     meter=meter,

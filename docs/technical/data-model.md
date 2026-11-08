@@ -112,7 +112,7 @@ erDiagram
     }
 ```
 
-The diagram omits audit columns (`created_at`, `updated_at`, provided by a mixin) and a few Playlist columns (`snapshot_id`, `genre`, `mood`, `custom_instructions`). Models live in [`museflow/infrastructure/adapters/database/models/`](https://github.com/ychab/museflow/tree/main/museflow/infrastructure/adapters/database/models); the matching frozen-dataclass entities live in [`museflow/domain/entities/`](https://github.com/ychab/museflow/tree/main/museflow/domain/entities).
+The diagram omits audit columns (`created_at`, `updated_at`, provided by a mixin) and a few Playlist columns (`snapshot_id`, `prompt`). Models live in [`museflow/infrastructure/adapters/database/models/`](https://github.com/ychab/museflow/tree/main/museflow/infrastructure/adapters/database/models); the matching frozen-dataclass entities live in [`museflow/domain/entities/`](https://github.com/ychab/museflow/tree/main/museflow/domain/entities).
 
 ## Track and its plays
 
@@ -192,7 +192,7 @@ A track's `genres` list is ordered `[macro, meso, micro?]`, so the first element
 
 ## Playlist: one entity, a type discriminator
 
-`museflow_playlist` stores both kinds of playlists in one table with a `type` column (`PlaylistType`): `DISCOVERY` (AI-curated) and `HISTORY` (a persisted "best of" from the user's own library). They were once two separate concepts (an ephemeral playlist and a persisted discovery playlist) and were merged (commit `467a4ce`) so a new type does not need a new table. Columns specific to discovery (`profile_id`, `reasoning`, `focus`, `genre`, `mood`, `custom_instructions`) are nullable and set only for that type, recording *why* the playlist exists. Membership and order live in `museflow_playlist_track` (`position`).
+`museflow_playlist` stores both kinds of playlists in one table with a `type` column (`PlaylistType`): `DISCOVERY` (AI-curated) and `HISTORY` (a persisted "best of" from the user's own library). They were once two separate concepts (an ephemeral playlist and a persisted discovery playlist) and were merged (commit `467a4ce`) so a new type does not need a new table. Columns specific to discovery (`profile_id`, `reasoning`, `prompt`, `focus`) are nullable and set only for that type, recording *why* the playlist exists. Membership and order live in `museflow_playlist_track` (`position`).
 
 `profile_id` references the taste profile with `ON DELETE SET NULL`: deleting a taste profile keeps the discovery playlists it guided (they can still be listed and rated) and only drops the link. The column is informational; no code reads it back.
 

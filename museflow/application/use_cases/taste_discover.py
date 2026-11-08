@@ -146,11 +146,9 @@ class DiscoverTasteUseCase:
             logger.debug("--- Discovery strategy ---")
             strategy = await self._advisor.get_discovery_strategy(
                 profile=profile,
-                focus=config.focus,
                 advisor_limit=config.advisor_limit,
-                genre=config.genre,
-                mood=config.mood,
-                custom_instructions=config.custom_instructions,
+                prompt=config.prompt,
+                focus=config.focus,
                 excluded_tracks=list(tracks_suggested) or None,
                 blacklisted_artists=blacklisted_artists,
                 blacklisted_tracks=blacklisted_tracks,
@@ -263,10 +261,8 @@ class DiscoverTasteUseCase:
                 playlist,
                 profile_id=profile.id,
                 reasoning=strategy.reasoning,
+                prompt=config.prompt,
                 focus=config.focus,
-                genre=config.genre,
-                mood=config.mood,
-                custom_instructions=config.custom_instructions,
                 tracks=tracks_with_ids,
             )
             playlist_db = await uow.playlists.create(playlist)
