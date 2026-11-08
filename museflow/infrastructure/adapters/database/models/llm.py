@@ -1,10 +1,12 @@
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Index
 from sqlalchemy import Integer
+from sqlalchemy import Interval
 from sqlalchemy import Numeric
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped
@@ -53,6 +55,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     reasoning_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     cost: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
+    duration: Mapped[timedelta] = mapped_column(Interval, nullable=False)
 
     @classmethod
     def from_entity(cls, entity: LLMUsageRecord) -> LLMUsageModel:
@@ -70,6 +73,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             completion_tokens=entity.usage.completion_tokens,
             reasoning_tokens=entity.usage.reasoning_tokens,
             cost=entity.usage.cost,
+            duration=entity.usage.duration,
         )
 
     def to_entity(self) -> LLMUsageRecord:
@@ -86,6 +90,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
                 completion_tokens=self.completion_tokens,
                 reasoning_tokens=self.reasoning_tokens,
                 cost=self.cost,
+                duration=self.duration,
             ),
             profile_id=self.profile_id,
             playlist_id=self.playlist_id,

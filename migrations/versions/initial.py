@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 4d276b3b2aa8
+Revision ID: 35b4120122b8
 Revises:
-Create Date: 2026-11-02 14:57:29.576451
+Create Date: 2026-11-08 10:33:28.328621
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '4d276b3b2aa8'
+revision: str = '35b4120122b8'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -156,6 +156,7 @@ def upgrade() -> None:
     sa.Column('completion_tokens', sa.Integer(), nullable=False),
     sa.Column('reasoning_tokens', sa.Integer(), nullable=False),
     sa.Column('cost', sa.Numeric(precision=12, scale=6), nullable=False),
+    sa.Column('duration', sa.Interval(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['playlist_id'], ['museflow_playlist.id'], ondelete='SET NULL'),

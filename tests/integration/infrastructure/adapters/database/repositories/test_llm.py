@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 
@@ -95,6 +96,7 @@ class TestLLMUsageSQLRepository:
             completion_tokens=50,
             reasoning_tokens=10,
             cost=Decimal("0.010000"),
+            duration=timedelta(seconds=2),
         )
         for cost in ("0.020000", "0.030000"):
             await LLMUsageModelFactory.create_async(
@@ -105,6 +107,7 @@ class TestLLMUsageSQLRepository:
                 completion_tokens=500,
                 reasoning_tokens=200,
                 cost=Decimal(cost),
+                duration=timedelta(seconds=3),
             )
         # Another user's spending stays out.
         await LLMUsageModelFactory.create_async(operation=LLMOperation.DISCOVER)
@@ -122,6 +125,7 @@ class TestLLMUsageSQLRepository:
                         completion_tokens=1000,
                         reasoning_tokens=400,
                         cost=Decimal("0.050000"),
+                        duration=timedelta(seconds=6),
                     ),
                 ),
                 LLMUsageGroup(
@@ -133,6 +137,7 @@ class TestLLMUsageSQLRepository:
                         completion_tokens=50,
                         reasoning_tokens=10,
                         cost=Decimal("0.010000"),
+                        duration=timedelta(seconds=2),
                     ),
                 ),
             ],
@@ -143,6 +148,7 @@ class TestLLMUsageSQLRepository:
                 completion_tokens=1050,
                 reasoning_tokens=410,
                 cost=Decimal("0.060000"),
+                duration=timedelta(seconds=8),
             ),
         )
 

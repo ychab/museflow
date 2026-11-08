@@ -1,5 +1,6 @@
 import logging
 from contextlib import nullcontext
+from datetime import timedelta
 
 from rich import get_console
 from rich.console import Console
@@ -13,6 +14,18 @@ from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
 console = Console()
 
 
+def format_duration(duration: timedelta) -> str:
+    """A short human duration: `8.4s`, `4m09s`, `1h02m`."""
+    seconds = duration.total_seconds()
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes, seconds = divmod(int(seconds), 60)
+    if minutes < 60:
+        return f"{minutes}m{seconds:02d}s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h{minutes:02d}m"
+
+
 def spinner(message: str) -> Status | nullcontext[None]:
     """Shows a spinner with the `rich` log handler only: it shares Rich's console, so its logs print above the spinner."""
     if any(isinstance(handler, RichHandler) for handler in logging.getLogger(LOGGER_MUSEFLOW).handlers):
@@ -21,7 +34,10 @@ def spinner(message: str) -> Status | nullcontext[None]:
 
 
 def print_llm_usage(meter: LLMUsageMeter) -> None:
-    """Prints what the command spent on LLM calls, per step and model: nothing when no call was made."""
+    """Prints what the command spent on LLM calls, per step and model, then how long it ran.
+
+    Prints nothing when no call was made.
+    """
     usages = meter.usages
     if not usages:
         return
@@ -34,6 +50,7 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
     table.add_column("Completion", justify="right", footer=f"{sum(usage.completion_tokens for usage in usages):,}")
     table.add_column("Reasoning", justify="right", footer=f"{sum(usage.reasoning_tokens for usage in usages):,}")
     table.add_column("Cost", justify="right", footer=f"${meter.total_cost:.4f}")
+    table.add_column("Time", justify="right", footer=format_duration(sum((u.duration for u in usages), timedelta(0))))
     for usage in usages:
         table.add_row(
             usage.step,
@@ -43,5 +60,8 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
             f"{usage.completion_tokens:,}",
             f"{usage.reasoning_tokens:,}",
             f"${usage.cost:.4f}",
+            format_duration(usage.duration),
         )
     console.print(table)
+    # Wall-clock time: the LLM calls, plus the database work and the throttling sleeps
+    console.print(f"Elapsed: {format_duration(meter.elapsed)}")

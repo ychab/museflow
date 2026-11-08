@@ -3,6 +3,7 @@ from datetime import UTC
 from datetime import date
 from datetime import datetime
 from datetime import time
+from datetime import timedelta
 from decimal import Decimal
 
 from sqlalchemy import Row
@@ -49,7 +50,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         }
 
         # ROLLUP appends the grand total row, sorted last by GROUPING(): it counts the distinct runs over all groups.
-        stmt: Select[object, int, int, int, int, int, Decimal] = (
+        stmt: Select[object, int, int, int, int, int, Decimal, timedelta] = (
             select(
                 group.label("name"),
                 func.count(distinct(LLMUsageModel.run_id)).label("runs"),
@@ -58,6 +59,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
                 func.coalesce(func.sum(LLMUsageModel.completion_tokens), 0).label("completion_tokens"),
                 func.coalesce(func.sum(LLMUsageModel.reasoning_tokens), 0).label("reasoning_tokens"),
                 cost.label("cost"),
+                func.coalesce(func.sum(LLMUsageModel.duration), timedelta(0)).label("duration"),
             )
             .select_from(LLMUsageModel)
             .join(UserModel, UserModel.id == LLMUsageModel.user_id)
@@ -115,7 +117,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         }
         return [expressions[group_by]], expressions[group_by]
 
-    def _totals(self, row: Row[object, int, int, int, int, int, Decimal]) -> LLMUsageTotals:
+    def _totals(self, row: Row[object, int, int, int, int, int, Decimal, timedelta]) -> LLMUsageTotals:
         return LLMUsageTotals(
             runs=row.runs,
             calls=row.calls,
@@ -123,4 +125,5 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             completion_tokens=row.completion_tokens,
             reasoning_tokens=row.reasoning_tokens,
             cost=Decimal(row.cost),
+            duration=row.duration,
         )

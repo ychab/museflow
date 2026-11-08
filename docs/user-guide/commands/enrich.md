@@ -42,8 +42,8 @@ museflow enrich tracks --limit 20 --model openai/gpt-5-mini
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
 re-run processes the missing tracks), or `No tracks to enrich.`. When every batch failed, it prints
-`No track enriched: N batch(es) failed` and exits with code 1. Last, an `LLM usage` table gives the calls, tokens and
-cost of the run, then the total, whatever the outcome.
+`No track enriched: N batch(es) failed` and exits with code 1. Last, an `LLM usage` table gives the calls, tokens,
+cost and time of the run, then the total and the elapsed time of the command, whatever the outcome.
 
 **When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
 succeed:

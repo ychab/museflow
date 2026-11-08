@@ -15,6 +15,7 @@ from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
+from museflow.infrastructure.entrypoints.cli.utils.display import format_duration
 
 console = Console()
 
@@ -57,6 +58,7 @@ def llm_usage_command(
     table.add_column("Completion", justify="right", footer=f"{total.completion_tokens:,}")
     table.add_column("Reasoning", justify="right", footer=f"{total.reasoning_tokens:,}")
     table.add_column("Cost", justify="right", footer=f"${total.cost:.4f}")
+    table.add_column("Time", justify="right", footer=format_duration(total.duration))
     for group in summary.groups:
         totals = group.totals
         table.add_row(
@@ -67,6 +69,7 @@ def llm_usage_command(
             f"{totals.completion_tokens:,}",
             f"{totals.reasoning_tokens:,}",
             f"${totals.cost:.4f}",
+            format_duration(totals.duration),
         )
     console.print(table)
 
