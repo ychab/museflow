@@ -15,4 +15,5 @@ migrations. When that ends, this file is deleted and schema changes become ordin
   3. `museflow users create`, `make backup-import` (migrations, history, then the exports), `museflow provider connect`.
 - **The reset is the user's call.** `make backup-export` is free and read-only; `make reset` destroys the local
   database: ask before running it.
-- Data a reset still loses (anything without an export/import, e.g. the LLM usage until #150) is named in the PR.
+- Data a reset still loses (anything without an export/import, e.g. the saved playlists) is named in the PR; a new
+  table worth keeping gets its export/import, chained in `backup-export` / `backup-import`.

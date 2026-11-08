@@ -42,4 +42,38 @@ reasoning tokens, the cost in dollars and the time spent waiting for the model, 
 steps) counts once in the total. `No LLM usage recorded.` when nothing matches.
 
 !!! note
-    The history lives in the database only: a database reset wipes it.
+    The history lives in the database: a database reset wipes it. Export it first with [`llm export`](#llm-export).
+
+## `llm export`
+
+Exports the user's LLM usage history to a YAML file, one entry per row: run, operation, step, model, tokens, cost,
+time and date. The profile travels by name, the playlist link is dropped (playlists are not exported).
+
+```bash
+museflow llm export [--email <email>] --output <path>
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--output` | required | Path to the output YAML file. |
+
+**Output.** `Exported <n> LLM usage row(s) to <path>`.
+
+## `llm import`
+
+Imports a file produced by `llm export`, in one transaction. A row already there (same run, step and model) is
+skipped, so importing twice adds nothing. Each row keeps its date, so `--by month` and `--since` give the same
+figures as before the export. The profile link is restored when a profile of that name exists: import the profiles
+first ([`taste import`](taste.md#taste-import)).
+
+```bash
+museflow llm import [--email <email>] --input <path>
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--input` | required | Path to the input YAML file. |
+
+**Output.** `Imported <n> LLM usage row(s) (<m> already there).`. A missing file or invalid YAML ends with an error.

@@ -59,7 +59,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
 
     @classmethod
     def from_entity(cls, entity: LLMUsageRecord) -> LLMUsageModel:
-        return cls(
+        usage_db = cls(
             id=entity.id,
             user_id=entity.user_id,
             run_id=entity.run_id,
@@ -75,6 +75,9 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             cost=entity.usage.cost,
             duration=entity.usage.duration,
         )
+        # Not an init field: set it so that an imported row keeps the date of its run.
+        usage_db.created_at = entity.created_at
+        return usage_db
 
     def to_entity(self) -> LLMUsageRecord:
         return LLMUsageRecord(
