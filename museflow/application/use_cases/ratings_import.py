@@ -7,22 +7,6 @@ from museflow.application.utils.tracks import match_fingerprints
 from museflow.domain.entities.track import Track
 
 
-def _to_track(user_id: uuid.UUID, entry: RatingEntryInput) -> Track | None:
-    # An entry exported before the track data was added only rates a track already in the library
-    if not entry.name or not entry.artists or not entry.provider_links:
-        return None
-
-    return Track(
-        user_id=user_id,
-        name=entry.name,
-        artists=entry.artists,
-        album_name=entry.album_name,
-        fingerprint=entry.fingerprint,
-        provider_links=entry.provider_links,
-        source=entry.source,
-    )
-
-
 @dataclass(frozen=True, kw_only=True)
 class ImportRatingsResult:
     imported_count: int
@@ -64,4 +48,20 @@ async def import_ratings(
         skipped_count=skipped_count,
         created_count=created_count,
         not_found_count=matches.not_found_count - len(track_ids),
+    )
+
+
+def _to_track(user_id: uuid.UUID, entry: RatingEntryInput) -> Track | None:
+    # An entry exported before the track data was added only rates a track already in the library
+    if not entry.name or not entry.artists or not entry.provider_links:
+        return None
+
+    return Track(
+        user_id=user_id,
+        name=entry.name,
+        artists=entry.artists,
+        album_name=entry.album_name,
+        fingerprint=entry.fingerprint,
+        provider_links=entry.provider_links,
+        source=entry.source,
     )

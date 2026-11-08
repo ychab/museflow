@@ -15,20 +15,6 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
-def _dump_track(track: Track) -> dict[str, Any]:
-    # What recreates the track on import when the library lacks it (e.g. a discovery never played, after a reset)
-    return {
-        "fingerprint": track.fingerprint,
-        "name": track.name,
-        "artists": track.artists,
-        "album_name": track.album_name,
-        "source": int(track.source),
-        "provider_links": [
-            {"provider": link.provider.value, "provider_id": link.provider_id} for link in track.provider_links
-        ],
-    }
-
-
 @app.command("export", help="Export track ratings to a YAML file.")
 def rate_export_command(
     email: str = EMAIL_OPTION,
@@ -65,3 +51,17 @@ async def rate_export_logic(email: EmailStr) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = [{**_dump_track(t), "score": t.score} for t in ratings.rated]
     result += [{**_dump_track(t), "score_skipped": True} for t in ratings.skipped]
     return result
+
+
+def _dump_track(track: Track) -> dict[str, Any]:
+    # What recreates the track on import when the library lacks it (e.g. a discovery never played, after a reset)
+    return {
+        "fingerprint": track.fingerprint,
+        "name": track.name,
+        "artists": track.artists,
+        "album_name": track.album_name,
+        "source": int(track.source),
+        "provider_links": [
+            {"provider": link.provider.value, "provider_id": link.provider_id} for link in track.provider_links
+        ],
+    }
