@@ -16,9 +16,9 @@ museflow taste build [--email <email>] --name <name> [OPTIONS]
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--name` | required | Profile name (unique per user). |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
-| `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10). |
-| `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000). |
-| `--batch-size` | automatic | Tracks per LLM request (1 to 1000). By default 200, or the seeds split into about 20 batches for a larger library. |
+| `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10): the periods are cut from their plays only. |
+| `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000), capped by the tracks played at least once. A track played in several periods takes a seed in each. |
+| `--batch-size` | automatic | Seed tracks per listening period, one LLM request each (1 to 1000). By default 200, or the seeds split into about 20 periods for a larger library. |
 | `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-3.1-flash-lite`). |
 | `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
 | `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |

@@ -44,8 +44,8 @@ def taste_build_command(
         BuildTasteProfileConfigInput.batch_size,
         "--batch-size",
         help=(
-            f"Tracks per batch. Default: {TASTE_BATCH_SIZE_MIN}, or the seeds split into about "
-            f"{TASTE_BATCH_COUNT_TARGET} batches for a larger library"
+            f"Seed tracks per listening period (one LLM request each). Default: {TASTE_BATCH_SIZE_MIN}, or the seeds "
+            f"split into about {TASTE_BATCH_COUNT_TARGET} periods for a larger library"
         ),
         min=1,
         max=1000,
