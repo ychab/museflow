@@ -151,7 +151,9 @@ every annotation of the class that uses it (`list[Track]`) then names the method
 - Parameters grouped by role: inputs first, then the unit of work, then other ports. DI parameters stay contiguous;
   a new port goes next to the others, never at the end.
 - No single-letter names, except in comprehensions, lambdas, loop indexes and `except ... as e`.
-- Group module members by kind (private functions, then classes); never class/function/class.
+- Public members first, private helpers (`_`-prefixed) after: a reader opens a module for what it exposes. A helper
+  run at import time (a decorator argument such as `_is_retryable_error`, a module-level constant) stays above its
+  first use. Group members by kind; never class/function/class.
 - No `return` inside a `try` block that has a `finally:`: assign the result in the `try`, then return it after the
   statement, so the exit point stays visible.
 - No duplicated inner functions: a closure repeated in several places becomes a decorator or shared helper
