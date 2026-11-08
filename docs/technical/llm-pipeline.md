@@ -47,8 +47,8 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 
 | Step | Setting | Default model | Volume | Why this tier |
 |---|---|---|---|---|
-| Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per batch (15 for the default 3,000 seeds in batches of 200, 20 for 10,000 seeds) | High volume, narrow task: classify a batch of tracks into tags and weights against a closed vocabulary. A small, cheap model is enough |
-| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per batch after the first | Judges whether a segment continues the last era, and names an era when the timeline is full: a few eras in, two fields out, the code assembling the profile. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
+| Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per listening period (15 for the default 3,000 seeds in periods of 200, 20 for 10,000 seeds) | High volume, narrow task: classify the tracks of a period into tags and weights against a closed vocabulary. A small, cheap model is enough |
+| Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per period after the first | Judges whether a segment continues the last era, and names an era when the timeline is full: a few eras in, two fields out, the code assembling the profile. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
 | Advisor | `ADVISOR` | `google/gemini-3.5-flash` | Up to `--max-attempts` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively |
 | Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
@@ -58,23 +58,23 @@ The principle is to spend model capability where one call has outsized influence
 !!! note "Reasoning tokens count against `MAX_TOKENS`"
     On reasoning models, the hidden reasoning is billed and counted as output tokens. A low `MAX_TOKENS` can cut the JSON off (`finish_reason: length`), which fails the call as truncated. The defaults leave `MAX_TOKENS` unset for that reason.
 
-## Profiler: batches, merge, reflect
+## Profiler: periods, merge, reflect
 
 ```mermaid
 flowchart TD
-    A["Seed tracks: most played first, limit 3000 by default"] --> B["Re-sort chronologically by last played"]
-    B --> C["Split into batches (200, or about 20 for a large library), a trailing batch under half a batch folded into the previous one"]
+    A["Seeds: tracks played at least once, limit 3000 by default"] --> B["Split the plays, oldest first, into periods of equal plays (one per 200 seeds, or about 20 for a large library)"]
+    B --> C["Seed each period with its most played tracks"]
     C --> D{"Resume and checkpoint exists?"}
-    D -- yes --> E["Load partial profile, skip finished batches"]
-    D -- no --> F["Batch 1"]
+    D -- yes --> E["Load partial profile, skip finished periods"]
+    D -- no --> F["Period 1"]
     E --> F
-    F --> G["Segment: batch to partial profile (lite model)"]
-    G --> H{"First batch?"}
+    F --> G["Segment: period to partial profile (lite model)"]
+    G --> H{"First period?"}
     H -- yes --> I["Partial profile becomes the foundation"]
     H -- no --> J["Merge: the model decides the timeline (mid model), the code assembles the profile"]
     I --> K["Save checkpoint, status BUILDING"]
     J --> K
-    K --> L{"More batches?"}
+    K --> L{"More periods?"}
     L -- yes --> M["Optional throttle sleep"] --> G
     L -- no --> N["Reflect: add archetype and traits (pro model)"]
     N --> O["Sort timeline, upsert, status FINISHED, clear checkpoint"]
@@ -87,15 +87,15 @@ Source: [`taste_profile_build.py`](https://github.com/ychab/museflow/blob/main/m
 
 Design decisions:
 
-- **Map, then fold, then reflect.** A 3,000-track history does not fit comfortably in one prompt and a single huge prompt is fragile. Each batch is summarised independently (segment), then folded into a running profile (merge). The final reflection sees only the profile, never raw tracks.
-- **Chronological batches.** Seeds are selected by play count (best signal) and then re-sorted by last-played date, so each batch covers a coherent period and the model can describe it as a "taste era" with a time range.
-- **The model judges, the code merges** ([`domain/utils/taste.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/utils/taste.py)). The merge prompt carries only the last era and the segment's era, and the model answers one question: does the segment continue that era (more than 80% similar and already described by its label)? If so, the code extends the era's end date and keeps its label (a label broadened at each merge would absorb every later segment); otherwise it appends the segment's era. Past 15 eras, the code merges the two oldest (spanning time range, averaged fingerprint, moods of both), under a label the model names when the timeline is full. An era label names the music, never dates or the processing ("batch"), since dates live in `time_range` and a merge would make them stale. `core_identity` is an average weighted by tracks (a segment of 500 tracks merged into a profile of 1,500 weighs a quarter), so it is the mean over every seed whatever the batch size, and `current_vibe` is replaced wholesale: arithmetic the model used to do while rewriting the whole profile at every merge, which made the merge most of a build's cost. The two fields encode a product opinion: long-term identity is the whole library, current mood is the latest segment. A fixed 0.3 weight per segment, as before, kept in fact only the last few batches, more or fewer of them with the batch size. Every weight is rounded to 3 decimals and those that round to 0 are dropped, so later prompts do not carry noise.
-- **Batch size from the seed count.** Without `--batch-size`, batches hold 200 tracks, or the seeds split into about 20 batches when that makes them larger (10,155 seeds: batches of 508). Each batch then holds about one era of the 15-era timeline: on 10,155 seeds, batches of 200 meant 50 merges, many of them forced merges of the oldest eras, which squeezed 2017 to 2024 into a single era, for $2.41; batches of 500 gave 20 merges, a timeline spread over the whole history, for $0.92.
-- **No short trailing batch.** A trailing batch under half the batch size is folded into the previous one (1,005 seeds in batches of 200: 4 × 200 + 205): a handful of tracks would otherwise replace the current vibe and add an era of their own (#136).
-- **User ratings are part of the signal.** Each track line carries first / last played, play count and, if rated, the score. The prompt tells the model to treat high scores as confirmed anchors and minimum scores as anti-preferences.
-- **Checkpoint and pause.** After every batch the partial profile and batch index are persisted ([Data model](data-model.md#taste-profile)). A rate-limit overrun or an unusable reply raises `TasteProfileBuildPausedError` instead of losing the run; `taste build --resume` continues from the next batch. `TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS` can space out batches to stay under a quota.
-- **The reflect step is resumable.** The reflection result itself is not checkpointed, but the merged profile is saved after the last batch. A rate-limit overrun or unusable reply in the final call also raises `TasteProfileBuildPausedError` (reported as batch N/N), and `--resume` skips every batch and repeats only that final call.
-- **Reproducibility metadata.** `logic_version` (currently `v2.1`, the merge assembled in code) and, in `profiler_metadata`, the gateway and the settings of each step (model, fallbacks, reasoning effort, max tokens, temperature) are stored with the profile.
+- **Map, then fold, then reflect.** A 3,000-track history does not fit comfortably in one prompt and a single huge prompt is fragile. Each period is summarised independently (segment), then folded into a running profile (merge). The final reflection sees only the profile, never raw tracks.
+- **Listening periods, from every play** ([`TrackPlaySQLRepository.get_periods`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/database/repositories/track_play.py), #139). The plays, oldest first, are dealt into periods holding the same number of plays (SQL `ntile`), so a dense year gets more periods than a quiet one; each period is seeded with the tracks most played *during* it, and the prompt gives each track its plays in the period and the period's dates as the era's time range. A track replayed years later seeds each period it was played in, and a track never played (a discovery not listened to) seeds none. Before, seeds were the most played tracks overall, dated by their last play only: on the author's library, 7 of 14 eras fell in the last 10 months; with periods, 20 periods of about 5,900 plays span 2017 to 2026, built from 10,160 seed slots over 4,071 distinct tracks.
+- **The model judges, the code merges** ([`domain/utils/taste.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/utils/taste.py)). The merge prompt carries only the last era and the segment's era, and the model answers one question: does the segment continue that era (more than 80% similar and already described by its label)? If so, the code extends the era's end date and keeps its label (a label broadened at each merge would absorb every later segment); otherwise it appends the segment's era. Past 15 eras, the code merges the two oldest (spanning time range, averaged fingerprint, moods of both), under a label the model names when the timeline is full. An era label names the music, never dates or the processing ("batch"), since dates live in `time_range` and a merge would make them stale. `core_identity` is an average weighted by plays (a period of 5,000 plays merged into a profile of 15,000 weighs a quarter), so it is the mean over the listening whatever the period size, and `current_vibe` is replaced wholesale: arithmetic the model used to do while rewriting the whole profile at every merge, which made the merge most of a build's cost. The two fields encode a product opinion: long-term identity is the whole library, current mood is the latest segment. A fixed 0.3 weight per segment, as before, kept in fact only the last few periods, more or fewer of them with their size. Every weight is rounded to 3 decimals and those that round to 0 are dropped, so later prompts do not carry noise.
+- **Period size from the seed count.** Without `--batch-size`, a period holds 200 seed tracks, or the seeds split into about 20 periods when that makes them larger (10,155 seeds: periods of 508). Each period then holds about one era of the 15-era timeline: on 10,155 seeds, batches of 200 meant 50 merges, many of them forced merges of the oldest eras, which squeezed 2017 to 2024 into a single era, for $2.41; batches of 500 gave 20 merges, a timeline spread over the whole history, for $0.92.
+- **No short trailing period.** Periods hold the same number of plays by construction, so none is a handful of tracks that would replace the current vibe and add an era of its own (#136).
+- **User ratings are part of the signal.** Each track line carries its plays in the period and, if rated, the score. The prompt tells the model to treat high scores as confirmed anchors and minimum scores as anti-preferences.
+- **Checkpoint and pause.** After every period the partial profile and period index are persisted ([Data model](data-model.md#taste-profile)). A rate-limit overrun or an unusable reply raises `TasteProfileBuildPausedError` instead of losing the run; `taste build --resume` continues from the next period, the periods being cut the same way as long as no play is imported in between. `TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS` can space out periods to stay under a quota.
+- **The reflect step is resumable.** The reflection result itself is not checkpointed, but the merged profile is saved after the last period. A rate-limit overrun or unusable reply in the final call also raises `TasteProfileBuildPausedError` (reported as batch N/N), and `--resume` skips every period and repeats only that final call.
+- **Reproducibility metadata.** `logic_version` (currently `v2.2`, listening periods built from every play) and, in `profiler_metadata`, the gateway and the settings of each step (model, fallbacks, reasoning effort, max tokens, temperature) are stored with the profile.
 
 ## Advisor: guided discovery
 

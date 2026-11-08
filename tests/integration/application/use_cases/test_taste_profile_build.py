@@ -1,3 +1,6 @@
+from datetime import UTC
+from datetime import datetime
+
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +17,7 @@ from museflow.infrastructure.adapters.database.models.taste import TasteProfileM
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
+from tests.integration.factories.models.track import TrackPlayModelFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
 
 
@@ -23,7 +27,7 @@ class TestBuildTasteProfileUseCase:
     def config(self) -> BuildTasteProfileConfigInput:
         return BuildTasteProfileConfigInputFactory.build(
             track_limit=100,
-            batch_size=5,
+            batch_size=2,
             throttling_sleep_seconds=0.0,
         )
 
@@ -45,14 +49,22 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         async_session_db: AsyncSession,
     ) -> None:
-        # 11 tracks in batches of 5: the trailing single track is folded into the second batch (5 / 6)
-        await TrackModelFactory.create_batch_async(size=11, user_id=user.id)
+        # 6 plays in 2 periods of 3: the replayed track seeds both periods, the never-played one none.
+        replayed, early, late, _ = [await TrackModelFactory.create_async(user_id=user.id) for _ in range(4)]
+        for track_db, day in [(replayed, 1), (replayed, 2), (early, 3)]:
+            await TrackPlayModelFactory.create_async(
+                track_id=track_db.id, played_at=datetime(2020, 1, day, tzinfo=UTC)
+            )
+        for track_db, day in [(replayed, 1), (replayed, 2), (late, 3)]:
+            await TrackPlayModelFactory.create_async(
+                track_id=track_db.id, played_at=datetime(2022, 1, day, tzinfo=UTC)
+            )
 
         profile = await use_case.build_profile(user=user, config=config)
 
-        assert profile.tracks_count == 11
+        assert profile.tracks_count == 4  # 2 seeds a period, the replayed track in both
         assert profile.user_id == user.id
-        assert profile.logic_version == "v2.1"
+        assert profile.logic_version == "v2.2"
         assert profile.profiler_metadata["gateway"] == "openrouter"
         assert profile.profile["personality_archetype"] == "The Introspective Wanderer"
         assert profile.profile["life_phase_insights"] == [
@@ -87,7 +99,7 @@ class TestBuildTasteProfileUseCase:
         config: BuildTasteProfileConfigInput,
         async_session_db: AsyncSession,
     ) -> None:
-        await TrackModelFactory.create_batch_async(size=3, user_id=user.id)
+        await TrackModelFactory.create_batch_async(size=3, user_id=user.id, played_count=1)
 
         await use_case.build_profile(user=user, config=config)
         await use_case.build_profile(user=user, config=config)

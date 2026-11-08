@@ -3,8 +3,8 @@ from abc import abstractmethod
 from typing import Any
 
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.track import Track
 from museflow.domain.value_objects.llm import LLMUsage
+from museflow.domain.value_objects.taste import ListeningPeriod
 
 
 class TasteProfilerPort(ABC):
@@ -27,8 +27,8 @@ class TasteProfilerPort(ABC):
         ...
 
     @abstractmethod
-    async def build_profile_segment(self, tracks: list[Track]) -> TasteProfileData:
-        """Analyze a batch of tracks and return a partial taste profile."""
+    async def build_profile_segment(self, period: ListeningPeriod) -> TasteProfileData:
+        """Analyze the tracks most played during a listening period and return a partial taste profile."""
 
     @abstractmethod
     async def merge_profiles(

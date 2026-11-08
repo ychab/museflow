@@ -1,7 +1,5 @@
 import json
 from collections.abc import Iterator
-from datetime import UTC
-from datetime import datetime
 from typing import Any
 from unittest import mock
 
@@ -14,21 +12,21 @@ from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
+from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
-from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
 from tests.unit.factories.value_objects.llm import LLMUsageFactory
+from tests.unit.factories.value_objects.taste import ListeningPeriodFactory
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -86,16 +84,14 @@ class TestBuildTasteProfileUseCase:
         )
 
     @pytest.fixture
-    def tracks(self, request: pytest.FixtureRequest, user: User) -> list[Track]:
-        size: int = request.param
-        return [
-            TrackFactory.build(
-                user_id=user.id,
-                played_at_last=datetime(2020, 1, i + 1, tzinfo=UTC),
-                played_at_first=datetime(2019, 1, i + 1, tzinfo=UTC),
-            )
-            for i in range(size)
-        ]
+    def periods(
+        self, request: pytest.FixtureRequest, mock_track_play_repository: mock.AsyncMock
+    ) -> list[ListeningPeriod]:
+        """`request.param` listening periods of 3 tracks each, as the plays repository returns them."""
+        periods = ListeningPeriodFactory.batch(request.param)
+        mock_track_play_repository.count_played_tracks.return_value = 3 * request.param
+        mock_track_play_repository.get_periods.return_value = periods
+        return periods
 
     @pytest.fixture
     def use_case(
@@ -160,23 +156,19 @@ class TestBuildTasteProfileUseCase:
         ) as mocked:
             yield mocked
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__nominal__multiple_batches(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        # 8 tracks → 3 batches (3 / 3 / 2)
-        mock_track_repository.get_list.return_value = tracks
-
         # 3 build_profile_segment + 2 merge_profiles + 1 reflect_on_profile
         for _ in range(6):
             httpx_mock.add_response(
@@ -195,42 +187,44 @@ class TestBuildTasteProfileUseCase:
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
     @pytest.mark.parametrize("mock_reflect", [None], indirect=True)
-    async def test__no_batch_size__sized_from_seeds__merge_weighted_by_tracks(
+    async def test__no_batch_size__sized_from_seeds__merge_weighted_by_plays(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         profile_data: TasteProfileData,
-        mock_track_repository: mock.AsyncMock,
+        mock_track_play_repository: mock.AsyncMock,
         mock_segment: mock.AsyncMock,
         mock_merge: mock.AsyncMock,
         mock_reflect: mock.AsyncMock,
     ) -> None:
-        # 450 seeds: batches of the 200 minimum, the trailing 50 folded into the second batch (200 / 250)
-        config = BuildTasteProfileConfigInputFactory.build(track_limit=450, batch_size=None)
-        mock_track_repository.get_list.return_value = TrackFactory.batch(
-            450, user_id=user.id, played_at_last=datetime(2020, 1, 1, tzinfo=UTC)
-        )
+        # 450 played tracks: periods of the 200 minimum, so 3 of them
+        config = BuildTasteProfileConfigInputFactory.build(track_limit=3000, batch_size=None)
+        mock_track_play_repository.count_played_tracks.return_value = 450
+        periods = [ListeningPeriodFactory.build(plays=plays) for plays in (100, 300, 600)]
+        mock_track_play_repository.get_periods.return_value = periods
         mock_reflect.side_effect = None
         mock_reflect.return_value = profile_data
 
         await use_case.build_profile(user=user, config=config)
 
-        assert [len(call.args[0]) for call in mock_segment.call_args_list] == [200, 250]
-        mock_merge.assert_awaited_once_with(profile_data, profile_data, 250 / 450)
+        mock_track_play_repository.get_periods.assert_awaited_once_with(
+            user_id=user.id, periods=3, tracks_per_period=200, min_score=None
+        )
+        assert [call.args[0] for call in mock_segment.call_args_list] == periods
+        # Each period weighs its share of the plays processed so far
+        assert [call.args[2] for call in mock_merge.call_args_list] == [300 / 400, 600 / 1000]
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__profiler_calls__run_outside_any_block(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
+        periods: list[ListeningPeriod],
         mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = tracks
         blocks_open: list[bool] = []
 
         def respond(request: httpx.Request) -> httpx.Response:
@@ -254,26 +248,23 @@ class TestBuildTasteProfileUseCase:
 
         # 3 segments + 2 merges + 1 reflection
         assert blocks_open == [False] * 6
-        # The seeds read, one checkpoint per batch, the final upsert, then the LLM usage
-        assert mock_uow.__aenter__.await_count == 6
+        # The played tracks counted, the periods read, one checkpoint per period, the final upsert, then the LLM usage
+        assert mock_uow.__aenter__.await_count == 7
 
-    @pytest.mark.parametrize("tracks", [2], indirect=True)
+    @pytest.mark.parametrize("periods", [1], indirect=True)
     async def test__nominal__single_batch(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
     ) -> None:
-        # 2 tracks → 1 batch → 1 build_profile_segment + 1 reflect_on_profile (no merge)
-        mock_track_repository.get_list.return_value = tracks
-
+        # 1 period → 1 build_profile_segment + 1 reflect_on_profile (no merge)
         for _ in range(2):
             httpx_mock.add_response(
                 url=URL,
@@ -289,13 +280,12 @@ class TestBuildTasteProfileUseCase:
         assert profile.user_id == user.id
         assert mock_taste_profile_repository.upsert.call_args.args[0].profile == profile_data
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__throttling(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
@@ -303,13 +293,12 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
         mock_sleep: mock.AsyncMock,
     ) -> None:
-        # 8 tracks → 3 batches (3 / 3 / 2) — sleep called twice (between batch 1→2 and 2→3, not after last)
+        # 3 periods: sleep called twice (between periods 1→2 and 2→3, not after the last)
         config = BuildTasteProfileConfigInputFactory.build(
             track_limit=10,
             batch_size=3,
             throttling_sleep_seconds=1.0,
         )
-        mock_track_repository.get_list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -325,14 +314,13 @@ class TestBuildTasteProfileUseCase:
         assert mock_sleep.call_count == 2
         mock_sleep.assert_called_with(1.0)
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__no_throttling(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
@@ -341,7 +329,6 @@ class TestBuildTasteProfileUseCase:
         mock_sleep: mock.AsyncMock,
     ) -> None:
         # throttling_sleep_seconds=0.0 (default from factory) — sleep never called
-        mock_track_repository.get_list.return_value = tracks
 
         for _ in range(6):
             httpx_mock.add_response(
@@ -361,39 +348,35 @@ class TestBuildTasteProfileUseCase:
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        mock_track_repository: mock.AsyncMock,
+        mock_track_play_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_play_repository.count_played_tracks.return_value = 0
 
         with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
 
-    async def test__rated_only__passes_min_score_to_get_list(
+        mock_track_play_repository.get_periods.assert_not_called()
+
+    async def test__rated_only__counts_the_rated_tracks_only(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        mock_track_repository: mock.AsyncMock,
+        mock_track_play_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_list.return_value = []
+        mock_track_play_repository.count_played_tracks.return_value = 0
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, rated_only=True)
 
         with pytest.raises(TasteProfileNoSeedError):
             await use_case.build_profile(user=user, config=config)
 
-        mock_track_repository.get_list.assert_called_once_with(
-            user_id=user.id,
-            order=mock.ANY,
-            limit=10,
-            min_score=0,
-        )
+        mock_track_play_repository.count_played_tracks.assert_awaited_once_with(user_id=user.id, min_score=0)
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__resume__checkpoint_found(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
@@ -402,7 +385,6 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 1)
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -418,13 +400,12 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
         assert mock_taste_profile_repository.upsert_checkpoint.call_count == 2
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__resume__no_checkpoint(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
         profile_data: TasteProfileData,
@@ -432,7 +413,6 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = None
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -447,7 +427,7 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     @pytest.mark.parametrize(
         ("mock_segment", "reason"),
         [
@@ -461,14 +441,12 @@ class TestBuildTasteProfileUseCase:
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         mock_segment: mock.AsyncMock,
         reason: str,
     ) -> None:
         # Batch 1 fails: the build pauses at once, no checkpoint saved
-        mock_track_repository.get_list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
@@ -479,21 +457,19 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__paused__usage_recorded(
         self,
         user: User,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
+        periods: list[ListeningPeriod],
         mock_uow: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_llm_usage_repository: mock.AsyncMock,
     ) -> None:
         usage = LLMUsageFactory.build()
         profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
         profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
-        mock_track_repository.get_list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError):
             await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler).build_profile(user=user, config=config)
@@ -502,20 +478,18 @@ class TestBuildTasteProfileUseCase:
         (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert (record.operation, record.usage) == (LLMOperation.TASTE_BUILD, usage)
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__batch_fail__pauses__checkpoint_preserved(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
+        periods: list[ListeningPeriod],
         profile_data: TasteProfileData,
-        mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_segment: mock.AsyncMock,
     ) -> None:
         # Batch 1 succeeds (checkpoint saved), batch 2 fails: pauses at 2/3, upsert never called
-        mock_track_repository.get_list.return_value = tracks
         mock_segment.side_effect = [profile_data, TasteProfilerRateLimitExceededError("rate limit")]
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
@@ -527,7 +501,7 @@ class TestBuildTasteProfileUseCase:
         mock_taste_profile_repository.upsert_checkpoint.assert_called_once()
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     @pytest.mark.parametrize(
         ("mock_reflect", "reason"),
         [
@@ -541,15 +515,13 @@ class TestBuildTasteProfileUseCase:
         user: User,
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
-        tracks: list[Track],
-        mock_track_repository: mock.AsyncMock,
+        periods: list[ListeningPeriod],
         mock_taste_profile_repository: mock.AsyncMock,
         mock_segment: mock.AsyncMock,
         mock_merge: mock.AsyncMock,
         mock_reflect: mock.AsyncMock,
         reason: str,
     ) -> None:
-        mock_track_repository.get_list.return_value = tracks
 
         with pytest.raises(TasteProfileBuildPausedError) as exc_info:
             await use_case.build_profile(user=user, config=config)
@@ -560,22 +532,20 @@ class TestBuildTasteProfileUseCase:
         assert mock_taste_profile_repository.upsert_checkpoint.call_count == 3
         mock_taste_profile_repository.upsert.assert_not_called()
 
-    @pytest.mark.parametrize("tracks", [8], indirect=True)
+    @pytest.mark.parametrize("periods", [3], indirect=True)
     @pytest.mark.parametrize("mock_reflect", [None], indirect=True)
     async def test__resume__checkpoint_at_last_batch__only_reflects(
         self,
         user: User,
         use_case: BuildTasteProfileUseCase,
-        tracks: list[Track],
+        periods: list[ListeningPeriod],
         profile_data: TasteProfileData,
-        mock_track_repository: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_segment: mock.AsyncMock,
         mock_merge: mock.AsyncMock,
         mock_reflect: mock.AsyncMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
-        mock_track_repository.get_list.return_value = tracks
         mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 3)
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
         mock_reflect.side_effect = None

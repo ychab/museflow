@@ -1,14 +1,19 @@
 import dataclasses
 import itertools
+import uuid
 from typing import Final
 
+from sqlalchemy import distinct
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy import true
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.selectable import LateralFromClause
 
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
+from museflow.domain.value_objects.taste import ListeningPeriod
+from museflow.domain.value_objects.taste import PeriodTrack
 from museflow.domain.value_objects.track import TrackPlay
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
 from museflow.infrastructure.adapters.database.models.track import TrackPlay as TrackPlayModel
@@ -59,3 +64,98 @@ class TrackPlaySQLRepository(TrackPlayRepository):
             )
             created += len((await self.session.execute(stmt)).all())
         return created
+
+    async def count_played_tracks(self, user_id: uuid.UUID, min_score: int | None = None) -> int:
+        stmt = (
+            select(func.count(distinct(TrackPlayModel.track_id)))
+            .join(TrackModel, TrackModel.id == TrackPlayModel.track_id)
+            .where(TrackModel.user_id == user_id)
+        )
+        if min_score is not None:
+            stmt = stmt.where(TrackModel.score >= min_score)
+        return (await self.session.execute(stmt)).scalar_one()
+
+    async def get_periods(
+        self,
+        user_id: uuid.UUID,
+        periods: int,
+        tracks_per_period: int,
+        min_score: int | None = None,
+    ) -> list[ListeningPeriod]:
+        # 1. The user's plays, each numbered with its period: ntile() deals them out, oldest first, into `periods`
+        #    groups of the same size.
+        user_plays = (
+            select(
+                TrackPlayModel.track_id,
+                TrackPlayModel.played_at,
+                func.ntile(periods).over(order_by=TrackPlayModel.played_at).label("period"),
+            )
+            .join(TrackModel, TrackModel.id == TrackPlayModel.track_id)
+            .where(TrackModel.user_id == user_id)
+        )
+        if min_score is not None:
+            user_plays = user_plays.where(TrackModel.score >= min_score)
+        plays = user_plays.cte("plays")
+
+        # 2. Each period's first and last play and its number of plays.
+        bounds = (
+            select(
+                plays.c.period,
+                func.min(plays.c.played_at).label("start"),
+                func.max(plays.c.played_at).label("end"),
+                func.count().label("plays"),
+            )
+            .group_by(plays.c.period)
+            .cte("bounds")
+        )
+
+        # 3. The plays of each track in each period, ranked within the period: most played first.
+        track_plays = (
+            select(plays.c.period, plays.c.track_id, func.count().label("plays"))
+            .group_by(plays.c.period, plays.c.track_id)
+            .cte("track_plays")
+        )
+        ranked = select(
+            track_plays,
+            func.row_number()
+            .over(
+                partition_by=track_plays.c.period,
+                order_by=(track_plays.c.plays.desc(), track_plays.c.track_id),
+            )
+            .label("rank"),
+        ).cte("ranked")
+
+        # 4. The top tracks of each period, with their period, and their play data over the whole history.
+        summary = self.plays_summary()
+        stmt = (
+            select(
+                ranked.c.period,
+                ranked.c.plays,
+                bounds.c.start,
+                bounds.c.end,
+                bounds.c.plays.label("period_plays"),
+                TrackModel,
+                summary.c.played_count,
+                summary.c.played_at_first,
+                summary.c.played_at_last,
+            )
+            .join(bounds, bounds.c.period == ranked.c.period)
+            .join(TrackModel, TrackModel.id == ranked.c.track_id)
+            .join(summary, true())
+            .where(ranked.c.rank <= tracks_per_period)
+            .order_by(ranked.c.period, ranked.c.rank)
+        )
+
+        listening_periods: dict[int, ListeningPeriod] = {}
+        for row in (await self.session.execute(stmt)).all():
+            listening_period = listening_periods.setdefault(
+                row.period,
+                ListeningPeriod(start=row.start, end=row.end, plays=row.period_plays, tracks=[]),
+            )
+            track = row.Track.to_entity(
+                played_count=row.played_count,
+                played_at_first=row.played_at_first,
+                played_at_last=row.played_at_last,
+            )
+            listening_period.tracks.append(PeriodTrack(track=track, plays=row.plays))
+        return list(listening_periods.values())
