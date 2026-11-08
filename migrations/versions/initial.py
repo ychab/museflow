@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 35b4120122b8
+Revision ID: e259afccbe6b
 Revises:
-Create Date: 2026-11-08 10:33:28.328621
+Create Date: 2026-11-08 11:34:49.451919
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '35b4120122b8'
+revision: str = 'e259afccbe6b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -104,9 +104,6 @@ def upgrade() -> None:
     sa.Column('artists', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('album_name', sa.String(length=512), nullable=True),
     sa.Column('fingerprint', sa.String(length=512), nullable=False),
-    sa.Column('played_at_first', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('played_at_last', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('played_count', sa.Integer(), nullable=False),
     sa.Column('source', sa.Integer(), nullable=False),
     sa.Column('score', sa.Integer(), nullable=True),
     sa.Column('score_skipped', sa.Boolean(), server_default='false', nullable=False),
@@ -142,6 +139,14 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_museflow_playlist_user_id'), 'museflow_playlist', ['user_id'], unique=False)
+    op.create_table('museflow_track_play',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('track_id', sa.UUID(), nullable=False),
+    sa.Column('played_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['track_id'], ['museflow_track.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('track_id', 'played_at', name='uq_museflow_track_play_track_played_at')
+    )
     op.create_table('museflow_llm_usage',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -185,6 +190,7 @@ def downgrade() -> None:
     op.drop_table('museflow_playlist_track')
     op.drop_index('ix_museflow_llm_usage_user_id_created_at', table_name='museflow_llm_usage')
     op.drop_table('museflow_llm_usage')
+    op.drop_table('museflow_track_play')
     op.drop_index(op.f('ix_museflow_playlist_user_id'), table_name='museflow_playlist')
     op.drop_table('museflow_playlist')
     op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')

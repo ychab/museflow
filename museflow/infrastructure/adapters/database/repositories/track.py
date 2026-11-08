@@ -170,7 +170,11 @@ class TrackSQLRepository(TrackRepository):
         # score_skipped, genres, moods, locales excluded so re-imports never overwrite user decisions/enrichment
         index_excluded: list[str] = ["id", "score_skipped", "genres", "moods", "locales"] + index_elements
 
-        tracks_dicts: list[dict[str, Any]] = [dataclasses.asdict(track) for track in tracks]
+        # The play data is computed from the plays, saved on their own: a track never writes it
+        computed = ("played_at_first", "played_at_last", "played_count")
+        tracks_dicts: list[dict[str, Any]] = [
+            {key: value for key, value in dataclasses.asdict(track).items() if key not in computed} for track in tracks
+        ]
 
         total: int = len(tracks_dicts)
         for offset in range(0, total, batch_size):
@@ -183,14 +187,7 @@ class TrackSQLRepository(TrackRepository):
                 index_elements=index_elements,
                 set_={
                     key: (
-                        func.greatest(getattr(TrackModel, key), excluded[key])
-                        if key == "played_at_last"
-                        else func.least(
-                            func.coalesce(getattr(TrackModel, key), excluded[key]),
-                            func.coalesce(excluded[key], getattr(TrackModel, key)),
-                        )
-                        if key == "played_at_first"
-                        else getattr(TrackModel, key).op("|")(excluded[key])
+                        getattr(TrackModel, key).op("|")(excluded[key])
                         if key == "source"
                         else func.coalesce(getattr(TrackModel, key), excluded[key])
                         if key == "score"

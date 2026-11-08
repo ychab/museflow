@@ -252,10 +252,7 @@ class DiscoverTasteUseCase:
         )
 
         # Upsert discovery tracks into museflow_track so they're excluded from future sessions
-        discovery_tracks = [
-            replace(t, source=TrackSource.DISCOVERY, played_count=0, played_at_first=None, played_at_last=None)
-            for t in tracks
-        ]
+        discovery_tracks = [replace(t, source=TrackSource.DISCOVERY) for t in tracks]
         # One block: the discovery tracks and their local playlist are saved together, or not at all.
         async with self._uow as uow:
             track_ids, _ = await uow.tracks.bulk_upsert(discovery_tracks, batch_size=100)

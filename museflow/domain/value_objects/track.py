@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Self
 
 from museflow.domain.entities.track import Track
@@ -30,6 +31,14 @@ class TrackKnownIdentifiers:
 
     def is_known(self, track: Track) -> bool:
         return track.fingerprint in self.fingerprints
+
+
+@dataclass(frozen=True, kw_only=True)
+class TrackPlay:
+    """One listen of a track."""
+
+    track_id: uuid.UUID
+    played_at: datetime
 
 
 @dataclass(frozen=True, kw_only=True)

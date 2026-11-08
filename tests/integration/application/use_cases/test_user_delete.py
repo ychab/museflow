@@ -36,7 +36,7 @@ class TestDeleteUserUseCase:
             await BlacklistedArtistModelFactory.create_async(user_id=user_id)
             await BlacklistedTrackModelFactory.create_async(user_id=user_id)
 
-            track_db = await TrackModelFactory.create_async(user_id=user_id)
+            track_db = await TrackModelFactory.create_async(user_id=user_id, played_count=1)
             profile_db = await TasteProfileModelFactory.create_async(user_id=user_id)
             playlist_db = await PlaylistModelFactory.create_async(
                 user_id=user_id,

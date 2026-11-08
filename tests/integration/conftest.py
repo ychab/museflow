@@ -28,6 +28,7 @@ from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -51,6 +52,7 @@ from museflow.infrastructure.adapters.database.repositories.llm import LLMUsageS
 from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
+from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
@@ -253,6 +255,11 @@ def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenR
 @pytest.fixture
 def track_repository(async_session_db: AsyncSession) -> TrackRepository:
     return TrackSQLRepository(async_session_db)
+
+
+@pytest.fixture
+def track_play_repository(async_session_db: AsyncSession) -> TrackPlayRepository:
+    return TrackPlaySQLRepository(async_session_db)
 
 
 @pytest.fixture

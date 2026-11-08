@@ -1,13 +1,18 @@
 import uuid
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 from typing import Any
 from typing import cast
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from polyfactory import Use
 
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track
+from museflow.infrastructure.adapters.database.models import TrackPlay
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
@@ -35,12 +40,41 @@ class TrackModelFactory(BaseModelFactory[Track]):
     )
 
     @classmethod
-    async def create_async(cls, **kwargs: Any) -> Track:
+    async def create_async(
+        cls,
+        *,
+        played_count: int | None = None,
+        played_at_first: datetime | None = None,
+        played_at_last: datetime | None = None,
+        **kwargs: Any,
+    ) -> Track:
+        """Creates the track, then the plays that give it the play data asked for, as the track has no such columns.
+
+        The plays fall on the first and last dates given, the others a second apart from the first (or before the
+        last); no play data asked for means no play.
+        """
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
 
-        return await super().create_async(**kwargs)
+        track = await super().create_async(**kwargs)
+
+        played_at = sorted({moment for moment in (played_at_first, played_at_last) if moment is not None})
+        anchor, step = datetime(2024, 1, 1, tzinfo=UTC), 1
+        if played_at_first is not None:
+            anchor = played_at_first
+        elif played_at_last is not None:
+            anchor, step = played_at_last, -1
+        offset = 1
+        while len(played_at) < (played_count if played_count is not None else len(played_at)):
+            played_at.append(anchor + timedelta(seconds=step * offset))
+            offset += 1
+
+        session = cast(AsyncSession, cls.__async_session__)
+        session.add_all([TrackPlay(track_id=track.id, played_at=moment) for moment in played_at])
+        await session.flush()
+        await session.refresh(track)  # loads the play data computed from the plays
+        return track
 
     @classmethod
     async def create_batch_async(cls, size: int, **kwargs: Any) -> list[Track]:
@@ -48,7 +82,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
 
-        return await super().create_batch_async(size=size, **kwargs)
+        return [await cls.create_async(**kwargs) for _ in range(size)]
 
     @classmethod
     async def get_or_create(cls, user_id: uuid.UUID, fingerprint: str, **kwargs: Any) -> tuple[Track, bool]:

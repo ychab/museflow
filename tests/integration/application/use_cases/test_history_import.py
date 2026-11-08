@@ -81,8 +81,8 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_track_id=0,
             unique_track_ids=4,
             tracks_already_known=0,
-            tracks_played_at_updated=0,
             plays_total=4,
+            plays_created=4,
             tracks_created=4,
             tracks_purged=0,
         )
@@ -116,8 +116,8 @@ class TestImportStreamingHistorySpotifyUseCase:
             items_skipped_no_track_id=0,
             unique_track_ids=4,
             tracks_already_known=0,
-            tracks_played_at_updated=0,
             plays_total=4,
+            plays_created=4,
             tracks_created=4,
             tracks_purged=3,
         )
@@ -126,7 +126,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         count = (await async_session_db.execute(stmt)).scalar()
         assert count == 0
 
-    async def test__known_tracks__played_at_updated(
+    async def test__known_tracks__plays_added(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -160,20 +160,28 @@ class TestImportStreamingHistorySpotifyUseCase:
         )
 
         assert report.tracks_already_known == 4
-        assert report.tracks_played_at_updated == 4
         assert report.tracks_created == 0
+        assert report.plays_created == 4
 
         results = await async_session_db.execute(
-            select(TrackModel).where(
+            select(TrackModel)
+            .where(
                 TrackModel.user_id == user.id,
                 TrackModel.fingerprint.in_(list(sample_fingerprints.values())),
             )
+            .execution_options(populate_existing=True)  # the factory loaded the play data before the import
         )
         tracks_by_provider_id = {t.provider_links[0]["provider_id"]: t for t in results.scalars().all()}
         for track_id, expected in expected_played_at.items():
-            assert tracks_by_provider_id[track_id].played_at_last == expected, f"Wrong played_at_last for {track_id}"
+            track_db = tracks_by_provider_id[track_id]
+            # The earlier play is kept, the imported one added
+            assert (track_db.played_count, track_db.played_at_first, track_db.played_at_last) == (
+                2,
+                old_played_at,
+                expected,
+            ), f"Wrong play data for {track_id}"
 
-    async def test__played_count__not_doubled_on_reimport(
+    async def test__reimport__plays_not_doubled(
         self,
         async_session_db: AsyncSession,
         user: User,
@@ -181,9 +189,10 @@ class TestImportStreamingHistorySpotifyUseCase:
     ) -> None:
         config = ImportStreamingHistoryConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
         reimport_fp = "reimport track|reimport artist"
-        stmt = select(TrackModel).where(
-            TrackModel.user_id == user.id,
-            TrackModel.fingerprint == reimport_fp,
+        stmt = (
+            select(TrackModel)
+            .where(TrackModel.user_id == user.id, TrackModel.fingerprint == reimport_fp)
+            .execution_options(populate_existing=True)
         )
 
         first_report = await use_case.import_history(user=user, config=config)
@@ -192,8 +201,9 @@ class TestImportStreamingHistorySpotifyUseCase:
         assert track_db.played_count == 3
 
         second_report = await use_case.import_history(user=user, config=config)
-        assert second_report.tracks_played_at_updated == 1
+        assert second_report.tracks_already_known == 1
         assert second_report.tracks_created == 0
+        assert second_report.plays_created == 0
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.played_count == 3
 

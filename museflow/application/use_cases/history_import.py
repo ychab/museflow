@@ -12,6 +12,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.utils.text import generate_fingerprint
+from museflow.domain.value_objects.track import TrackPlay
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class ImportStreamingHistoryReport:
     unique_track_ids: int = 0
 
     tracks_already_known: int = 0
-    tracks_played_at_updated: int = 0
     plays_total: int = 0
+    plays_created: int = 0  # plays not saved yet: 0 on a re-import of the same files
 
     tracks_created: int = 0
     tracks_purged: int = 0
@@ -95,49 +96,14 @@ class ImportStreamingHistoryUseCase:
         unique_fingerprints = set(track_metadata.keys())
         logger.info(f"Collected {len(unique_fingerprints)} unique fingerprints.")
 
-        # Filter already-known fingerprints
-        known_fingerprints: frozenset[str] = frozenset()
-        if unique_fingerprints:
-            async with self._uow as uow:
-                known_identifiers = await uow.tracks.get_known_identifiers(
-                    user_id=user.id,
-                    fingerprints=list(unique_fingerprints),
-                )
-            known_fingerprints = known_identifiers.fingerprints
-        unknown_fingerprints = unique_fingerprints - known_fingerprints
-        logger.info(f"Collected {len(unknown_fingerprints)} unknown fingerprints.")
+        # Upsert every track, known or not (its metadata and provider link are refreshed), then save its plays: a play
+        # already saved is skipped, so a re-import of the same files adds none.
+        logger.info(f"Upserting {len(unique_fingerprints)} tracks and their plays from file metadata.")
+        tracks_created = plays_created = 0
+        fingerprints = sorted(unique_fingerprints)
 
-        # Refresh play data for already-known tracks (upsert uses GREATEST/LEAST — safe to re-run)
-        tracks_played_at_updated = 0
-        if known_fingerprints:
-            updated_tracks = [
-                Track(
-                    user_id=user.id,
-                    provider_links=[
-                        ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=track_metadata[fp].provider_id)
-                    ],
-                    name=track_metadata[fp].name,
-                    artists=[track_metadata[fp].artist],
-                    album_name=track_metadata[fp].album_name,
-                    played_at_last=max(track_play_times[fp]),
-                    played_at_first=min(track_play_times[fp]),
-                    played_count=len(track_play_times[fp]),
-                )
-                for fp in known_fingerprints
-            ]
-            async with self._uow as uow:
-                await uow.tracks.bulk_upsert(tracks=updated_tracks, batch_size=config.batch_size)
-
-            tracks_played_at_updated = len(updated_tracks)
-            logger.info(f"Refreshed play data for {tracks_played_at_updated} already-known tracks.")
-
-        # Build Track entities for new tracks and upsert in batches
-        logger.info(f"Upserting {len(unknown_fingerprints)} new tracks from file metadata.")
-        tracks_created = 0
-        unknown_fps = list(unknown_fingerprints)
-
-        for offset in range(0, len(unknown_fps), config.batch_size):
-            chunk_fps = unknown_fps[offset : offset + config.batch_size]
+        for offset in range(0, len(fingerprints), config.batch_size):
+            chunk_fps = fingerprints[offset : offset + config.batch_size]
             chunk_tracks = [
                 Track(
                     user_id=user.id,
@@ -147,20 +113,21 @@ class ImportStreamingHistoryUseCase:
                     name=track_metadata[fp].name,
                     artists=[track_metadata[fp].artist],
                     album_name=track_metadata[fp].album_name,
-                    played_at_last=max(track_play_times[fp]),
-                    played_at_first=min(track_play_times[fp]),
-                    played_count=len(track_play_times[fp]),
                 )
                 for fp in chunk_fps
             ]
-            # One block per chunk: an interrupted import keeps the chunks already saved.
+            # One block per chunk: an interrupted import keeps the chunks already saved, each with its plays.
             async with self._uow as uow:
-                _, created = await uow.tracks.bulk_upsert(
-                    tracks=chunk_tracks,
-                    batch_size=config.batch_size,
+                track_ids, created = await uow.tracks.bulk_upsert(tracks=chunk_tracks, batch_size=config.batch_size)
+                plays_created += await uow.track_plays.bulk_create(
+                    [
+                        TrackPlay(track_id=track_ids[track.fingerprint], played_at=played_at)
+                        for track in chunk_tracks
+                        for played_at in track_play_times[track.fingerprint]
+                    ]
                 )
             tracks_created += created
-            logger.debug(f"... upserted {min(offset + config.batch_size, len(unknown_fps))} / {len(unknown_fps)}...")
+            logger.debug(f"... upserted {min(offset + config.batch_size, len(fingerprints))} / {len(fingerprints)}...")
 
         return ImportStreamingHistoryReport(
             items_read=items_read,
@@ -168,8 +135,8 @@ class ImportStreamingHistoryUseCase:
             items_skipped_short_play=items_skipped_short_play,
             items_skipped_no_track_id=items_skipped_no_track_id,
             unique_track_ids=len(unique_fingerprints),
-            tracks_already_known=len(known_fingerprints),
-            tracks_played_at_updated=tracks_played_at_updated,
+            tracks_already_known=len(unique_fingerprints) - tracks_created,
+            plays_created=plays_created,
             plays_total=sum(len(v) for v in track_play_times.values()),
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,

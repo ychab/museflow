@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import pytest
 
 from museflow.application.ports.repositories.track import TrackRepository
+from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
@@ -22,6 +23,7 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
+from museflow.domain.value_objects.track import TrackPlay
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -430,66 +432,27 @@ class TestTrackSQLRepository:
         expected_artists = ["SCH" for _ in range(len(tracks_db[5:]))]
         assert artists == expected_artists
 
-    async def test__bulk_upsert__played_at_last_keeps_latest(
+    async def test__bulk_upsert__play_data__computed_from_the_plays(
         self,
         user: User,
         track_repository: TrackRepository,
-        async_session_db: AsyncSession,
+        track_play_repository: TrackPlayRepository,
     ) -> None:
-        older = datetime(2023, 1, 1, tzinfo=UTC)
-        newer = datetime(2023, 6, 1, tzinfo=UTC)
+        track = TrackFactory.build(user_id=user.id, played_count=7, played_at_last=datetime(2023, 1, 1, tzinfo=UTC))
+        track_ids, _ = await track_repository.bulk_upsert([track], batch_size=1)
+        first, last = datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 6, 1, tzinfo=UTC)
+        await track_play_repository.bulk_create(
+            [TrackPlay(track_id=track_ids[track.fingerprint], played_at=moment) for moment in (first, last)]
+        )
 
-        track = TrackFactory.build(user_id=user.id, played_at_last=older)
-        await track_repository.bulk_upsert([track], batch_size=1)
+        [track_loaded] = await track_repository.get_list(user_id=user.id)
 
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_last=newer)], batch_size=1)
-
-        stmt = select(TrackModel).where(TrackModel.id == track.id)
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at_last == newer
-
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_last=older)], batch_size=1)
-
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at_last == newer
-
-    async def test__bulk_upsert__played_at_first_keeps_earliest(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-        async_session_db: AsyncSession,
-    ) -> None:
-        earlier = datetime(2020, 1, 1, tzinfo=UTC)
-        later = datetime(2023, 6, 1, tzinfo=UTC)
-
-        track = TrackFactory.build(user_id=user.id, played_at_first=later)
-        await track_repository.bulk_upsert([track], batch_size=1)
-
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_first=earlier)], batch_size=1)
-
-        stmt = select(TrackModel).where(TrackModel.id == track.id)
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at_first == earlier
-
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_at_first=later)], batch_size=1)
-
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_at_first == earlier
-
-    async def test__bulk_upsert__played_count_replaced(
-        self,
-        user: User,
-        track_repository: TrackRepository,
-        async_session_db: AsyncSession,
-    ) -> None:
-        track = TrackFactory.build(user_id=user.id, played_count=3)
-        await track_repository.bulk_upsert([track], batch_size=1)
-
-        await track_repository.bulk_upsert([dataclasses.replace(track, played_count=7)], batch_size=1)
-
-        stmt = select(TrackModel).where(TrackModel.id == track.id)
-        track_db = (await async_session_db.execute(stmt)).scalar_one()
-        assert track_db.played_count == 7
+        # The values the entity carried are never written: only its plays count.
+        assert (track_loaded.played_count, track_loaded.played_at_first, track_loaded.played_at_last) == (
+            2,
+            first,
+            last,
+        )
 
     async def test__bulk_upsert__same_fingerprint_different_provider_id__deduplicates(
         self,
@@ -498,17 +461,14 @@ class TestTrackSQLRepository:
         async_session_db: AsyncSession,
     ) -> None:
         """Importing the same song via two different Spotify IDs (e.g. single vs album) across
-        two separate import runs collapses into one DB row; provider_links are accumulated (both IDs kept)
-        and played_count is replaced with the latest value."""
+        two separate import runs collapses into one DB row; provider_links are accumulated (both IDs kept)."""
         first = TrackFactory.build(
             user_id=user.id,
             provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="single_version")],
-            played_count=1,
         )
         second = dataclasses.replace(
             first,
             provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="album_version")],
-            played_count=5,
         )
 
         _, created_first = await track_repository.bulk_upsert([first], batch_size=10)
@@ -526,7 +486,6 @@ class TestTrackSQLRepository:
         provider_ids = {link["provider_id"] for link in rows[0].provider_links}
         assert "single_version" in provider_ids
         assert "album_version" in provider_ids
-        assert rows[0].played_count == 5
 
     async def test__bulk_upsert__does_not_overwrite_score_skipped(
         self,
