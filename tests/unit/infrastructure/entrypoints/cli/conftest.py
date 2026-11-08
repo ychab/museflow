@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 from unittest import mock
@@ -29,7 +30,12 @@ type TextCleaner = Callable[[str], str]
 
 def spend(meter: LLMUsageMeter) -> None:
     """Records one paid reply, as the OpenRouter client does: the CLI tests mock the logic that would call it."""
-    meter.record("advisor", "google/gemini-2.5-flash", ChatUsage(prompt_tokens=1000, cost=Decimal("0.0123")))
+    meter.record(
+        "advisor",
+        "google/gemini-2.5-flash",
+        ChatUsage(prompt_tokens=1000, cost=Decimal("0.0123")),
+        timedelta(seconds=2),
+    )
 
 
 @pytest.fixture(autouse=True)

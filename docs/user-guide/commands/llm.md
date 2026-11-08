@@ -38,7 +38,7 @@ museflow llm usage --email user@example.com --by run --since 2026-11-01
 ```
 
 **Output.** A `LLM usage` table with the group, the runs (command executions), the calls, the prompt, completion and
-reasoning tokens, and the cost in dollars, then a `Total` row. A run that spans several groups (a build calls several
+reasoning tokens, the cost in dollars and the time spent waiting for the model, then a `Total` row. A run that spans several groups (a build calls several
 steps) counts once in the total. `No LLM usage recorded.` when nothing matches.
 
 !!! note

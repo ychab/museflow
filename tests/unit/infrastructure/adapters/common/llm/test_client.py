@@ -1,7 +1,9 @@
+import dataclasses
 import json
 import logging
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 from unittest import mock
@@ -220,17 +222,17 @@ class TestOpenRouterClient:
         with caplog.at_level(logging.DEBUG):
             await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        assert meter.usages == [
-            LLMUsage(
-                step="test",
-                model="google/gemini-2.5-flash",
-                calls=2,
-                prompt_tokens=200,
-                completion_tokens=80,
-                reasoning_tokens=60,
-                cost=Decimal("0.0030"),
-            )
-        ]
+        [recorded] = meter.usages
+        assert recorded.duration > timedelta(0)
+        assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
+            step="test",
+            model="google/gemini-2.5-flash",
+            calls=2,
+            prompt_tokens=200,
+            completion_tokens=80,
+            reasoning_tokens=60,
+            cost=Decimal("0.0030"),
+        )
         costs = [record.__dict__["cost"] for record in caplog.records if "cost" in record.__dict__]
         assert costs == [Decimal("0.0015"), Decimal("0.0015")]
 
@@ -246,7 +248,10 @@ class TestOpenRouterClient:
 
         await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        assert meter.usages == [LLMUsage(step="test", model="google/gemini-2.5-flash", calls=1)]
+        [recorded] = meter.usages
+        assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
+            step="test", model="google/gemini-2.5-flash", calls=1
+        )
 
     async def test__complete__rejected__records_nothing(
         self,

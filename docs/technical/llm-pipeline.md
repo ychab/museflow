@@ -173,18 +173,22 @@ OpenRouter returns a `usage` object with every non-streaming completion, with no
 OpenRouter credits (1 credit is 1 USD).
 
 `OpenRouterClient.complete` reads it from each reply and adds it to an `LLMUsageMeter`
-([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/usage.py)). The meter
-sums the calls, tokens and cost per step and model:
+([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/usage.py)), with the
+time the reply took. The meter sums the calls, tokens, cost and time per step and model:
 
 - **Step**: `advisor`, `enricher`, or `profiler segment`, `profiler merge`, `profiler reflect`, so a build shows what
   each phase costs.
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
 - **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
   since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
+- **Time**: from sending the request to receiving the reply, transient retries and rate-limit waits included: the time
+  the step actually waited, to weigh a cheaper model against a slower one.
 
 The CLI creates the meter and passes it down to the client through the dependency factories. `taste build`,
-`playlist discover` and `enrich tracks` print it as a last table: one row per step and model, then the total. They
-print it whatever the outcome, including after a paused build, an aborted enrichment or a failed discovery, because
+`playlist discover` and `enrich tracks` print it as a last table: one row per step and model, then the total, followed
+by the elapsed time of the whole command. Being created when the command starts, the meter times it too: the LLM
+calls plus the database work and the throttling sleeps. That wall-clock time is printed only, never saved: a resumed
+build spans two runs, and the LLM time is the one worth comparing. They print it whatever the outcome, including after a paused build, an aborted enrichment or a failed discovery, because
 those calls were paid too. The table is skipped when no call was made.
 
 The same totals are saved to `museflow_llm_usage`, one row per step and model, under a `run_id` shared by the rows of

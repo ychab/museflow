@@ -2,8 +2,10 @@ import asyncio
 import difflib
 import json
 import logging
+import time
 from collections import defaultdict
 from collections.abc import Mapping
+from datetime import timedelta
 from typing import Any
 from typing import cast
 
@@ -273,6 +275,7 @@ class OpenRouterClient(HttpClientMixin):
             reasoning=ReasoningConfig(effort=llm.REASONING_EFFORT) if llm.REASONING_EFFORT else None,
             provider=ProviderPreferences(zdr=self._zdr),
         )
+        started_at = time.monotonic()
         try:
             response_data = await self.make_api_call(
                 method="POST",
@@ -307,6 +310,7 @@ class OpenRouterClient(HttpClientMixin):
                 ),
             ) from e
 
+        duration = timedelta(seconds=time.monotonic() - started_at)
         envelope = ChatCompletionResponse.model_validate(response_data)
         model = envelope.model or llm.MODEL
         usage = envelope.usage or ChatUsage()
@@ -315,6 +319,6 @@ class OpenRouterClient(HttpClientMixin):
             extra={"adapter": adapter, "model": model, "cost": usage.cost},
         )
         # Recorded before parsing: an unusable reply is billed too
-        self._meter.record(adapter, model, usage)
+        self._meter.record(adapter, model, usage, duration)
 
         return parse_completion(envelope, response_model, adapter)

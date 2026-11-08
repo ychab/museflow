@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from museflow.domain.value_objects.llm import LLMUsage
@@ -23,10 +24,11 @@ class TestLLMUsageMeter:
             }
         )
 
-        meter.record("profiler segment", "google/gemini-2.5-flash", usage)
-        meter.record("profiler segment", "google/gemini-2.5-flash", usage)
-        meter.record("profiler segment", "openai/gpt-5-mini", ChatUsage(prompt_tokens=10, completion_tokens=5))
-        meter.record("profiler merge", "google/gemini-2.5-flash", ChatUsage(cost=Decimal("0.002")))
+        second = timedelta(seconds=1)
+        meter.record("profiler segment", "google/gemini-2.5-flash", usage, 2 * second)
+        meter.record("profiler segment", "google/gemini-2.5-flash", usage, 3 * second)
+        meter.record("profiler segment", "openai/gpt-5-mini", ChatUsage(prompt_tokens=10, completion_tokens=5), second)
+        meter.record("profiler merge", "google/gemini-2.5-flash", ChatUsage(cost=Decimal("0.002")), second)
 
         assert meter.usages == [
             LLMUsage(
@@ -37,6 +39,7 @@ class TestLLMUsageMeter:
                 completion_tokens=400,
                 reasoning_tokens=300,
                 cost=Decimal("0.02"),
+                duration=5 * second,
             ),
             LLMUsage(
                 step="profiler segment",
@@ -44,7 +47,14 @@ class TestLLMUsageMeter:
                 calls=1,
                 prompt_tokens=10,
                 completion_tokens=5,
+                duration=second,
             ),
-            LLMUsage(step="profiler merge", model="google/gemini-2.5-flash", calls=1, cost=Decimal("0.002")),
+            LLMUsage(
+                step="profiler merge",
+                model="google/gemini-2.5-flash",
+                calls=1,
+                cost=Decimal("0.002"),
+                duration=second,
+            ),
         ]
         assert meter.total_cost == Decimal("0.022")
