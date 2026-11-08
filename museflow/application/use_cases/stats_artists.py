@@ -10,16 +10,6 @@ from museflow.domain.enums import SourceFilter
 from museflow.domain.value_objects.stats import ArtistStats
 
 
-def _is_in_score_range(score: int | None, score_min: int | None, score_max: int | None) -> bool:
-    if score is None:
-        return False
-    if score_min is not None and score < score_min:
-        return False
-    if score_max is not None and score > score_max:
-        return False
-    return True
-
-
 async def get_top_artists(
     user_id: uuid.UUID,
     source: SourceFilter,
@@ -89,3 +79,13 @@ async def get_top_artists(
         rows.sort(key=lambda r: (-r.overall_score, r.artist))
 
     return rows[:limit]
+
+
+def _is_in_score_range(score: int | None, score_min: int | None, score_max: int | None) -> bool:
+    if score is None:
+        return False
+    if score_min is not None and score < score_min:
+        return False
+    if score_max is not None and score > score_max:
+        return False
+    return True

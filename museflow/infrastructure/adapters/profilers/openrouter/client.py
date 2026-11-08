@@ -41,44 +41,6 @@ _ERA_LABEL_RULE = (
 )
 
 
-def _format_tracks(tracks: list[PeriodTrack]) -> str:
-    lines = []
-
-    for period_track in tracks:
-        track = period_track.track
-        artists = " & ".join(track.artists)
-        score_part = f" | score:{track.score}" if track.score is not None else ""
-        lines.append(f"plays:{period_track.plays}{score_part} | {artists} - {track.name}")
-
-    return "\n".join(lines)
-
-
-def _profile_json(profile: TasteProfileData) -> str:
-    """Dumps a profile in the shape the response schema asks for, so the model reads what it must write back."""
-    return json.dumps(
-        {
-            **profile,
-            "core_identity": split_weights(profile["core_identity"]),
-            "current_vibe": split_weights(profile["current_vibe"]),
-        },
-        ensure_ascii=False,
-    )
-
-
-def _era_json(era: TasteEra) -> str:
-    return json.dumps(era, ensure_ascii=False)
-
-
-def _step_metadata(llm: LLMSettings) -> dict[str, Any]:
-    return {
-        "model": llm.MODEL,
-        "fallback_models": llm.FALLBACK_MODELS,
-        "reasoning_effort": llm.REASONING_EFFORT,
-        "max_tokens": llm.MAX_TOKENS,
-        "temperature": llm.TEMPERATURE,
-    }
-
-
 class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
     """Adapter that builds a taste profile through OpenRouter, each step (segment, merge, reflect) with its own model."""
 
@@ -250,3 +212,41 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         )
 
         return await self._complete_profile(prompt, self._reflect_llm, "reflect")
+
+
+def _format_tracks(tracks: list[PeriodTrack]) -> str:
+    lines = []
+
+    for period_track in tracks:
+        track = period_track.track
+        artists = " & ".join(track.artists)
+        score_part = f" | score:{track.score}" if track.score is not None else ""
+        lines.append(f"plays:{period_track.plays}{score_part} | {artists} - {track.name}")
+
+    return "\n".join(lines)
+
+
+def _profile_json(profile: TasteProfileData) -> str:
+    """Dumps a profile in the shape the response schema asks for, so the model reads what it must write back."""
+    return json.dumps(
+        {
+            **profile,
+            "core_identity": split_weights(profile["core_identity"]),
+            "current_vibe": split_weights(profile["current_vibe"]),
+        },
+        ensure_ascii=False,
+    )
+
+
+def _era_json(era: TasteEra) -> str:
+    return json.dumps(era, ensure_ascii=False)
+
+
+def _step_metadata(llm: LLMSettings) -> dict[str, Any]:
+    return {
+        "model": llm.MODEL,
+        "fallback_models": llm.FALLBACK_MODELS,
+        "reasoning_effort": llm.REASONING_EFFORT,
+        "max_tokens": llm.MAX_TOKENS,
+        "temperature": llm.TEMPERATURE,
+    }

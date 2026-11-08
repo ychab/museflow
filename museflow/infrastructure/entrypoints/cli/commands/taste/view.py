@@ -23,17 +23,6 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
-def _escape_html(value: Any) -> Any:
-    # The profile holds LLM-written and imported text: escape it before it lands in a page opened in the browser
-    if isinstance(value, str):
-        return escape(value)
-    if isinstance(value, dict):
-        return {escape(str(k)): _escape_html(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_escape_html(item) for item in value]
-    return value
-
-
 class ViewFormat(StrEnum):
     json = "json"
     python = "python"
@@ -216,3 +205,14 @@ def generate_profile_html_file(output: str) -> Path:
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as temp_file:
         temp_file.write(output.encode("utf-8"))
         return Path(temp_file.name)
+
+
+def _escape_html(value: Any) -> Any:
+    # The profile holds LLM-written and imported text: escape it before it lands in a page opened in the browser
+    if isinstance(value, str):
+        return escape(value)
+    if isinstance(value, dict):
+        return {escape(str(k)): _escape_html(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_escape_html(item) for item in value]
+    return value

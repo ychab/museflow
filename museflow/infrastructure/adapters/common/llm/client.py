@@ -71,40 +71,6 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-def _required_parameters(llm: LLMSettings) -> list[str]:
-    """Parameters the request carries for this step, which `require_parameters` makes mandatory for the provider."""
-    optional = {
-        "reasoning": llm.REASONING_EFFORT is not None,
-        "temperature": llm.TEMPERATURE is not None,
-        "max_tokens": llm.MAX_TOKENS is not None,
-    }
-    return ["structured_outputs", *(name for name, sent in optional.items() if sent)]
-
-
-def _parse_error(response: httpx.Response) -> ChatCompletionError | None:
-    try:
-        return ErrorResponse.model_validate_json(response.content).error
-    except ValidationError:
-        return None
-
-
-def _error_message(response: httpx.Response, error: ChatCompletionError | None) -> str:
-    if error is None:
-        message = response.text
-    else:
-        # OpenRouter's own message is often generic ("Provider returned error"): the cause is in the provider's error
-        message = error.message
-        metadata = error.metadata
-        if metadata is not None and metadata.raw is not None:
-            raw = metadata.raw if isinstance(metadata.raw, str) else json.dumps(metadata.raw)
-            message += f" ({metadata.provider_name or 'provider'}: {raw[:_RAW_ERROR_MAX_LENGTH]})"
-
-    if response.status_code == codes.UNAUTHORIZED:
-        # OpenRouter answers "Missing Authentication header" to an invalid key too
-        message = f"{message.rstrip('.')}. Check OPENROUTER_API_KEY."
-    return message
-
-
 class OpenRouterClient(HttpClientMixin):
     """Structured chat completions through the OpenRouter gateway, shared by the LLM adapters."""
 
@@ -322,3 +288,37 @@ class OpenRouterClient(HttpClientMixin):
         self._meter.record(adapter, model, usage, duration)
 
         return parse_completion(envelope, response_model, adapter)
+
+
+def _required_parameters(llm: LLMSettings) -> list[str]:
+    """Parameters the request carries for this step, which `require_parameters` makes mandatory for the provider."""
+    optional = {
+        "reasoning": llm.REASONING_EFFORT is not None,
+        "temperature": llm.TEMPERATURE is not None,
+        "max_tokens": llm.MAX_TOKENS is not None,
+    }
+    return ["structured_outputs", *(name for name, sent in optional.items() if sent)]
+
+
+def _parse_error(response: httpx.Response) -> ChatCompletionError | None:
+    try:
+        return ErrorResponse.model_validate_json(response.content).error
+    except ValidationError:
+        return None
+
+
+def _error_message(response: httpx.Response, error: ChatCompletionError | None) -> str:
+    if error is None:
+        message = response.text
+    else:
+        # OpenRouter's own message is often generic ("Provider returned error"): the cause is in the provider's error
+        message = error.message
+        metadata = error.metadata
+        if metadata is not None and metadata.raw is not None:
+            raw = metadata.raw if isinstance(metadata.raw, str) else json.dumps(metadata.raw)
+            message += f" ({metadata.provider_name or 'provider'}: {raw[:_RAW_ERROR_MAX_LENGTH]})"
+
+    if response.status_code == codes.UNAUTHORIZED:
+        # OpenRouter answers "Missing Authentication header" to an invalid key too
+        message = f"{message.rstrip('.')}. Check OPENROUTER_API_KEY."
+    return message

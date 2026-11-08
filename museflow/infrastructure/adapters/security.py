@@ -18,12 +18,6 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.infrastructure.config.settings.app import app_settings
 
 
-@cache
-def _get_dummy_hash() -> str:
-    # Hashed once per process: the hasher is created per request, and a request must only pay for the verification.
-    return Argon2Hasher().hash(secrets.token_urlsafe())
-
-
 class Argon2PasswordHasher(PasswordHasherPort):
     """An implementation of the `PasswordHasherPort` using the Argon2 algorithm.
 
@@ -82,3 +76,9 @@ class SystemStateTokenGenerator(StateTokenGeneratorPort):
     def generate(self, length: int = 30) -> str:
         rand = random.SystemRandom()
         return "".join(rand.choice(self.UNICODE_ASCII_CHARACTER_SET) for _ in range(length))
+
+
+@cache
+def _get_dummy_hash() -> str:
+    # Hashed once per process: the hasher is created per request, and a request must only pay for the verification.
+    return Argon2Hasher().hash(secrets.token_urlsafe())
