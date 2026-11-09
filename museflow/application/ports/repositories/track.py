@@ -93,8 +93,12 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_top_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
-        """Returns the primary artists the user owns the most tracks of, with their track count, most first."""
+    async def get_covered_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
+        """Returns the primary artists the user owns the most tracks of, with their track count, most first.
+
+        A coverage, not a preference: every track counts, whatever its plays or score, as the known-tracks filter
+        drops any track of the library.
+        """
         ...
 
     @abstractmethod

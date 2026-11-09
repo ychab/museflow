@@ -107,7 +107,7 @@ class TestDiscoverTasteUseCase:
         ) as spy:
             yield spy
 
-    async def test__top_artists(
+    async def test__covered_artists(
         self,
         use_case: DiscoverTasteUseCase,
         user: User,
@@ -126,8 +126,8 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, top_artists_limit=3, dry_run=True),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, covered_artists_limit=3, dry_run=True),
         )
 
-        top_artists = spy_get_discovery_strategy.call_args_list[0].kwargs["top_artists"]
-        assert list(top_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]
+        covered_artists = spy_get_discovery_strategy.call_args_list[0].kwargs["covered_artists"]
+        assert list(covered_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]

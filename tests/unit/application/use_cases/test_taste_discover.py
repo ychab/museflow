@@ -41,7 +41,7 @@ class TestDiscoverTasteUseCase:
             return {t.fingerprint: t.id for t in tracks}, len(tracks)
 
         mock_track_repository.get_list.return_value = []
-        mock_track_repository.get_top_artists.return_value = {}
+        mock_track_repository.get_covered_artists.return_value = {}
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture
@@ -652,7 +652,7 @@ class TestDiscoverTasteUseCase:
         assert advisor_kwargs["liked_tracks"] == liked_tracks
         assert advisor_kwargs["disliked_tracks"] == disliked_tracks
 
-    async def test__top_artists__limit_zero__not_read(
+    async def test__covered_artists__limit_zero__not_read(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -671,13 +671,13 @@ class TestDiscoverTasteUseCase:
             user=user,
             config=DiscoverTasteConfigInput(
                 playlist_limit=1,
-                top_artists_limit=0,
+                covered_artists_limit=0,
                 dry_run=True,
             ),
         )
 
-        mock_track_repository.get_top_artists.assert_not_called()
-        assert mock_advisor.get_discovery_strategy.call_args.kwargs["top_artists"] is None
+        mock_track_repository.get_covered_artists.assert_not_called()
+        assert mock_advisor.get_discovery_strategy.call_args.kwargs["covered_artists"] is None
 
     async def test__blacklist_empty__advisor_receives_none(
         self,

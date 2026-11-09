@@ -172,7 +172,7 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnownIdentifiers(fingerprints=known_fingerprints)
 
-    async def get_top_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
+    async def get_covered_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
         artist = TrackModel.artists[0].as_string()
         tracks_count = func.count()
         stmt = (
