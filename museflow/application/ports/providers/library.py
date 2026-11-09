@@ -36,6 +36,9 @@ class ProviderLibraryPort(ABC):
 
         Returns:
             A list of `Track` entities.
+
+        Raises:
+            ProviderSearchQueryInvalidError: If the provider rejects the query as malformed.
         """
         ...
 

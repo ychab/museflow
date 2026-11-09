@@ -54,6 +54,9 @@ class ProviderNoActiveDeviceError(Exception): ...
 class ProviderPremiumRequiredError(Exception): ...
 
 
+class ProviderSearchQueryInvalidError(Exception): ...
+
+
 # --- Advisor exceptions ---
 
 

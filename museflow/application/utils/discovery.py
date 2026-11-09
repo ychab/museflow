@@ -7,6 +7,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.types import ScoreAdvisor
 from museflow.domain.types import ScoreReconciler
@@ -32,12 +33,17 @@ async def reconcile_tracks(
     tracks_reconciled: list[TrackScored] = []
 
     for track_suggested in tracks_suggested:
-        candidates = await provider_library.search_tracks(
-            track=track_suggested.name,
-            artists=track_suggested.artists,
-            page_size=limit,
-            log_enabled=False,
-        )
+        try:
+            candidates = await provider_library.search_tracks(
+                track=track_suggested.name,
+                artists=track_suggested.artists,
+                page_size=limit,
+                log_enabled=False,
+            )
+        except ProviderSearchQueryInvalidError:
+            # One malformed suggestion must not end the run: the others, and the advisor calls paid, are kept.
+            logger.warning(f"Track skipped, its search query was rejected: '{track_suggested}'")
+            continue
 
         result = reconciler.reconcile(
             track_suggested=track_suggested,

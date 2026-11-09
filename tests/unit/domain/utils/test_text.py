@@ -1,6 +1,7 @@
 import pytest
 
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import strip_control_chars
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.utils.text import validate_locales
 
@@ -15,6 +16,20 @@ class TestUnidecodeLower:
     )
     def test__nominal(self, text: str, expected: str) -> None:
         assert unidecode_lower_text(text) == expected
+
+
+class TestStripControlChars:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            pytest.param("Café", "Café", id="untouched"),
+            pytest.param("Caf\x00\x19", "Caf", id="trailing"),
+            pytest.param("The\x1bFictional\tBand", "The Fictional Band", id="inner"),
+            pytest.param("\x00\x7f\x85", "", id="only-control"),
+        ],
+    )
+    def test__nominal(self, text: str, expected: str) -> None:
+        assert strip_control_chars(text) == expected
 
 
 class TestNormalizeText:
