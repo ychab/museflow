@@ -4,6 +4,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderPageValidationError
+from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -66,6 +67,21 @@ class TestSpotifyLibrary:
 
         with pytest.raises(ProviderPageValidationError):
             await spotify_library.search_tracks(track="Mi Pueblo")
+
+    async def test__search__query_invalid(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/search",
+            status=400,
+            json_body={"error": {"status": 400, "message": "Bad request."}},
+        )
+
+        with pytest.raises(ProviderSearchQueryInvalidError):
+            await spotify_library.search_tracks(track="Caf\x00\x19")
 
     async def test__play_track__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
         await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")

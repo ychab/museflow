@@ -18,6 +18,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderNoActiveDeviceError
 from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.exceptions import ProviderPremiumRequiredError
+from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyApiError
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
@@ -103,20 +104,27 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             is_underground=is_underground,
         )
 
-        return await self._fetch_pages(
-            endpoint="/search",
-            page_model=SpotifyPage[SpotifyTrack],
-            page_processor=self._extract_search_tracks,
-            page_size=page_size,
-            max_pages=max_pages,
-            log_enabled=log_enabled,
-            log_prefix=f"[Search track {track}]",
-            params={
-                "q": query_builder.get_query(),
-                "type": "track",
-            },
-            response_key="tracks",
-        )
+        try:
+            tracks = await self._fetch_pages(
+                endpoint="/search",
+                page_model=SpotifyPage[SpotifyTrack],
+                page_processor=self._extract_search_tracks,
+                page_size=page_size,
+                max_pages=max_pages,
+                log_enabled=log_enabled,
+                log_prefix=f"[Search track {track}]",
+                params={
+                    "q": query_builder.get_query(),
+                    "type": "track",
+                },
+                response_key="tracks",
+                ignored_status_codes=frozenset({400}),
+            )
+        except SpotifyApiError as e:
+            # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
+            raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for track {track!r}") from e
+
+        return tracks
 
     async def create_playlist(
         self,
@@ -193,6 +201,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         log_enabled: bool = True,
         log_prefix: str = "",
         response_key: str | None = None,
+        ignored_status_codes: frozenset[int] | None = None,
     ) -> list[Track]:
         """Generic method to fetch paginated resources from Spotify."""
         items: list[Track] = []
@@ -213,6 +222,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                     "limit": page_size,
                     **(params or {}),
                 },
+                ignored_status_codes=ignored_status_codes,
             )
 
             if response_key and response_key in data:

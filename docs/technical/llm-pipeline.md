@@ -118,7 +118,7 @@ Design decisions:
 
 ## Reconciler: from suggestion to catalogue track
 
-An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates) and asks the `Reconciler` to pick the best candidate:
+An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates) and asks the `Reconciler` to pick the best candidate. The advisor mapper first strips control characters from the names (an LLM may emit them in place of an accented letter), and a search the provider still rejects as malformed skips that suggestion with a warning instead of ending the run:
 
 1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes).
 2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz).

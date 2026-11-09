@@ -1,4 +1,5 @@
 import itertools
+import logging
 import uuid
 from collections.abc import Callable
 from collections.abc import Iterator
@@ -17,6 +18,7 @@ from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderRateLimitExceededError
+from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -102,6 +104,38 @@ class TestDiscoverTasteUseCase:
         assert result.strategy is discovery_taste_strategy
         assert len(result.tracks) == 1
         assert len(result.reports) == 1
+
+    async def test__search_query_invalid__suggestion_skipped(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        mock_reconciler: mock.Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        malformed, valid = TrackSuggestedFactory.batch(2)
+        mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
+        mock_advisor.get_discovery_strategy.return_value = DiscoveryTasteStrategyFactory.build(
+            recommended_tracks=[malformed, valid],
+        )
+
+        reconciled_track = TrackFactory.build()
+        mock_provider_library.search_tracks.side_effect = [ProviderSearchQueryInvalidError(), [reconciled_track]]
+        mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
+        mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+
+        with caplog.at_level(logging.WARNING):
+            result = await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
+            )
+
+        assert result.tracks == [reconciled_track]
+        mock_reconciler.reconcile.assert_called_once_with(track_suggested=valid, candidates=[reconciled_track])
+        assert f"Track skipped, its search query was rejected: '{malformed}'" in caplog.text
 
     async def test__profile_loaded_by_name(
         self,

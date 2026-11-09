@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 from unidecode import unidecode
 
@@ -41,6 +42,12 @@ def normalize_text(text: str) -> str:
     # Remove purely non-alphanumeric noise and extra whitespace
     text = re.sub(r"[^\w\s]", "", text)
 
+    return " ".join(text.split())
+
+
+def strip_control_chars(text: str) -> str:
+    """Removes the control characters (NUL, ESC, ...) an LLM may emit in place of a letter, then collapses whitespace."""
+    text = "".join(" " if unicodedata.category(char) == "Cc" else char for char in text)
     return " ".join(text.split())
 
 
