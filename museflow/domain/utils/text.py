@@ -5,6 +5,16 @@ from unidecode import unidecode
 
 from museflow.domain.types import LocaleCode
 
+# Applied to both sides of a comparison, in English and French, the languages most titles are in.
+_NUMBER_WORDS = {
+    word: str(number)
+    for words in (
+        ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"),
+        ("zero", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix"),
+    )
+    for number, word in enumerate(words)
+} | {"une": "1"}
+
 
 def validate_locale(v: object) -> LocaleCode | None:
     if not isinstance(v, str):
@@ -43,6 +53,17 @@ def normalize_text(text: str) -> str:
     text = re.sub(r"[^\w\s]", "", text)
 
     return " ".join(text.split())
+
+
+def strip_brackets(text: str) -> str:
+    """Removes the bracketed parts of a title, e.g. "Night Ride (Interlude)"; keeps the text if nothing else is left."""
+    stripped = " ".join(re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", text).split())
+    return stripped or text
+
+
+def normalize_numbers(text: str) -> str:
+    """Writes the small numbers of a normalized text as digits, so that "one night" and "1 night" compare equal."""
+    return " ".join(_NUMBER_WORDS.get(word, word) for word in text.split())
 
 
 def strip_control_chars(text: str) -> str:

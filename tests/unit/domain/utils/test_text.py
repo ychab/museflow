@@ -1,6 +1,8 @@
 import pytest
 
+from museflow.domain.utils.text import normalize_numbers
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import strip_brackets
 from museflow.domain.utils.text import strip_control_chars
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.utils.text import validate_locales
@@ -30,6 +32,34 @@ class TestStripControlChars:
     )
     def test__nominal(self, text: str, expected: str) -> None:
         assert strip_control_chars(text) == expected
+
+
+class TestStripBrackets:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            pytest.param("Neon Harbor", "Neon Harbor", id="untouched"),
+            pytest.param("Neon Harbor (Nightfall)", "Neon Harbor", id="parenthesis"),
+            pytest.param("Neon [Slowed] Harbor", "Neon Harbor", id="inner-square"),
+            pytest.param("(Intro)", "(Intro)", id="only-brackets"),
+        ],
+    )
+    def test__nominal(self, text: str, expected: str) -> None:
+        assert strip_brackets(text) == expected
+
+
+class TestNormalizeNumbers:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            pytest.param("one night", "1 night", id="english"),
+            pytest.param("une nuit sur deux", "1 nuit sur 2", id="french"),
+            pytest.param("2 moons", "2 moons", id="digits-untouched"),
+            pytest.param("someone", "someone", id="inside-word-untouched"),
+        ],
+    )
+    def test__nominal(self, text: str, expected: str) -> None:
+        assert normalize_numbers(text) == expected
 
 
 class TestNormalizeText:
