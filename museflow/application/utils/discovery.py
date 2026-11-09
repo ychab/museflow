@@ -38,6 +38,8 @@ async def reconcile_tracks(
                 track=track_suggested.name,
                 artists=track_suggested.artists,
                 page_size=limit,
+                # The best candidates come first: the next pages only slow the run down (a loose query may yield 300).
+                max_pages=1,
                 log_enabled=False,
             )
         except ProviderSearchQueryInvalidError:

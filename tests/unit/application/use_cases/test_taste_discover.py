@@ -104,6 +104,14 @@ class TestDiscoverTasteUseCase:
         assert result.strategy is discovery_taste_strategy
         assert len(result.tracks) == 1
         assert len(result.reports) == 1
+        suggested = discovery_taste_strategy.recommended_tracks[0]
+        mock_provider_library.search_tracks.assert_any_await(
+            track=suggested.name,
+            artists=suggested.artists,
+            page_size=10,
+            max_pages=1,
+            log_enabled=False,
+        )
 
     async def test__search_query_invalid__suggestion_skipped(
         self,
