@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from museflow.domain.entities.track import Track
@@ -22,9 +24,15 @@ class TestSpotifyLibrary:
             for track_id in ["7J5pB49l9ycy9ImB6D9hu0", "1Fp4njyRHJYyMTKP899c0q", "7eOSOc9z6gcsGBznsg5mk3"]
         ]
 
-    async def test__search__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
-        tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5)
+    async def test__search__nominal(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        with caplog.at_level(logging.DEBUG):
+            tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5)
         assert len(tracks) == 8
+        assert "Search query 'track:\"Mi Pueblo\"' returned 8 track(s)" in caplog.messages
 
         track_first = tracks[0]
         assert track_first.id is not None

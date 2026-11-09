@@ -103,6 +103,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             is_new=is_new,
             is_underground=is_underground,
         )
+        query = query_builder.get_query()
 
         try:
             tracks = await self._fetch_pages(
@@ -114,7 +115,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 log_enabled=log_enabled,
                 log_prefix=f"[Search track {track}]",
                 params={
-                    "q": query_builder.get_query(),
+                    "q": query,
                     "type": "track",
                 },
                 response_key="tracks",
@@ -124,6 +125,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
             raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for track {track!r}") from e
 
+        logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
         return tracks
 
     async def create_playlist(

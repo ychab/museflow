@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from museflow.domain.services.reconciler import Reconciler
@@ -8,19 +10,37 @@ from tests.unit.factories.entities.track import TrackSuggestedFactory
 
 @pytest.mark.parametrize("reconciler", [{"match_threshold": 80.0}], indirect=True)
 class TestReconciler:
-    def test__reconcile__no_candidate(self, reconciler: Reconciler) -> None:
-        result = reconciler.reconcile(track_suggested=TrackSuggestedFactory.build(), candidates=[])
-        assert result is None
+    def test__reconcile__no_candidate(self, reconciler: Reconciler, caplog: pytest.LogCaptureFixture) -> None:
+        track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
 
-    def test__reconcile__no_matching_candidates(self, reconciler: Reconciler) -> None:
+        with caplog.at_level(logging.DEBUG):
+            result = reconciler.reconcile(track_suggested=track_suggested, candidates=[])
+
+        assert result is None
+        assert caplog.messages == [
+            "Reconciliation failed for 'Queen - Bohemian Rhapsody'. Best score: -1.0. No candidate",
+        ]
+
+    def test__reconcile__no_matching_candidates(
+        self,
+        reconciler: Reconciler,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
         track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
         candidates = [
-            TrackFactory.build(name="Under Pressure", artists=["Queen", "David Bowie"]),
+            TrackFactory.build(name="Under Pressure", artists=["David Bowie"]),
+            TrackFactory.build(name="Bohemian Rhapsody (Nightmare)", artists=["Queen"]),
             TrackFactory.build(name="Somebody To Love", artists=["Queen"]),
         ]
 
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=candidates)
+        with caplog.at_level(logging.DEBUG):
+            result = reconciler.reconcile(track_suggested=track_suggested, candidates=candidates)
+
         assert result is None
+        assert caplog.messages == [
+            "Reconciliation failed for 'Queen - Bohemian Rhapsody'. Best score: 0.0. "
+            "Closest candidate: 'Queen - Bohemian Rhapsody (Nightmare)' (track: 77.3, artist: 100.0)",
+        ]
 
     def test__reconcile__exact_match(self, reconciler: Reconciler) -> None:
         track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
