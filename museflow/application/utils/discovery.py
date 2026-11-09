@@ -94,3 +94,8 @@ def apply_artist_cap(tracks: list[Track], max_tracks_per_artist: int) -> list[Tr
             artist_counts[primary_artist] += 1
 
     return tracks_filtered
+
+
+def get_primary_artists(tracks: list[Track]) -> list[str]:
+    """Returns the tracks' primary artists, each once, in the order of their first track."""
+    return list(dict.fromkeys(track.primary_artist for track in tracks))

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from museflow.domain.enums import DiscoveryFocus
+from museflow.domain.enums import DiscoveryPlayedMode
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -22,6 +23,8 @@ class DiscoverTasteConfigInput:
         liked_tracks_limit: Maximum number of liked tracks to send (top-scored first).
         disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
         disliked_tracks_limit: Maximum number of disliked tracks to send (lowest-scored first).
+        played_mode: Whether the most played unrated tracks are sent as tracks or as their primary artists.
+        played_tracks_limit: Maximum number of most played unrated tracks to read (0 sends none).
         dry_run: If True, skip playlist creation.
     """
 
@@ -43,6 +46,9 @@ class DiscoverTasteConfigInput:
 
     disliked_tracks_score_threshold: int = 2
     disliked_tracks_limit: int = 50
+
+    played_mode: DiscoveryPlayedMode = DiscoveryPlayedMode.TRACKS
+    played_tracks_limit: int = 100
 
     dry_run: bool = False
 

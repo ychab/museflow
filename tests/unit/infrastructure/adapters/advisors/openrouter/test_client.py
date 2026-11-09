@@ -213,6 +213,46 @@ class TestOpenRouterAdvisorAdapter:
         assert "Dig deeper" in known_list
         assert "- Known Artist: Known Song" in known_list
 
+    async def test__get_discovery_strategy__with_played_tracks_builds_played_block(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        taste_profile: TasteProfile,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+
+        await openrouter_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            advisor_limit=5,
+            played_tracks=[TrackFactory.build(name="Daily Loop", artists=["The Fictional Band"])],
+        )
+
+        system_message = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
+        assert "### ALREADY PLAYED BY THE USER (DO NOT SUGGEST THESE)\n" in system_message
+        assert "- The Fictional Band: Daily Loop" in system_message
+        assert "### ARTISTS ALREADY PLAYED BY THE USER" not in system_message
+
+    async def test__get_discovery_strategy__with_played_artists_builds_played_artists_block(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        taste_profile: TasteProfile,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+
+        await openrouter_advisor.get_discovery_strategy(
+            profile=taste_profile,
+            advisor_limit=5,
+            played_artists=["The Fictional Band"],
+        )
+
+        system_message = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
+        assert "### ARTISTS ALREADY PLAYED BY THE USER\n" in system_message
+        assert "- The Fictional Band\n" in system_message
+        assert "### ALREADY PLAYED BY THE USER (DO NOT SUGGEST THESE)" not in system_message
+
     @pytest.mark.parametrize(
         ("traits", "expected"),
         [

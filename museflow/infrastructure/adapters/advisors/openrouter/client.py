@@ -42,6 +42,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
         disliked_tracks: list[Track] | None = None,
+        played_tracks: list[Track] | None = None,
+        played_artists: list[str] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -90,6 +92,22 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "### ALREADY KNOWN BY THE USER (DO NOT SUGGEST THESE)\n"
                 "These suggestions of this session were already in the user's library: the picks were too obvious. "
                 "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
+                f"{formatted}"
+            )
+        if played_tracks:
+            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in played_tracks)
+            exclusion_parts.append(
+                "### ALREADY PLAYED BY THE USER (DO NOT SUGGEST THESE)\n"
+                "The user plays these tracks the most without rating them: they are already in the library. "
+                "Their artists stay open, through tracks not listed here:\n"
+                f"{formatted}"
+            )
+        if played_artists:
+            formatted = "\n".join(f"- {a}" for a in played_artists)
+            exclusion_parts.append(
+                "### ARTISTS ALREADY PLAYED BY THE USER\n"
+                "The user plays these artists the most without rating their tracks: their well-known tracks are "
+                "already in the library. Prefer artists outside this list:\n"
                 f"{formatted}"
             )
         if blacklisted_artists:
