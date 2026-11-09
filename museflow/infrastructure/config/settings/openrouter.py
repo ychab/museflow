@@ -44,7 +44,7 @@ class OpenRouterSettings(BaseSettings):
         default=HttpUrl("https://openrouter.ai/api/v1/")
     )
 
-    ADVISOR: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash")
+    ADVISOR: LLMSettings = LLMSettings(MODEL="anthropic/claude-sonnet-5.5")
 
     ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
 
