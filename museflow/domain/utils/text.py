@@ -55,10 +55,14 @@ def normalize_text(text: str) -> str:
     return " ".join(text.split())
 
 
-def strip_brackets(text: str) -> str:
-    """Removes the bracketed parts of a title, e.g. "Night Ride (Interlude)"; keeps the text if nothing else is left."""
-    stripped = " ".join(re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", text).split())
-    return stripped or text
+def strip_title_extras(text: str) -> str:
+    """Keeps the main part of a title: drops its bracketed parts and what follows a spaced " - " or " | ".
+
+    E.g. "Night Ride (Interlude)", "Night Ride - Bonus Track" and "NIGHT RIDE | N1GHT R1DE" all give the first words.
+    Keeps the text if nothing else is left.
+    """
+    main = re.split(r"\s[-|]\s", re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", text), maxsplit=1)[0]
+    return " ".join(main.split()) or text
 
 
 def normalize_numbers(text: str) -> str:

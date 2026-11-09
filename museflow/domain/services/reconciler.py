@@ -73,8 +73,8 @@ class Reconciler:
             artists=candidate.artists,
         )
 
-        # A title may differ only by a bracketed part, e.g. "(Interlude)": the names without it count too, slightly
-        # below a full match, so that the exact title wins when the search returns both.
+        # A title may differ only by an extra, e.g. "(Interlude)" or " - Bonus Track": the main parts count too,
+        # slightly below a full match, so that the exact title wins when the search returns both.
         track_score = max(
             fuzz.token_sort_ratio(track_target.name, track_candidate.name),
             fuzz.token_sort_ratio(track_target.name_base, track_candidate.name_base) * self.BASE_NAME_WEIGHT,

@@ -2,8 +2,8 @@ import pytest
 
 from museflow.domain.utils.text import normalize_numbers
 from museflow.domain.utils.text import normalize_text
-from museflow.domain.utils.text import strip_brackets
 from museflow.domain.utils.text import strip_control_chars
+from museflow.domain.utils.text import strip_title_extras
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.utils.text import validate_locales
 
@@ -34,7 +34,7 @@ class TestStripControlChars:
         assert strip_control_chars(text) == expected
 
 
-class TestStripBrackets:
+class TestStripTitleExtras:
     @pytest.mark.parametrize(
         ("text", "expected"),
         [
@@ -42,10 +42,14 @@ class TestStripBrackets:
             pytest.param("Neon Harbor (Nightfall)", "Neon Harbor", id="parenthesis"),
             pytest.param("Neon [Slowed] Harbor", "Neon Harbor", id="inner-square"),
             pytest.param("(Intro)", "(Intro)", id="only-brackets"),
+            pytest.param("Neon Harbor - Bonus Track", "Neon Harbor", id="hyphen-suffix"),
+            pytest.param("NEON HARBOR | N3ON HARB0R", "NEON HARBOR", id="pipe-alternate"),
+            pytest.param("Neon-Harbor", "Neon-Harbor", id="unspaced-hyphen-kept"),
+            pytest.param("Neon Harbor (Live) - Remix", "Neon Harbor", id="brackets-then-suffix"),
         ],
     )
     def test__nominal(self, text: str, expected: str) -> None:
-        assert strip_brackets(text) == expected
+        assert strip_title_extras(text) == expected
 
 
 class TestNormalizeNumbers:
