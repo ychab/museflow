@@ -16,6 +16,7 @@ class Reconciler:
 
     def __init__(self, match_threshold: float = 80.0) -> None:
         self.MATCH_THRESHOLD: Final[float] = match_threshold
+        self.BASE_NAME_WEIGHT: Final[float] = 0.95
 
     def reconcile(
         self,
@@ -72,7 +73,12 @@ class Reconciler:
             artists=candidate.artists,
         )
 
-        track_score = fuzz.token_sort_ratio(track_target.name, track_candidate.name)
+        # A title may differ only by a bracketed part, e.g. "(Interlude)": the names without it count too, slightly
+        # below a full match, so that the exact title wins when the search returns both.
+        track_score = max(
+            fuzz.token_sort_ratio(track_target.name, track_candidate.name),
+            fuzz.token_sort_ratio(track_target.name_base, track_candidate.name_base) * self.BASE_NAME_WEIGHT,
+        )
         artist_scores = [fuzz.WRatio(ta, ca) for ta in track_target.artists for ca in track_candidate.artists]
         best_artist_score = max(artist_scores) if artist_scores else 0.0
 

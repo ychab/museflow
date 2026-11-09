@@ -7,18 +7,24 @@ from museflow.domain.entities.track import Track
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.types import LocaleCode
+from museflow.domain.utils.text import normalize_numbers
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import strip_brackets
 
 
 @dataclass(frozen=True, kw_only=True)
 class TrackNormalized:
+    """A track's name and artists, normalized for a fuzzy comparison (not for the fingerprint)."""
+
     name: str
+    name_base: str  # the name without its bracketed parts, e.g. "(Interlude)"
     artists: list[str]
 
     @classmethod
     def create(cls, name: str, artists: list[str]) -> Self:
         return cls(
-            name=normalize_text(name),
+            name=normalize_numbers(normalize_text(name)),
+            name_base=normalize_numbers(normalize_text(strip_brackets(name))),
             artists=[normalize_text(artist) for artist in artists],
         )
 

@@ -120,8 +120,8 @@ Design decisions:
 
 An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates) and asks the `Reconciler` to pick the best candidate. The advisor mapper first strips control characters from the names (an LLM may emit them in place of an accented letter), and a search the provider still rejects as malformed skips that suggestion with a warning instead of ending the run:
 
-1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes).
-2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz).
+1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes), then write the small numbers as digits (`one night` and `1 night` compare equal).
+2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz). The names are also compared without their bracketed parts, so that `Neon Harbor` finds `Neon Harbor (Nightfall)`; that score is weighted by 0.95, so the exact title wins when the search returns both.
 3. If either component is below `RECONCILER_MATCH_THRESHOLD` (80), the candidate scores 0.
 4. Otherwise the composite is `0.6 * track + 0.4 * artist`. A candidate scoring 0 is never accepted, so scores are either 0 or between the threshold and 100. The best non-zero candidate is accepted and its score divided by 100 becomes the **match confidence**.
 

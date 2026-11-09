@@ -29,7 +29,7 @@ class TestReconciler:
         track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
         candidates = [
             TrackFactory.build(name="Under Pressure", artists=["David Bowie"]),
-            TrackFactory.build(name="Bohemian Rhapsody (Nightmare)", artists=["Queen"]),
+            TrackFactory.build(name="Bohemian Rhapsody Nightmare", artists=["Queen"]),
             TrackFactory.build(name="Somebody To Love", artists=["Queen"]),
         ]
 
@@ -39,7 +39,7 @@ class TestReconciler:
         assert result is None
         assert caplog.messages == [
             "Reconciliation failed for 'Queen - Bohemian Rhapsody'. Best score: 0.0. "
-            "Closest candidate: 'Queen - Bohemian Rhapsody (Nightmare)' (track: 77.3, artist: 100.0)",
+            "Closest candidate: 'Queen - Bohemian Rhapsody Nightmare' (track: 77.3, artist: 100.0)",
         ]
 
     def test__reconcile__exact_match(self, reconciler: Reconciler) -> None:
@@ -79,3 +79,37 @@ class TestReconciler:
         track_reconciled, score = result
         assert track_reconciled is close_match
         assert 0.0 < score <= 1.0
+
+    def test__reconcile__bracketed_suffix__matches_below_exact(self, reconciler: Reconciler) -> None:
+        track_suggested = TrackSuggestedFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
+
+        suffixed = TrackFactory.build(name="Neon Harbor (Nightfall)", artists=["Velvet Comet"])
+
+        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[suffixed])
+        assert result is not None
+        track_reconciled, score = result
+        assert track_reconciled is suffixed
+        assert score == pytest.approx(0.97)  # 95 for the name without its suffix, 100 for the artist
+
+    def test__reconcile__bracketed_suffix__exact_title_wins(self, reconciler: Reconciler) -> None:
+        track_suggested = TrackSuggestedFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
+
+        suffixed = TrackFactory.build(name="Neon Harbor [Slowed]", artists=["Velvet Comet"])
+        exact = TrackFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
+
+        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[suffixed, exact])
+        assert result is not None
+        track_reconciled, score = result
+        assert track_reconciled is exact
+        assert score == 1.0
+
+    def test__reconcile__number_in_words__matches_digits(self, reconciler: Reconciler) -> None:
+        track_suggested = TrackSuggestedFactory.build(name="2 Moons", artists=["Velvet Comet"])
+
+        expected_match = TrackFactory.build(name="Two Moons", artists=["Velvet Comet"])
+
+        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[expected_match])
+        assert result is not None
+        track_reconciled, score = result
+        assert track_reconciled is expected_match
+        assert score == 1.0
