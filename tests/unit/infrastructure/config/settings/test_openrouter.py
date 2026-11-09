@@ -22,7 +22,7 @@ class TestOpenRouterSettings:
         settings = OpenRouterSettings(_env_file=None)
 
         assert settings.ADVISOR == LLMSettings(
-            MODEL="google/gemini-3.5-flash",
+            MODEL="anthropic/claude-sonnet-5.5",
             REASONING_EFFORT=ReasoningEffort.HIGH,
             FALLBACK_MODELS=["openai/gpt-5-mini"],
         )
