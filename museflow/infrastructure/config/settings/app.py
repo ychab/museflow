@@ -60,7 +60,6 @@ class AppSettings(BaseSettings):
     DISCOVERY_LIKED_TRACKS_LIMIT: int = 200  # 200 is a quality cap, not a technical constraint (higher is noise)
     DISCOVERY_DISLIKED_SCORE_THRESHOLD: int = 2
     DISCOVERY_DISLIKED_TRACKS_LIMIT: int = 50
-    DISCOVERY_TOP_PLAYED_TRACKS_LIMIT: int = 100  # 0 sends none
     DISCOVERY_TOP_ARTISTS_LIMIT: int = 100  # 0 sends none
 
     STATS_BAYESIAN_CONFIDENCE: int = 5

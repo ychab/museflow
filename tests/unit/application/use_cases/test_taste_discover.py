@@ -626,7 +626,7 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository.get_latest.return_value = TasteProfileFactory.build(user_id=user.id)
         liked_tracks = TrackFactory.batch(2, score=9)
         disliked_tracks = TrackFactory.batch(2, score=1)
-        mock_track_repository.get_list.side_effect = [liked_tracks, disliked_tracks, []]
+        mock_track_repository.get_list.side_effect = [liked_tracks, disliked_tracks]
         mock_advisor.get_discovery_strategy.return_value = discovery_taste_strategy
         reconciled_track = TrackFactory.build()
         mock_reconciler.reconcile.return_value = (reconciled_track, 0.9)
@@ -652,7 +652,7 @@ class TestDiscoverTasteUseCase:
         assert advisor_kwargs["liked_tracks"] == liked_tracks
         assert advisor_kwargs["disliked_tracks"] == disliked_tracks
 
-    async def test__top_listening__limit_zero__not_read(
+    async def test__top_artists__limit_zero__not_read(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -671,17 +671,13 @@ class TestDiscoverTasteUseCase:
             user=user,
             config=DiscoverTasteConfigInput(
                 playlist_limit=1,
-                top_played_tracks_limit=0,
                 top_artists_limit=0,
                 dry_run=True,
             ),
         )
 
-        assert mock_track_repository.get_list.call_count == 2
         mock_track_repository.get_top_artists.assert_not_called()
-        advisor_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
-        assert advisor_kwargs["top_played_tracks"] is None
-        assert advisor_kwargs["top_artists"] is None
+        assert mock_advisor.get_discovery_strategy.call_args.kwargs["top_artists"] is None
 
     async def test__blacklist_empty__advisor_receives_none(
         self,
