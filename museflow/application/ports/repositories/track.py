@@ -93,6 +93,11 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_top_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
+        """Returns the primary artists the user owns the most tracks of, with their track count, most first."""
+        ...
+
+    @abstractmethod
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         """Performs a bulk "upsert" (insert or update) of track records.
 

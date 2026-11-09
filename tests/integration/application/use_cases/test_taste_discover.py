@@ -11,7 +11,6 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
-from museflow.domain.enums import DiscoveryPlayedMode
 from museflow.domain.enums import LLMOperation
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -108,58 +107,39 @@ class TestDiscoverTasteUseCase:
         ) as spy:
             yield spy
 
-    @pytest.mark.parametrize(
-        ("played_mode", "expected_played_tracks", "expected_played_artists"),
-        [
-            pytest.param(
-                DiscoveryPlayedMode.TRACKS,
-                ["Most Played", "Second Hit", "Played Once"],
-                None,
-                id="tracks",
-            ),
-            pytest.param(
-                DiscoveryPlayedMode.ARTISTS,
-                None,
-                ["The Fictional Band", "Another Band"],
-                id="artists",
-            ),
-        ],
-    )
-    async def test__played_tracks(
+    async def test__top_listening(
         self,
         use_case: DiscoverTasteUseCase,
         user: User,
         spy_get_discovery_strategy: mock.AsyncMock,
-        played_mode: DiscoveryPlayedMode,
-        expected_played_tracks: list[str] | None,
-        expected_played_artists: list[str] | None,
     ) -> None:
-        """Only the unrated tracks played at least once are sent, most played first, as tracks or artists."""
+        """The most played tracks besides the liked ones, and the artists owned the most, reach the advisor."""
         await TasteProfileModelFactory.create_async(user_id=user.id)
         await TrackModelFactory.create_async(
-            user_id=user.id, name="Played Once", artists=["The Fictional Band"], score=None, played_count=1
+            user_id=user.id, name="Liked", artists=["The Fictional Band"], score=9, played_count=9
         )
         await TrackModelFactory.create_async(
             user_id=user.id, name="Most Played", artists=["The Fictional Band"], score=None, played_count=3
         )
         await TrackModelFactory.create_async(
-            user_id=user.id, name="Second Hit", artists=["Another Band"], score=None, played_count=2
+            user_id=user.id, name="Rated Average", artists=["Another Band"], score=5, played_count=2
         )
-        await TrackModelFactory.create_async(user_id=user.id, name="Rated", score=5, played_count=5)
-        await TrackModelFactory.create_async(user_id=user.id, name="Never Played", score=None)
+        await TrackModelFactory.create_async(
+            user_id=user.id, name="Never Played", artists=["Another Band"], score=None
+        )
+        await TrackModelFactory.create_async(user_id=user.id, name="Lonely", artists=["A Third Band"], score=None)
 
         await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(
                 playlist_limit=1,
                 advisor_limit=5,
-                played_mode=played_mode,
-                played_tracks_limit=10,
+                top_played_tracks_limit=10,
+                top_artists_limit=2,
                 dry_run=True,
             ),
         )
 
         kwargs = spy_get_discovery_strategy.call_args_list[0].kwargs
-        played_tracks = kwargs["played_tracks"]
-        assert ([t.name for t in played_tracks] if played_tracks else None) == expected_played_tracks
-        assert kwargs["played_artists"] == expected_played_artists
+        assert [t.name for t in kwargs["top_played_tracks"]] == ["Most Played", "Rated Average"]
+        assert kwargs["top_artists"] == {"Another Band": 2, "The Fictional Band": 2}

@@ -9,7 +9,6 @@ from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from museflow import BASE_DIR
-from museflow.domain.enums import DiscoveryPlayedMode
 from museflow.infrastructure.types import LogHandler
 from museflow.infrastructure.types import LogLevel
 
@@ -61,8 +60,8 @@ class AppSettings(BaseSettings):
     DISCOVERY_LIKED_TRACKS_LIMIT: int = 200  # 200 is a quality cap, not a technical constraint (higher is noise)
     DISCOVERY_DISLIKED_SCORE_THRESHOLD: int = 2
     DISCOVERY_DISLIKED_TRACKS_LIMIT: int = 50
-    DISCOVERY_PLAYED_MODE: DiscoveryPlayedMode = DiscoveryPlayedMode.TRACKS
-    DISCOVERY_PLAYED_TRACKS_LIMIT: int = 100  # 0 sends none
+    DISCOVERY_TOP_PLAYED_TRACKS_LIMIT: int = 100  # 0 sends none
+    DISCOVERY_TOP_ARTISTS_LIMIT: int = 100  # 0 sends none
 
     STATS_BAYESIAN_CONFIDENCE: int = 5
 

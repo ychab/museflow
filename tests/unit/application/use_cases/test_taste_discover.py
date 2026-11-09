@@ -41,6 +41,7 @@ class TestDiscoverTasteUseCase:
             return {t.fingerprint: t.id for t in tracks}, len(tracks)
 
         mock_track_repository.get_list.return_value = []
+        mock_track_repository.get_top_artists.return_value = {}
         mock_track_repository.bulk_upsert.side_effect = _bulk_upsert
 
     @pytest.fixture
@@ -651,7 +652,7 @@ class TestDiscoverTasteUseCase:
         assert advisor_kwargs["liked_tracks"] == liked_tracks
         assert advisor_kwargs["disliked_tracks"] == disliked_tracks
 
-    async def test__played_tracks__limit_zero__not_read(
+    async def test__top_listening__limit_zero__not_read(
         self,
         user: User,
         use_case: DiscoverTasteUseCase,
@@ -668,13 +669,19 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=1, played_tracks_limit=0, dry_run=True),
+            config=DiscoverTasteConfigInput(
+                playlist_limit=1,
+                top_played_tracks_limit=0,
+                top_artists_limit=0,
+                dry_run=True,
+            ),
         )
 
         assert mock_track_repository.get_list.call_count == 2
+        mock_track_repository.get_top_artists.assert_not_called()
         advisor_kwargs = mock_advisor.get_discovery_strategy.call_args.kwargs
-        assert advisor_kwargs["played_tracks"] is None
-        assert advisor_kwargs["played_artists"] is None
+        assert advisor_kwargs["top_played_tracks"] is None
+        assert advisor_kwargs["top_artists"] is None
 
     async def test__blacklist_empty__advisor_receives_none(
         self,
