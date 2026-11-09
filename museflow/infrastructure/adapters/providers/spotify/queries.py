@@ -11,9 +11,6 @@ class SpotifySearchTrackQuery(BaseModel):
     is_new: bool = False
     is_underground: bool = False
 
-    def _escape(self, val: str) -> str:
-        return val.replace('"', '\\"')
-
     def get_query(self) -> str:
         parts = [f'track:"{self._escape(self.track)}"']
 
@@ -22,10 +19,21 @@ class SpotifySearchTrackQuery(BaseModel):
         if self.artists:
             parts.append(f'artist:"{self._escape(self.artists[0])}"')
 
-        if self.is_new:
-            parts.append("tag:new")
-
-        if self.is_underground:
-            parts.append("tag:hipster")
-
+        parts.extend(self._get_tags())
         return " ".join(parts)
+
+    def get_free_text_query(self) -> str:
+        """The track and primary artist as plain words, matched in any field: looser than the field filters."""
+        words = " ".join(word.replace('"', " ") for word in [self.track, *self.artists[:1]])
+        return " ".join([" ".join(words.split()), *self._get_tags()])
+
+    def _escape(self, val: str) -> str:
+        return val.replace('"', '\\"')
+
+    def _get_tags(self) -> list[str]:
+        tags = []
+        if self.is_new:
+            tags.append("tag:new")
+        if self.is_underground:
+            tags.append("tag:hipster")
+        return tags

@@ -25,6 +25,8 @@ class ProviderLibraryPort(ABC):
     ) -> list[Track]:
         """Retrieves a list of tracks based on the search criteria.
 
+        A provider may follow a strict query that finds nothing with a looser one: the caller checks the candidates.
+
         Args:
             track: The name of the track to search for.
             artists: The track's artists, primary first. A provider may filter on the primary one only.
