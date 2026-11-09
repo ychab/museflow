@@ -87,7 +87,6 @@ def playlist_discover_command(
                         liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
                         disliked_tracks_score_threshold=app_settings.DISCOVERY_DISLIKED_SCORE_THRESHOLD,
                         disliked_tracks_limit=app_settings.DISCOVERY_DISLIKED_TRACKS_LIMIT,
-                        top_played_tracks_limit=app_settings.DISCOVERY_TOP_PLAYED_TRACKS_LIMIT,
                         top_artists_limit=app_settings.DISCOVERY_TOP_ARTISTS_LIMIT,
                         playlist_limit=limit,
                         max_attempts=app_settings.DISCOVERY_MAX_ATTEMPTS,

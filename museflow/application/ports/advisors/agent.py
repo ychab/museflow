@@ -37,7 +37,6 @@ class AdvisorPort(ABC):
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
         disliked_tracks: list[Track] | None = None,
-        top_played_tracks: list[Track] | None = None,
         top_artists: dict[str, int] | None = None,
     ) -> DiscoveryTasteStrategy:
         """Asks for new tracks matching the profile.
@@ -47,7 +46,6 @@ class AdvisorPort(ABC):
             known_tracks: Earlier suggestions of the session the user already knew: the next picks should dig deeper.
             liked_tracks: Tracks the user rated high, as taste anchors.
             disliked_tracks: Tracks the user rated low, as what to steer away from.
-            top_played_tracks: Tracks the user plays the most, besides the liked ones: already known.
             top_artists: Artists the user owns the most tracks of, with their track count: already well covered.
         """
         ...

@@ -22,7 +22,6 @@ class DiscoverTasteConfigInput:
         liked_tracks_limit: Maximum number of liked tracks to send (top-scored first).
         disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
         disliked_tracks_limit: Maximum number of disliked tracks to send (lowest-scored first).
-        top_played_tracks_limit: Maximum number of most played tracks to send, besides the liked ones (0 sends none).
         top_artists_limit: Maximum number of artists the user owns the most tracks of to send (0 sends none).
         dry_run: If True, skip playlist creation.
     """
@@ -46,7 +45,6 @@ class DiscoverTasteConfigInput:
     disliked_tracks_score_threshold: int = 2
     disliked_tracks_limit: int = 50
 
-    top_played_tracks_limit: int = 100
     top_artists_limit: int = 100
 
     dry_run: bool = False

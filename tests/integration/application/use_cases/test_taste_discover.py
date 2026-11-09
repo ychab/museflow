@@ -107,39 +107,27 @@ class TestDiscoverTasteUseCase:
         ) as spy:
             yield spy
 
-    async def test__top_listening(
+    async def test__top_artists(
         self,
         use_case: DiscoverTasteUseCase,
         user: User,
         spy_get_discovery_strategy: mock.AsyncMock,
     ) -> None:
-        """The most played tracks besides the liked ones, and the artists owned the most, reach the advisor."""
+        """The artists the user owns the most tracks of reach the advisor, most first, ties by name."""
         await TasteProfileModelFactory.create_async(user_id=user.id)
-        await TrackModelFactory.create_async(
-            user_id=user.id, name="Liked", artists=["The Fictional Band"], score=9, played_count=9
-        )
-        await TrackModelFactory.create_async(
-            user_id=user.id, name="Most Played", artists=["The Fictional Band"], score=None, played_count=3
-        )
-        await TrackModelFactory.create_async(
-            user_id=user.id, name="Rated Average", artists=["Another Band"], score=5, played_count=2
-        )
-        await TrackModelFactory.create_async(
-            user_id=user.id, name="Never Played", artists=["Another Band"], score=None
-        )
-        await TrackModelFactory.create_async(user_id=user.id, name="Lonely", artists=["A Third Band"], score=None)
+        for artist, tracks_count in [
+            ("Tied Band", 2),
+            ("The Fictional Band", 3),
+            ("Another Band", 2),
+            ("Lone Band", 1),
+        ]:
+            for _ in range(tracks_count):
+                await TrackModelFactory.create_async(user_id=user.id, artists=[artist, "A Featured Artist"])
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(
-                playlist_limit=1,
-                advisor_limit=5,
-                top_played_tracks_limit=10,
-                top_artists_limit=2,
-                dry_run=True,
-            ),
+            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, top_artists_limit=3, dry_run=True),
         )
 
-        kwargs = spy_get_discovery_strategy.call_args_list[0].kwargs
-        assert [t.name for t in kwargs["top_played_tracks"]] == ["Most Played", "Rated Average"]
-        assert kwargs["top_artists"] == {"Another Band": 2, "The Fictional Band": 2}
+        top_artists = spy_get_discovery_strategy.call_args_list[0].kwargs["top_artists"]
+        assert list(top_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]

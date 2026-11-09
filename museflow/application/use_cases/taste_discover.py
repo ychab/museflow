@@ -116,16 +116,8 @@ class DiscoverTasteUseCase:
                 order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
                 limit=config.disliked_tracks_limit,
             )
-            # The top listening, told from the first attempt on so that it suggests fewer known tracks (#154).
-            top_played_tracks: list[Track] = []
-            if config.top_played_tracks_limit > 0:
-                top_played_tracks = await uow.tracks.get_list(
-                    user_id=user.id,
-                    exclude_ids=[t.id for t in liked_tracks],
-                    order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-                    limit=config.top_played_tracks_limit,
-                )
-                top_played_tracks = [t for t in top_played_tracks if t.played_count > 0]
+            # Told from the first attempt on, so that it suggests fewer known tracks (#154). The most played tracks
+            # were measured too: no gain, as 100 tracks barely cover a library of thousands.
             top_artists: dict[str, int] = {}
             if config.top_artists_limit > 0:
                 top_artists = await uow.tracks.get_top_artists(user_id=user.id, limit=config.top_artists_limit)
@@ -133,9 +125,7 @@ class DiscoverTasteUseCase:
         # What the advisor spent is saved whatever the outcome: a failed discovery was billed too.
         playlist_id: uuid.UUID | None = None
         try:
-            result = await self._discover(
-                user, config, profile, blacklist, liked_tracks, disliked_tracks, top_played_tracks, top_artists
-            )
+            result = await self._discover(user, config, profile, blacklist, liked_tracks, disliked_tracks, top_artists)
             playlist_id = result.playlist.id if result.playlist else None
         finally:
             await record_llm_usage(
@@ -156,7 +146,6 @@ class DiscoverTasteUseCase:
         blacklist: UserBlacklist,
         liked_tracks: list[Track],
         disliked_tracks: list[Track],
-        top_played_tracks: list[Track],
         top_artists: dict[str, int],
     ) -> DiscoverTasteResult:
         blacklisted_artists = blacklist.artist_names or None
@@ -184,7 +173,6 @@ class DiscoverTasteUseCase:
                 blacklisted_tracks=blacklisted_tracks,
                 liked_tracks=liked_tracks,
                 disliked_tracks=disliked_tracks,
-                top_played_tracks=top_played_tracks or None,
                 top_artists=top_artists or None,
             )
             tracks_suggested.extend(strategy.recommended_tracks)

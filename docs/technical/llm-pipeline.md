@@ -112,7 +112,6 @@ Design decisions:
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
 | Liked tracks | Tracks rated 7 or more, at most 200, highest first; not filtered on the prompt | Concrete taste anchors beyond statistics |
 | Disliked tracks | Tracks rated 2 or less, at most 50, lowest first (`DISCOVERY_DISLIKED_SCORE_THRESHOLD`, `DISCOVERY_DISLIKED_TRACKS_LIMIT`) | What to steer away from, beyond the blacklist |
-| Top played tracks | The most played tracks besides the liked ones, played at least once, at most 100 (`DISCOVERY_TOP_PLAYED_TRACKS_LIMIT`, 0 sends none) | Already known: not to be suggested, from the first attempt on |
 | Top artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_TOP_ARTISTS_LIMIT`, 0 sends none) | Already well covered: a rare deep cut is welcome, most picks should come from other artists |
 
 **Quality over quantity** is stated in the prompt: only return a track if confidence would be at least 0.7, and return fewer than the requested limit rather than pad. This is an instruction to the model, not a post-filter in code; the confidence values are used afterwards for ranking. The prompt also asks for real, released recordings only, with their exact title and the primary artist first: the catalogue search filters on that artist, and an invented title finds no candidate, so the suggestion is lost. The strategy response is constrained by a strict JSON schema and validated into Pydantic models.
