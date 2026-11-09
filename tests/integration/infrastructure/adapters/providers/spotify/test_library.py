@@ -12,6 +12,10 @@ from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLi
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
+EMPTY_SEARCH_PAGE = {
+    "tracks": {"href": "", "limit": 10, "next": None, "offset": 0, "previous": None, "total": 0, "items": []}
+}
+
 
 @pytest.mark.wiremock("spotify")
 class TestSpotifyLibrary:
@@ -32,7 +36,9 @@ class TestSpotifyLibrary:
         with caplog.at_level(logging.DEBUG):
             tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5)
         assert len(tracks) == 8
-        assert "Search query 'track:\"Mi Pueblo\"' returned 8 track(s)" in caplog.messages
+        assert [message for message in caplog.messages if message.startswith("Search query")] == [
+            "Search query 'track:\"Mi Pueblo\"' returned 8 track(s)",
+        ]
 
         track_first = tracks[0]
         assert track_first.id is not None
@@ -60,6 +66,40 @@ class TestSpotifyLibrary:
     ) -> None:
         tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5, max_pages=1)
         assert len(tracks) == 5
+
+    async def test__search__strict_query_empty__falls_back_to_free_text(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/search",
+            status=200,
+            query_params={"q": 'track:"Mi Pueblo" artist:"Grupo Niche"'},
+            json_body=EMPTY_SEARCH_PAGE,
+        )
+
+        with caplog.at_level(logging.DEBUG):
+            tracks = await spotify_library.search_tracks(track="Mi Pueblo", artists=["Grupo Niche"], page_size=5)
+
+        assert len(tracks) == 8
+        assert [message for message in caplog.messages if message.startswith("Search query")] == [
+            'Search query \'track:"Mi Pueblo" artist:"Grupo Niche"\' returned 0 track(s)',
+            "Search query 'Mi Pueblo Grupo Niche' returned 8 track(s)",
+        ]
+
+    async def test__search__both_queries_empty(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(method="GET", url_path="/search", status=200, json_body=EMPTY_SEARCH_PAGE)
+
+        tracks = await spotify_library.search_tracks(track="Ghost Song", artists=["Velvet Comet"])
+
+        assert tracks == []
 
     async def test__search__page_validation_error(
         self,

@@ -118,7 +118,7 @@ Design decisions:
 
 ## Reconciler: from suggestion to catalogue track
 
-An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates) and asks the `Reconciler` to pick the best candidate. The advisor mapper first strips control characters from the names (an LLM may emit them in place of an accented letter), and a search the provider still rejects as malformed skips that suggestion with a warning instead of ending the run:
+An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates; on Spotify, field filters first, then the same words as free text when they find nothing, as the filters can miss a track that exists) and asks the `Reconciler` to pick the best candidate. The advisor mapper first strips control characters from the names (an LLM may emit them in place of an accented letter), and a search the provider still rejects as malformed skips that suggestion with a warning instead of ending the run:
 
 1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes), then write the small numbers as digits (`one night` and `1 night` compare equal).
 2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz). The names are also compared without their bracketed parts, so that `Neon Harbor` finds `Neon Harbor (Nightfall)`; that score is weighted by 0.95, so the exact title wins when the search returns both.

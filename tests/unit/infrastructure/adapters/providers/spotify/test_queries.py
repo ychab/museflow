@@ -51,3 +51,15 @@ class TestSpotifySearchTrackQuery:
             "tag:hipster",
         ]
         assert q == " ".join(expected_parts)
+
+    def test__free_text_query__track_and_primary_artist(self) -> None:
+        q = SpotifySearchTrackQuery(track="Neon Harbor", artists=["Velvet Comet", "Other"]).get_free_text_query()
+        assert q == "Neon Harbor Velvet Comet"
+
+    def test__free_text_query__quotes_removed(self) -> None:
+        q = SpotifySearchTrackQuery(track='Say "Hi"', artists=['The "Band"']).get_free_text_query()
+        assert q == "Say Hi The Band"
+
+    def test__free_text_query__without_artist__keeps_tags(self) -> None:
+        q = SpotifySearchTrackQuery(track="Neon Harbor", is_new=True, is_underground=True).get_free_text_query()
+        assert q == "Neon Harbor tag:new tag:hipster"

@@ -103,29 +103,34 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             is_new=is_new,
             is_underground=is_underground,
         )
-        query = query_builder.get_query()
+        tracks: list[Track] = []
+        # The field filters can miss a track that exists, even in the Spotify app (#162): when they find nothing, a
+        # free-text query on the same words follows. Its looser candidates are still checked by the reconciler.
+        for query in (query_builder.get_query(), query_builder.get_free_text_query()):
+            try:
+                tracks = await self._fetch_pages(
+                    endpoint="/search",
+                    page_model=SpotifyPage[SpotifyTrack],
+                    page_processor=self._extract_search_tracks,
+                    page_size=page_size,
+                    max_pages=max_pages,
+                    log_enabled=log_enabled,
+                    log_prefix=f"[Search track {track}]",
+                    params={
+                        "q": query,
+                        "type": "track",
+                    },
+                    response_key="tracks",
+                    ignored_status_codes=frozenset({400}),
+                )
+            except SpotifyApiError as e:
+                # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
+                raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for track {track!r}") from e
 
-        try:
-            tracks = await self._fetch_pages(
-                endpoint="/search",
-                page_model=SpotifyPage[SpotifyTrack],
-                page_processor=self._extract_search_tracks,
-                page_size=page_size,
-                max_pages=max_pages,
-                log_enabled=log_enabled,
-                log_prefix=f"[Search track {track}]",
-                params={
-                    "q": query,
-                    "type": "track",
-                },
-                response_key="tracks",
-                ignored_status_codes=frozenset({400}),
-            )
-        except SpotifyApiError as e:
-            # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
-            raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for track {track!r}") from e
+            logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
+            if tracks:
+                break
 
-        logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
         return tracks
 
     async def create_playlist(
