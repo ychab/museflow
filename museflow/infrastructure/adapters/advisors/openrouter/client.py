@@ -42,8 +42,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
         disliked_tracks: list[Track] | None = None,
-        played_tracks: list[Track] | None = None,
-        played_artists: list[str] | None = None,
+        top_played_tracks: list[Track] | None = None,
+        top_artists: dict[str, int] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -94,20 +94,20 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
                 f"{formatted}"
             )
-        if played_tracks:
-            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in played_tracks)
+        if top_played_tracks:
+            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in top_played_tracks)
             exclusion_parts.append(
-                "### ALREADY PLAYED BY THE USER (DO NOT SUGGEST THESE)\n"
-                "The user plays these tracks the most without rating them: they are already in the library. "
-                "Their artists stay open, through tracks not listed here:\n"
+                "### TOP PLAYED TRACKS (DO NOT SUGGEST THESE)\n"
+                "Besides the liked tracks, the user plays these the most: they are already in the library:\n"
                 f"{formatted}"
             )
-        if played_artists:
-            formatted = "\n".join(f"- {a}" for a in played_artists)
+        if top_artists:
+            formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in top_artists.items())
             exclusion_parts.append(
-                "### ARTISTS ALREADY PLAYED BY THE USER\n"
-                "The user plays these artists the most without rating their tracks: their well-known tracks are "
-                "already in the library. Prefer artists outside this list:\n"
+                "### TOP ARTISTS IN THE LIBRARY\n"
+                "The user already owns many tracks of these artists (count in brackets): their well-known tracks "
+                "are already known. A rare deep cut of theirs is still welcome, but most picks should come from "
+                "other artists:\n"
                 f"{formatted}"
             )
         if blacklisted_artists:

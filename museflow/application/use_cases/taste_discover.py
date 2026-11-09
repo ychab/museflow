@@ -14,7 +14,6 @@ from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import filter_known_tracks
-from museflow.application.utils.discovery import get_primary_artists
 from museflow.application.utils.discovery import reconcile_tracks
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
@@ -22,7 +21,6 @@ from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
-from museflow.domain.enums import DiscoveryPlayedMode
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import SortOrder
@@ -118,24 +116,25 @@ class DiscoverTasteUseCase:
                 order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
                 limit=config.disliked_tracks_limit,
             )
-            # What the user plays without rating it is known too: told from the first attempt on (#154).
-            played_tracks = (
-                await uow.tracks.get_list(
+            # The top listening, told from the first attempt on so that it suggests fewer known tracks (#154).
+            top_played_tracks: list[Track] = []
+            if config.top_played_tracks_limit > 0:
+                top_played_tracks = await uow.tracks.get_list(
                     user_id=user.id,
-                    unrated_only=True,
+                    exclude_ids=[t.id for t in liked_tracks],
                     order=[(TrackOrderBy.PLAYED_COUNT, SortOrder.DESC)],
-                    limit=config.played_tracks_limit,
+                    limit=config.top_played_tracks_limit,
                 )
-                if config.played_tracks_limit > 0
-                else []
-            )
-            played_tracks = [t for t in played_tracks if t.played_count > 0]
+                top_played_tracks = [t for t in top_played_tracks if t.played_count > 0]
+            top_artists: dict[str, int] = {}
+            if config.top_artists_limit > 0:
+                top_artists = await uow.tracks.get_top_artists(user_id=user.id, limit=config.top_artists_limit)
 
         # What the advisor spent is saved whatever the outcome: a failed discovery was billed too.
         playlist_id: uuid.UUID | None = None
         try:
             result = await self._discover(
-                user, config, profile, blacklist, liked_tracks, disliked_tracks, played_tracks
+                user, config, profile, blacklist, liked_tracks, disliked_tracks, top_played_tracks, top_artists
             )
             playlist_id = result.playlist.id if result.playlist else None
         finally:
@@ -157,15 +156,11 @@ class DiscoverTasteUseCase:
         blacklist: UserBlacklist,
         liked_tracks: list[Track],
         disliked_tracks: list[Track],
-        played_tracks: list[Track],
+        top_played_tracks: list[Track],
+        top_artists: dict[str, int],
     ) -> DiscoverTasteResult:
         blacklisted_artists = blacklist.artist_names or None
         blacklisted_tracks = blacklist.track_display_strings or None
-        # Tracks or artists: which one helps the first attempt most is measured, not guessed (#154).
-        played_artists: list[str] = []
-        if config.played_mode == DiscoveryPlayedMode.ARTISTS:
-            played_artists = get_primary_artists(played_tracks)
-            played_tracks = []
 
         tracks_scores: list[TrackScored] = []
         tracks_suggested: list[TrackSuggested] = []
@@ -189,8 +184,8 @@ class DiscoverTasteUseCase:
                 blacklisted_tracks=blacklisted_tracks,
                 liked_tracks=liked_tracks,
                 disliked_tracks=disliked_tracks,
-                played_tracks=played_tracks or None,
-                played_artists=played_artists or None,
+                top_played_tracks=top_played_tracks or None,
+                top_artists=top_artists or None,
             )
             tracks_suggested.extend(strategy.recommended_tracks)
             logger.info(

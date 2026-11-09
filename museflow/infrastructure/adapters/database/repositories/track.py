@@ -172,6 +172,19 @@ class TrackSQLRepository(TrackRepository):
 
         return TrackKnownIdentifiers(fingerprints=known_fingerprints)
 
+    async def get_top_artists(self, user_id: uuid.UUID, limit: int) -> dict[str, int]:
+        artist = TrackModel.artists[0].as_string()
+        tracks_count = func.count()
+        stmt = (
+            select(artist, tracks_count)
+            .where(TrackModel.user_id == user_id)
+            .group_by(artist)
+            .order_by(tracks_count.desc(), artist.asc())
+            .limit(limit)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return {name: count for name, count in rows}
+
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         # Keyed by fingerprint: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
         track_ids: dict[str, uuid.UUID] = {}

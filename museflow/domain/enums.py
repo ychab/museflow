@@ -17,11 +17,6 @@ class DiscoveryFocus(StrEnum):
     CULTURAL_BRIDGE = "cultural_bridge"
 
 
-class DiscoveryPlayedMode(StrEnum):
-    TRACKS = "tracks"  # the most played tracks: their artists stay open to deep cuts
-    ARTISTS = "artists"  # the artists of the most played tracks: pushes toward new names
-
-
 class PlaylistType(StrEnum):
     DISCOVERY = "discovery"  # AI-curated playlist
     HISTORY = "history"  # persisted "best of"
