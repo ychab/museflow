@@ -213,7 +213,7 @@ class TestOpenRouterAdvisorAdapter:
         assert "Dig deeper" in known_list
         assert "- Known Artist: Known Song" in known_list
 
-    async def test__get_discovery_strategy__with_top_artists_builds_top_artists_block(
+    async def test__get_discovery_strategy__with_covered_artists_builds_covered_artists_block(
         self,
         openrouter_advisor: OpenRouterAdvisorAdapter,
         taste_profile: TasteProfile,
@@ -225,11 +225,11 @@ class TestOpenRouterAdvisorAdapter:
         await openrouter_advisor.get_discovery_strategy(
             profile=taste_profile,
             advisor_limit=5,
-            top_artists={"The Fictional Band": 42},
+            covered_artists={"The Fictional Band": 42},
         )
 
         system_message = json.loads(httpx_mock.get_requests()[0].content)["messages"][0]["content"]
-        assert "### TOP ARTISTS IN THE LIBRARY\n" in system_message
+        assert "### ARTISTS ALREADY COVERED IN THE LIBRARY\n" in system_message
         assert "- The Fictional Band (42 tracks)" in system_message
 
     @pytest.mark.parametrize(

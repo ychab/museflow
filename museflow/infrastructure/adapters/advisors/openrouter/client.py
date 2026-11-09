@@ -42,7 +42,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         blacklisted_tracks: list[str] | None = None,
         liked_tracks: list[Track] | None = None,
         disliked_tracks: list[Track] | None = None,
-        top_artists: dict[str, int] | None = None,
+        covered_artists: dict[str, int] | None = None,
     ) -> DiscoveryTasteStrategy:
         data = profile.profile
 
@@ -93,10 +93,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
                 f"{formatted}"
             )
-        if top_artists:
-            formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in top_artists.items())
+        if covered_artists:
+            formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in covered_artists.items())
             exclusion_parts.append(
-                "### TOP ARTISTS IN THE LIBRARY\n"
+                "### ARTISTS ALREADY COVERED IN THE LIBRARY\n"
                 "The user already owns many tracks of these artists (count in brackets): their well-known tracks "
                 "are already known. A rare deep cut of theirs is still welcome, but most picks should come from "
                 "other artists:\n"
