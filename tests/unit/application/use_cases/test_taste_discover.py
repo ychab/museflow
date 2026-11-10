@@ -386,6 +386,29 @@ class TestDiscoverTasteUseCase:
         assert advisor_kwargs["blacklisted_artists"] == ["A Blacklisted Band"]
         assert advisor_kwargs["blacklisted_tracks"] == ["A Song by A Blacklisted Band"]
 
+    async def test__advisor_inputs__covered_artists(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        discovery_artist_strategy: DiscoveryArtistStrategy,
+    ) -> None:
+        covered_artists = {"The Fictional Band": 3, "Another Band": 2}
+        mock_track_repository.get_covered_artists.return_value = covered_artists
+        mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
+        artist = discovery_artist_strategy.artists[0].name
+        mock_provider_library.search_artist_tracks.return_value = [TrackFactory.build(artists=[artist])]
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=1, covered_artists_limit=2, dry_run=True),
+        )
+
+        mock_track_repository.get_covered_artists.assert_called_once_with(user_id=user.id, limit=2)
+        assert mock_advisor.get_discovery_artists.call_args.kwargs["covered_artists"] == covered_artists
+
     async def test__remote_playlist_creation_fails__nothing_written(
         self,
         user: User,

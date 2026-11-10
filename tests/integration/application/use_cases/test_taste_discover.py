@@ -1,6 +1,3 @@
-from collections.abc import Iterator
-from unittest import mock
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,24 +36,6 @@ class TestDiscoverTasteUseCase:
             advisor=openrouter_advisor,
             reconciler=reconciler,
         )
-
-    @pytest.fixture
-    def spy_get_discovery_artists(self, openrouter_advisor: OpenRouterAdvisorAdapter) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_advisor,
-            "get_discovery_artists",
-            wraps=openrouter_advisor.get_discovery_artists,
-        ) as spy:
-            yield spy
-
-    @pytest.fixture
-    def spy_pick_discovery_tracks(self, openrouter_advisor: OpenRouterAdvisorAdapter) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_advisor,
-            "pick_discovery_tracks",
-            wraps=openrouter_advisor.pick_discovery_tracks,
-        ) as spy:
-            yield spy
 
     async def test__nominal(
         self,
@@ -128,45 +107,16 @@ class TestDiscoverTasteUseCase:
         )
         assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, None)}
 
-    async def test__known_tracks__not_offered(
-        self,
-        use_case: DiscoverTasteUseCase,
-        user: User,
-        spy_pick_discovery_tracks: mock.AsyncMock,
-    ) -> None:
+    async def test__known_tracks__not_offered(self, use_case: DiscoverTasteUseCase, user: User) -> None:
         await TasteProfileModelFactory.create_async(user_id=user.id)
         known = TrackFactory.build(name="Mi Pueblo", artists=["Grupo Niche"])
         await TrackModelFactory.create_async(user_id=user.id, fingerprint=known.fingerprint)
 
-        await use_case.create_suggestions_playlist(
+        result = await use_case.create_suggestions_playlist(
             user=user,
             config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
         )
 
-        candidates = spy_pick_discovery_tracks.call_args.kwargs["candidates"]
-        assert [track.name for track in candidates["Grupo Niche"]] == ["Mi Pueblo Natal"]
-
-    async def test__covered_artists(
-        self,
-        use_case: DiscoverTasteUseCase,
-        user: User,
-        spy_get_discovery_artists: mock.AsyncMock,
-    ) -> None:
-        """The artists the user owns the most tracks of reach the advisor, most first, ties by name."""
-        await TasteProfileModelFactory.create_async(user_id=user.id)
-        for artist, tracks_count in [
-            ("Tied Band", 2),
-            ("The Fictional Band", 3),
-            ("Another Band", 2),
-            ("Lone Band", 1),
-        ]:
-            for _ in range(tracks_count):
-                await TrackModelFactory.create_async(user_id=user.id, artists=[artist, "A Featured Artist"])
-
-        await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=1, covered_artists_limit=3, dry_run=True),
-        )
-
-        covered_artists = spy_get_discovery_artists.call_args_list[0].kwargs["covered_artists"]
-        assert list(covered_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]
+        # The only candidate left gets the id "1": the picks "2" and "99" point at nothing.
+        assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
+        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]
