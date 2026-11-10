@@ -20,7 +20,6 @@ from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
-from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
@@ -67,7 +66,6 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
-        reconciler: Reconciler,
         track_roundtrip: None,
         pick_all: None,
     ) -> DiscoverTasteUseCase:
@@ -80,7 +78,6 @@ class TestDiscoverTasteUseCase:
             uow=mock_uow,
             provider_library=mock_provider_library,
             advisor=mock_advisor,
-            reconciler=reconciler,
         )
 
     async def test__profile_loaded_by_name(

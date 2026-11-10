@@ -24,7 +24,6 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
-from museflow.infrastructure.entrypoints.cli.dependencies import get_reconciler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
@@ -210,13 +209,11 @@ async def playlist_discover_logic(
         provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 
         advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
-        reconciler = get_reconciler()
 
         use_case = DiscoverTasteUseCase(
             uow=uow,
             provider_library=provider_library,
             advisor=advisor,
-            reconciler=reconciler,
         )
 
         return await use_case.create_suggestions_playlist(user=user, config=config)

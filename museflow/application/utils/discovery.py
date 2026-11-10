@@ -28,6 +28,17 @@ async def drop_known_tracks(user: User, tracks: list[Track], uow: UnitOfWorkPort
     return result
 
 
+def filter_by_artist(artist: str, tracks: list[Track]) -> list[Track]:
+    """Keeps the tracks crediting `artist`, by exact normalized name: a short name must not match a longer one."""
+    target = normalize_text(artist)
+    kept = [track for track in tracks if target in {normalize_text(a) for a in track.artists}]
+
+    rejected = {track.primary_artist for track in tracks if track not in kept}
+    if rejected:
+        logger.debug(f"Artist '{artist}': rejected tracks of {sorted(rejected)}")
+    return kept
+
+
 def apply_artist_cap(tracks: list[Track], max_tracks_per_artist: int) -> list[Track]:
     """Keeps at most `max_tracks_per_artist` tracks per credited artist: a featured appearance counts too."""
     tracks_filtered: list[Track] = []

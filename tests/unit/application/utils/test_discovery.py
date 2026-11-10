@@ -2,12 +2,12 @@ import logging
 
 import pytest
 
-from museflow.domain.services.reconciler import Reconciler
+from museflow.application.utils.discovery import filter_by_artist
 
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestReconciler:
+class TestFilterByArtist:
     @pytest.mark.parametrize(
         ("artist", "credited", "kept"),
         [
@@ -18,17 +18,13 @@ class TestReconciler:
             pytest.param("Nova Kane", ["Nova"], False, id="shorter_name"),
         ],
     )
-    def test__filter_by_artist(self, reconciler: Reconciler, artist: str, credited: list[str], kept: bool) -> None:
+    def test__nominal(self, artist: str, credited: list[str], kept: bool) -> None:
         track = TrackFactory.build(artists=credited)
 
-        assert reconciler.filter_by_artist(artist=artist, candidates=[track]) == ([track] if kept else [])
+        assert filter_by_artist(artist=artist, tracks=[track]) == ([track] if kept else [])
 
-    def test__filter_by_artist__rejected__logged(
-        self,
-        reconciler: Reconciler,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
+    def test__rejected__logged(self, caplog: pytest.LogCaptureFixture) -> None:
         with caplog.at_level(logging.DEBUG):
-            reconciler.filter_by_artist(artist="Nova", candidates=[TrackFactory.build(artists=["Novalee"])])
+            filter_by_artist(artist="Nova", tracks=[TrackFactory.build(artists=["Novalee"])])
 
-        assert "Artist 'Nova': rejected candidates of ['Novalee']" in caplog.text
+        assert "Artist 'Nova': rejected tracks of ['Novalee']" in caplog.text
