@@ -56,7 +56,11 @@ museflow/application/use_cases/user_create.py
   (`wraps=`) so the real code still runs and the call is recorded.
 - Mocks and spies belong in unit tests. An integration test asserts the observable outcome (result, rows, requests
   received by WireMock); when a value only shows as an argument passed, test its source where it is produced (e.g. the
-  repository) and the forwarding in a unit test.
+  repository) and the forwarding in a unit test. Exceptions, mocked in integration too:
+  - what an integration test can't run: terminal input (`typer.prompt`), a real device (`play_track`), the logging
+    setup;
+  - the use case called by a CLI command's integration `TestXLogic`: that test checks the real wiring (user and token
+    loaded from the database), and relies on the use case's own integration tests for the rest.
 - Assert logs with `caplog` (e.g. `with caplog.at_level(logging.ERROR), pytest.raises(SomeError):`), never by patching
   the module `logger`.
 
