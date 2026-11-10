@@ -336,6 +336,23 @@ class TestTrackSQLRepository:
 
         assert known_identifiers.fingerprints == frozenset(["foo", "bar"])
 
+    async def test__get_covered_artists__nominal(self, user: User, track_repository: TrackRepository) -> None:
+        """Counted on the primary artist, most tracks first, ties by name, capped; other users' tracks ignored."""
+        for artist, tracks_count in [
+            ("Tied Band", 2),
+            ("The Fictional Band", 3),
+            ("Another Band", 2),
+            ("Lone Band", 1),
+        ]:
+            for _ in range(tracks_count):
+                await TrackModelFactory.create_async(user_id=user.id, artists=[artist, "A Featured Artist"])
+        for _ in range(4):
+            await TrackModelFactory.create_async(artists=["Lone Band"])  # Another user
+
+        covered_artists = await track_repository.get_covered_artists(user_id=user.id, limit=3)
+
+        assert list(covered_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]
+
     async def test__bulk_upsert__create(
         self,
         async_session_db: AsyncSession,
