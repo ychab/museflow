@@ -12,7 +12,7 @@ MuseFlow is a Python backend with a CLI as its primary interface and a small Fas
 | Validation | Pydantic v2, `pydantic-settings` | External DTOs, structured LLM output, settings |
 | HTTP | `httpx` (async) + `tenacity` | One shared client mixin, per-adapter retry policies |
 | LLM | OpenRouter gateway (OpenAI-compatible REST) | Any model it lists, one per pipeline step (see [LLM pipeline](llm-pipeline.md)) |
-| Matching | `rapidfuzz`, `unidecode` | Fuzzy reconciliation and text normalisation |
+| Matching | `unidecode` | Text normalisation: fingerprints, and the strict artist match of discovery |
 | Quality | pytest, polyfactory, WireMock, Ruff, mypy, deptry, pre-commit | See [Quality & testing](quality.md) |
 
 ## Size at a glance

@@ -2,29 +2,27 @@ from pydantic import ValidationError
 
 import pytest
 
-from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_STRATEGY_SCHEMA
-from museflow.infrastructure.adapters.advisors.openrouter.schemas import SuggestedTrack
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_ARTISTS_SCHEMA
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_PICKS_SCHEMA
+from museflow.infrastructure.adapters.advisors.openrouter.schemas import SuggestedArtist
+from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 
 
-class TestSuggestedTrack:
-    def test__parse__multiple_artists(self) -> None:
-        track = SuggestedTrack.model_validate({"name": "Song", "artists": ["A", "B"], "score": 0.5})
-        assert track.artists == ["A", "B"]
+class TestSuggestedArtist:
+    def test__parse__empty_name(self) -> None:
+        with pytest.raises(ValidationError):
+            SuggestedArtist.model_validate({"name": "", "sound": "Warm brass", "score": 0.5})
 
+
+class TestDiscoverySchemas:
     @pytest.mark.parametrize(
-        "data",
+        "schema",
         [
-            pytest.param({"name": "", "artists": ["A"], "score": 0.5}, id="empty_name"),
-            pytest.param({"name": "Song", "artists": [], "score": 0.5}, id="no_artist"),
+            pytest.param(DISCOVERY_ARTISTS_SCHEMA, id="artists"),
+            pytest.param(DISCOVERY_PICKS_SCHEMA, id="picks"),
         ],
     )
-    def test__parse__invalid(self, data: dict[str, object]) -> None:
-        with pytest.raises(ValidationError):
-            SuggestedTrack.model_validate(data)
-
-
-class TestDiscoveryStrategySchema:
-    def test__strict__all_properties_required(self) -> None:
-        assert DISCOVERY_STRATEGY_SCHEMA.properties is not None
-        assert DISCOVERY_STRATEGY_SCHEMA.required == list(DISCOVERY_STRATEGY_SCHEMA.properties)
-        assert DISCOVERY_STRATEGY_SCHEMA.additionalProperties is False
+    def test__strict__all_properties_required(self, schema: JsonSchemaProperty) -> None:
+        assert schema.properties is not None
+        assert schema.required == list(schema.properties)
+        assert schema.additionalProperties is False

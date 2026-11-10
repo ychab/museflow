@@ -13,25 +13,7 @@ from tests.unit.factories.entities.track import TrackFactory
 
 @pytest.mark.wiremock("openrouter")
 class TestOpenRouterAdvisorAdapter:
-    async def test__get_discovery_strategy__nominal(
-        self,
-        openrouter_advisor: OpenRouterAdvisorAdapter,
-        taste_profile: TasteProfile,
-    ) -> None:
-        strategy = await openrouter_advisor.get_discovery_strategy(
-            profile=taste_profile,
-            focus=DiscoveryFocus.EXPANSION,
-            advisor_limit=5,
-        )
-
-        assert strategy.strategy_label == "Progressive Horizons"
-        assert strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
-        assert len(strategy.recommended_tracks) == 1
-        assert strategy.recommended_tracks[0].name == "Mi Pueblo"
-        assert strategy.recommended_tracks[0].artists == ["Grupo Niche"]
-        assert strategy.recommended_tracks[0].score == pytest.approx(1.0)
-
-    async def test__get_discovery_strategy__invalid_response_then_valid__self_heals(
+    async def test__get_discovery_artists__invalid_response_then_valid__self_heals(
         self,
         openrouter_advisor: OpenRouterAdvisorAdapter,
         openrouter_wiremock: WireMockContext,
@@ -52,14 +34,14 @@ class TestOpenRouterAdvisorAdapter:
             new_state="invalid-served",
         )
 
-        strategy = await openrouter_advisor.get_discovery_strategy(
+        strategy = await openrouter_advisor.get_discovery_artists(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            advisor_limit=5,
+            artists_limit=5,
         )
 
         assert strategy.strategy_label == "Progressive Horizons"
-        assert len(strategy.recommended_tracks) == 1
+        assert len(strategy.artists) == 1
 
     async def test__get_discovery_artists__nominal(
         self,

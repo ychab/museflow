@@ -4,7 +4,6 @@ import pytest
 
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
-from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import MusicProvider
 
 
@@ -64,13 +63,3 @@ class TestTrack:
                 provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id="spotify:track:123")],
                 artists=[],
             )
-
-
-class TestTrackSuggested:
-    def test__name__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackSuggested.name must not be empty"):
-            TrackSuggested(name="", artists=["Queen"], score=0.5)
-
-    def test__artists__none(self) -> None:
-        with pytest.raises(ValueError, match="TrackSuggested must have at least one artist"):
-            TrackSuggested(name="Bohemian Rhapsody", artists=[], score=0.5)

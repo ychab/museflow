@@ -28,7 +28,6 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "pyjwt>=2.15.1",
     "tenacity>=9.2.1",
-    "rapidfuzz>=3.14.6",
     "unidecode>=1.4.0",
     "ijson>=3.6.0",
     "pyyaml>=6.0.3",

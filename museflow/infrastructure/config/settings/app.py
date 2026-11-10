@@ -45,8 +45,6 @@ class AppSettings(BaseSettings):
 
     HTTP_MAX_RETRIES: int = 5
 
-    RECONCILER_MATCH_THRESHOLD: float = 80.0
-
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
     # Artists asked and tracks picked per attempt, against the playlist size: the per-artist cap and the advisor

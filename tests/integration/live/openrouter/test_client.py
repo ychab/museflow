@@ -32,15 +32,15 @@ class TestOpenRouterAdvisorLive:
         async with get_advisor() as client:
             yield client
 
-    async def test__get_discovery_strategy(
+    async def test__get_discovery_artists(
         self,
         openrouter_advisor_live: AdvisorPort,
         taste_profile: TasteProfile,
     ) -> None:
-        strategy = await openrouter_advisor_live.get_discovery_strategy(
+        strategy = await openrouter_advisor_live.get_discovery_artists(
             profile=taste_profile,
             focus=DiscoveryFocus.EXPANSION,
-            advisor_limit=5,
+            artists_limit=5,
         )
         assert strategy.strategy_label
-        assert len(strategy.recommended_tracks) > 0
+        assert len(strategy.artists) > 0

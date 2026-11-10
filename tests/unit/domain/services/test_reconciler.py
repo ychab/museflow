@@ -5,111 +5,30 @@ import pytest
 from museflow.domain.services.reconciler import Reconciler
 
 from tests.unit.factories.entities.track import TrackFactory
-from tests.unit.factories.entities.track import TrackSuggestedFactory
 
 
-@pytest.mark.parametrize("reconciler", [{"match_threshold": 80.0}], indirect=True)
 class TestReconciler:
-    def test__reconcile__no_candidate(self, reconciler: Reconciler, caplog: pytest.LogCaptureFixture) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
+    @pytest.mark.parametrize(
+        ("artist", "credited", "kept"),
+        [
+            pytest.param("Nova", ["Nova"], True, id="exact"),
+            pytest.param("Beyoncé", ["BEYONCE"], True, id="case_and_accent"),
+            pytest.param("Nova", ["A Guest Band", "Nova"], True, id="featured"),
+            pytest.param("Nova", ["Novalee"], False, id="longer_name"),
+            pytest.param("Nova Kane", ["Nova"], False, id="shorter_name"),
+        ],
+    )
+    def test__filter_by_artist(self, reconciler: Reconciler, artist: str, credited: list[str], kept: bool) -> None:
+        track = TrackFactory.build(artists=credited)
 
-        with caplog.at_level(logging.DEBUG):
-            result = reconciler.reconcile(track_suggested=track_suggested, candidates=[])
+        assert reconciler.filter_by_artist(artist=artist, candidates=[track]) == ([track] if kept else [])
 
-        assert result is None
-        assert caplog.messages == [
-            "Reconciliation failed for 'Queen - Bohemian Rhapsody'. Best score: -1.0. No candidate",
-        ]
-
-    def test__reconcile__no_matching_candidates(
+    def test__filter_by_artist__rejected__logged(
         self,
         reconciler: Reconciler,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
-        candidates = [
-            TrackFactory.build(name="Under Pressure", artists=["David Bowie"]),
-            TrackFactory.build(name="Bohemian Rhapsody Nightmare", artists=["Queen"]),
-            TrackFactory.build(name="Somebody To Love", artists=["Queen"]),
-        ]
-
         with caplog.at_level(logging.DEBUG):
-            result = reconciler.reconcile(track_suggested=track_suggested, candidates=candidates)
+            reconciler.filter_by_artist(artist="Nova", candidates=[TrackFactory.build(artists=["Novalee"])])
 
-        assert result is None
-        assert caplog.messages == [
-            "Reconciliation failed for 'Queen - Bohemian Rhapsody'. Best score: 0.0. "
-            "Closest candidate: 'Queen - Bohemian Rhapsody Nightmare' (track: 77.3, artist: 100.0)",
-        ]
-
-    def test__reconcile__exact_match(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
-
-        expected_match = TrackFactory.build(name=track_suggested.name, artists=track_suggested.artists)
-        candidates = [
-            TrackFactory.build(name="Under Pressure", artists=["Queen"]),
-            expected_match,
-        ]
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=candidates)
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is expected_match
-        assert 0.0 < score <= 1.0
-
-    def test__reconcile__fuzzy_text_match__ignores_noise(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Strobe", artists=["deadmau5"])
-
-        expected_match = TrackFactory.build(name="Strobe - Radio Edit", artists=["deadmau5"])
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[expected_match])
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is expected_match
-        assert 0.0 < score <= 1.0
-
-    def test__reconcile__best_text_match_wins(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
-
-        close_match = TrackFactory.build(name="Bohemian Rhapsody", artists=["Queen"])
-        poor_match = TrackFactory.build(name="Bohemian Rhapsody (Karaoke Version)", artists=["Unknown Artist"])
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[poor_match, close_match])
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is close_match
-        assert 0.0 < score <= 1.0
-
-    def test__reconcile__bracketed_suffix__matches_below_exact(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
-
-        suffixed = TrackFactory.build(name="Neon Harbor (Nightfall)", artists=["Velvet Comet"])
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[suffixed])
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is suffixed
-        assert score == pytest.approx(0.97)  # 95 for the name without its suffix, 100 for the artist
-
-    def test__reconcile__bracketed_suffix__exact_title_wins(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
-
-        suffixed = TrackFactory.build(name="Neon Harbor [Slowed]", artists=["Velvet Comet"])
-        exact = TrackFactory.build(name="Neon Harbor", artists=["Velvet Comet"])
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[suffixed, exact])
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is exact
-        assert score == 1.0
-
-    def test__reconcile__number_in_words__matches_digits(self, reconciler: Reconciler) -> None:
-        track_suggested = TrackSuggestedFactory.build(name="2 Moons", artists=["Velvet Comet"])
-
-        expected_match = TrackFactory.build(name="Two Moons", artists=["Velvet Comet"])
-
-        result = reconciler.reconcile(track_suggested=track_suggested, candidates=[expected_match])
-        assert result is not None
-        track_reconciled, score = result
-        assert track_reconciled is expected_match
-        assert score == 1.0
+        assert "Artist 'Nova': rejected candidates of ['Novalee']" in caplog.text

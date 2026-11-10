@@ -120,10 +120,6 @@ class TestSpotifyLibrary:
         with pytest.raises(httpx.HTTPStatusError):
             await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
 
-    async def test__search_artist_tracks__max_pages_missing(self, spotify_library: SpotifyLibraryAdapter) -> None:
-        with pytest.raises(ValueError, match="max_pages is required"):
-            await spotify_library.search_artist_tracks(artist="A Band")
-
     async def test__create_playlist__empty_tracks(
         self,
         spotify_library: SpotifyLibraryAdapter,
