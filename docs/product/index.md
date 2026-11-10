@@ -16,6 +16,9 @@ This section is about the *why* and the *what*. The *how* lives in the [technica
 - **V3.** One AI vendor was the next single point of failure. MuseFlow now reaches most models on the market through
   one gateway: no vendor lock-in, a profile per model to compare, and a model chosen per step to control the cost.
   → [V3: any model](v3.md)
+- **The second cut.** Asked for track titles, the model invented some and repeated what I knew. Discovery now asks it
+  for artists and lets it pick among their real tracks: more relevant, three times faster, a third of the cost, and a
+  whole subsystem deleted. → [Discovery: from titles to artists](discovery-by-artists.md)
 - **The principles.** Quality over quantity, the user as the judge, a constrained LLM, no single vendor.
   → [Product principles](principles.md)
 - **The surprise.** Dogfooding showed that what I play most is not what I love most, and that rediscovering forgotten

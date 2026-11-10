@@ -8,7 +8,7 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
+from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
@@ -38,13 +38,13 @@ class TestPlaylistDiscoverLogic:
         self,
         user: User,
         auth_token: OAuthProviderUserToken,
-        discovery_taste_strategy: DiscoveryTasteStrategy,
+        discovery_artist_strategy: DiscoveryArtistStrategy,
         mock_use_case: mock.Mock,
         mock_check_models: mock.AsyncMock,
     ) -> None:
         expected_result = DiscoverTasteResult(
             playlist=PlaylistFactory.build(user_id=user.id),
-            strategy=discovery_taste_strategy,
+            strategy=discovery_artist_strategy,
             reports=[],
             tracks=[],
         )

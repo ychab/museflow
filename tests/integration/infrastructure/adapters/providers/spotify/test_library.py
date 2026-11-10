@@ -131,6 +131,42 @@ class TestSpotifyLibrary:
         with pytest.raises(ProviderSearchQueryInvalidError):
             await spotify_library.search_tracks(track="Caf\x00\x19")
 
+    async def test__search_artist_tracks__nominal(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A short first page does not end the search: the pages are read up to `max_pages`."""
+        with caplog.at_level(logging.DEBUG):
+            tracks = await spotify_library.search_artist_tracks(artist="Grupo Niche", max_pages=2)
+
+        # 5 tracks on the first page of 10, then 3 more on the next one.
+        assert len(tracks) == 8
+        assert [message for message in caplog.messages if message.startswith("Search query")] == [
+            "Search query 'artist:\"Grupo Niche\"' returned 8 track(s)",
+        ]
+        assert [(track.name, track.album_name, track.album_year) for track in tracks[:2]] == [
+            ("Mi Pueblo", "The Best", 1988),
+            ("Mi Pueblo", "Llegando Al 100%", 1992),
+        ]
+
+    async def test__search_artist_tracks__empty_page__stops(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/search",
+            status=200,
+            query_params={"q": 'artist:"Grupo Niche"', "offset": 20},
+            json_body=EMPTY_SEARCH_PAGE,
+        )
+
+        tracks = await spotify_library.search_artist_tracks(artist="Grupo Niche", max_pages=10)
+
+        assert len(tracks) == 8
+
     async def test__play_track__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
         await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
 

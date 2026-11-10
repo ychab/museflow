@@ -49,12 +49,12 @@ class AppSettings(BaseSettings):
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
 
-    # About 30% of the advisor suggestions are lost to reconciliation and known tracks: ask for more than the target.
+    # Artists asked and tracks picked per attempt, against the playlist size: the per-artist cap and the advisor
+    # returning fewer picks than asked both eat into them.
     DISCOVERY_ADVISOR_LIMIT_RATIO: float = 1.5
-    DISCOVERY_RECONCILER_LIMIT: int = 10
+    DISCOVERY_ARTIST_TRACKS_PAGES: int = Field(default=2, ge=1)  # pages of 10 search results per suggested artist
     DISCOVERY_MAX_ATTEMPTS: int = 3
     DISCOVERY_MAX_TRACKS_PER_ARTIST: int = 3
-    DISCOVERY_SCORE_BAND_WIDTH: float = 0.05
     DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3
     DISCOVERY_LIKED_SCORE_THRESHOLD: int = 7
     DISCOVERY_LIKED_TRACKS_LIMIT: int = 200  # 200 is a quality cap, not a technical constraint (higher is noise)

@@ -21,9 +21,9 @@ V1 produced long playlists, and I discarded almost all of them. V2 goes the othe
   a number. Five great tracks beat twenty guesses.
 - **A cap on tracks per artist.** A small constraint with a big perceived effect: a "discovery" playlist with four
   songs from the same artist does not feel like discovery.
-- **Confidence on both sides.** The LLM gives a confidence score; matching its suggestion to a real catalogue track
-  gives another. Within a band of similar LLM confidence, a well-matched track ranks above a fuzzy match. A great
-  suggestion that resolves to the wrong song is worse than a good one that resolves to the right song.
+- **Only real tracks, never a guess.** The LLM does not write titles: it names artists, and picks among their real
+  catalogue tracks that I don't know yet. A suggestion cannot point at a song that does not exist, nor at one I
+  already have. → [Discovery: from titles to artists](discovery-by-artists.md)
 - **Never suggest the same track twice.** Every suggested track is remembered and excluded from future runs.
 
 ## 3. The user is the best judge

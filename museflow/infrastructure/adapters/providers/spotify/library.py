@@ -23,6 +23,7 @@ from museflow.infrastructure.adapters.providers.spotify.exceptions import Spotif
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_playlist
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
+from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchArtistQuery
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchTrackQuery
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
@@ -103,35 +104,37 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             is_new=is_new,
             is_underground=is_underground,
         )
-        tracks: list[Track] = []
-        # The field filters can miss a track that exists, even in the Spotify app (#162): when they find nothing, a
-        # free-text query on the same words follows. Its looser candidates are still checked by the reconciler.
-        for query in (query_builder.get_query(), query_builder.get_free_text_query()):
-            try:
-                tracks = await self._fetch_pages(
-                    endpoint="/search",
-                    page_model=SpotifyPage[SpotifyTrack],
-                    page_processor=self._extract_search_tracks,
-                    page_size=page_size,
-                    max_pages=max_pages,
-                    log_enabled=log_enabled,
-                    log_prefix=f"[Search track {track}]",
-                    params={
-                        "q": query,
-                        "type": "track",
-                    },
-                    response_key="tracks",
-                    ignored_status_codes=frozenset({400}),
-                )
-            except SpotifyApiError as e:
-                # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
-                raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for track {track!r}") from e
+        return await self._search_tracks(
+            queries=(query_builder.get_query(), query_builder.get_free_text_query()),
+            subject=f"track {track!r}",
+            page_size=page_size,
+            max_pages=max_pages,
+            log_enabled=log_enabled,
+        )
 
-            logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
-            if tracks:
-                break
+    async def search_artist_tracks(
+        self,
+        artist: str,
+        page_size: int = 10,
+        max_pages: int | None = None,
+        log_enabled: bool = True,
+    ) -> list[Track]:
+        if max_pages is None:
+            raise ValueError("max_pages is required: an artist search may walk up to 1000 results")
 
-        return tracks
+        return await self._search_tracks(
+            # No free-text fallback: in the #174 runs, the field filter always found the artist's tracks.
+            queries=(SpotifySearchArtistQuery(artist=artist).get_query(),),
+            subject=f"artist {artist!r}",
+            page_size=page_size,
+            max_pages=max_pages,
+            log_enabled=log_enabled,
+            # Temporary workaround, seen in November 2026 (#174): for an `artist:"…"` query with a limit of 10, the
+            # first page held 5 to 7 tracks with a `total` equal to that count, while the next page held 10 more
+            # tracks with a total above 100. The pages are therefore read up to `max_pages`, until an empty one. To
+            # drop once a short first page comes with a consistent total.
+            stop_on_short_page=False,
+        )
 
     async def create_playlist(
         self,
@@ -195,6 +198,49 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     # Core Logic
     # -------------------------------------------------------------------------
 
+    async def _search_tracks(
+        self,
+        queries: tuple[str, ...],
+        subject: str,
+        page_size: int,
+        max_pages: int | None,
+        log_enabled: bool,
+        stop_on_short_page: bool = True,
+    ) -> list[Track]:
+        """Runs the queries in turn and returns the tracks of the first one that finds any.
+
+        The field filters can miss a track that exists, even in the Spotify app (#162): when they find nothing, a
+        free-text query on the same words follows. Its looser candidates are still checked by the caller.
+        """
+        tracks: list[Track] = []
+        for query in queries:
+            try:
+                tracks = await self._fetch_pages(
+                    endpoint="/search",
+                    page_model=SpotifyPage[SpotifyTrack],
+                    page_processor=self._extract_search_tracks,
+                    page_size=page_size,
+                    max_pages=max_pages,
+                    log_enabled=log_enabled,
+                    log_prefix=f"[Search {subject}]",
+                    params={
+                        "q": query,
+                        "type": "track",
+                    },
+                    response_key="tracks",
+                    ignored_status_codes=frozenset({400}),
+                    stop_on_short_page=stop_on_short_page,
+                )
+            except SpotifyApiError as e:
+                # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
+                raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for {subject}") from e
+
+            logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
+            if tracks:
+                break
+
+        return tracks
+
     async def _fetch_pages(
         self,
         endpoint: str,
@@ -209,8 +255,14 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         log_prefix: str = "",
         response_key: str | None = None,
         ignored_status_codes: frozenset[int] | None = None,
+        stop_on_short_page: bool = True,
     ) -> list[Track]:
-        """Generic method to fetch paginated resources from Spotify."""
+        """Generic method to fetch paginated resources from Spotify.
+
+        Args:
+            stop_on_short_page: Whether a short page, or reaching the page's `total`, ends the walk. Without it,
+                only `max_pages` or an empty page does.
+        """
         items: list[Track] = []
         pages_count = 0
 
@@ -252,7 +304,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             if log_enabled:
                 logger.info(f"{log_prefix} ... processed {offset + page_size}/{page.total} ...")
 
-            if len(items) >= page.total or len(page.items) < page_size:
+            if not page.items:
+                break
+            if stop_on_short_page and (len(items) >= page.total or len(page.items) < page_size):
                 break
 
             offset += page_size
