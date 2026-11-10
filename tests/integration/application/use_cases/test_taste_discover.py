@@ -10,7 +10,6 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import TrackSource
-from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
@@ -28,13 +27,11 @@ class TestDiscoverTasteUseCase:
         uow: UnitOfWorkPort,
         spotify_library: ProviderLibraryPort,
         openrouter_advisor: OpenRouterAdvisorAdapter,
-        reconciler: Reconciler,
     ) -> DiscoverTasteUseCase:
         return DiscoverTasteUseCase(
             uow=uow,
             provider_library=spotify_library,
             advisor=openrouter_advisor,
-            reconciler=reconciler,
         )
 
     async def test__nominal(

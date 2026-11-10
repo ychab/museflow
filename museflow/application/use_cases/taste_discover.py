@@ -12,6 +12,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import drop_known_tracks
+from museflow.application.utils.discovery import filter_by_artist
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileStatus
@@ -26,7 +27,6 @@ from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
-from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
@@ -59,12 +59,10 @@ class DiscoverTasteUseCase:
         uow: UnitOfWorkPort,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
-        reconciler: Reconciler,
     ) -> None:
         self._uow = uow
         self._provider_library = provider_library
         self._advisor = advisor
-        self._reconciler = reconciler
 
     async def create_suggestions_playlist(
         self,
@@ -306,7 +304,7 @@ class DiscoverTasteUseCase:
                 logger.warning(f"Artist skipped, its search query was rejected: '{artist.name}'")
                 continue
 
-            tracks_matched = self._reconciler.filter_by_artist(artist=artist.name, candidates=tracks)
+            tracks_matched = filter_by_artist(artist=artist.name, tracks=tracks)
             found += len(tracks)
             matched += len(tracks_matched)
             kept: list[Track] = []

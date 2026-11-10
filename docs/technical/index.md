@@ -59,7 +59,7 @@ Measured on the current `HEAD` of the branch this documentation was written on:
 
     ---
 
-    Profiler, advisor, reconciler and enricher; model choice per step; retries and self-healing of structured output.
+    Profiler, advisor and enricher; model choice per step; retries and self-healing of structured output.
 
     [:octicons-arrow-right-24: LLM pipeline](llm-pipeline.md)
 
