@@ -86,7 +86,10 @@ writes reliable titles, the archive and #174 say exactly what was tried, and how
 - **Measured on one listener**: my runs, my library, a handful of themes.
 - **The model picks without hearing.** It judges a track by its title, album and year, and leaves out what it cannot
   place. Letting me listen to samples before the playlist is created is an idea for later (#178).
-- **The profile still steers a precise request.** Asked for a calm sound, the model leaned toward the energy my
-  profile shows. That concerns both methods, and has its own issue (#177).
+- **A request leads only on what it settles.** Asked for a calm sound, the model used to lean toward the energy my
+  profile shows. Now the request wins on the sound it implies, and a genre with its own sound decides which artists
+  come in; the profile keeps the rest, and a request like "US rap" is answered from the profile alone (#177). On a
+  niche genre, 0 of 5 playlists were on theme before, 2 of 3 after. A few artists of my usual scene still slip in on
+  such a genre, given a made-up sound (#184).
 - **The same artists come back** across runs on one theme, deeper into their catalogue each time. That will run out
   one day; how the model reacts then is still to see.
