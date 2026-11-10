@@ -181,7 +181,7 @@ class TestEnrichTracksLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     @pytest.fixture
-    def spy_get_enricher(self) -> Iterable[mock.MagicMock]:
+    def mock_get_enricher(self) -> Iterable[mock.MagicMock]:
         with mock.patch(f"{TARGET_PATH}.get_enricher") as patched:
             yield patched
 
@@ -193,14 +193,14 @@ class TestEnrichTracksLogic:
     async def test__model_and_meter__forwarded_to_enricher(
         self,
         mock_track_repository: mock.AsyncMock,
-        spy_get_enricher: mock.MagicMock,
+        mock_get_enricher: mock.MagicMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
         meter = LLMUsageMeter()
 
         await enrich_tracks_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
 
-        spy_get_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
+        mock_get_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
 
     async def test__passes_config_to_use_case(
         self,

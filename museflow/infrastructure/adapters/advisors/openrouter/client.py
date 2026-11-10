@@ -76,7 +76,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
                 f"{formatted}"
             )
-        exclusion_parts.extend(_library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
+        exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
 
         constraints = (
             "### CONSTRAINTS\n"
@@ -96,10 +96,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "- Keep suggested_playlist_name creative and thematic.\n"
         )
         content = await self._complete(
-            system_prompt=_profile_system_prompt(
+            system_prompt=self._profile_system_prompt(
                 profile, focus, exclusion_parts, liked_tracks, disliked_tracks, constraints
             ),
-            user_message=_user_message(prompt, focus, default="Recommend new tracks for this user."),
+            user_message=self._user_message(prompt, focus, default="Recommend new tracks for this user."),
             response_model=DiscoveryStrategyResponse,
             schema=DISCOVERY_STRATEGY_SCHEMA,
             step="advisor",
@@ -127,7 +127,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "These artists have already been considered in this session. You MUST suggest DIFFERENT artists:\n"
                 f"{formatted}"
             )
-        exclusion_parts.extend(_library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
+        exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
 
         constraints = (
             "### CONSTRAINTS\n"
@@ -147,10 +147,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "- Keep suggested_playlist_name creative and thematic.\n"
         )
         content = await self._complete(
-            system_prompt=_profile_system_prompt(
+            system_prompt=self._profile_system_prompt(
                 profile, focus, exclusion_parts, liked_tracks, disliked_tracks, constraints
             ),
-            user_message=_user_message(prompt, focus, default="Recommend new artists for this user."),
+            user_message=self._user_message(prompt, focus, default="Recommend new artists for this user."),
             response_model=DiscoveryArtistsResponse,
             schema=DISCOVERY_ARTISTS_SCHEMA,
             step="advisor_artists",
@@ -208,7 +208,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         )
         content = await self._complete(
             system_prompt=system_prompt,
-            user_message=_user_message(prompt, focus, default="Choose the tracks for this playlist."),
+            user_message=self._user_message(prompt, focus, default="Choose the tracks for this playlist."),
             response_model=DiscoveryPicksResponse,
             schema=DISCOVERY_PICKS_SCHEMA,
             step="advisor_picks",
@@ -247,131 +247,129 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         except LLMResponseError as e:
             raise DiscoveryTasteStrategyError(f"Invalid discovery strategy response: {e}") from e
 
+    @staticmethod
+    def _profile_system_prompt(
+        profile: TasteProfile,
+        focus: DiscoveryFocus | None,
+        exclusion_parts: list[str],
+        liked_tracks: list[Track] | None,
+        disliked_tracks: list[Track] | None,
+        constraints: str,
+    ) -> str:
+        """The advisor's prompt around the taste profile, shared by the titles and the artists steps."""
+        data = profile.profile
 
-def _profile_system_prompt(
-    profile: TasteProfile,
-    focus: DiscoveryFocus | None,
-    exclusion_parts: list[str],
-    liked_tracks: list[Track] | None,
-    disliked_tracks: list[Track] | None,
-    constraints: str,
-) -> str:
-    """The advisor's prompt around the taste profile, shared by the titles and the artists steps."""
-    data = profile.profile
+        timeline_summary = taste_utils.timeline_summary(data)
+        core_identity_str = taste_utils.core_identity_summary(data)
+        current_vibe_str = taste_utils.current_vibe_summary(data)
+        behavioral_traits_str = taste_utils.behavioral_traits_summary(data)
+        archetype = taste_utils.personality_archetype(data)
+        oldest_era = taste_utils.oldest_era_label(data)
+        current_era = taste_utils.current_era_label(data)
 
-    timeline_summary = taste_utils.timeline_summary(data)
-    core_identity_str = taste_utils.core_identity_summary(data)
-    current_vibe_str = taste_utils.current_vibe_summary(data)
-    behavioral_traits_str = taste_utils.behavioral_traits_summary(data)
-    archetype = taste_utils.personality_archetype(data)
-    oldest_era = taste_utils.oldest_era_label(data)
-    current_era = taste_utils.current_era_label(data)
+        traits = data.get("behavioral_traits", {})
+        openness = traits.get("openness", 0.5)
+        adventurousness = traits.get("adventurousness", 0.5)
+        if openness < 0.4 and adventurousness < 0.4:
+            risk_calibration = (
+                "User prefers sonic comfort zones — stay close to established core identity. No genre leaps."
+            )
+        elif openness > 0.7 or adventurousness > 0.7:
+            risk_calibration = "User is adventurous — push into niche, adjacent, or crossover territory confidently."
+        else:
+            risk_calibration = "User is moderately open — occasional adjacent genre exploration is fine, but anchor to known strengths."
 
-    traits = data.get("behavioral_traits", {})
-    openness = traits.get("openness", 0.5)
-    adventurousness = traits.get("adventurousness", 0.5)
-    if openness < 0.4 and adventurousness < 0.4:
-        risk_calibration = (
-            "User prefers sonic comfort zones — stay close to established core identity. No genre leaps."
+        focus_descriptions = {
+            DiscoveryFocus.EXPANSION: "Find high-probability cousin genres not yet explored.",
+            DiscoveryFocus.ROOTS_REVIVAL: f"Find modern tracks replicating the technical fingerprint of the oldest era ({oldest_era}).",
+            DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
+        }
+
+        focus_block = ""
+        if focus:
+            focus_block = f"### FOCUS STRATEGY: {focus.value}\n{focus_descriptions[focus]}\n\n"
+
+        exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
+
+        # The liked anchors are the global top, not filtered on the prompt: a free-text theme does not map to the
+        # enriched genres without interpreting it, so the advisor picks the relevant anchors itself (#146). If the
+        # playlists drift off theme, filter them here (see #137).
+        liked_tracks_block = ""
+        if liked_tracks:
+            formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in liked_tracks)
+            liked_tracks_block = (
+                "### LIKED TRACKS\n"
+                "These are tracks the user has explicitly enjoyed and rated highly. "
+                "Use them as concrete taste anchors when shaping your recommendations — "
+                "they reveal what this user genuinely responds to beyond statistical patterns.\n"
+                f"{formatted}\n\n"
+            )
+
+        disliked_tracks_block = ""
+        if disliked_tracks:
+            formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in disliked_tracks)
+            disliked_tracks_block = (
+                "### DISLIKED TRACKS\n"
+                "These are tracks the user rated low. Steer away from what they share (sound, style, production), "
+                "not only from these exact tracks.\n"
+                f"{formatted}\n\n"
+            )
+
+        return (
+            "### ROLE\n"
+            'You are the "MuseFlow Navigator," a world-class musicologist.\n'
+            "Your goal: recommend NEW music the user has never heard, based on their Taste Profile.\n\n"
+            f"### USER IDENTITY: {archetype}\n"
+            f"- Core Identity: {core_identity_str}\n"
+            f"- Current Active Vibe: {current_vibe_str}\n"
+            f"- Behavioral Traits: {behavioral_traits_str}\n"
+            f"- Taste Timeline (oldest → newest): {timeline_summary}\n\n"
+            "### RISK CALIBRATION\n"
+            f"{risk_calibration}\n\n"
+            f"{exclusion_block}"
+            f"{liked_tracks_block}"
+            f"{disliked_tracks_block}"
+            f"{focus_block}"
+            f"{constraints}"
         )
-    elif openness > 0.7 or adventurousness > 0.7:
-        risk_calibration = "User is adventurous — push into niche, adjacent, or crossover territory confidently."
-    else:
-        risk_calibration = (
-            "User is moderately open — occasional adjacent genre exploration is fine, but anchor to known strengths."
-        )
 
-    focus_descriptions = {
-        DiscoveryFocus.EXPANSION: "Find high-probability cousin genres not yet explored.",
-        DiscoveryFocus.ROOTS_REVIVAL: f"Find modern tracks replicating the technical fingerprint of the oldest era ({oldest_era}).",
-        DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
-    }
+    @staticmethod
+    def _library_exclusion_parts(
+        covered_artists: dict[str, int] | None,
+        blacklisted_artists: list[str] | None,
+        blacklisted_tracks: list[str] | None,
+    ) -> list[str]:
+        parts: list[str] = []
+        if covered_artists:
+            formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in covered_artists.items())
+            parts.append(
+                "### ARTISTS ALREADY COVERED IN THE LIBRARY\n"
+                "The user already owns many tracks of these artists (count in brackets): their well-known tracks "
+                "are already known. A rare deep cut of theirs is still welcome, but most picks should come from "
+                "other artists:\n"
+                f"{formatted}"
+            )
+        if blacklisted_artists:
+            formatted = "\n".join(f"- {a}" for a in blacklisted_artists)
+            parts.append(
+                "### PERMANENTLY BLACKLISTED ARTISTS (NEVER SUGGEST)\n"
+                "The user has permanently excluded these artists. Do NOT suggest any track by them:\n"
+                f"{formatted}"
+            )
+        if blacklisted_tracks:
+            formatted = "\n".join(f"- {t}" for t in blacklisted_tracks)
+            parts.append(
+                "### PERMANENTLY BLACKLISTED TRACKS (NEVER SUGGEST)\n"
+                "The user has permanently excluded these tracks:\n"
+                f"{formatted}"
+            )
+        return parts
 
-    focus_block = ""
-    if focus:
-        focus_block = f"### FOCUS STRATEGY: {focus.value}\n{focus_descriptions[focus]}\n\n"
-
-    exclusion_block = ("\n\n".join(exclusion_parts) + "\n\n") if exclusion_parts else ""
-
-    # The liked anchors are the global top, not filtered on the prompt: a free-text theme does not map to the
-    # enriched genres without interpreting it, so the advisor picks the relevant anchors itself (#146). If the
-    # playlists drift off theme, filter them here (see #137).
-    liked_tracks_block = ""
-    if liked_tracks:
-        formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in liked_tracks)
-        liked_tracks_block = (
-            "### LIKED TRACKS\n"
-            "These are tracks the user has explicitly enjoyed and rated highly. "
-            "Use them as concrete taste anchors when shaping your recommendations — "
-            "they reveal what this user genuinely responds to beyond statistical patterns.\n"
-            f"{formatted}\n\n"
-        )
-
-    disliked_tracks_block = ""
-    if disliked_tracks:
-        formatted = "\n".join(f"- {t.artists[0] if t.artists else 'Unknown'}: {t.name}" for t in disliked_tracks)
-        disliked_tracks_block = (
-            "### DISLIKED TRACKS\n"
-            "These are tracks the user rated low. Steer away from what they share (sound, style, production), "
-            "not only from these exact tracks.\n"
-            f"{formatted}\n\n"
-        )
-
-    return (
-        "### ROLE\n"
-        'You are the "MuseFlow Navigator," a world-class musicologist.\n'
-        "Your goal: recommend NEW music the user has never heard, based on their Taste Profile.\n\n"
-        f"### USER IDENTITY: {archetype}\n"
-        f"- Core Identity: {core_identity_str}\n"
-        f"- Current Active Vibe: {current_vibe_str}\n"
-        f"- Behavioral Traits: {behavioral_traits_str}\n"
-        f"- Taste Timeline (oldest → newest): {timeline_summary}\n\n"
-        "### RISK CALIBRATION\n"
-        f"{risk_calibration}\n\n"
-        f"{exclusion_block}"
-        f"{liked_tracks_block}"
-        f"{disliked_tracks_block}"
-        f"{focus_block}"
-        f"{constraints}"
-    )
-
-
-def _library_exclusion_parts(
-    covered_artists: dict[str, int] | None,
-    blacklisted_artists: list[str] | None,
-    blacklisted_tracks: list[str] | None,
-) -> list[str]:
-    parts: list[str] = []
-    if covered_artists:
-        formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in covered_artists.items())
-        parts.append(
-            "### ARTISTS ALREADY COVERED IN THE LIBRARY\n"
-            "The user already owns many tracks of these artists (count in brackets): their well-known tracks "
-            "are already known. A rare deep cut of theirs is still welcome, but most picks should come from "
-            "other artists:\n"
-            f"{formatted}"
-        )
-    if blacklisted_artists:
-        formatted = "\n".join(f"- {a}" for a in blacklisted_artists)
-        parts.append(
-            "### PERMANENTLY BLACKLISTED ARTISTS (NEVER SUGGEST)\n"
-            "The user has permanently excluded these artists. Do NOT suggest any track by them:\n"
-            f"{formatted}"
-        )
-    if blacklisted_tracks:
-        formatted = "\n".join(f"- {t}" for t in blacklisted_tracks)
-        parts.append(
-            "### PERMANENTLY BLACKLISTED TRACKS (NEVER SUGGEST)\n"
-            "The user has permanently excluded these tracks:\n"
-            f"{formatted}"
-        )
-    return parts
-
-
-def _user_message(prompt: str | None, focus: DiscoveryFocus | None, default: str) -> str:
-    user_parts: list[str] = []
-    if focus:
-        user_parts.append(f"Apply the '{focus.value}' focus strategy.")
-    if prompt:
-        user_parts.append(f"User request: {prompt}")
-    return " ".join(user_parts) or default
+    @staticmethod
+    def _user_message(prompt: str | None, focus: DiscoveryFocus | None, default: str) -> str:
+        user_parts: list[str] = []
+        if focus:
+            user_parts.append(f"Apply the '{focus.value}' focus strategy.")
+        if prompt:
+            user_parts.append(f"User request: {prompt}")
+        return " ".join(user_parts) or default
