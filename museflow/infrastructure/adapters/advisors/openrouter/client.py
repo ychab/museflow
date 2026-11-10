@@ -63,7 +63,37 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             )
         exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
 
+        # With a request, the profile still leads, except on what the request settles: the sound it implies, and the
+        # artists when it names a genre with its own sound (#177). Off-genre artists still slip in at the edge (#184).
+        request_block = ""
+        if prompt:
+            request_block = (
+                "### USER REQUEST VS TASTE PROFILE\n"
+                "The user request narrows the profile; it does not replace it.\n"
+                "- First read what the request implies about the SOUND: energy, tempo, mood, texture, production\n"
+                "  (e.g. 'cloud rap' implies hazy, floating, low energy; 'workout' implies high energy). A request\n"
+                "  naming only a genre, a scene, a language or a region (e.g. 'US rap', 'French rap') implies nothing\n"
+                "  about the sound.\n"
+                "- Where the request implies a sound dimension, it wins over the profile on that dimension ONLY: set\n"
+                "  aside any trait, vibe or liked track that pulls the other way (e.g. a high-energy profile asking for\n"
+                "  cloud rap gets floating, low-energy tracks, not energetic ones).\n"
+                "- A requested genre with its own sound (e.g. cloud rap, ambient, drill) decides WHO can be suggested:\n"
+                "  only artists whose core sound IS that genre. Never an artist of the user's usual scene who merely\n"
+                "  sits next to it: a rapper with no cloud sound is no cloud rap artist, however close to the profile.\n"
+                "- A language or region counts only when the request states it. Never infer one from the wording or\n"
+                "  the language of the request (e.g. 'rap cloud' written in French does not ask for French artists).\n"
+                "  Among the artists that fit, the profile's languages and scenes may still break ties.\n"
+                "- The pioneers and best-known artists of a requested genre are likely known to the user already:\n"
+                "  favour the next generation, the lesser-known and the international scenes of that genre.\n"
+                "- Everything else still comes from the profile: the scenes, eras and production the user loves, the\n"
+                "  dislikes, the risk calibration. A request with no sound implication is answered from the profile\n"
+                "  entirely.\n"
+                "- In the reasoning, name each profile dimension you set aside because the request overrides it, or\n"
+                "  say that none was.\n\n"
+            )
+
         constraints = (
+            f"{request_block}"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- Recommend ARTISTS, not tracks: their real tracks are fetched from the streaming catalogue afterwards,\n"
@@ -129,6 +159,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "- Pick ONLY ids listed above: any other id is discarded.\n"
             "- A user request, when given, sets the playlist theme: every pick MUST fit it, and the artist's wanted\n"
             "  sound.\n"
+            "- Where the request implies a sound (energy, tempo, mood), it wins over the strategy above on that point:\n"
+            "  a track that fits the strategy but not the requested sound is left out.\n"
             "- Judge each track by its SOUND (production, mood, flow, the artist's style on that album and in that\n"
             "  year), never by its words: a title or album name that echoes the theme (e.g. 'rain', 'night' for a\n"
             "  rainy-night request) is no evidence of fit, and a track does not need one.\n"
@@ -137,6 +169,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             f"- Pick up to {tracks_limit} tracks, at most {max_tracks_per_artist} per artist, featured appearances\n"
             "  included (a track crediting two artists counts for both): spread the picks across the artists.\n"
             "- Quality over quantity: pick fewer tracks, or none of an artist, when nothing fits — never pad.\n"
+            f"  {tracks_limit} is a ceiling, not a target: a short list is a valid answer, as the app then runs\n"
+            "  another round with other artists. A track off the requested sound is worse than no track.\n"
             "- Avoid two versions of the same song (remix, live, edit) unless that version is the better fit.\n"
             "- Give each pick a fit score (0.0–1.0): 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
         )

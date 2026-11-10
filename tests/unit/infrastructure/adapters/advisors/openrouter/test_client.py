@@ -103,6 +103,8 @@ class TestOpenRouterAdvisorAdapter:
 
         system_message, user_message = json.loads(httpx_mock.get_requests()[0].content)["messages"]
         assert ("### FOCUS STRATEGY" in system_message["content"]) is (focus is not None)
+        # Without a request, the profile leads alone: no rule on what a request settles.
+        assert ("### USER REQUEST VS TASTE PROFILE" in system_message["content"]) is (prompt is not None)
         assert user_message["content"] == expected_message
 
     async def test__get_discovery_artists__with_excluded_artists_builds_exclusion_block(

@@ -176,6 +176,8 @@ class DiscoverTasteUseCase:
                 covered_artists=covered_artists or None,
             )
             artists_asked.extend(artist.name for artist in strategy.artists)
+            for artist in strategy.artists:
+                logger.debug(f"Artist suggested '{artist.name}' ({artist.score:.2f}): {artist.sound}")
             logger.info(
                 f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
                 extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
@@ -200,6 +202,8 @@ class DiscoverTasteUseCase:
                     prompt=config.prompt,
                     focus=config.focus,
                 )
+                for track_picked in tracks_picked_now:
+                    logger.debug(f"Picked ({track_picked.score:.2f}): '{track_picked.track}'")
 
             reports.append(
                 DiscoverTasteAttemptReport(
