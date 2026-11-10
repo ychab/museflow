@@ -28,80 +28,7 @@ class TestSpotifyLibrary:
             for track_id in ["7J5pB49l9ycy9ImB6D9hu0", "1Fp4njyRHJYyMTKP899c0q", "7eOSOc9z6gcsGBznsg5mk3"]
         ]
 
-    async def test__search__nominal(
-        self,
-        spotify_library: SpotifyLibraryAdapter,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        with caplog.at_level(logging.DEBUG):
-            tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5)
-        assert len(tracks) == 8
-        assert [message for message in caplog.messages if message.startswith("Search query")] == [
-            "Search query 'track:\"Mi Pueblo\"' returned 8 track(s)",
-        ]
-
-        track_first = tracks[0]
-        assert track_first.id is not None
-        assert track_first.user_id == spotify_library.user.id
-        assert track_first.name == "Mi Pueblo"
-        assert len(track_first.artists) == 1
-        assert track_first.artists[0] == "Grupo Niche"
-        assert track_first.provider_links[0].provider == MusicProvider.SPOTIFY
-        assert track_first.get_provider_id(MusicProvider.SPOTIFY) == "30xocklvViCtxktihAEZM8"
-        assert track_first.played_at_last is None
-
-        track_last = tracks[-1]
-        assert track_last.id is not None
-        assert track_last.user_id == spotify_library.user.id
-        assert track_last.name == "Mi Pueblo"
-        assert len(track_last.artists) == 1
-        assert track_last.artists[0] == "Grupo Niche"
-        assert track_last.provider_links[0].provider == MusicProvider.SPOTIFY
-        assert track_last.get_provider_id(MusicProvider.SPOTIFY) == "0K81HUG9YhPp6khuUEAH9g"
-        assert track_last.played_at_last is None
-
-    async def test__search__max_pages(
-        self,
-        spotify_library: SpotifyLibraryAdapter,
-    ) -> None:
-        tracks = await spotify_library.search_tracks(track="Mi Pueblo", page_size=5, max_pages=1)
-        assert len(tracks) == 5
-
-    async def test__search__strict_query_empty__falls_back_to_free_text(
-        self,
-        spotify_library: SpotifyLibraryAdapter,
-        spotify_wiremock: WireMockContext,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        spotify_wiremock.create_mapping(
-            method="GET",
-            url_path="/search",
-            status=200,
-            query_params={"q": 'track:"Mi Pueblo" artist:"Grupo Niche"'},
-            json_body=EMPTY_SEARCH_PAGE,
-        )
-
-        with caplog.at_level(logging.DEBUG):
-            tracks = await spotify_library.search_tracks(track="Mi Pueblo", artists=["Grupo Niche"], page_size=5)
-
-        assert len(tracks) == 8
-        assert [message for message in caplog.messages if message.startswith("Search query")] == [
-            'Search query \'track:"Mi Pueblo" artist:"Grupo Niche"\' returned 0 track(s)',
-            "Search query 'Mi Pueblo Grupo Niche' returned 8 track(s)",
-        ]
-
-    async def test__search__both_queries_empty(
-        self,
-        spotify_library: SpotifyLibraryAdapter,
-        spotify_wiremock: WireMockContext,
-    ) -> None:
-        spotify_wiremock.create_mapping(method="GET", url_path="/search", status=200, json_body=EMPTY_SEARCH_PAGE)
-
-        tracks = await spotify_library.search_tracks(track="Ghost Song", artists=["Velvet Comet"])
-
-        assert tracks == []
-
-    async def test__search__page_validation_error(
+    async def test__search_artist_tracks__page_validation_error(
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_wiremock: WireMockContext,
@@ -114,9 +41,9 @@ class TestSpotifyLibrary:
         )
 
         with pytest.raises(ProviderPageValidationError):
-            await spotify_library.search_tracks(track="Mi Pueblo")
+            await spotify_library.search_artist_tracks(artist="Grupo Niche", max_pages=1)
 
-    async def test__search__query_invalid(
+    async def test__search_artist_tracks__query_invalid(
         self,
         spotify_library: SpotifyLibraryAdapter,
         spotify_wiremock: WireMockContext,
@@ -128,8 +55,8 @@ class TestSpotifyLibrary:
             json_body={"error": {"status": 400, "message": "Bad request."}},
         )
 
-        with pytest.raises(ProviderSearchQueryInvalidError):
-            await spotify_library.search_tracks(track="Caf\x00\x19")
+        with pytest.raises(ProviderSearchQueryInvalidError, match="Spotify rejected the search query for artist"):
+            await spotify_library.search_artist_tracks(artist="Caf\x00\x19", max_pages=1)
 
     async def test__search_artist_tracks__nominal(
         self,

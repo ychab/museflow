@@ -66,24 +66,3 @@ class Track(BaseEntity):
                 artist_names=[self.primary_artist],
             )
             object.__setattr__(self, "fingerprint", fingerprint_val)
-
-
-@dataclass(frozen=True, kw_only=True)
-class TrackSuggested:
-    name: str
-    artists: list[str] = field(default_factory=list)
-    advisor_id: str | None = None
-    score: float
-
-    @property
-    def primary_artist(self) -> str:
-        return self.artists[0]
-
-    def __post_init__(self) -> None:
-        if not self.name:
-            raise ValueError("TrackSuggested.name must not be empty")
-        if not self.artists:
-            raise ValueError("TrackSuggested must have at least one artist")
-
-    def __str__(self) -> str:
-        return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")

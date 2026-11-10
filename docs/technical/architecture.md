@@ -38,7 +38,7 @@ flowchart TB
 
 | Layer | Path | May import | Contains |
 |---|---|---|---|
-| Domain | `museflow/domain/` | the standard library and a few pure helpers (`rapidfuzz`, `unidecode`) | Frozen-dataclass entities, value objects, the `Reconciler` service, enums, constants, exceptions |
+| Domain | `museflow/domain/` | the standard library and a pure helper (`unidecode`) | Frozen-dataclass entities, value objects, the `Reconciler` service, enums, constants, exceptions |
 | Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, port interfaces (`abc.ABC`) |
 | Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
 

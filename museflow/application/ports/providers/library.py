@@ -9,50 +9,18 @@ from museflow.domain.enums import PlaylistType
 class ProviderLibraryPort(ABC):
     """A port defining the contract for interacting with a music provider's library.
 
-    This interface abstracts track search and playlist creation on a specific music provider.
+    This interface abstracts the artist track search and playlist creation on a specific music provider.
     """
-
-    @abstractmethod
-    async def search_tracks(
-        self,
-        track: str,
-        artists: list[str] | None = None,
-        is_new: bool = False,
-        is_underground: bool = False,
-        page_size: int = 20,
-        max_pages: int | None = None,
-        log_enabled: bool = True,
-    ) -> list[Track]:
-        """Retrieves a list of tracks based on the search criteria.
-
-        A provider may follow a strict query that finds nothing with a looser one: the caller checks the candidates.
-
-        Args:
-            track: The name of the track to search for.
-            artists: The track's artists, primary first. A provider may filter on the primary one only.
-            is_new: Whether to include only new tracks (periodicity depends on the provider).
-            is_underground: Whether to include underground tracks (depends on the provider).
-            page_size: An optional maximum number of tracks per page.
-            max_pages: The maximum number of pages to retrieve.
-            log_enabled: Whether to write logs.
-
-        Returns:
-            A list of `Track` entities.
-
-        Raises:
-            ProviderSearchQueryInvalidError: If the provider rejects the query as malformed.
-        """
-        ...
 
     @abstractmethod
     async def search_artist_tracks(
         self,
         artist: str,
+        max_pages: int,
         page_size: int = 10,
-        max_pages: int | None = None,
         log_enabled: bool = True,
     ) -> list[Track]:
-        """Retrieves tracks of an artist, in the provider's relevance order.
+        """Retrieves tracks of an artist, in the provider's relevance order, over at most `max_pages` pages.
 
         The provider may also return tracks of artists with a close name: the caller checks the candidates.
 
