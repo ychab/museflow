@@ -73,7 +73,8 @@ class DiscoverTasteUseCase:
 
         Each attempt asks the advisor for artists, fetches their catalogue tracks the user does not know, then
         asks the advisor to pick among them, so that no title can be invented. Iterates up to `max_attempts` times,
-        each time excluding the artists already asked, and stops once `playlist_limit` tracks are picked.
+        each time excluding the artists already asked, and stops once `playlist_limit` tracks are kept after the
+        per-artist cap.
 
         Args:
             user: The user for whom to create the playlist.
@@ -151,6 +152,8 @@ class DiscoverTasteUseCase:
         covered_artists: dict[str, int],
     ) -> DiscoverTasteResult:
         tracks_picked: list[TrackPicked] = []
+        # What the playlist would hold now: the loop stops on it, so an attempt cut by the per-artist cap needs another.
+        tracks: list[Track] = []
         reports: list[DiscoverTasteAttemptReport] = []
         strategy: DiscoveryArtistStrategy | None = None
         # The artists asked in earlier attempts, not to be suggested again.
@@ -208,36 +211,24 @@ class DiscoverTasteUseCase:
             )
 
             tracks_picked.extend(tracks_picked_now)
+            tracks = self._select_tracks(tracks_picked=tracks_picked, config=config)
             logger.info(
                 f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
-                f"(total: {len(tracks_picked)})\n",
-                extra={"attempt": attempt, "total": len(tracks_picked)},
+                f"(total: {len(tracks_picked)}, {len(tracks)} kept)\n",
+                extra={"attempt": attempt, "total": len(tracks_picked), "kept": len(tracks)},
             )
 
-            if len(tracks_picked) >= config.playlist_limit:
+            if len(tracks) >= config.playlist_limit:
                 break
 
         # strategy can only be None if no attempt ran, which DiscoverTasteConfigInput forbids (max_attempts >= 1)
-        if strategy is None or not tracks_picked:
+        if strategy is None or not tracks:
             raise DiscoveryTrackNoNewError()
-
-        # Best fit first; a stable sort keeps the advisor's order between equal scores.
-        tracks_picked.sort(key=lambda tp: tp.score, reverse=True)
-
-        # Per credited artist: the suggested artists often feature on each other's tracks.
-        tracks = apply_artist_cap(
-            tracks=[tp.track for tp in tracks_picked],
-            max_tracks_per_artist=config.max_tracks_per_artist,
-        )
-
-        # Trim to the final playlist limit
-        tracks = tracks[: config.playlist_limit]
 
         if len(tracks) < config.playlist_limit:
             logger.warning(
-                f"playlist_limit not reached ({len(tracks)}/{config.playlist_limit}) "
-                f"after {config.max_attempts} attempt(s)",
-                extra={"found": len(tracks), "target": config.playlist_limit},
+                f"playlist_limit not reached ({len(tracks)}/{config.playlist_limit}) after {len(reports)} attempt(s)",
+                extra={"found": len(tracks), "target": config.playlist_limit, "attempts": len(reports)},
             )
 
         if config.dry_run:
@@ -335,6 +326,18 @@ class DiscoverTasteUseCase:
             extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
         )
         return candidates
+
+    @staticmethod
+    def _select_tracks(tracks_picked: list[TrackPicked], config: DiscoverTasteConfigInput) -> list[Track]:
+        """Returns the playlist tracks: best fit first, capped per credited artist, trimmed to the playlist limit."""
+        # A stable sort keeps the advisor's order between equal scores.
+        tracks_sorted = sorted(tracks_picked, key=lambda tp: tp.score, reverse=True)
+        # Per credited artist: the suggested artists often feature on each other's tracks.
+        tracks = apply_artist_cap(
+            tracks=[tp.track for tp in tracks_sorted],
+            max_tracks_per_artist=config.max_tracks_per_artist,
+        )
+        return tracks[: config.playlist_limit]
 
     @staticmethod
     def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:

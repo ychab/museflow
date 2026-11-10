@@ -295,6 +295,36 @@ class TestDiscoverTasteUseCase:
         # The featured appearance counts for the artist: the fourth track is over the cap.
         assert result.tracks == [high, featured, capped]
 
+    async def test__attempts__capped_below_limit__next_attempt(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """An attempt reaching the limit before the per-artist cap, but not after it, is followed by another one."""
+        artist_1, artist_2 = ArtistSuggestedFactory.batch(2)
+        mock_advisor.get_discovery_artists.side_effect = [
+            DiscoveryArtistStrategyFactory.build(artists=[artist_1]),
+            DiscoveryArtistStrategyFactory.build(artists=[artist_2]),
+        ]
+        tracks_1 = TrackFactory.batch(3, artists=[artist_1.name])
+        track_2 = TrackFactory.build(artists=[artist_2.name])
+        mock_provider_library.search_artist_tracks.side_effect = [tracks_1, [track_2]]
+
+        with caplog.at_level(logging.WARNING):
+            result = await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(
+                    playlist_limit=3, max_attempts=2, max_tracks_per_artist=1, dry_run=True
+                ),
+            )
+
+        assert result.tracks == [tracks_1[0], track_2]
+        assert [r.tracks_picked for r in result.reports] == [3, 1]
+        assert "playlist_limit not reached (2/3) after 2 attempt(s)" in caplog.text
+
     async def test__remote_calls__run_outside_any_block(
         self,
         user: User,
