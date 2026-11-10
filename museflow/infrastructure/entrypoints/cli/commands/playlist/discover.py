@@ -81,8 +81,7 @@ def playlist_discover_command(
                         focus=focus,
                         profile_name=name,
                         advisor_limit=math.ceil(limit * app_settings.DISCOVERY_ADVISOR_LIMIT_RATIO),
-                        reconciler_limit=app_settings.DISCOVERY_RECONCILER_LIMIT,
-                        score_band_width=app_settings.DISCOVERY_SCORE_BAND_WIDTH,
+                        artist_tracks_pages=app_settings.DISCOVERY_ARTIST_TRACKS_PAGES,
                         liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
                         liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
                         disliked_tracks_score_threshold=app_settings.DISCOVERY_DISLIKED_SCORE_THRESHOLD,
@@ -130,15 +129,15 @@ def playlist_discover_command(
 
         report_table = Table(title="Discovery Report")
         report_table.add_column("Attempt", justify="right")
-        report_table.add_column("Suggested", justify="right")
-        report_table.add_column("Survived", justify="right")
-        report_table.add_column("New", justify="right")
+        report_table.add_column("Artists", justify="right")
+        report_table.add_column("Unknown tracks", justify="right")
+        report_table.add_column("Picked", justify="right")
         for report in result.reports:
             report_table.add_row(
                 str(report.attempt),
-                str(report.tracks_suggested),
-                str(report.tracks_survived),
-                str(report.tracks_new),
+                str(report.artists),
+                str(report.candidates),
+                str(report.tracks_picked),
             )
         console.print(report_table)
 

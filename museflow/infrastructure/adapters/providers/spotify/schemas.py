@@ -38,6 +38,8 @@ class SpotifyTrackArtist(BaseModel):
 
 class SpotifyAlbum(BaseModel):
     name: str
+    # "YYYY", "YYYY-MM" or "YYYY-MM-DD", following `release_date_precision`.
+    release_date: str | None = None
 
 
 class SpotifyItem(BaseModel):

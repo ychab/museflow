@@ -12,12 +12,15 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import TrackSource
 from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
+from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 @pytest.mark.wiremock("openrouter", "spotify")
@@ -37,6 +40,24 @@ class TestDiscoverTasteUseCase:
             reconciler=reconciler,
         )
 
+    @pytest.fixture
+    def spy_get_discovery_artists(self, openrouter_advisor: OpenRouterAdvisorAdapter) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            openrouter_advisor,
+            "get_discovery_artists",
+            wraps=openrouter_advisor.get_discovery_artists,
+        ) as spy:
+            yield spy
+
+    @pytest.fixture
+    def spy_pick_discovery_tracks(self, openrouter_advisor: OpenRouterAdvisorAdapter) -> Iterator[mock.AsyncMock]:
+        with mock.patch.object(
+            openrouter_advisor,
+            "pick_discovery_tracks",
+            wraps=openrouter_advisor.pick_discovery_tracks,
+        ) as spy:
+            yield spy
+
     async def test__nominal(
         self,
         async_session_db: AsyncSession,
@@ -47,29 +68,40 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(
-                prompt="lo-fi jazz and soul for focus",
-                playlist_limit=1,
-                advisor_limit=5,
-                dry_run=False,
-            ),
+            config=DiscoverTasteConfigInput(prompt="lo-fi jazz and soul for focus", playlist_limit=2, dry_run=False),
         )
 
         assert result.playlist is not None
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert result.playlist.prompt == "lo-fi jazz and soul for focus"
         assert result.playlist.focus is None
-        assert len(result.playlist.tracks) == len(result.tracks)
+        assert result.playlist.reasoning == result.strategy.reasoning
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
-        assert len(result.tracks) >= 1
+        # The picks "1" and "2" are the first two candidates; the made-up id "99" is dropped.
+        assert [(track.name, track.album_year) for track in result.tracks] == [
+            ("Mi Pueblo", 1988),
+            ("Mi Pueblo Natal", 2005),
+        ]
+        # The search pages hold 8 tracks of the artist, versions of 2 songs.
+        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 2, 2)]
 
-        row = (
-            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
-        ).scalar_one()
-        assert (row.operation, row.step) == (LLMOperation.DISCOVER, "advisor")
-        assert row.profile_id == profile_db.id
-        assert row.playlist_id == result.playlist.id
+        tracks_db = (
+            (await async_session_db.execute(select(TrackModel).where(TrackModel.user_id == user.id))).scalars().all()
+        )
+        assert {track.name for track in tracks_db} == {"Mi Pueblo", "Mi Pueblo Natal"}
+        assert {track.source for track in tracks_db} == {TrackSource.DISCOVERY}
+
+        rows = (
+            (await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id)))
+            .scalars()
+            .all()
+        )
+        assert sorted((row.operation, row.step) for row in rows) == [
+            (LLMOperation.DISCOVER, "advisor_artists"),
+            (LLMOperation.DISCOVER, "advisor_picks"),
+        ]
+        assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, result.playlist.id)}
 
     async def test__dry_run(
         self,
@@ -81,37 +113,44 @@ class TestDiscoverTasteUseCase:
 
         result = await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(
-                playlist_limit=1,
-                advisor_limit=5,
-                dry_run=True,
-            ),
+            config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
         )
 
         assert result.playlist is None
-        assert result.strategy.strategy_label == "Progressive Horizons"
-        assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
+        assert len(result.tracks) == 1
 
-        row = (
-            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
-        ).scalar_one()
-        assert row.profile_id == profile_db.id
-        assert row.playlist_id is None
+        tracks_db = (await async_session_db.execute(select(TrackModel).where(TrackModel.user_id == user.id))).all()
+        assert tracks_db == []
+        rows = (
+            (await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id)))
+            .scalars()
+            .all()
+        )
+        assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, None)}
 
-    @pytest.fixture
-    def spy_get_discovery_strategy(self, openrouter_advisor: OpenRouterAdvisorAdapter) -> Iterator[mock.AsyncMock]:
-        with mock.patch.object(
-            openrouter_advisor,
-            "get_discovery_strategy",
-            wraps=openrouter_advisor.get_discovery_strategy,
-        ) as spy:
-            yield spy
+    async def test__known_tracks__not_offered(
+        self,
+        use_case: DiscoverTasteUseCase,
+        user: User,
+        spy_pick_discovery_tracks: mock.AsyncMock,
+    ) -> None:
+        await TasteProfileModelFactory.create_async(user_id=user.id)
+        known = TrackFactory.build(name="Mi Pueblo", artists=["Grupo Niche"])
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint=known.fingerprint)
+
+        await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
+        )
+
+        candidates = spy_pick_discovery_tracks.call_args.kwargs["candidates"]
+        assert [track.name for track in candidates["Grupo Niche"]] == ["Mi Pueblo Natal"]
 
     async def test__covered_artists(
         self,
         use_case: DiscoverTasteUseCase,
         user: User,
-        spy_get_discovery_strategy: mock.AsyncMock,
+        spy_get_discovery_artists: mock.AsyncMock,
     ) -> None:
         """The artists the user owns the most tracks of reach the advisor, most first, ties by name."""
         await TasteProfileModelFactory.create_async(user_id=user.id)
@@ -126,8 +165,8 @@ class TestDiscoverTasteUseCase:
 
         await use_case.create_suggestions_playlist(
             user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=1, advisor_limit=5, covered_artists_limit=3, dry_run=True),
+            config=DiscoverTasteConfigInput(playlist_limit=1, covered_artists_limit=3, dry_run=True),
         )
 
-        covered_artists = spy_get_discovery_strategy.call_args_list[0].kwargs["covered_artists"]
+        covered_artists = spy_get_discovery_artists.call_args_list[0].kwargs["covered_artists"]
         assert list(covered_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]

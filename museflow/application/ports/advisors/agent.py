@@ -6,7 +6,9 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.value_objects.llm import LLMUsage
+from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
+from museflow.domain.value_objects.taste import TrackPicked
 
 
 class AdvisorPort(ABC):
@@ -48,6 +50,50 @@ class AdvisorPort(ABC):
             disliked_tracks: Tracks the user rated low, as what to steer away from.
             covered_artists: Artists the user owns the most tracks of, with their track count: their catalogue is
                 already well covered. A coverage, not a preference: plays and scores do not count.
+        """
+        ...
+
+    @abstractmethod
+    async def get_discovery_artists(
+        self,
+        profile: TasteProfile,
+        artists_limit: int,
+        prompt: str | None = None,
+        focus: DiscoveryFocus | None = None,
+        excluded_artists: list[str] | None = None,
+        blacklisted_artists: list[str] | None = None,
+        blacklisted_tracks: list[str] | None = None,
+        liked_tracks: list[Track] | None = None,
+        disliked_tracks: list[Track] | None = None,
+        covered_artists: dict[str, int] | None = None,
+    ) -> DiscoveryArtistStrategy:
+        """Asks for artists matching the profile, each with the sound wanted from them: their tracks come later.
+
+        Args:
+            excluded_artists: Artists already suggested in this session, not to be suggested again.
+            The others: as in `get_discovery_strategy`.
+        """
+        ...
+
+    @abstractmethod
+    async def pick_discovery_tracks(
+        self,
+        strategy: DiscoveryArtistStrategy,
+        candidates: dict[str, list[Track]],
+        tracks_limit: int,
+        max_tracks_per_artist: int,
+        prompt: str | None = None,
+        focus: DiscoveryFocus | None = None,
+    ) -> list[TrackPicked]:
+        """Asks to choose, among the candidates only, the tracks that fit the strategy and the request.
+
+        Args:
+            strategy: The artists step's reply, whose reasoning and per-artist sound guide the choice.
+            candidates: Catalogue tracks unknown to the user, per suggested artist name.
+            tracks_limit: The most tracks to pick: fewer, or none, when nothing fits.
+
+        Returns:
+            The picked candidates; a pick that is not one of them is dropped.
         """
         ...
 

@@ -1,0 +1,27 @@
+{
+  "id": "gen-1761811200-advisor-picks",
+  "provider": "Google",
+  "model": "google/gemini-2.5-flash",
+  "object": "chat.completion",
+  "created": 1761811200,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "STOP",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"picks\": [{\"id\": \"1\", \"score\": 0.9}, {\"id\": \"2\", \"score\": 0.8}, {\"id\": \"99\", \"score\": 0.7}]}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1500,
+    "completion_tokens": 120,
+    "total_tokens": 1620,
+    "cost": 0.0008
+  }
+}

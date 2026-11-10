@@ -44,8 +44,8 @@ flowchart TB
 
 Two points are easy to miss:
 
-- **The domain contains a service, not only data.** The `Reconciler` ([`museflow/domain/services/reconciler.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/services/reconciler.py)) decides whether an LLM suggestion and a catalogue track are the same recording. That is a business rule, it has no I/O, and it is deterministic, so it lives in the domain and is injected into the use case.
-- **Ports are defined by the application, not by the infrastructure.** For example `AdvisorPort` ([`museflow/application/ports/advisors/agent.py`](https://github.com/ychab/museflow/blob/main/museflow/application/ports/advisors/agent.py)) exposes `get_discovery_strategy(...)` in domain terms (`TasteProfile`, `Track`, `DiscoveryFocus`) and returns a `DiscoveryTasteStrategy`. Nothing in it mentions HTTP or JSON.
+- **The domain contains a service, not only data.** The `Reconciler` ([`museflow/domain/services/reconciler.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/services/reconciler.py)) decides whether a catalogue track belongs to the artist the LLM named: a search for a short name also returns artists with a longer, close one. That is a business rule, it has no I/O, and it is deterministic, so it lives in the domain and is injected into the use case.
+- **Ports are defined by the application, not by the infrastructure.** For example `AdvisorPort` ([`museflow/application/ports/advisors/agent.py`](https://github.com/ychab/museflow/blob/main/museflow/application/ports/advisors/agent.py)) exposes `get_discovery_artists(...)` in domain terms (`TasteProfile`, `Track`, `DiscoveryFocus`) and returns a `DiscoveryArtistStrategy`. Nothing in it mentions HTTP or JSON.
 
 ## Ports and adapters
 
@@ -85,14 +85,16 @@ sequenceDiagram
     CLI->>UC: create_suggestions_playlist(user, config)
     UC->>UoW: block: taste profile (named or latest), blacklist, liked and disliked tracks
     loop up to max_attempts, stop once playlist_limit reached
-        UC->>Adv: get_discovery_strategy(profile, prompt, focus, exclusions, known, liked and disliked tracks)
-        Adv-->>UC: DiscoveryTasteStrategy (suggested tracks with scores)
-        UC->>Lib: search_tracks per suggestion
-        UC->>Rec: reconcile(suggestion, candidates)
-        Rec-->>UC: best match and confidence, or nothing
+        UC->>Adv: get_discovery_artists(profile, prompt, focus, artists already asked, liked and disliked tracks)
+        Adv-->>UC: DiscoveryArtistStrategy (artists, each with the sound wanted and a score)
+        UC->>Lib: search_artist_tracks per artist
+        UC->>Rec: filter_by_artist(artist, tracks)
+        Rec-->>UC: the tracks crediting that exact artist
         UC->>UoW: block: drop tracks the user already knows (by fingerprint)
+        UC->>Adv: pick_discovery_tracks(strategy, unknown tracks per artist)
+        Adv-->>UC: picked tracks with a fit score
     end
-    UC->>UC: sort by advisor score band then match confidence, cap per artist, trim
+    UC->>UC: sort by fit score, cap per credited artist, trim
     UC->>Lib: create_playlist
     UC->>UoW: one block: upsert tracks as DISCOVERY source, save playlist and its tracks
     UC-->>CLI: DiscoverTasteResult
@@ -102,10 +104,10 @@ sequenceDiagram
 What the diagram encodes, with the reasoning behind each step:
 
 1. **Composition happens in the entrypoint.** `discover_logic` gets a unit of work and opens each adapter inside an `AsyncExitStack`, so every HTTP client is closed even on failure, then hands finished objects to the use case. The use case never instantiates a repository or a client.
-2. **The advisor is asked several times.** The first answer rarely survives filtering (unreconciled, already known, blacklisted), so the use case loops up to `DISCOVERY_MAX_ATTEMPTS` times, passing everything suggested so far as an exclusion list, with the suggestions the user already knew set apart so the next attempt digs deeper. Each attempt is reported (`suggested / survived / new`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while the model thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule. Why this design, and what came before it: [Why a unit of work](unit-of-work.md).
-3. **Every candidate is a reconciled suggestion.** The catalogue is searched for each suggestion by title and primary artist only: Spotify ignores `OR` in a query, and several artist filters must all match, so the reconciler checks the other artists. The strategy used to return free-text search queries too. They were dropped: Spotify matches their words against track titles, so they brought back compilations and type beats that skipped reconciliation and outranked real suggestions.
+2. **The advisor names artists, the catalogue gives the tracks.** An LLM knows niche artists far better than their discographies: asked for titles, it invented some and repeated the genre's canon the user already knew. So it names artists, each with the sound wanted from them; the provider returns their real tracks; the known and blacklisted ones are dropped locally; and a second call picks among what is left, by short ids, so no title can be invented. The why, with the numbers: [Discovery: from titles to artists](../product/discovery-by-artists.md).
+3. **One round usually fills the playlist.** When it does not, the use case runs another, up to `DISCOVERY_MAX_ATTEMPTS`, excluding the artists already asked. Each round is reported (`artists / unknown tracks / picked`) so the user can see where candidates were lost. Every database access is a short `async with uow:` block, closed before the next advisor or catalogue call: a block opens a session from the pool and closes it on exit, so no connection sits *idle in transaction* while the model thinks, which can take minutes. `enrich tracks`, `taste build` and the interactive `rate` commands follow the same rule. Why this design, and what came before it: [Why a unit of work](unit-of-work.md).
 4. **"Known" is decided by fingerprint**, not by provider id, so a re-release or a different catalogue entry of a track the user already played is still excluded (see [Data model](data-model.md)).
-5. **Ordering is banded.** Tracks are sorted by advisor score rounded down to a band (`DISCOVERY_SCORE_BAND_WIDTH`, default 0.05), then by reconciliation confidence within the band. Banding stops tiny, meaningless score differences from outranking a more certain catalogue match.
+5. **The cap counts every credited artist.** Tracks are sorted by the advisor's fit score, then capped per artist (`DISCOVERY_MAX_TRACKS_PER_ARTIST`), a featured appearance included: the artists of one scene feature on each other's tracks, and a cap on the primary artist alone let one of them fill the playlist.
 6. **Side effects come last, remote first.** The remote playlist is created first; only then are the discovery tracks upserted (so they are excluded from future sessions) and the local playlist row saved. A provider failure therefore leaves nothing behind locally. The tracks upsert and the playlist save then run in one block of the unit of work: a database failure keeps neither. Elsewhere, flows open one block per step, so paid LLM batches and checkpoints are kept when a later step fails. See [Known gaps](privacy-and-data.md#known-gaps).
 
 ## Conventions and why they exist

@@ -45,6 +45,23 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
+    async def search_artist_tracks(
+        self,
+        artist: str,
+        page_size: int = 10,
+        max_pages: int | None = None,
+        log_enabled: bool = True,
+    ) -> list[Track]:
+        """Retrieves tracks of an artist, in the provider's relevance order.
+
+        The provider may also return tracks of artists with a close name: the caller checks the candidates.
+
+        Raises:
+            ProviderSearchQueryInvalidError: If the provider rejects the query as malformed.
+        """
+        ...
+
+    @abstractmethod
     async def create_playlist(
         self,
         name: str,

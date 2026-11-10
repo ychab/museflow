@@ -1,5 +1,4 @@
 import logging
-import math
 import uuid
 from dataclasses import dataclass
 from dataclasses import replace
@@ -11,15 +10,12 @@ from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import record_llm_usage
-from museflow.application.utils.discovery import TrackScored
 from museflow.application.utils.discovery import apply_artist_cap
-from museflow.application.utils.discovery import filter_known_tracks
-from museflow.application.utils.discovery import reconcile_tracks
+from museflow.application.utils.discovery import drop_known_tracks
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
-from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
@@ -27,12 +23,14 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
+from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
+from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
+from museflow.domain.value_objects.taste import TrackPicked
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +38,15 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class DiscoverTasteAttemptReport:
     attempt: int = 0
-    tracks_suggested: int = 0
-    tracks_survived: int = 0
-    tracks_new: int = 0
+    artists: int = 0  # suggested by the advisor
+    candidates: int = 0  # their catalogue tracks the user does not know, offered to the advisor
+    tracks_picked: int = 0  # among the candidates
 
 
 @dataclass(frozen=True, kw_only=True)
 class DiscoverTasteResult:
     playlist: Playlist | None
-    strategy: DiscoveryTasteStrategy
+    strategy: DiscoveryArtistStrategy
     reports: list[DiscoverTasteAttemptReport]
     tracks: list[Track]
 
@@ -75,9 +73,9 @@ class DiscoverTasteUseCase:
     ) -> DiscoverTasteResult:
         """Creates a playlist of suggested tracks guided by the user's taste profile.
 
-        Iterates up to `max_attempts` times, each time calling the advisor with an exclusion
-        list of previously suggested tracks. Stops early once `playlist_limit` tracks are
-        accumulated.
+        Each attempt asks the advisor for artists, fetches their catalogue tracks the user does not know, then
+        asks the advisor to pick among them, so that no title can be invented. Iterates up to `max_attempts` times,
+        each time excluding the artists already asked, and stops once `playlist_limit` tracks are picked.
 
         Args:
             user: The user for whom to create the playlist.
@@ -154,106 +152,83 @@ class DiscoverTasteUseCase:
         disliked_tracks: list[Track],
         covered_artists: dict[str, int],
     ) -> DiscoverTasteResult:
-        blacklisted_artists = blacklist.artist_names or None
-        blacklisted_tracks = blacklist.track_display_strings or None
-
-        tracks_scores: list[TrackScored] = []
-        tracks_suggested: list[TrackSuggested] = []
-        # The suggestions dropped because the user knew them: told apart, so the next attempt digs deeper.
-        tracks_known: list[TrackSuggested] = []
+        tracks_picked: list[TrackPicked] = []
         reports: list[DiscoverTasteAttemptReport] = []
-        strategy: DiscoveryTasteStrategy | None = None
+        strategy: DiscoveryArtistStrategy | None = None
+        # The artists asked in earlier attempts, not to be suggested again.
+        artists_asked: list[str] = []
 
         for attempt in range(1, config.max_attempts + 1):
             logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
 
-            logger.debug("--- Discovery strategy ---")
-            strategy = await self._advisor.get_discovery_strategy(
+            logger.debug("--- Discovery artists ---")
+            strategy = await self._advisor.get_discovery_artists(
                 profile=profile,
-                advisor_limit=config.advisor_limit,
+                artists_limit=config.advisor_limit,
                 prompt=config.prompt,
                 focus=config.focus,
-                excluded_tracks=[t for t in tracks_suggested if t not in tracks_known] or None,
-                known_tracks=list(tracks_known) or None,
-                blacklisted_artists=blacklisted_artists,
-                blacklisted_tracks=blacklisted_tracks,
+                excluded_artists=list(artists_asked) or None,
+                blacklisted_artists=blacklist.artist_names or None,
+                blacklisted_tracks=blacklist.track_display_strings or None,
                 liked_tracks=liked_tracks,
                 disliked_tracks=disliked_tracks,
                 covered_artists=covered_artists or None,
             )
-            tracks_suggested.extend(strategy.recommended_tracks)
+            artists_asked.extend(artist.name for artist in strategy.artists)
             logger.info(
-                f"Discovery strategy: '{strategy.strategy_label}'",
-                extra={"strategy_label": strategy.strategy_label},
+                f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
+                extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
             )
 
-            # Reconcile recommended tracks
-            logger.debug("--- Reconciliation ---")
-            tracks_reconciled = await reconcile_tracks(
-                tracks_suggested=strategy.recommended_tracks,
-                limit=config.reconciler_limit,
-                provider_library=self._provider_library,
-                reconciler=self._reconciler,
-            )
-            logger.info(f"Reconciled recommended tracks: {len(tracks_reconciled)}")
-
-            # Intra-attempt dedup: two suggestions can reconcile to the same track
-            tracks_all = self._dedup_by_identity(tracks_reconciled)
-
-            # Remove blacklisted artists and tracks (safety net in case the advisor ignored instructions)
-            if not blacklist.is_empty:
-                tracks_all = [ts for ts in tracks_all if not self._is_blacklisted(ts.track, blacklist)]
-
-            # Remove known tracks
-            logger.debug("--- Filter known tracks ---")
-            tracks_survived = await filter_known_tracks(
+            candidates = await self._get_candidates(
                 user=user,
-                tracks_scored=tracks_all,
-                uow=self._uow,
+                config=config,
+                strategy=strategy,
+                blacklist=blacklist,
+                fingerprints_kept={tp.track.fingerprint for tp in tracks_picked},
             )
-            logger.info(f"Tracks after filtering known: {len(tracks_survived)}")
-            survived_fps = {ts.track.fingerprint for ts in tracks_survived}
-            tracks_known.extend(ts.suggested for ts in tracks_all if ts.track.fingerprint not in survived_fps)
 
-            # Inter-iteration dedup: exclude tracks already accumulated in previous attempts
-            existing_fps = {ts.track.fingerprint for ts in tracks_scores}
-            tracks_new_this_attempt = [ts for ts in tracks_survived if ts.track.fingerprint not in existing_fps]
+            tracks_picked_now: list[TrackPicked] = []
+            if candidates:
+                logger.debug("--- Picks ---")
+                tracks_picked_now = await self._advisor.pick_discovery_tracks(
+                    strategy=strategy,
+                    candidates=candidates,
+                    tracks_limit=config.advisor_limit,
+                    max_tracks_per_artist=config.max_tracks_per_artist,
+                    prompt=config.prompt,
+                    focus=config.focus,
+                )
 
             reports.append(
                 DiscoverTasteAttemptReport(
                     attempt=attempt,
-                    tracks_suggested=len(tracks_all),
-                    tracks_survived=len(tracks_survived),
-                    tracks_new=len(tracks_new_this_attempt),
+                    artists=len(strategy.artists),
+                    candidates=sum(len(tracks) for tracks in candidates.values()),
+                    tracks_picked=len(tracks_picked_now),
                 )
             )
 
-            tracks_scores.extend(tracks_new_this_attempt)
+            tracks_picked.extend(tracks_picked_now)
             logger.info(
-                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_new_this_attempt)} tracks "
-                f"(total: {len(tracks_scores)})\n",
-                extra={"attempt": attempt, "total": len(tracks_scores)},
+                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
+                f"(total: {len(tracks_picked)})\n",
+                extra={"attempt": attempt, "total": len(tracks_picked)},
             )
 
-            if len(tracks_scores) >= config.playlist_limit:
+            if len(tracks_picked) >= config.playlist_limit:
                 break
 
         # strategy can only be None if no attempt ran, which DiscoverTasteConfigInput forbids (max_attempts >= 1)
-        if strategy is None or not tracks_scores:
+        if strategy is None or not tracks_picked:
             raise DiscoveryTrackNoNewError()
 
-        # Sort: band by advisor score DESC, then by reconciler confidence DESC within band
-        tracks_scores.sort(
-            key=lambda ts: (
-                math.floor(ts.advisor_score / config.score_band_width) * config.score_band_width,
-                ts.reconciler_score,
-            ),
-            reverse=True,
-        )
+        # Best fit first; a stable sort keeps the advisor's order between equal scores.
+        tracks_picked.sort(key=lambda tp: tp.score, reverse=True)
 
-        # Apply per-artist cap
+        # Per credited artist: the suggested artists often feature on each other's tracks.
         tracks = apply_artist_cap(
-            tracks=[ts.track for ts in tracks_scores],
+            tracks=[tp.track for tp in tracks_picked],
             max_tracks_per_artist=config.max_tracks_per_artist,
         )
 
@@ -303,21 +278,68 @@ class DiscoverTasteUseCase:
             tracks=tracks_with_ids,
         )
 
+    async def _get_candidates(
+        self,
+        user: User,
+        config: DiscoverTasteConfigInput,
+        strategy: DiscoveryArtistStrategy,
+        blacklist: UserBlacklist,
+        fingerprints_kept: set[str],
+    ) -> dict[str, list[Track]]:
+        """Returns the catalogue tracks of each suggested artist the user does not know, per artist name.
+
+        A track is kept only when it credits the artist, and is neither blacklisted nor kept by an earlier attempt.
+        """
+        logger.debug("--- Artist tracks ---")
+        candidates: dict[str, list[Track]] = {}
+        fingerprints_seen = set(fingerprints_kept)
+        found = matched = 0
+        for artist in strategy.artists:
+            try:
+                tracks = await self._provider_library.search_artist_tracks(
+                    artist=artist.name,
+                    max_pages=config.artist_tracks_pages,
+                    log_enabled=False,
+                )
+            except ProviderSearchQueryInvalidError:
+                # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
+                logger.warning(f"Artist skipped, its search query was rejected: '{artist.name}'")
+                continue
+
+            tracks_matched = self._reconciler.filter_by_artist(artist=artist.name, candidates=tracks)
+            found += len(tracks)
+            matched += len(tracks_matched)
+            kept: list[Track] = []
+            for track in tracks_matched:
+                if track.fingerprint in fingerprints_seen or self._is_blacklisted(track, blacklist):
+                    continue
+                fingerprints_seen.add(track.fingerprint)
+                kept.append(track)
+            logger.debug(f"Artist '{artist.name}': {len(tracks)} found, {len(tracks_matched)} matched")
+            if kept:
+                candidates[artist.name] = kept
+
+        # Known tracks dropped locally: the advisor never sees them, so it cannot pick them.
+        tracks_unknown = await drop_known_tracks(
+            user=user,
+            tracks=[track for tracks in candidates.values() for track in tracks],
+            uow=self._uow,
+        )
+        fingerprints_unknown = {track.fingerprint for track in tracks_unknown}
+        candidates = {
+            artist: unknown
+            for artist, tracks in candidates.items()
+            if (unknown := [track for track in tracks if track.fingerprint in fingerprints_unknown])
+        }
+        logger.info(
+            f"Artist tracks: {found} found, {matched} by the artist, {len(tracks_unknown)} unknown "
+            f"({len(candidates)}/{len(strategy.artists)} artists left)",
+            extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
+        )
+        return candidates
+
     @staticmethod
     def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:
         if track.fingerprint in blacklist.track_fingerprints:
             return True
         return bool({normalize_text(a) for a in track.artists} & blacklist.artist_fingerprints)
-
-    @staticmethod
-    def _dedup_by_identity(tracks_scored: list[TrackScored]) -> list[TrackScored]:
-        deduplicated: list[TrackScored] = []
-        fingerprints: set[str] = set()
-
-        for ts in tracks_scored:
-            if ts.track.fingerprint in fingerprints:
-                continue
-            fingerprints.add(ts.track.fingerprint)
-            deduplicated.append(ts)
-
-        return deduplicated

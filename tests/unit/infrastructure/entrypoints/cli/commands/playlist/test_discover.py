@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
-from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
+from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 from tests.unit.infrastructure.entrypoints.cli.conftest import spend
@@ -33,7 +33,7 @@ class TestPlaylistDiscoverParserCommand:
     @pytest.fixture(autouse=True)
     def mock_playlist_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = f"{TARGET_PATH}.playlist_discover_logic"
-        strategy = DiscoveryTasteStrategyFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build()
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, reports=[], tracks=[])
             yield patched
@@ -58,6 +58,7 @@ class TestPlaylistDiscoverParserCommand:
         assert config.focus == DiscoveryFocus.EXPANSION
         assert config.playlist_limit == 15
         assert config.advisor_limit == 23
+        assert config.artist_tracks_pages == 2
 
     def test__prompt__omitted(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])
@@ -188,7 +189,7 @@ class TestPlaylistDiscoverCommand:
         mock_playlist_discover_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
-        strategy = DiscoveryTasteStrategyFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build()
 
         async def discover(**kwargs: Any) -> DiscoverTasteResult:
             spend(kwargs["meter"])
@@ -279,7 +280,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        strategy = DiscoveryTasteStrategyFactory.build(suggested_playlist_name="Progressive Horizons")
+        strategy = DiscoveryArtistStrategyFactory.build(suggested_playlist_name="Progressive Horizons")
         playlist = PlaylistFactory.build()
 
         track_with_album = TrackFactory.build()
@@ -306,7 +307,7 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        strategy = DiscoveryTasteStrategyFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build()
         mock_playlist_discover_logic.return_value = DiscoverTasteResult(
             playlist=None, strategy=strategy, reports=[], tracks=[]
         )
@@ -323,11 +324,11 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        strategy = DiscoveryTasteStrategyFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build()
         mock_playlist_discover_logic.return_value = DiscoverTasteResult(
             playlist=None,
             strategy=strategy,
-            reports=[DiscoverTasteAttemptReport(attempt=1, tracks_suggested=5, tracks_survived=3, tracks_new=2)],
+            reports=[DiscoverTasteAttemptReport(attempt=1, artists=12, candidates=87, tracks_picked=14)],
             tracks=[],
         )
 
@@ -336,6 +337,8 @@ class TestPlaylistDiscoverCommand:
 
         output = clean_typer_text(result.stdout)
         assert "Discovery Report" in output
+        assert "Unknown tracks" in output
+        assert "87" in output
 
 
 @pytest.mark.usefixtures(

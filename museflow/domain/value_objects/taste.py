@@ -14,6 +14,29 @@ class DiscoveryTasteStrategy:
 
 
 @dataclass(frozen=True, kw_only=True)
+class ArtistSuggested:
+    name: str
+    sound: str  # what the advisor wants from this artist for the request, to guide the pick among their tracks
+    score: float
+
+
+@dataclass(frozen=True, kw_only=True)
+class DiscoveryArtistStrategy:
+    reasoning: str
+    strategy_label: str
+    artists: list[ArtistSuggested]
+    suggested_playlist_name: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class TrackPicked:
+    """A catalogue track the advisor chose among the candidates it was given."""
+
+    track: Track
+    score: float
+
+
+@dataclass(frozen=True, kw_only=True)
 class PeriodTrack:
     """A track as listened to during one period."""
 

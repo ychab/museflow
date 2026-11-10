@@ -123,8 +123,8 @@ the time to reread it.
   use Spotify.
 - Spotify is still needed to **search** tracks and **write** playlists. The dependency did not vanish; it shrank to
   the smallest surface I could get it to. The history export already contains each track's Spotify ID, so importing
-  and rediscovery need no search at all. Discovery does: the LLM suggests tracks as plain text (artist and title),
-  and each suggestion must be matched to a real catalogue entry before it can go into a playlist. Writing playlists
-  and playing a track while rating it are the other remaining calls.
+  and rediscovery need no search at all. Discovery does: the LLM names artists, and their real tracks are searched
+  in the catalogue before it picks among them ([Discovery: from titles to artists](discovery-by-artists.md)).
+  Writing playlists and playing a track while rating it are the other remaining calls.
 - The pivot moved the main dependency from the music provider to the **LLM provider**. That is a known trade-off —
   see [lessons learned](lessons-learned.md). [V3](v3.md) loosened it in turn: the models now come from any vendor.

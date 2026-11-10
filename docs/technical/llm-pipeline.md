@@ -5,11 +5,11 @@ Four components use a language model or its output, and each sits behind a port 
 | Component | Port | Where | Job |
 |---|---|---|---|
 | Profiler | `TasteProfilerPort` | `adapters/profilers/openrouter/` | Condense a listening history into a structured taste profile |
-| Advisor | `AdvisorPort` | `adapters/advisors/openrouter/` | Propose tracks the user does not know, guided by the profile |
-| Reconciler | none (domain service) | `domain/services/reconciler.py` | Match free-text suggestions to real catalogue tracks |
+| Advisor | `AdvisorPort` | `adapters/advisors/openrouter/` | Pick artists for the user, then tracks among their catalogue the user does not know, guided by the profile |
+| Reconciler | none (domain service) | `domain/services/reconciler.py` | Keep the catalogue tracks that credit the artist the advisor named |
 | Enricher | `TrackEnricherPort` | `adapters/enrichers/openrouter/` | Tag tracks with genres, moods and language |
 
-A design stance runs through all of them: **the model proposes, deterministic code disposes.** Output is constrained by a JSON response schema, validated by Pydantic, restricted to closed vocabularies, matched against the real catalogue, and filtered against what the user already knows or has blacklisted. The model never writes to the database or to the provider directly.
+A design stance runs through all of them: **the model proposes, deterministic code disposes.** Output is constrained by a JSON response schema, validated by Pydantic, restricted to closed vocabularies, chosen among the real catalogue, and filtered against what the user already knows or has blacklisted. The model never writes to the database or to the provider directly.
 
 ## Gateway: OpenRouter
 
@@ -50,7 +50,7 @@ The CLI also overrides the model for one run: `enrich tracks --model`, `taste bu
 | Profile segment | `PROFILER_SEGMENT` | `google/gemini-3.1-flash-lite` | One call per listening period (15 for the default 3,000 seeds in periods of 200, 20 for 10,000 seeds) | High volume, narrow task: classify the tracks of a period into tags and weights against a closed vocabulary. A small, cheap model is enough |
 | Profile merge | `PROFILER_MERGE` | `google/gemini-3.5-flash` | One call per period after the first | Judges whether a segment continues the last era, and names an era when the timeline is full: a few eras in, two fields out, the code assembling the profile. A step up from the lite tier, with a low reasoning effort: on the same seeds it gave the same profile structure for 56% less than the default effort (#82) |
 | Profile reflect | `PROFILER_REFLECT` | `google/gemini-3.1-pro-preview` | **One call per build** | The only step that writes narrative and judgement (archetype, life-phase insights, behavioural traits). Run once, so the most capable model is affordable |
-| Advisor | `ADVISOR` | `anthropic/claude-sonnet-5.5` | Up to `DISCOVERY_MAX_ATTEMPTS` calls per playlist (default 3) | Needs musical knowledge and instruction-following, called interactively. Chosen by ear over three Gemini models on real playlists, for about $0.17 a playlist; it also invents the fewest titles (90% of its suggestions reconciled) (#163) |
+| Advisor | `ADVISOR` | `anthropic/claude-sonnet-5.5` | Two calls per round (artists, then picks), one round per playlist in practice, `DISCOVERY_MAX_ATTEMPTS` at most (default 3) | Needs musical knowledge and instruction-following, called interactively. Chosen by ear over three Gemini models on real playlists (#163); about $0.06 a playlist since discovery picks artists first (#174). Gemini 3.5 Flash was no cheaper on that flow, as it reasons longer |
 | Enricher | `ENRICHER` | `google/gemini-3.1-flash-lite` | One call per batch of 200 tracks | Pure classification into closed vocabularies, repeated over the whole library |
 
 The principle is to spend model capability where one call has outsized influence on the result (the single reflection pass, the merge that every later step builds on) and use the cheapest tier where the work is high-volume and constrained. The defaults stay on Gemini, as before the gateway, but on 3.x models: the 2.5 Flash and Flash Lite models MuseFlow used have no Zero Data Retention endpoint, so ZDR routing refuses them. They were not benchmarked against other vendors, so treat the tiering as a reasoned default, not a measured optimum. Comparing models is now a `--model` flag away.
@@ -99,7 +99,16 @@ Design decisions:
 
 ## Advisor: guided discovery
 
-`get_discovery_strategy` returns a `DiscoveryTasteStrategy`: a reasoning paragraph, a strategy label, a list of recommended tracks each with a confidence score, and a playlist name. The prompt is assembled in [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py), as a system message (the role and rules) and a user message (the session's focus and prompt), from:
+Discovery takes two calls per round. The model is asked for **artists**, and only then for tracks, chosen among the
+real catalogue tracks of those artists: models know niche artists far better than their discographies, so asked for
+titles they invented some and kept to the genre's canon (the measure behind this choice:
+[Discovery: from titles to artists](../product/discovery-by-artists.md)).
+
+**Step 1, artists** (`get_discovery_artists`, usage step `advisor_artists`). It returns a `DiscoveryArtistStrategy`:
+a reasoning paragraph, a strategy label, the artists each with the `sound` wanted from them for this playlist (era,
+mood, texture) and a confidence score, and a playlist name. The prompt is assembled in
+[`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py),
+as a system message (the role and rules) and a user message (the session's focus and prompt), from:
 
 | Input | Source | Purpose |
 |---|---|---|
@@ -107,27 +116,44 @@ Design decisions:
 | Risk calibration | Derived from the `openness` and `adventurousness` traits: both below 0.4 means stay in the comfort zone, either above 0.7 means push into adjacent territory | How far to stray |
 | Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
 | Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words |
-| Exclusion list | The suggestions of earlier attempts of the same run, except those the user already knew | Avoid repeats across attempts |
-| Known tracks | The suggestions of earlier attempts dropped because they were already in the library | Avoid repeats, and dig deeper: the picks were too obvious |
+| Exclusion list | The artists asked in earlier rounds of the same run | Other artists in the next round |
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
 | Liked tracks | Tracks rated 7 or more, at most 200, highest first; not filtered on the prompt | Concrete taste anchors beyond statistics |
 | Disliked tracks | Tracks rated 2 or less, at most 50, lowest first (`DISCOVERY_DISLIKED_SCORE_THRESHOLD`, `DISCOVERY_DISLIKED_TRACKS_LIMIT`) | What to steer away from, beyond the blacklist |
 | Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists |
 
-**Quality over quantity** is stated in the prompt: only return a track if confidence would be at least 0.7, and return fewer than the requested limit rather than pad. This is an instruction to the model, not a post-filter in code; the confidence values are used afterwards for ranking. The prompt also asks for real, released recordings only, with their exact title and the primary artist first: the catalogue search filters on that artist, and an invented title finds no candidate, so the suggestion is lost. The strategy response is constrained by a strict JSON schema and validated into Pydantic models.
+**Between the calls, no LLM.** For each artist, the provider is searched by artist only
+(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify), the `Reconciler` keeps the tracks crediting that exact
+artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
+provider rejects as malformed skips that artist with a warning instead of ending the run.
 
-## Reconciler: from suggestion to catalogue track
+**Step 2, picks** (`pick_discovery_tracks`, usage step `advisor_picks`). The model gets the strategy of step 1, each
+artist with its wanted sound, and the remaining tracks as `id | title | album | album release year`, then answers with
+ids and a fit score. The ids are short numbers given in the prompt: the adapter maps them back to the candidates and
+drops any other, so a title cannot be invented. The prompt asks to judge a track by its sound (the artist's style on
+that album, in that year), never by its words, and to leave out a track it cannot place: seeing only titles, the model
+had picked tracks whose title echoed the theme. The profile is not sent again: the strategy carries the intent, and the
+call stays cheap.
 
-An LLM suggests *names*; the provider needs *ids*. For each suggestion the use case searches the provider by title and primary artist (`DISCOVERY_RECONCILER_LIMIT` candidates; on Spotify, field filters first, then the same words as free text when they find nothing, as the filters can miss a track that exists) and asks the `Reconciler` to pick the best candidate. The advisor mapper first strips control characters from the names (an LLM may emit them in place of an accented letter), and a search the provider still rejects as malformed skips that suggestion with a warning instead of ending the run:
+**Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
+0.7, and return fewer than the limit rather than pad. This is an instruction to the model, not a post-filter in code;
+the fit scores are used afterwards for ranking. Both responses are constrained by a strict JSON schema and validated
+into Pydantic models; the mappers strip control characters from the artist names (an LLM may emit them in place of an
+accented letter).
 
-1. Normalise suggestion and candidate (`normalize_text`: ASCII fold, lowercase, strip feature / remaster / live suffixes), then write the small numbers as digits (`one night` and `1 night` compare equal).
-2. Score the track name with `token_sort_ratio` and the artist with `WRatio` (RapidFuzz). The names are also compared on their main part, without bracketed parts or what follows a spaced ` - ` or ` | `, so that `Neon Harbor` finds `Neon Harbor (Nightfall)` or `Neon Harbor - Bonus Track`; that score is weighted by 0.95, so the exact title wins when the search returns both.
-3. If either component is below `RECONCILER_MATCH_THRESHOLD` (80), the candidate scores 0.
-4. Otherwise the composite is `0.6 * track + 0.4 * artist`. A candidate scoring 0 is never accepted, so scores are either 0 or between the threshold and 100. The best non-zero candidate is accepted and its score divided by 100 becomes the **match confidence**.
+## Reconciler: the strict artist match
 
-Two scores therefore travel with each track: the advisor's confidence ("is this a good pick for the listener?") and the reconciler's confidence ("is this the track the advisor meant?"). The final order uses both: advisor score rounded down to a band of 0.05, then match confidence inside the band, so a marginally higher advisor score cannot outrank a clearly more certain catalogue match. A per-artist cap (`DISCOVERY_MAX_TRACKS_PER_ARTIST`, default 3) is applied after sorting so one artist cannot dominate a playlist.
+A search by artist also returns artists with a close name: `Nova` brings back `Novalee`, and a short or common name
+brings back the most popular tracks of other artists. The `Reconciler` keeps a track only when one of its credited
+artists *equals* the asked one once normalised (`normalize_text`: ASCII fold, lowercase, punctuation and feature
+suffixes removed). Equality, not a fuzzy score: a short name must not match a longer one. In the measure, one asked
+artist got 10 search results, all by other artists, and all were rejected.
 
-Fuzzy matching is deliberately a domain service: it is pure, deterministic and cheap to test with table-driven cases, and it is the guard against the most visible LLM failure mode, a plausible-sounding track that does not exist.
+The tracks picked are sorted by fit score, then capped per artist (`DISCOVERY_MAX_TRACKS_PER_ARTIST`, default 3),
+counting every credited artist: the artists of one scene feature on each other's tracks, and a cap on the primary
+artist alone let one of them fill the playlist.
+
+The match is deliberately a domain service: it is pure, deterministic and cheap to test with table-driven cases.
 
 ## Enricher: closed vocabularies
 
@@ -179,8 +205,8 @@ OpenRouter credits (1 credit is 1 USD).
 ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/usage.py)), with the
 time the reply took. The meter sums the calls, tokens, cost and time per step and model:
 
-- **Step**: `advisor`, `enricher`, or `profiler segment`, `profiler merge`, `profiler reflect`, so a build shows what
-  each phase costs.
+- **Step**: `advisor_artists`, `advisor_picks`, `enricher`, or `profiler segment`, `profiler merge`,
+  `profiler reflect`, so a run shows what each phase costs.
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
 - **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
   since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
