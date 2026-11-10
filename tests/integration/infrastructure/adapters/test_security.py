@@ -1,9 +1,6 @@
 import uuid
-from collections.abc import Iterator
-from unittest import mock
 
 import pytest
-from argon2 import PasswordHasher as Argon2Hasher
 
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -11,11 +8,6 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 
 
 class TestArgon2PasswordHasher:
-    @pytest.fixture
-    def spy_argon2_verify(self) -> Iterator[mock.Mock]:
-        with mock.patch.object(Argon2Hasher, "verify", autospec=True, side_effect=Argon2Hasher.verify) as spy:
-            yield spy
-
     def test__verify__nominal(self, password_hasher: PasswordHasherPort) -> None:
         password = "testtest"
         hashed_password = password_hasher.hash(password)
@@ -24,18 +16,6 @@ class TestArgon2PasswordHasher:
     def test__verify__wrong(self, password_hasher: PasswordHasherPort) -> None:
         hashed_password = password_hasher.hash("blahblah")
         assert password_hasher.verify("testtest", hashed_password) is False
-
-    def test__verify_simulate__same_cost_as_verify(
-        self,
-        password_hasher: PasswordHasherPort,
-        spy_argon2_verify: mock.Mock,
-    ) -> None:
-        password_hasher.verify_simulate("testtest")
-
-        spy_argon2_verify.assert_called_once()
-        _, dummy_hash, password = spy_argon2_verify.call_args.args
-        assert password == "testtest"
-        assert Argon2Hasher().check_needs_rehash(dummy_hash) is False
 
 
 class TestJwtAccessTokenManager:

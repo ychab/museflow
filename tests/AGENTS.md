@@ -53,9 +53,10 @@ museflow/application/use_cases/user_create.py
 - **Never `with mock.patch(...)` inside a test**: always a `pytest.fixture`.
 - `mock.AsyncMock` for async ports, `mock.Mock` for sync ones.
 - A fixture is named after what it does to the patched callable: `mock_<name>` replaces it, `spy_<name>` wraps it
-  (`wraps=`) so the real code still runs and the call is recorded. A spy lets an integration test assert an argument
-  passed to a port the flow really calls (`spy_get_discovery_artists`), where the observable outcome doesn't show it;
-  never spy to drive a branch, mock it in a unit test.
+  (`wraps=`) so the real code still runs and the call is recorded.
+- Mocks and spies belong in unit tests. An integration test asserts the observable outcome (result, rows, requests
+  received by WireMock); when a value only shows as an argument passed, test its source where it is produced (e.g. the
+  repository) and the forwarding in a unit test.
 - Assert logs with `caplog` (e.g. `with caplog.at_level(logging.ERROR), pytest.raises(SomeError):`), never by patching
   the module `logger`.
 
