@@ -21,6 +21,8 @@ class ProviderLink:
 class Track(BaseEntity):
     artists: list[str] = field(default_factory=list)
     album_name: str | None = None
+    # Read-only: the album's release year, as the provider catalogue returns it; never saved with the track.
+    album_year: int | None = None
 
     fingerprint: str = ""
 

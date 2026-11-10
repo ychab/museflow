@@ -44,6 +44,7 @@ def to_domain_track(
         provider_links=[ProviderLink(provider=MusicProvider.SPOTIFY, provider_id=spotify_track.id)],
         artists=[artist.name for artist in spotify_track.artists],
         album_name=spotify_track.album.name if spotify_track.album else None,
+        album_year=_to_year(spotify_track.album.release_date) if spotify_track.album else None,
         source=TrackSource.HISTORY,
     )
 
@@ -63,3 +64,9 @@ def to_domain_playlist(
         tracks=tracks,
         type=type,
     )
+
+
+def _to_year(release_date: str | None) -> int | None:
+    # Spotify fills an unknown date with "0000".
+    year = release_date[:4] if release_date else ""
+    return int(year) if year.isdigit() and int(year) > 0 else None

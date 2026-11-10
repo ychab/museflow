@@ -13,15 +13,15 @@ usage**, and it is very unevenly distributed:
 |---|---|---|---|
 | Build a taste profile | Rarely (when taste shifts, a few times a year) | Thousands of tracks in batches, then merge and synthesis with stronger models | **High** |
 | Tag tracks (genres, moods, language) | Once per new track | Many small requests on the cheapest model | Low, one-off |
-| Generate a discovery playlist | Often | One or a few requests using the profile | **Low** |
+| Generate a discovery playlist | Often | Two requests: artists from the profile, then picks among their tracks | **Low** |
 | Rediscovery playlist | Often | None — a database query | Nil |
 
 Measured with `museflow llm usage` (see [V3](v3.md)): a profile build from about 1,000 rated tracks costs
-**$0.22**, a discovery playlist about **$0.07**, and tagging a library of 10,000 tracks about $0.80, once. The build
+**$0.22**, a discovery playlist about **$0.06** ([since it picks artists first](discovery-by-artists.md)), and tagging a library of 10,000 tracks about $0.80, once. The build
 grows with the number of seed tracks and the models chosen; moving the high-volume steps to cheaper models brought it
 down.
 
-So **the profile costs more than a playlist**, but by less than I assumed: a discovery is about a third of a small
+So **the profile costs more than a playlist**, but by less than I assumed: a discovery is about a quarter of a small
 build. The asymmetry holds; it is narrower than I thought.
 
 ## A pricing idea that follows the cost

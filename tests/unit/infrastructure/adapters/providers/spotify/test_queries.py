@@ -1,3 +1,4 @@
+from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchArtistQuery
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchTrackQuery
 
 
@@ -63,3 +64,8 @@ class TestSpotifySearchTrackQuery:
     def test__free_text_query__without_artist__keeps_tags(self) -> None:
         q = SpotifySearchTrackQuery(track="Neon Harbor", is_new=True, is_underground=True).get_free_text_query()
         assert q == "Neon Harbor tag:new tag:hipster"
+
+
+class TestSpotifySearchArtistQuery:
+    def test__query__escaped(self) -> None:
+        assert SpotifySearchArtistQuery(artist='The "Band"').get_query() == 'artist:"The \\"Band\\""'

@@ -1,104 +1,42 @@
 import logging
 from collections import Counter
-from dataclasses import dataclass
 
-from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import Track
-from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import ProviderSearchQueryInvalidError
-from museflow.domain.services.reconciler import Reconciler
-from museflow.domain.types import ScoreAdvisor
-from museflow.domain.types import ScoreReconciler
+from museflow.domain.utils.text import normalize_text
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class TrackScored:
-    track: Track
-    # The advisor's suggestion the track was reconciled from, as the advisor spelled it.
-    suggested: TrackSuggested
-    advisor_score: ScoreAdvisor
-    reconciler_score: ScoreReconciler
-
-
-async def reconcile_tracks(
-    tracks_suggested: list[TrackSuggested],
-    limit: int,
-    provider_library: ProviderLibraryPort,
-    reconciler: Reconciler,
-) -> list[TrackScored]:
-    tracks_reconciled: list[TrackScored] = []
-
-    for track_suggested in tracks_suggested:
-        try:
-            candidates = await provider_library.search_tracks(
-                track=track_suggested.name,
-                artists=track_suggested.artists,
-                page_size=limit,
-                # The best candidates come first: the next pages only slow the run down (a loose query may yield 300).
-                max_pages=1,
-                log_enabled=False,
-            )
-        except ProviderSearchQueryInvalidError:
-            # One malformed suggestion must not end the run: the others, and the advisor calls paid, are kept.
-            logger.warning(f"Track skipped, its search query was rejected: '{track_suggested}'")
-            continue
-
-        result = reconciler.reconcile(
-            track_suggested=track_suggested,
-            candidates=candidates,
-        )
-        if result:
-            best_match, reconciler_score = result
-            tracks_reconciled.append(
-                TrackScored(
-                    track=best_match,
-                    suggested=track_suggested,
-                    advisor_score=track_suggested.score,
-                    reconciler_score=reconciler_score,
-                )
-            )
-            logger.debug(f"Track reconciled: '{track_suggested}'")
-        else:
-            logger.debug(f"Track not reconciled: '{track_suggested}'")
-
-    return tracks_reconciled
-
-
-async def filter_known_tracks(
-    user: User,
-    tracks_scored: list[TrackScored],
-    uow: UnitOfWorkPort,
-) -> list[TrackScored]:
-    if not tracks_scored:
+async def drop_known_tracks(user: User, tracks: list[Track], uow: UnitOfWorkPort) -> list[Track]:
+    if not tracks:
         return []
     async with uow:
         known_identifiers = await uow.tracks.get_known_identifiers(
             user_id=user.id,
-            fingerprints=[ts.track.fingerprint for ts in tracks_scored],
+            fingerprints=[track.fingerprint for track in tracks],
         )
 
-    result: list[TrackScored] = []
-    for ts in tracks_scored:
-        if known_identifiers.is_known(ts.track):
-            logger.debug(f"Excluded '{ts.track}'")
+    result: list[Track] = []
+    for track in tracks:
+        if known_identifiers.is_known(track):
+            logger.debug(f"Excluded '{track}'")
             continue
-        result.append(ts)
+        result.append(track)
 
     return result
 
 
 def apply_artist_cap(tracks: list[Track], max_tracks_per_artist: int) -> list[Track]:
+    """Keeps at most `max_tracks_per_artist` tracks per credited artist: a featured appearance counts too."""
     tracks_filtered: list[Track] = []
     artist_counts: Counter[str] = Counter()
 
     for track in tracks:
-        primary_artist = track.primary_artist
-        if artist_counts[primary_artist] < max_tracks_per_artist:
+        artists = {normalize_text(a) for a in track.artists}
+        if all(artist_counts[artist] < max_tracks_per_artist for artist in artists):
             tracks_filtered.append(track)
-            artist_counts[primary_artist] += 1
+            artist_counts.update(artists)
 
     return tracks_filtered

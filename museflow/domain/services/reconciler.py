@@ -6,6 +6,7 @@ from rapidfuzz import fuzz
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.types import ScoreReconciler
+from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.track import TrackNormalized
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,16 @@ class Reconciler:
             extra={"artists": track_suggested.artists, "track": track_suggested.name, "best_score": best_score},
         )
         return None
+
+    def filter_by_artist(self, artist: str, candidates: list[Track]) -> list[Track]:
+        """Keeps the candidates crediting `artist`, by exact normalized name: a short name must not match a longer one."""
+        target = normalize_text(artist)
+        kept = [candidate for candidate in candidates if target in {normalize_text(a) for a in candidate.artists}]
+
+        rejected = {candidate.primary_artist for candidate in candidates if candidate not in kept}
+        if rejected:
+            logger.debug(f"Artist '{artist}': rejected candidates of {sorted(rejected)}")
+        return kept
 
     def _compute_similarity_scores(self, track_target: TrackNormalized, candidate: Track) -> tuple[float, float]:
         """Returns the fuzzy similarity (0 to 100) of the track names, then of the closest artist names."""

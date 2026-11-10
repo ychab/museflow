@@ -13,8 +13,9 @@ and manage them.
 
 ## `playlist discover`
 
-Discovers new tracks guided by the taste profile, matches them on the music provider, and saves them as a
-playlist.
+Discovers new tracks guided by the taste profile and saves them as a playlist. The advisor picks artists, the
+music provider gives their real tracks, and the advisor then chooses among the ones you don't know yet: every track
+exists, and none is already in your library.
 
 ```bash
 museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
@@ -31,10 +32,10 @@ museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
-The tuning lives in settings: the advisor is asked for `--limit` × `DISCOVERY_ADVISOR_LIMIT_RATIO` (1.5) tracks per
-call, as about 30% of the suggestions are lost to matching and known tracks, `DISCOVERY_MAX_ATTEMPTS` (3) calls at
-most, `DISCOVERY_RECONCILER_LIMIT` (10) search candidates per suggestion, and `DISCOVERY_MAX_TRACKS_PER_ARTIST` (3)
-tracks per artist.
+The tuning lives in settings: the advisor is asked for `--limit` × `DISCOVERY_ADVISOR_LIMIT_RATIO` (1.5) artists,
+then may pick as many tracks, `DISCOVERY_ARTIST_TRACKS_PAGES` (2) search pages of 10 tracks are read per artist,
+`DISCOVERY_MAX_ATTEMPTS` (3) rounds at most, and `DISCOVERY_MAX_TRACKS_PER_ARTIST` (3) tracks per artist, a featured
+appearance included.
 
 **Focus strategies**
 
@@ -48,8 +49,9 @@ tracks per artist.
 - A connected Spotify account ([`provider connect`](provider.md#provider-connect)).
 - An OpenRouter API key (`OPENROUTER_API_KEY`).
 
-The advisor is called up to `DISCOVERY_MAX_ATTEMPTS` times until `--limit` new tracks are found. Tracks
-already in the library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are excluded.
+One round is two LLM calls (the artists, then the picks); a round usually fills the playlist, and another one runs,
+with other artists, until `--limit` tracks are picked or `DISCOVERY_MAX_ATTEMPTS` is reached. Tracks already in the
+library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are never offered to the advisor.
 
 **Examples**
 
@@ -60,10 +62,11 @@ museflow playlist discover --focus roots_revival
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** A report table per attempt (suggested, survived, new tracks), then the table of discovered tracks
-(artist, track, album). Unless `--dry-run` is set, the playlist is created and the command prints its ID and
-follow-up commands to view and rate it. Last, an `LLM usage` table gives the advisor calls, tokens, cost and time, then the
-total and the elapsed time of the command, even when no new track was found.
+**Output.** A report table per round (artists asked, their tracks you don't know, tracks picked), then the table of
+discovered tracks (artist, track, album). Unless `--dry-run` is set, the playlist is created and the command prints
+its ID and follow-up commands to view and rate it. Last, an `LLM usage` table gives the calls, tokens, cost and time of
+each advisor step (`advisor_artists`, `advisor_picks`), then the total and the elapsed time of the command, even when
+no new track was found.
 
 ## `playlist history`
 

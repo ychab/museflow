@@ -194,8 +194,9 @@ class TrackSQLRepository(TrackRepository):
         # score_skipped, genres, moods, locales excluded so re-imports never overwrite user decisions/enrichment
         index_excluded: list[str] = ["id", "score_skipped", "genres", "moods", "locales"] + index_elements
 
-        # The play data is computed from the plays, saved on their own: a track never writes it
-        computed = ("played_at_first", "played_at_last", "played_count")
+        # The play data is computed from the plays, saved on their own, and the album year only comes from the
+        # provider catalogue: a track never writes them.
+        computed = ("played_at_first", "played_at_last", "played_count", "album_year")
         tracks_dicts: list[dict[str, Any]] = [
             {key: value for key, value in dataclasses.asdict(track).items() if key not in computed} for track in tracks
         ]

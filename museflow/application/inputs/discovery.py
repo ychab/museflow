@@ -12,12 +12,11 @@ class DiscoverTasteConfigInput:
         focus: The discovery focus strategy. Without a prompt it defaults to `expansion`; with a prompt it stays
             unset unless given, as a focus would pull the advisor away from the requested theme.
         profile_name: Optional profile name; if omitted the latest profile is used.
-        advisor_limit: Number of recommended tracks to request from the advisor.
-        reconciler_limit: Maximum number of search candidates per suggestion.
-        score_band_width: Width of advisor score bands for tiebreaking by reconciler confidence.
+        advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
+        artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
         playlist_limit: Target number of tracks in the generated playlist.
-        max_attempts: Maximum number of advisor calls before stopping.
-        max_tracks_per_artist: Maximum tracks per artist in the final playlist.
+        max_attempts: Maximum number of advisor rounds before stopping.
+        max_tracks_per_artist: Maximum tracks per credited artist in the final playlist.
         liked_tracks_score_threshold: Minimum user score for a track to be sent to the advisor as a positive example.
         liked_tracks_limit: Maximum number of liked tracks to send (top-scored first).
         disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
@@ -31,13 +30,11 @@ class DiscoverTasteConfigInput:
     profile_name: str | None = None
 
     advisor_limit: int = 15
-    reconciler_limit: int = 10
+    artist_tracks_pages: int = 2
     playlist_limit: int = 10
 
     max_attempts: int = 3
     max_tracks_per_artist: int = 3
-
-    score_band_width: float = 0.05
 
     liked_tracks_score_threshold: int = 7
     liked_tracks_limit: int = 200

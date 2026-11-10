@@ -29,6 +29,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
+from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
@@ -45,6 +46,7 @@ from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.user import UserFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
+from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 
 # --- Security Mocks ---
@@ -200,6 +202,11 @@ def taste_profile(request: pytest.FixtureRequest, user: User) -> TasteProfile:
 @pytest.fixture
 def discovery_taste_strategy(request: pytest.FixtureRequest) -> DiscoveryTasteStrategy:
     return DiscoveryTasteStrategyFactory.build(**getattr(request, "param", {}))
+
+
+@pytest.fixture
+def discovery_artist_strategy(request: pytest.FixtureRequest) -> DiscoveryArtistStrategy:
+    return DiscoveryArtistStrategyFactory.build(**getattr(request, "param", {}))
 
 
 # --- Client Mocks ---

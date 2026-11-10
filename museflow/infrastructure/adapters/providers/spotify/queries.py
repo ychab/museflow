@@ -37,3 +37,12 @@ class SpotifySearchTrackQuery(BaseModel):
         if self.is_underground:
             tags.append("tag:hipster")
         return tags
+
+
+class SpotifySearchArtistQuery(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    artist: str = Field(min_length=1)
+
+    def get_query(self) -> str:
+        return f'artist:"{self.artist.replace('"', '\\"')}"'
