@@ -32,7 +32,6 @@ museflow/
 ├── domain/          # Pure Python — NO framework imports ever
 │   ├── entities/    # frozen dataclasses
 │   ├── value_objects/
-│   ├── services/    # domain services (e.g., Reconciler)
 │   ├── utils/       # pure functions (text normalization, fingerprinting, locale validation)
 │   ├── exceptions.py
 │   ├── enums.py     # all StrEnum / IntFlag definitions

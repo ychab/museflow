@@ -12,7 +12,6 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.domain.services.reconciler import Reconciler
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -176,10 +175,3 @@ def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPo
 
 def get_unit_of_work() -> UnitOfWorkPort:
     return SQLUnitOfWork(async_session_factory)
-
-
-# --- Services ---
-
-
-def get_reconciler() -> Reconciler:
-    return Reconciler()

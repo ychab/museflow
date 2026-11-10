@@ -21,7 +21,6 @@ flowchart TB
     subgraph DOM["domain (pure Python)"]
         direction TB
         ENT["entities, value_objects"]
-        SVC["services: Reconciler"]
         UTL["utils, enums, const, exceptions"]
     end
     EP --> UC
@@ -29,22 +28,20 @@ flowchart TB
     UC --> ASVC
     ASVC --> PORTS
     UC --> ENT
-    UC --> SVC
     AD -.implements.-> PORTS
     AD --> ENT
     PORTS --> ENT
-    SVC --> ENT
 ```
 
 | Layer | Path | May import | Contains |
 |---|---|---|---|
-| Domain | `museflow/domain/` | the standard library and a pure helper (`unidecode`) | Frozen-dataclass entities, value objects, the `Reconciler` service, enums, constants, exceptions |
+| Domain | `museflow/domain/` | the standard library and a pure helper (`unidecode`) | Frozen-dataclass entities, value objects, pure helpers (text normalization, fingerprint), enums, constants, exceptions |
 | Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, port interfaces (`abc.ABC`) |
 | Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
 
 Two points are easy to miss:
 
-- **The domain contains a service, not only data.** The `Reconciler` ([`museflow/domain/services/reconciler.py`](https://github.com/ychab/museflow/blob/main/museflow/domain/services/reconciler.py)) decides whether a catalogue track belongs to the artist the LLM named: a search for a short name also returns artists with a longer, close one. That is a business rule, it has no I/O, and it is deterministic, so it lives in the domain and is injected into the use case.
+- **The domain holds rules, not only data.** A `Track` computes its own fingerprint in `__post_init__`, from its title and artists normalized by `domain/utils`: that fingerprint is how a track is recognised across providers, imports and discovery runs. No I/O, deterministic, so it lives in the domain. A rule only one flow uses stays a pure helper next to its use case (`application/utils/`), with no class or injection around it.
 - **Ports are defined by the application, not by the infrastructure.** For example `AdvisorPort` ([`museflow/application/ports/advisors/agent.py`](https://github.com/ychab/museflow/blob/main/museflow/application/ports/advisors/agent.py)) exposes `get_discovery_artists(...)` in domain terms (`TasteProfile`, `Track`, `DiscoveryFocus`) and returns a `DiscoveryArtistStrategy`. Nothing in it mentions HTTP or JSON.
 
 ## Ports and adapters
@@ -77,10 +74,9 @@ sequenceDiagram
     participant UC as DiscoverTasteUseCase
     participant UoW as Unit of work (short SQL blocks)
     participant Adv as AdvisorPort (OpenRouter adapter)
-    participant Rec as Reconciler (domain)
     participant Lib as ProviderLibraryPort (Spotify adapter)
 
-    CLI->>DI: unit of work, OAuth client, advisor, reconciler
+    CLI->>DI: unit of work, OAuth client, advisor
     CLI->>UoW: block: user by email, auth token
     CLI->>UC: create_suggestions_playlist(user, config)
     UC->>UoW: block: taste profile (named or latest), blacklist, liked and disliked tracks
@@ -88,8 +84,7 @@ sequenceDiagram
         UC->>Adv: get_discovery_artists(profile, prompt, focus, artists already asked, liked and disliked tracks)
         Adv-->>UC: DiscoveryArtistStrategy (artists, each with the sound wanted and a score)
         UC->>Lib: search_artist_tracks per artist
-        UC->>Rec: filter_by_artist(artist, tracks)
-        Rec-->>UC: the tracks crediting that exact artist
+        UC->>UC: filter_by_artist: keep the tracks crediting that exact artist
         UC->>UoW: block: drop tracks the user already knows (by fingerprint)
         UC->>Adv: pick_discovery_tracks(strategy, unknown tracks per artist)
         Adv-->>UC: picked tracks with a fit score

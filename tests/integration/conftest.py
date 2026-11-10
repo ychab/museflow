@@ -39,7 +39,6 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -482,11 +481,6 @@ async def openrouter_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator
 
 
 # --- Services ---
-
-
-@pytest.fixture
-def reconciler() -> Reconciler:
-    return Reconciler()
 
 
 # --- Wiremock ---

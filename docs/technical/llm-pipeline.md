@@ -1,12 +1,11 @@
 # LLM pipeline
 
-Four components use a language model or its output, and each sits behind a port so the use cases never see a vendor, a prompt or a JSON payload:
+Three components use a language model, and each sits behind a port so the use cases never see a vendor, a prompt or a JSON payload:
 
 | Component | Port | Where | Job |
 |---|---|---|---|
 | Profiler | `TasteProfilerPort` | `adapters/profilers/openrouter/` | Condense a listening history into a structured taste profile |
 | Advisor | `AdvisorPort` | `adapters/advisors/openrouter/` | Pick artists for the user, then tracks among their catalogue the user does not know, guided by the profile |
-| Reconciler | none (domain service) | `domain/services/reconciler.py` | Keep the catalogue tracks that credit the artist the advisor named |
 | Enricher | `TrackEnricherPort` | `adapters/enrichers/openrouter/` | Tag tracks with genres, moods and language |
 
 A design stance runs through all of them: **the model proposes, deterministic code disposes.** Output is constrained by a JSON response schema, validated by Pydantic, restricted to closed vocabularies, chosen among the real catalogue, and filtered against what the user already knows or has blacklisted. The model never writes to the database or to the provider directly.
@@ -123,8 +122,8 @@ as a system message (the role and rules) and a user message (the session's focus
 | Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists |
 
 **Between the calls, no LLM.** For each artist, the provider is searched by artist only
-(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify), the `Reconciler` keeps the tracks crediting that exact
-artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
+(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify), a [strict match](#strict-artist-match) keeps the tracks crediting that
+exact artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
 provider rejects as malformed skips that artist with a warning instead of ending the run.
 
 **Step 2, picks** (`pick_discovery_tracks`, usage step `advisor_picks`). The model gets the strategy of step 1, each
@@ -141,10 +140,10 @@ the fit scores are used afterwards for ranking. Both responses are constrained b
 into Pydantic models; the mappers strip control characters from the artist names (an LLM may emit them in place of an
 accented letter).
 
-## Reconciler: the strict artist match
+## Strict artist match
 
 A search by artist also returns artists with a close name: `Nova` brings back `Novalee`, and a short or common name
-brings back the most popular tracks of other artists. The `Reconciler` keeps a track only when one of its credited
+brings back the most popular tracks of other artists. `filter_by_artist` (`application/utils/discovery.py`) keeps a track only when one of its credited
 artists *equals* the asked one once normalised (`normalize_text`: ASCII fold, lowercase, punctuation and feature
 suffixes removed). Equality, not a fuzzy score: a short name must not match a longer one. In the measure, one asked
 artist got 10 search results, all by other artists, and all were rejected.
@@ -153,7 +152,7 @@ The tracks picked are sorted by fit score, then capped per artist (`DISCOVERY_MA
 counting every credited artist: the artists of one scene feature on each other's tracks, and a cap on the primary
 artist alone let one of them fill the playlist.
 
-The match is deliberately a domain service: it is pure, deterministic and cheap to test with table-driven cases.
+The match is a pure function, deterministic and cheap to test with table-driven cases.
 
 ## Enricher: closed vocabularies
 
