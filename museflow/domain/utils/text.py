@@ -5,16 +5,6 @@ from unidecode import unidecode
 
 from museflow.domain.types import LocaleCode
 
-# Applied to both sides of a comparison, in English and French, the languages most titles are in.
-_NUMBER_WORDS = {
-    word: str(number)
-    for words in (
-        ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"),
-        ("zero", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix"),
-    )
-    for number, word in enumerate(words)
-} | {"une": "1"}
-
 
 def validate_locale(v: object) -> LocaleCode | None:
     if not isinstance(v, str):
@@ -53,21 +43,6 @@ def normalize_text(text: str) -> str:
     text = re.sub(r"[^\w\s]", "", text)
 
     return " ".join(text.split())
-
-
-def strip_title_extras(text: str) -> str:
-    """Keeps the main part of a title: drops its bracketed parts and what follows a spaced " - " or " | ".
-
-    E.g. "Night Ride (Interlude)", "Night Ride - Bonus Track" and "NIGHT RIDE | N1GHT R1DE" all give the first words.
-    Keeps the text if nothing else is left.
-    """
-    main = re.split(r"\s[-|]\s", re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", text), maxsplit=1)[0]
-    return " ".join(main.split()) or text
-
-
-def normalize_numbers(text: str) -> str:
-    """Writes the small numbers of a normalized text as digits, so that "one night" and "1 night" compare equal."""
-    return " ".join(_NUMBER_WORDS.get(word, word) for word in text.split())
 
 
 def strip_control_chars(text: str) -> str:

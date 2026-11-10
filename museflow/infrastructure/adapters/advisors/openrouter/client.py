@@ -5,23 +5,18 @@ from pydantic import BaseModel
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.track import Track
-from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.exceptions import AdvisorRateLimitExceededError
 from museflow.domain.exceptions import DiscoveryTasteStrategyError
 from museflow.domain.utils import taste as taste_utils
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
-from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 from museflow.infrastructure.adapters.advisors.openrouter.mappers import to_discovery_artist_strategy
-from museflow.infrastructure.adapters.advisors.openrouter.mappers import to_discovery_strategy
 from museflow.infrastructure.adapters.advisors.openrouter.mappers import to_tracks_picked
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_ARTISTS_SCHEMA
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_PICKS_SCHEMA
-from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_STRATEGY_SCHEMA
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DiscoveryArtistsResponse
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DiscoveryPicksResponse
-from museflow.infrastructure.adapters.advisors.openrouter.schemas import DiscoveryStrategyResponse
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError
@@ -35,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
-    """Adapter that asks an LLM, through OpenRouter, for a discovery strategy matching a taste profile."""
+    """Adapter that asks an LLM, through OpenRouter, for artists matching a taste profile, then for picks."""
 
     def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
         super().__init__(client=client)
@@ -44,67 +39,6 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
     @property
     def display_name(self) -> str:
         return "OpenRouter"
-
-    async def get_discovery_strategy(
-        self,
-        profile: TasteProfile,
-        advisor_limit: int,
-        prompt: str | None = None,
-        focus: DiscoveryFocus | None = None,
-        excluded_tracks: list[TrackSuggested] | None = None,
-        known_tracks: list[TrackSuggested] | None = None,
-        blacklisted_artists: list[str] | None = None,
-        blacklisted_tracks: list[str] | None = None,
-        liked_tracks: list[Track] | None = None,
-        disliked_tracks: list[Track] | None = None,
-        covered_artists: dict[str, int] | None = None,
-    ) -> DiscoveryTasteStrategy:
-        exclusion_parts: list[str] = []
-        if excluded_tracks:
-            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in excluded_tracks)
-            exclusion_parts.append(
-                "### EXCLUSION LIST (DO NOT SUGGEST THESE)\n"
-                "These tracks have already been considered in this session. "
-                "You MUST suggest DIFFERENT tracks and avoid these artists where possible:\n"
-                f"{formatted}"
-            )
-        if known_tracks:
-            formatted = "\n".join(f"- {t.primary_artist}: {t.name}" for t in known_tracks)
-            exclusion_parts.append(
-                "### ALREADY KNOWN BY THE USER (DO NOT SUGGEST THESE)\n"
-                "These suggestions of this session were already in the user's library: the picks were too obvious. "
-                "Dig deeper: lesser-known artists, deep cuts, less mainstream tracks:\n"
-                f"{formatted}"
-            )
-        exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
-
-        constraints = (
-            "### CONSTRAINTS\n"
-            "- Return ONLY the JSON object (schema enforced).\n"
-            "- recommended_tracks MUST be tracks the user has NOT heard before — they are new discoveries.\n"
-            "- recommended_tracks MUST NOT appear in any exclusion or blacklist section above.\n"
-            "- A user request, when given, sets the playlist theme: every recommended track MUST fit it.\n"
-            "- If exclusions are provided, pivot to deeper cuts or adjacent artists to ensure variety.\n"
-            "- Every recommended track MUST be a real, released recording you are certain exists in the streaming\n"
-            "  catalogues. Never invent or guess a title: if you are unsure a song exists, pick another one.\n"
-            "- Give each track's exact released title, without version suffixes (Remix, Radio Edit, Live) unless that\n"
-            "  version is the pick, and its artists as credited, primary artist first.\n"
-            f"- Provide up to {advisor_limit} recommended tracks, each with a discovery score (0.0–1.0).\n"
-            "- Quality over quantity: only include a track if your confidence score would be ≥ 0.7.\n"
-            "  If you only have 5 high-confidence picks, return 5 — do not pad with uncertain ones.\n"
-            "  Score interpretation: 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
-            "- Keep suggested_playlist_name creative and thematic.\n"
-        )
-        content = await self._complete(
-            system_prompt=self._profile_system_prompt(
-                profile, focus, exclusion_parts, liked_tracks, disliked_tracks, constraints
-            ),
-            user_message=self._user_message(prompt, focus, default="Recommend new tracks for this user."),
-            response_model=DiscoveryStrategyResponse,
-            schema=DISCOVERY_STRATEGY_SCHEMA,
-            step="advisor",
-        )
-        return to_discovery_strategy(content)
 
     async def get_discovery_artists(
         self,
@@ -256,7 +190,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         disliked_tracks: list[Track] | None,
         constraints: str,
     ) -> str:
-        """The advisor's prompt around the taste profile, shared by the titles and the artists steps."""
+        """The advisor's prompt around the taste profile, for the artists step."""
         data = profile.profile
 
         timeline_summary = taste_utils.timeline_summary(data)

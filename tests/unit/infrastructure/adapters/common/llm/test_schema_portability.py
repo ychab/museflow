@@ -6,7 +6,6 @@ import pytest
 from museflow.domain.enums import EnrichField
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_ARTISTS_SCHEMA
 from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_PICKS_SCHEMA
-from museflow.infrastructure.adapters.advisors.openrouter.schemas import DISCOVERY_STRATEGY_SCHEMA
 from museflow.infrastructure.adapters.common.llm.json_schema import MAX_ENUM_VALUES
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.enrichers.openrouter.schemas import build_enrichment_schema
@@ -29,7 +28,6 @@ _SCHEMAS = [
         for fields in combinations(EnrichField, size)
     ),
     pytest.param(TASTE_PROFILE_SCHEMA, id="profiler"),
-    pytest.param(DISCOVERY_STRATEGY_SCHEMA, id="advisor"),
     pytest.param(DISCOVERY_ARTISTS_SCHEMA, id="advisor_artists"),
     pytest.param(DISCOVERY_PICKS_SCHEMA, id="advisor_picks"),
 ]

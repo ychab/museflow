@@ -105,7 +105,7 @@ class TestSpotifyLibraryLive:
         ]
 
     async def test__search(self, spotify_library_live: SpotifyLibraryAdapter) -> None:
-        tracks = await spotify_library_live.search_tracks(track="Mi Pueblo", page_size=5, max_pages=1)
+        tracks = await spotify_library_live.search_artist_tracks(artist="Grupo Niche", max_pages=1)
         assert len(tracks) > 0
 
     async def test__playlist_create(

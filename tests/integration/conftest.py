@@ -42,7 +42,6 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.services.reconciler import Reconciler
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
-from museflow.domain.value_objects.taste import DiscoveryTasteStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.database.models.base import Base
@@ -81,7 +80,6 @@ from tests.unit.factories.inputs.user import UserCreateInputFactory
 from tests.unit.factories.inputs.user import UserUpdateInputFactory
 from tests.unit.factories.value_objects.auth import OAuthProviderTokenPayloadFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
-from tests.unit.factories.value_objects.discovery import DiscoveryTasteStrategyFactory
 
 
 def _populate_existing(orm_execute_state: ORMExecuteState) -> None:
@@ -341,11 +339,6 @@ def taste_profile() -> TasteProfile:
 
 
 # --- Value objects ---
-
-
-@pytest.fixture
-def discovery_taste_strategy(request: pytest.FixtureRequest) -> DiscoveryTasteStrategy:
-    return DiscoveryTasteStrategyFactory.build(**getattr(request, "param", {}))
 
 
 @pytest.fixture

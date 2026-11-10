@@ -3,7 +3,6 @@ from polyfactory.factories.dataclass_factory import DataclassFactory
 
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
-from museflow.domain.entities.track import TrackSuggested
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 
@@ -28,9 +27,3 @@ class TrackFactory(DataclassFactory[Track]):
     score = None
     score_skipped = False
     locales = None
-
-
-class TrackSuggestedFactory(DataclassFactory[TrackSuggested]):
-    __model__ = TrackSuggested
-
-    artists = Use(lambda: [DataclassFactory.__faker__.name()])

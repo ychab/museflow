@@ -25,7 +25,6 @@ from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLi
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
-from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -183,4 +182,4 @@ def get_unit_of_work() -> UnitOfWorkPort:
 
 
 def get_reconciler() -> Reconciler:
-    return Reconciler(match_threshold=app_settings.RECONCILER_MATCH_THRESHOLD)
+    return Reconciler()
