@@ -6,14 +6,17 @@ from unittest import mock
 from httpx import ASGITransport
 from httpx import AsyncClient
 
+from sqlalchemy import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
 
 import pytest
 
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
+from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
@@ -27,6 +30,16 @@ def block_api_logging_reconfiguration() -> Iterator[mock.Mock]:
     """Prevents FastAPI lifespan from overwriting test logging config."""
     with mock.patch("museflow.infrastructure.entrypoints.api.main.configure_loggers") as patched:
         yield patched
+
+
+@pytest.fixture
+async def unavailable_db_session(test_db_name: str) -> AsyncGenerator[AsyncSession]:
+    """A session on a database that doesn't exist: its first query fails with PostgreSQL's real error."""
+    url = make_url(str(database_settings.URI)).set(database=f"{test_db_name}_missing")
+    engine = create_async_engine(url)
+    async with async_sessionmaker(engine)() as session:
+        yield session
+    await engine.dispose()
 
 
 @pytest.fixture
