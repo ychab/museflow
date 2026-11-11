@@ -11,6 +11,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import taste_build_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -337,6 +338,44 @@ class TestTasteBuildCommand:
 )
 class TestTasteBuildLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.build"
+
+    @pytest.fixture
+    def mock_get_profiler(self) -> Iterable[mock.MagicMock]:
+        with mock.patch(f"{self.TARGET_PATH}.get_profiler") as patched:
+            yield patched
+
+    @pytest.fixture
+    def mock_use_case(self) -> Iterable[mock.Mock]:
+        with mock.patch(f"{self.TARGET_PATH}.BuildTasteProfileUseCase", autospec=True) as patched:
+            yield patched.return_value
+
+    async def test__models_and_meter__forwarded_to_profiler(
+        self,
+        mock_get_profiler: mock.MagicMock,
+        mock_use_case: mock.Mock,
+    ) -> None:
+        meter = LLMUsageMeter()
+
+        await taste_build_logic(
+            email="test@example.com",
+            name="my-profile",
+            track_limit=3000,
+            batch_size=200,
+            resume=False,
+            rated_only=False,
+            segment_model="google/gemini-3.1-flash-lite",
+            merge_model="google/gemini-3.5-flash",
+            reflect_model="google/gemini-3.1-pro-preview",
+            meter=meter,
+        )
+
+        mock_get_profiler.assert_called_once_with(
+            "google/gemini-3.1-flash-lite",
+            "google/gemini-3.5-flash",
+            "google/gemini-3.1-pro-preview",
+            meter=meter,
+        )
+        mock_use_case.build_profile.assert_awaited_once()
 
     async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

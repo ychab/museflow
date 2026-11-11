@@ -45,6 +45,7 @@ def get_openrouter_client(meter: LLMUsageMeter | None = None) -> OpenRouterClien
     return OpenRouterClient(
         api_key=openrouter_settings.API_KEY.get_secret_value(),
         base_url=openrouter_settings.BASE_URL,
+        verify_ssl=openrouter_settings.VERIFY_SSL,
         timeout=openrouter_settings.HTTP_TIMEOUT,
         max_retry_wait=openrouter_settings.HTTP_MAX_RETRY_WAIT,
         zdr=openrouter_settings.ZDR,

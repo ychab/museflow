@@ -43,6 +43,8 @@ class OpenRouterSettings(BaseSettings):
     BASE_URL: Annotated[HttpUrl, UrlConstraints(allowed_schemes=["https"])] = Field(
         default=HttpUrl("https://openrouter.ai/api/v1/")
     )
+    # Off only for a local test server with a self-signed certificate (WireMock)
+    VERIFY_SSL: bool = True
 
     ADVISOR: LLMSettings = LLMSettings(MODEL="anthropic/claude-sonnet-5.5")
 

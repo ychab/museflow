@@ -2,7 +2,6 @@ from collections.abc import AsyncGenerator
 from collections.abc import AsyncIterator
 from collections.abc import Iterator
 from unittest import mock
-from unittest.mock import AsyncMock
 
 from httpx import ASGITransport
 from httpx import AsyncClient
@@ -28,11 +27,6 @@ def block_api_logging_reconfiguration() -> Iterator[mock.Mock]:
     """Prevents FastAPI lifespan from overwriting test logging config."""
     with mock.patch("museflow.infrastructure.entrypoints.api.main.configure_loggers") as patched:
         yield patched
-
-
-@pytest.fixture
-async def mock_db_session() -> AsyncMock:
-    return AsyncMock(spec=AsyncSession)
 
 
 @pytest.fixture
@@ -68,12 +62,12 @@ async def async_client(
         etc.
     """
 
-    # Override get_db: use mock_db if present, otherwise use test session
-    if "mock_db_session" in request.fixturenames:
-        mock_db_session = request.getfixturevalue("mock_db_session")
+    # Override get_db: use the unavailable database if requested, otherwise the test session
+    if "unavailable_db_session" in request.fixturenames:
+        unavailable_db_session = request.getfixturevalue("unavailable_db_session")
 
         async def override_get_db() -> AsyncIterator[AsyncSession]:
-            yield mock_db_session
+            yield unavailable_db_session
 
         app.dependency_overrides[get_db] = override_get_db
     else:
