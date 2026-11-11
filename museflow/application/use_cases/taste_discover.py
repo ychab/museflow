@@ -239,9 +239,12 @@ class DiscoverTasteUseCase:
             logger.info("Dry-run mode: skipping playlist creation.")
             return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
 
+        name = config.title or (
+            f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}"
+        )
         # Remote first: if the provider call fails, nothing has been written locally.
         playlist = await self._provider_library.create_playlist(
-            name=f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}",
+            name=name,
             type=PlaylistType.DISCOVERY,
             tracks=tracks,
         )
