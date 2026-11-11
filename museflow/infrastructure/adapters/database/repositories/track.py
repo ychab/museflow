@@ -33,7 +33,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.stats import ArtistTally
+from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
@@ -188,13 +188,13 @@ class TrackSQLRepository(TrackRepository):
         rows = (await self.session.execute(stmt)).all()
         return {name: count for name, count in rows}
 
-    async def get_artist_tallies(
+    async def get_artist_stats(
         self,
         user_id: uuid.UUID,
         source: TrackSource | None = None,
         score_min: int | None = None,
         score_max: int | None = None,
-    ) -> list[ArtistTally]:
+    ) -> list[ArtistStats]:
         plays = TrackPlaySQLRepository.plays_summary()
         artist = TrackModel.artists[0].as_string()
 
@@ -222,7 +222,7 @@ class TrackSQLRepository(TrackRepository):
 
         rows = (await self.session.execute(stmt)).all()
         return [
-            ArtistTally(
+            ArtistStats(
                 artist=row.artist,
                 track_count=row.track_count,
                 plays_count=row.plays_count,

@@ -11,7 +11,7 @@ from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import ArtistRanking
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
@@ -107,7 +107,7 @@ async def stats_artists_logic(
     score_max: int | None,
     confidence: int,
     sort: ArtistSortBy,
-) -> list[ArtistStats]:
+) -> list[ArtistRanking]:
     uow = get_unit_of_work()
 
     async with uow:

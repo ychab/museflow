@@ -14,23 +14,23 @@ async def get_artist_candidates(
     uow: UnitOfWorkPort,
 ) -> list[ArtistCandidate]:
     async with uow:
-        tallies = await uow.tracks.get_artist_tallies(user_id=user_id, source=source.to_track_source())
+        all_stats = await uow.tracks.get_artist_stats(user_id=user_id, source=source.to_track_source())
 
     rows: list[ArtistCandidate] = []
-    for tally in tallies:
-        if tally.track_count > max_tracks or tally.rated_count == 0:
+    for stats in all_stats:
+        if stats.track_count > max_tracks or stats.rated_count == 0:
             continue
 
-        avg_score = tally.rated_sum / tally.rated_count
+        avg_score = stats.rated_sum / stats.rated_count
         if avg_score < min_avg:
             continue
 
         rows.append(
             ArtistCandidate(
-                artist=tally.artist,
+                artist=stats.artist,
                 avg_score=avg_score,
-                rated_count=tally.rated_count,
-                total_count=tally.track_count,
+                rated_count=stats.rated_count,
+                total_count=stats.track_count,
             )
         )
 

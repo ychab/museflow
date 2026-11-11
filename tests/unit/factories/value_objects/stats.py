@@ -1,10 +1,10 @@
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
-from museflow.domain.value_objects.stats import ArtistTally
+from museflow.domain.value_objects.stats import ArtistStats
 
 
-class ArtistTallyFactory(DataclassFactory[ArtistTally]):
-    __model__ = ArtistTally
+class ArtistStatsFactory(DataclassFactory[ArtistStats]):
+    __model__ = ArtistStats
     __set_as_default_factory_for_type__ = True
 
     track_count = 1
