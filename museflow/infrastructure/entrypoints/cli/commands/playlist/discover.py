@@ -37,7 +37,6 @@ def playlist_discover_command(
     prompt: str | None = typer.Argument(
         None,
         help="Optional freeform request for the advisor: genres, moods, a theme (e.g. 'lo-fi jazz and soul for focus')",
-        show_default=False,
     ),
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
@@ -46,7 +45,6 @@ def playlist_discover_command(
         None,
         "--focus",
         help="The discovery focus strategy (defaults to expansion without a prompt, none with one)",
-        show_default=False,
     ),
     model: str | None = typer.Option(
         None,
@@ -57,7 +55,6 @@ def playlist_discover_command(
         None,
         "--title",
         help="Playlist name, used as is (defaults to the advisor's suggestion with a timestamp)",
-        show_default=False,
     ),
     dry_run: bool = typer.Option(
         False,
