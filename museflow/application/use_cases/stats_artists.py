@@ -1,12 +1,10 @@
-import math
 import uuid
-from collections import defaultdict
-from typing import cast
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.domain.entities.track import Track
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
+from museflow.domain.utils.stats import compute_overall
+from museflow.domain.utils.stats import compute_quality
 from museflow.domain.value_objects.stats import ArtistStats
 
 
@@ -21,49 +19,30 @@ async def get_top_artists(
     uow: UnitOfWorkPort,
 ) -> list[ArtistStats]:
     async with uow:
-        all_tracks = await uow.tracks.get_list(
+        tallies = await uow.tracks.get_artist_tallies(
             user_id=user_id,
             source=source.to_track_source(),
-            limit=None,
+            score_min=score_min,
+            score_max=score_max,
         )
 
-    artist_tracks: dict[str, list[Track]] = defaultdict(list)
-    for track in all_tracks:
-        artist_tracks[track.primary_artist].append(track)
-
-    all_rated_scores = [cast(int, t.score) for t in all_tracks if _is_in_score_range(t.score, score_min, score_max)]
-    global_mean = sum(all_rated_scores) / len(all_rated_scores) if all_rated_scores else 0.0
+    # Each track has one primary artist: the tallies add up to the whole library
+    rated_count_total = sum(tally.rated_count for tally in tallies)
+    global_mean = sum(tally.rated_sum for tally in tallies) / rated_count_total if rated_count_total else 0.0
 
     rows: list[ArtistStats] = []
-    for artist, tracks in artist_tracks.items():
-        rated_scores = [cast(int, t.score) for t in tracks if _is_in_score_range(t.score, score_min, score_max)]
-        rated_count = len(rated_scores)
-        track_count = len(tracks)
-        plays_count = sum(t.played_count for t in tracks)
-
-        rate_avg: float | None
-        quality_score: float | None
-        if rated_count > 0:
-            rate_avg = sum(rated_scores) / rated_count
-            quality = (confidence * global_mean + rated_count * rate_avg) / (confidence + rated_count)
-            quality_score = quality
-        else:
-            rate_avg = None
-            quality = global_mean
-            quality_score = None
-
-        quality_ratio = quality / global_mean if global_mean > 0 else 1.0
-        overall_score = math.log(1 + track_count) * math.log(1 + plays_count) * quality_ratio
-
+    for tally in tallies:
+        rate_avg = tally.rated_sum / tally.rated_count if tally.rated_count else None
+        quality = compute_quality(rate_avg, tally.rated_count, global_mean, confidence)
         rows.append(
             ArtistStats(
-                artist=artist,
-                quality_score=quality_score,
-                overall_score=overall_score,
+                artist=tally.artist,
+                quality_score=quality if rate_avg is not None else None,
+                overall_score=compute_overall(tally.track_count, tally.plays_count, quality, global_mean),
                 rate_avg=rate_avg,
-                rated_count=rated_count,
-                track_count=track_count,
-                plays_count=plays_count,
+                rated_count=tally.rated_count,
+                track_count=tally.track_count,
+                plays_count=tally.plays_count,
             )
         )
 
@@ -79,13 +58,3 @@ async def get_top_artists(
         rows.sort(key=lambda r: (-r.overall_score, r.artist))
 
     return rows[:limit]
-
-
-def _is_in_score_range(score: int | None, score_min: int | None, score_max: int | None) -> bool:
-    if score is None:
-        return False
-    if score_min is not None and score < score_min:
-        return False
-    if score_max is not None and score > score_max:
-        return False
-    return True

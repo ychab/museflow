@@ -4,7 +4,9 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import Boolean
+from sqlalchemy import ColumnElement
 from sqlalchemy import Uuid
+from sqlalchemy import and_
 from sqlalchemy import any_
 from sqlalchemy import bindparam
 from sqlalchemy import delete
@@ -31,6 +33,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
+from museflow.domain.value_objects.stats import ArtistTally
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
@@ -184,6 +187,50 @@ class TrackSQLRepository(TrackRepository):
         )
         rows = (await self.session.execute(stmt)).all()
         return {name: count for name, count in rows}
+
+    async def get_artist_tallies(
+        self,
+        user_id: uuid.UUID,
+        source: TrackSource | None = None,
+        score_min: int | None = None,
+        score_max: int | None = None,
+    ) -> list[ArtistTally]:
+        plays = TrackPlaySQLRepository.plays_summary()
+        artist = TrackModel.artists[0].as_string()
+
+        rated_conditions: list[ColumnElement[bool]] = [TrackModel.score.is_not(None)]
+        if score_min is not None:
+            rated_conditions.append(TrackModel.score >= score_min)
+        if score_max is not None:
+            rated_conditions.append(TrackModel.score <= score_max)
+        rated = and_(*rated_conditions)
+
+        stmt = (
+            select(
+                artist.label("artist"),
+                func.count().label("track_count"),
+                func.coalesce(func.sum(plays.c.played_count), 0).label("plays_count"),
+                func.count().filter(rated).label("rated_count"),
+                func.coalesce(func.sum(TrackModel.score).filter(rated), 0).label("rated_sum"),
+            )
+            .join(plays, true())
+            .where(TrackModel.user_id == user_id)
+            .group_by(artist)
+        )
+        if source is not None:
+            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            ArtistTally(
+                artist=row.artist,
+                track_count=row.track_count,
+                plays_count=row.plays_count,
+                rated_count=row.rated_count,
+                rated_sum=row.rated_sum,
+            )
+            for row in rows
+        ]
 
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         # Keyed by fingerprint: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
