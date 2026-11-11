@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.stats_tags import GetTopTagsResult
+from museflow.application.use_cases.stats_tags import TopTagsResult
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
@@ -24,7 +24,7 @@ class TestStatsTagsParserCommand:
     @pytest.fixture(autouse=True)
     def mock_stats_tags_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.stats_tags_logic", new_callable=mock.AsyncMock) as patched:
-            patched.return_value = GetTopTagsResult(rankings=[], unenriched_count=0)
+            patched.return_value = TopTagsResult(rankings=[], unenriched_count=0)
             yield patched
 
     @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ class TestStatsTagsCommand:
             overall_score=37.1,
             rate_avg=9.0,
         )
-        mock_stats_tags_logic.return_value = GetTopTagsResult(rankings=[ranking], unenriched_count=4)
+        mock_stats_tags_logic.return_value = TopTagsResult(rankings=[ranking], unenriched_count=4)
 
         result = runner.invoke(app, ["stats", "tags", "--email", "test@example.com", "--tier", "meso"])
 
@@ -82,7 +82,7 @@ class TestStatsTagsCommand:
         assert "4 tracks without genre are not ranked." in result.output
 
     def test__no_tags(self, mock_stats_tags_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        mock_stats_tags_logic.return_value = GetTopTagsResult(rankings=[], unenriched_count=0)
+        mock_stats_tags_logic.return_value = TopTagsResult(rankings=[], unenriched_count=0)
 
         result = runner.invoke(app, ["stats", "tags", "--email", "test@example.com", "--by", "locale"])
 

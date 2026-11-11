@@ -11,7 +11,7 @@ from museflow.domain.types import TagRanking
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetTopTagsResult:
+class TopTagsResult:
     rankings: list[TagRanking]
     unenriched_count: int  # tracks without any tag of the field, left out of the rankings
 
@@ -27,7 +27,7 @@ async def get_top_tags(
     sort: RankingSortBy,
     limit: int,
     uow: UnitOfWorkPort,
-) -> GetTopTagsResult:
+) -> TopTagsResult:
     async with uow:
         all_stats = await uow.tracks.get_tag_stats(
             user_id=user_id,
@@ -53,4 +53,4 @@ async def get_top_tags(
         sort=sort,
         limit=limit,
     )
-    return GetTopTagsResult(rankings=rankings, unenriched_count=library_stats.unenriched_count)
+    return TopTagsResult(rankings=rankings, unenriched_count=library_stats.unenriched_count)
