@@ -47,6 +47,7 @@ class TestPlaylistDiscoverParserCommand:
                 "--email", "test@example.com",
                 "--provider", MusicProvider.SPOTIFY,
                 "--focus", DiscoveryFocus.EXPANSION,
+                "--title", "Friday night",
                 "--limit", "15",
             ],
         )
@@ -56,6 +57,7 @@ class TestPlaylistDiscoverParserCommand:
         config = mock_playlist_discover_logic.call_args.kwargs["config"]
         assert config.prompt == "lo-fi jazz and soul for focus"
         assert config.focus == DiscoveryFocus.EXPANSION
+        assert config.title == "Friday night"
         assert config.playlist_limit == 15
         assert config.advisor_limit == 23
         assert config.artist_tracks_pages == 2
@@ -280,8 +282,8 @@ class TestPlaylistDiscoverCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        strategy = DiscoveryArtistStrategyFactory.build(suggested_playlist_name="Progressive Horizons")
-        playlist = PlaylistFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build()
+        playlist = PlaylistFactory.build(name="Friday night")
 
         track_with_album = TrackFactory.build()
         track_without_album = TrackFactory.build(album_name=None)
@@ -296,7 +298,7 @@ class TestPlaylistDiscoverCommand:
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Suggested tracks successfully saved into playlist 'Progressive Horizons'!" in output
+        assert "Suggested tracks successfully saved into playlist 'Friday night'!" in output
         assert f"Saved playlist ID: {playlist.id}" in output
         assert "Rate tracks: museflow rate playlist" in output
         assert "--email" not in output

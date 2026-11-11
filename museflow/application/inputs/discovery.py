@@ -12,6 +12,7 @@ class DiscoverTasteConfigInput:
         focus: The discovery focus strategy. Without a prompt it defaults to `expansion`; with a prompt it stays
             unset unless given, as a focus would pull the advisor away from the requested theme.
         profile_name: Optional profile name; if omitted the latest profile is used.
+        title: Optional playlist name, used as is; if omitted the name is built from the advisor's suggestion.
         advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
         artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
         playlist_limit: Target number of tracks in the generated playlist.
@@ -28,6 +29,7 @@ class DiscoverTasteConfigInput:
     prompt: str | None = None
     focus: DiscoveryFocus | None = None
     profile_name: str | None = None
+    title: str | None = None
 
     advisor_limit: int = 15
     artist_tracks_pages: int = 2

@@ -53,6 +53,12 @@ def playlist_discover_command(
         "--model",
         help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
     ),
+    title: str | None = typer.Option(
+        None,
+        "--title",
+        help="Playlist name, used as is (defaults to the advisor's suggestion with a timestamp)",
+        show_default=False,
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
@@ -79,6 +85,7 @@ def playlist_discover_command(
                         prompt=prompt,
                         focus=focus,
                         profile_name=name,
+                        title=title,
                         advisor_limit=math.ceil(limit * app_settings.DISCOVERY_ADVISOR_LIMIT_RATIO),
                         artist_tracks_pages=app_settings.DISCOVERY_ARTIST_TRACKS_PAGES,
                         liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
@@ -158,7 +165,7 @@ def playlist_discover_command(
             )
         else:
             typer.secho(
-                f"\n\nSuggested tracks successfully saved into playlist '{result.strategy.suggested_playlist_name}'! ✅",
+                f"\n\nSuggested tracks successfully saved into playlist '{result.playlist.name}'! ✅",
                 fg=typer.colors.GREEN,
             )
             typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)

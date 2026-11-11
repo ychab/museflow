@@ -29,6 +29,7 @@ museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 | `--name` | latest profile | Taste profile name (defaults to latest). |
 | `--focus` | `expansion` without a prompt, none with one | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. With a prompt, no focus is applied unless given: it would pull the advisor away from the requested theme. |
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
+| `--title` | advisor's suggestion | Playlist name, used as is. Without it, the playlist is named `[MF] - <name suggested by the advisor> - <timestamp>`. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
@@ -58,6 +59,7 @@ library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are n
 ```bash
 museflow playlist discover --limit 15
 museflow playlist discover "chill jazz and soul, mostly instrumental" --dry-run
+museflow playlist discover "lo-fi beats for a rainy evening" --title "Friday night"
 museflow playlist discover --focus roots_revival
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
