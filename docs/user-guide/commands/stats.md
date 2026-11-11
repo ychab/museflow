@@ -65,6 +65,41 @@ museflow stats candidates --max-tracks 3 --min-avg 8
 **Output.** A _Discovery Candidates_ table (artist, average score, rated tracks, total tracks), or
 `No discovery candidates found.`. Requires rated tracks.
 
+## `stats tags`
+
+Shows top genres, moods or locales, with the scores of [`stats artists`](#stats-artists): the tags the enrichment
+stored on the tracks, ranked from the library alone. A ground truth to check the taste profile against.
+
+```bash
+museflow stats tags [--email <email>] [OPTIONS]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--by` | `genre` | Tags to rank: `genre`, `mood` or `locale`. |
+| `--tier` | none | Genre tier to rank: `macro`, `meso` or `micro`. With `--by genre` only. |
+| `--source` | `all` | Track source to include: `all`, `history` or `discovery`. |
+| `--score-min` | none | Minimum score filter (0-10). |
+| `--score-max` | none | Maximum score filter (0-10). |
+| `--confidence` | `5` | Bayesian confidence constant: tags with fewer rated tracks than this are pulled toward the mean. |
+| `--sort` | `overall` | Ranking strategy, as for `stats artists`: `track_count`, `plays_count`, `rate_avg`, `quality` or `overall`. |
+| `--limit` | `20` | Max rows in the table. |
+
+A track counts in each of its tags. The enrichment orders the genres of a track from the broadest to the most
+specific (macro, meso, then micro when it has one): without `--tier`, every genre counts; with it, only the genre at
+that tier. The quality is pulled toward the mean rating of the whole library, as for the artists.
+
+**Example**
+
+```bash
+museflow stats tags --by genre --tier macro --sort quality
+```
+
+**Output.** A _Top Genres_ (_Top Moods_, _Top Locales_) table with the columns of `stats artists`, the tag instead
+of the artist, then how many tracks have no tag of that kind (not enriched yet), which the table leaves out:
+`12 tracks without genre are not ranked.`. Run [`enrich tracks`](enrich.md#enrich-tracks) to tag them.
+
 ## `stats tracks`
 
 Shows top rated tracks.

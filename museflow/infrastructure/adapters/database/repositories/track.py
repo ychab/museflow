@@ -3,6 +3,7 @@ import uuid
 from datetime import date
 from typing import Any
 
+from sqlalchemy import BigInteger
 from sqlalchemy import Boolean
 from sqlalchemy import ColumnElement
 from sqlalchemy import Uuid
@@ -20,11 +21,14 @@ from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import Label
+from sqlalchemy.sql.selectable import LateralFromClause
 
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.domain.enums import GenreTier
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SortOrder
@@ -34,6 +38,8 @@ from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import LibraryStats
+from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
@@ -93,7 +99,7 @@ class TrackSQLRepository(TrackRepository):
         if max_score is not None:
             stmt = stmt.where(TrackModel.score <= max_score)
         if source is not None:
-            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+            stmt = stmt.where(self._source_condition(source))
         if unrated_only:
             stmt = stmt.where(TrackModel.score.is_(None))
         if exclude_skipped:
@@ -113,14 +119,9 @@ class TrackSQLRepository(TrackRepository):
         if exclude_ids:
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
         if missing_fields:
-            conditions = []
-            if EnrichField.GENRE in missing_fields:
-                conditions.append(func.array_length(TrackModel.genres, 1).is_(None))
-            if EnrichField.MOOD in missing_fields:
-                conditions.append(func.array_length(TrackModel.moods, 1).is_(None))
-            if EnrichField.LOCALE in missing_fields:
-                conditions.append(TrackModel.locales.is_(None))
-            stmt = stmt.where(or_(*conditions))
+            stmt = stmt.where(
+                or_(*(self._missing_condition(field) for field in EnrichField if field in missing_fields))
+            )
         if genres is not None:
             stmt = stmt.where(TrackModel.genres.overlap([g.value for g in genres]))
         if moods is not None:
@@ -198,27 +199,14 @@ class TrackSQLRepository(TrackRepository):
         plays = TrackPlaySQLRepository.plays_summary()
         artist = TrackModel.artists[0].as_string()
 
-        rated_conditions: list[ColumnElement[bool]] = [TrackModel.score.is_not(None)]
-        if score_min is not None:
-            rated_conditions.append(TrackModel.score >= score_min)
-        if score_max is not None:
-            rated_conditions.append(TrackModel.score <= score_max)
-        rated = and_(*rated_conditions)
-
         stmt = (
-            select(
-                artist.label("artist"),
-                func.count().label("track_count"),
-                func.coalesce(func.sum(plays.c.played_count), 0).label("plays_count"),
-                func.count().filter(rated).label("rated_count"),
-                func.coalesce(func.sum(TrackModel.score).filter(rated), 0).label("rated_sum"),
-            )
+            select(artist.label("artist"), *self._stats_columns(plays, score_min, score_max))
             .join(plays, true())
             .where(TrackModel.user_id == user_id)
             .group_by(artist)
         )
         if source is not None:
-            stmt = stmt.where(TrackModel.source.op("&")(int(source)) != 0)
+            stmt = stmt.where(self._source_condition(source))
 
         rows = (await self.session.execute(stmt)).all()
         return [
@@ -231,6 +219,77 @@ class TrackSQLRepository(TrackRepository):
             )
             for row in rows
         ]
+
+    async def get_tag_stats(
+        self,
+        user_id: uuid.UUID,
+        field: EnrichField,
+        tier: GenreTier | None = None,
+        source: TrackSource | None = None,
+        score_min: int | None = None,
+        score_max: int | None = None,
+    ) -> list[TagStats]:
+        if tier is not None and field != EnrichField.GENRE:
+            raise ValueError(f"A genre tier only applies to genres, not to {field}")
+
+        plays = TrackPlaySQLRepository.plays_summary()
+        column = getattr(TrackModel, self._ENRICH_FIELD_TO_COLUMN[field])
+        if tier is not None:
+            # PostgreSQL arrays start at 1; past the end, the element is NULL
+            tag = column[tier.position + 1]
+            tags = select(tag.label("tag")).where(tag.is_not(None)).correlate(TrackModel).lateral("tags")
+        else:
+            # DISTINCT: a tag listed twice on a track counts the track once
+            tags = select(func.unnest(column).label("tag")).distinct().correlate(TrackModel).lateral("tags")
+
+        stmt = (
+            select(tags.c.tag, *self._stats_columns(plays, score_min, score_max))
+            .select_from(TrackModel)
+            .join(tags, true())
+            .join(plays, true())
+            .where(TrackModel.user_id == user_id)
+            .group_by(tags.c.tag)
+        )
+        if source is not None:
+            stmt = stmt.where(self._source_condition(source))
+
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            TagStats(
+                tag=row.tag,
+                track_count=row.track_count,
+                plays_count=row.plays_count,
+                rated_count=row.rated_count,
+                rated_sum=row.rated_sum,
+            )
+            for row in rows
+        ]
+
+    async def get_library_stats(
+        self,
+        user_id: uuid.UUID,
+        field: EnrichField,
+        source: TrackSource | None = None,
+        score_min: int | None = None,
+        score_max: int | None = None,
+    ) -> LibraryStats:
+        rated = self._rated_condition(score_min, score_max)
+        stmt = select(
+            func.count().label("track_count"),
+            func.count().filter(rated).label("rated_count"),
+            func.coalesce(func.sum(TrackModel.score).filter(rated), 0).cast(BigInteger).label("rated_sum"),
+            func.count().filter(self._missing_condition(field)).label("unenriched_count"),
+        ).where(TrackModel.user_id == user_id)
+        if source is not None:
+            stmt = stmt.where(self._source_condition(source))
+
+        row = (await self.session.execute(stmt)).one()
+        return LibraryStats(
+            track_count=row.track_count,
+            rated_count=row.rated_count,
+            rated_sum=row.rated_sum,
+            unenriched_count=row.unenriched_count,
+        )
 
     async def bulk_upsert(self, tracks: list[Track], batch_size: int) -> tuple[dict[str, uuid.UUID], int]:
         # Keyed by fingerprint: PostgreSQL does not guarantee that RETURNING follows the VALUES order.
@@ -372,3 +431,41 @@ class TrackSQLRepository(TrackRepository):
 
         result = await self.session.execute(stmt)
         return int(result.rowcount)  # type: ignore
+
+    @staticmethod
+    def _source_condition(source: TrackSource) -> ColumnElement[bool]:
+        return TrackModel.source.op("&")(int(source)) != 0
+
+    @classmethod
+    def _missing_condition(cls, field: EnrichField) -> ColumnElement[bool]:
+        """A track not enriched for `field`; an empty locale list is enriched (no lyrics), unlike a NULL one."""
+        if field == EnrichField.LOCALE:
+            return TrackModel.locales.is_(None)
+        column = getattr(TrackModel, cls._ENRICH_FIELD_TO_COLUMN[field])
+        return func.array_length(column, 1).is_(None)
+
+    @staticmethod
+    def _rated_condition(score_min: int | None, score_max: int | None) -> ColumnElement[bool]:
+        conditions: list[ColumnElement[bool]] = [TrackModel.score.is_not(None)]
+        if score_min is not None:
+            conditions.append(TrackModel.score >= score_min)
+        if score_max is not None:
+            conditions.append(TrackModel.score <= score_max)
+        return and_(*conditions)
+
+    @classmethod
+    def _stats_columns(
+        cls,
+        plays: LateralFromClause,
+        score_min: int | None,
+        score_max: int | None,
+    ) -> list[Label[int]]:
+        """The totals of a group of tracks: count, plays, and the ratings in the score range."""
+        rated = cls._rated_condition(score_min, score_max)
+        return [
+            func.count().label("track_count"),
+            # sum() of integers is a numeric in PostgreSQL
+            func.coalesce(func.sum(plays.c.played_count), 0).cast(BigInteger).label("plays_count"),
+            func.count().filter(rated).label("rated_count"),
+            func.coalesce(func.sum(TrackModel.score).filter(rated), 0).cast(BigInteger).label("rated_sum"),
+        ]

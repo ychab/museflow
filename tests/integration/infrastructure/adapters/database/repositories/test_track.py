@@ -19,12 +19,15 @@ from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
+from museflow.domain.enums import GenreTier
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import LibraryStats
+from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackPlay
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
@@ -393,6 +396,108 @@ class TestTrackSQLRepository:
         all_stats = await track_repository.get_artist_stats(user_id=user.id, source=TrackSource.HISTORY)
 
         assert all_stats == [ArtistStats(artist="Band A", track_count=2, plays_count=0, rated_count=2, rated_sum=12)]
+
+    async def test__get_tag_stats__nominal(self, user: User, track_repository: TrackRepository) -> None:
+        """A track counts in each of its genres, every tier; untagged tracks and other users ignored."""
+        await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "post-rock"], score=8, played_count=2)
+        await TrackModelFactory.create_async(
+            user_id=user.id, genres=["rock", "indie-rock"], score=None, played_count=1
+        )
+        await TrackModelFactory.create_async(user_id=user.id, genres=[], score=10)
+        await TrackModelFactory.create_async(genres=["rock"], score=2)  # Another user
+
+        all_stats = await track_repository.get_tag_stats(user_id=user.id, field=EnrichField.GENRE)
+
+        assert sorted(all_stats, key=operator.attrgetter("tag")) == [
+            TagStats(tag="indie-rock", track_count=1, plays_count=1, rated_count=0, rated_sum=0),
+            TagStats(tag="post-rock", track_count=1, plays_count=2, rated_count=1, rated_sum=8),
+            TagStats(tag="rock", track_count=2, plays_count=3, rated_count=1, rated_sum=8),
+        ]
+
+    async def test__get_tag_stats__tier(self, user: User, track_repository: TrackRepository) -> None:
+        """The genre at the tier's position only; a track without that tier is skipped."""
+        await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "post-rock", "math-rock"], score=6)
+        await TrackModelFactory.create_async(user_id=user.id, genres=["rock", "indie-rock"], score=8)
+
+        all_stats = await track_repository.get_tag_stats(
+            user_id=user.id, field=EnrichField.GENRE, tier=GenreTier.MICRO
+        )
+
+        assert all_stats == [TagStats(tag="math-rock", track_count=1, plays_count=0, rated_count=1, rated_sum=6)]
+
+    async def test__get_tag_stats__tier__not_genre(self, user: User, track_repository: TrackRepository) -> None:
+        with pytest.raises(ValueError, match="A genre tier only applies to genres"):
+            await track_repository.get_tag_stats(user_id=user.id, field=EnrichField.MOOD, tier=GenreTier.MACRO)
+
+    async def test__get_tag_stats__duplicate_tag(self, user: User, track_repository: TrackRepository) -> None:
+        """A tag listed twice on a track counts the track once."""
+        await TrackModelFactory.create_async(user_id=user.id, moods=["chill", "chill"], score=7, played_count=1)
+
+        all_stats = await track_repository.get_tag_stats(user_id=user.id, field=EnrichField.MOOD)
+
+        assert all_stats == [TagStats(tag="chill", track_count=1, plays_count=1, rated_count=1, rated_sum=7)]
+
+    async def test__get_tag_stats__filters(self, user: User, track_repository: TrackRepository) -> None:
+        """NULL locales are skipped; the source filters tracks, the score range only the ratings."""
+        for score in (2, 6, 9):
+            await TrackModelFactory.create_async(
+                user_id=user.id, locales=["fr"], score=score, source=TrackSource.HISTORY
+            )
+        await TrackModelFactory.create_async(user_id=user.id, locales=None, score=6, source=TrackSource.HISTORY)
+        await TrackModelFactory.create_async(user_id=user.id, locales=["fr"], score=6, source=TrackSource.DISCOVERY)
+
+        all_stats = await track_repository.get_tag_stats(
+            user_id=user.id,
+            field=EnrichField.LOCALE,
+            source=TrackSource.HISTORY,
+            score_min=5,
+            score_max=8,
+        )
+
+        assert all_stats == [TagStats(tag="fr", track_count=3, plays_count=0, rated_count=1, rated_sum=6)]
+
+    @pytest.mark.parametrize(
+        ("field", "unenriched_count"),
+        [
+            pytest.param(EnrichField.GENRE, 1, id="genre"),
+            pytest.param(EnrichField.MOOD, 2, id="mood"),
+            pytest.param(EnrichField.LOCALE, 1, id="locale"),
+        ],
+    )
+    async def test__get_library_stats__nominal(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+        field: EnrichField,
+        unenriched_count: int,
+    ) -> None:
+        """Every track of the source counts; an empty locale list is enriched (no lyrics), a NULL one is not."""
+        history = TrackSource.HISTORY
+        await TrackModelFactory.create_async(
+            user_id=user.id, genres=["rock"], moods=["chill"], locales=[], score=4, source=history
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id, genres=["rock"], moods=[], locales=["fr"], score=8, source=history
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id, genres=[], moods=[], locales=None, score=9, source=history
+        )
+        await TrackModelFactory.create_async(user_id=user.id, genres=[], source=TrackSource.DISCOVERY, score=1)
+        await TrackModelFactory.create_async(genres=[], score=1)  # Another user
+
+        library_stats = await track_repository.get_library_stats(
+            user_id=user.id,
+            field=field,
+            source=TrackSource.HISTORY,
+            score_max=8,
+        )
+
+        assert library_stats == LibraryStats(
+            track_count=3,
+            rated_count=2,
+            rated_sum=12,
+            unenriched_count=unenriched_count,
+        )
 
     async def test__bulk_upsert__create(
         self,
