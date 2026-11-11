@@ -41,6 +41,7 @@ async def import_llm_usage(
                     usage=LLMUsage(
                         step=entry.step,
                         model=entry.model,
+                        reasoning_effort=entry.reasoning_effort,
                         calls=entry.calls,
                         prompt_tokens=entry.prompt_tokens,
                         completion_tokens=entry.completion_tokens,

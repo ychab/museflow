@@ -22,6 +22,7 @@ async def export_llm_usage(
             profile_name=profile_names.get(record.profile_id) if record.profile_id else None,
             step=record.usage.step,
             model=record.usage.model,
+            reasoning_effort=record.usage.reasoning_effort,
             calls=record.usage.calls,
             prompt_tokens=record.usage.prompt_tokens,
             completion_tokens=record.usage.completion_tokens,

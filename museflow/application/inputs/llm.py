@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ReasoningEffort
 
 
 class LLMUsageEntryInput(BaseModel):
@@ -21,6 +22,7 @@ class LLMUsageEntryInput(BaseModel):
     profile_name: str | None = None
     step: str
     model: str
+    reasoning_effort: ReasoningEffort | None = None  # absent from the exports taken before it was recorded
     calls: int = Field(ge=0)
     prompt_tokens: int = Field(ge=0)
     completion_tokens: int = Field(ge=0)

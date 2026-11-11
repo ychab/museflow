@@ -30,9 +30,10 @@ class TestExportLLMUsageUseCase:
             with_profile.operation,
             with_profile.created_at,
         )
-        assert (entry.step, entry.model, entry.calls, entry.cost, entry.duration) == (
+        assert (entry.step, entry.model, entry.reasoning_effort, entry.calls, entry.cost, entry.duration) == (
             with_profile.usage.step,
             with_profile.usage.model,
+            with_profile.usage.reasoning_effort,
             with_profile.usage.calls,
             with_profile.usage.cost,
             with_profile.usage.duration,

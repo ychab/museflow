@@ -17,6 +17,7 @@ from pydantic import HttpUrl
 import pytest
 from pytest_httpx import HTTPXMock
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.client import _is_retryable_error
@@ -28,7 +29,6 @@ from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
-from museflow.infrastructure.types import ReasoningEffort
 
 URL = "https://openrouter.test/api/v1/chat/completions"
 MODELS_URL = "https://openrouter.test/api/v1/models"
@@ -252,6 +252,27 @@ class TestOpenRouterClient:
         assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
             step="test", model="google/gemini-2.5-flash", calls=1
         )
+
+    async def test__complete__records_the_reasoning_effort(
+        self,
+        metered_client: OpenRouterClient,
+        meter: LLMUsageMeter,
+        llm: LLMSettings,
+        messages: list[ChatMessage],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=VALID_RESPONSE)
+
+        await metered_client.complete(
+            messages,
+            response_model=Answer,
+            schema=SCHEMA,
+            llm=llm.model_copy(update={"REASONING_EFFORT": ReasoningEffort.LOW}),
+            adapter="test",
+        )
+
+        [recorded] = meter.usages
+        assert recorded.reasoning_effort == ReasoningEffort.LOW
 
     async def test__complete__rejected__records_nothing(
         self,

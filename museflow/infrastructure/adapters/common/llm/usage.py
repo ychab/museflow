@@ -3,6 +3,7 @@ import time
 from datetime import timedelta
 from decimal import Decimal
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 
@@ -29,8 +30,19 @@ class LLMUsageMeter:
     def elapsed(self) -> timedelta:
         return timedelta(seconds=time.monotonic() - self._started_at)
 
-    def record(self, step: str, model: str, usage: ChatUsage, duration: timedelta) -> None:
-        current = self._usages.get((step, model), LLMUsage(step=step, model=model))
+    def record(
+        self,
+        step: str,
+        model: str,
+        reasoning_effort: ReasoningEffort | None,
+        usage: ChatUsage,
+        duration: timedelta,
+    ) -> None:
+        # A step runs on one setting through a command run: the effort comes with the step, it needs no key of its own.
+        current = self._usages.get(
+            (step, model),
+            LLMUsage(step=step, model=model, reasoning_effort=reasoning_effort),
+        )
         details = usage.completion_tokens_details
         self._usages[(step, model)] = dataclasses.replace(
             current,

@@ -33,6 +33,7 @@ def spend(meter: LLMUsageMeter) -> None:
     meter.record(
         "advisor",
         "google/gemini-2.5-flash",
+        None,
         ChatUsage(prompt_tokens=1000, cost=Decimal("0.0123")),
         timedelta(seconds=2),
     )

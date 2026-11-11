@@ -13,10 +13,12 @@ from museflow.application.use_cases.llm_usage_export import export_llm_usage
 from museflow.application.use_cases.llm_usage_import import import_llm_usage
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ReasoningEffort
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.unit.factories.entities.llm import LLMUsageRecordFactory
+from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 
 class TestImportLLMUsageUseCase:
@@ -47,8 +49,12 @@ class TestImportLLMUsageUseCase:
         source_profile_db = await TasteProfileModelFactory.create_async(user_id=source_user_db.id, name="my-profile")
         profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
         records = [
-            LLMUsageRecordFactory.build(user_id=source_user_db.id, profile_id=source_profile_db.id),
-            LLMUsageRecordFactory.build(user_id=source_user_db.id),
+            LLMUsageRecordFactory.build(
+                user_id=source_user_db.id,
+                profile_id=source_profile_db.id,
+                usage=LLMUsageFactory.build(reasoning_effort=ReasoningEffort.LOW),
+            ),
+            LLMUsageRecordFactory.build(user_id=source_user_db.id, usage=LLMUsageFactory.build(reasoning_effort=None)),
         ]
         await llm_usage_repository.bulk_create(records)
         entries = await export_llm_usage(user_id=source_user_db.id, uow=uow)
@@ -89,3 +95,18 @@ class TestImportLLMUsageUseCase:
         assert result.imported_count == 1
         [record] = await llm_usage_repository.get_list(user_id=user.id)
         assert record.profile_id is None
+
+    async def test__effort_absent__provider_default(
+        self,
+        user: User,
+        uow: UnitOfWorkPort,
+        llm_usage_repository: LLMUsageRepository,
+        entry: LLMUsageEntryInput,
+    ) -> None:
+        # The exports taken before the effort was recorded have no such field.
+        legacy = LLMUsageEntryInput.model_validate(entry.model_dump(exclude={"reasoning_effort"}))
+
+        await import_llm_usage(user_id=user.id, entries=[legacy], uow=uow)
+
+        [record] = await llm_usage_repository.get_list(user_id=user.id)
+        assert record.usage.reasoning_effort is None

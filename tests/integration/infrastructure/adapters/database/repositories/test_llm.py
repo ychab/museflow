@@ -13,6 +13,7 @@ from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
@@ -185,12 +186,35 @@ class TestLLMUsageSQLRepository:
         assert summary.total.cost == Decimal("0.400000")
 
     async def test__summarize__by_model(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
-        await LLMUsageModelFactory.create_async(user_id=user.id, model="google/gemini-3.5-flash", cost=Decimal(1))
-        await LLMUsageModelFactory.create_async(user_id=user.id, model="openai/gpt-5-mini", cost=Decimal(2))
+        await LLMUsageModelFactory.create_async(
+            user_id=user.id, model="google/gemini-3.5-flash", reasoning_effort=None, cost=Decimal(1)
+        )
+        await LLMUsageModelFactory.create_async(
+            user_id=user.id, model="openai/gpt-5-mini", reasoning_effort=None, cost=Decimal(2)
+        )
 
         summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MODEL)
 
         assert [group.name for group in summary.groups] == ["openai/gpt-5-mini", "google/gemini-3.5-flash"]
+
+    async def test__summarize__by_model__one_row_per_effort(
+        self,
+        user: User,
+        llm_usage_repository: LLMUsageRepository,
+    ) -> None:
+        model = "google/gemini-3.8-flash"
+        for effort, cost in ((None, 1), (ReasoningEffort.LOW, 3), (ReasoningEffort.LOW, 1), (ReasoningEffort.HIGH, 2)):
+            await LLMUsageModelFactory.create_async(
+                user_id=user.id, model=model, reasoning_effort=effort, cost=Decimal(cost)
+            )
+
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MODEL)
+
+        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            (f"{model} (low)", 2, Decimal("4.000000")),
+            (f"{model} (high)", 1, Decimal("2.000000")),
+            (model, 1, Decimal("1.000000")),
+        ]
 
     async def test__summarize__by_month__chronological(
         self,

@@ -207,6 +207,10 @@ time the reply took. The meter sums the calls, tokens, cost and time per step an
 - **Step**: `advisor_artists`, `advisor_picks`, `enricher`, or `profiler segment`, `profiler merge`,
   `profiler reflect`, so a run shows what each phase costs.
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
+- **Reasoning effort**: the step's `REASONING_EFFORT`, none when left to the provider's default. A step keeps one
+  setting through a run, so it is recorded with the step and model, not as a key of its own: two runs of one model at
+  two efforts can then be compared. The table printed at the end of a command and `llm usage --by model` show it
+  after the model: `google/gemini-3.8-flash (low)`.
 - **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
   since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
 - **Time**: from sending the request to receiving the reply, transient retries and rate-limit waits included: the time

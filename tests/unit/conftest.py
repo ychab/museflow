@@ -27,6 +27,7 @@ from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -37,7 +38,6 @@ from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLi
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
-from museflow.infrastructure.types import ReasoningEffort
 
 from tests.unit.factories.entities.auth import OAuthProviderStateFactory
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
