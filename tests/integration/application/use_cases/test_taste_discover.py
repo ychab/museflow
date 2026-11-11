@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +14,7 @@ from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
+from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
@@ -49,6 +52,10 @@ class TestDiscoverTasteUseCase:
 
         assert result.playlist is not None
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
+        assert re.fullmatch(
+            r"\[MF\] - Sonic Expansion - Progressive Horizons - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00",
+            result.playlist.name,
+        )
         assert result.playlist.prompt == "lo-fi jazz and soul for focus"
         assert result.playlist.focus is None
         assert result.playlist.reasoning == result.strategy.reasoning
@@ -78,6 +85,26 @@ class TestDiscoverTasteUseCase:
             (LLMOperation.DISCOVER, "advisor_picks"),
         ]
         assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, result.playlist.id)}
+
+    async def test__title(
+        self,
+        async_session_db: AsyncSession,
+        use_case: DiscoverTasteUseCase,
+        user: User,
+    ) -> None:
+        await TasteProfileModelFactory.create_async(user_id=user.id)
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(title="Friday night", playlist_limit=2),
+        )
+
+        assert result.playlist is not None
+        assert result.playlist.name == "Friday night"
+        playlist_db = (
+            await async_session_db.execute(select(PlaylistModel).where(PlaylistModel.id == result.playlist.id))
+        ).scalar_one()
+        assert playlist_db.name == "Friday night"
 
     async def test__dry_run(
         self,

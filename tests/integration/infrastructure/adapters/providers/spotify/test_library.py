@@ -103,14 +103,14 @@ class TestSpotifyLibrary:
         spotify_library: SpotifyLibraryAdapter,
     ) -> None:
         playlist = await spotify_library.create_playlist(
-            name="test",
+            name="Friday night",
             type=PlaylistType.DISCOVERY,
             tracks=playlist_tracks,
         )
 
         assert playlist.id is not None
         assert playlist.user_id == spotify_library.user.id
-        assert playlist.name == "test"
+        assert playlist.name == "Friday night"
         assert playlist.provider == MusicProvider.SPOTIFY
         assert playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert playlist.snapshot_id == "AAAAAsNYTkn8k2rpWWck/VOdy+GiqV1c"
