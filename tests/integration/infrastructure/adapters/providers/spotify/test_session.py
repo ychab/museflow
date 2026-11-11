@@ -1,12 +1,12 @@
 from datetime import datetime
 from datetime import timedelta
-from unittest import mock
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
@@ -40,7 +40,7 @@ class TestSpotifyOAuthSessionClient:
         frozen_time: datetime,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
-        auth_token_repository: mock.AsyncMock,
+        auth_token_repository: OAuthProviderTokenRepository,
         token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
         spotify_wiremock: WireMockContext,
@@ -92,7 +92,7 @@ class TestSpotifyOAuthSessionClient:
         frozen_time: datetime,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
-        auth_token_repository: mock.AsyncMock,
+        auth_token_repository: OAuthProviderTokenRepository,
         token_payload: OAuthProviderTokenPayload,
         auth_token_expired: OAuthProviderUserToken,
         spotify_wiremock: WireMockContext,

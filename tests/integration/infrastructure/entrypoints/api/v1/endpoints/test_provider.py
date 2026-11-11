@@ -1,7 +1,6 @@
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from unittest import mock
 
 from fastapi import status
 from httpx import AsyncClient
@@ -21,6 +20,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 from museflow.infrastructure.entrypoints.api.main import app
 
@@ -77,7 +77,7 @@ class TestProviderCallback:
         frozen_time: datetime,
         user: User,
         auth_state: OAuthProviderState,
-        spotify_oauth: mock.AsyncMock,
+        spotify_oauth: SpotifyOAuthAdapter,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
@@ -134,7 +134,7 @@ class TestProviderCallback:
         user: User,
         auth_state: OAuthProviderState,
         auth_token: OAuthProviderUserToken,
-        spotify_oauth: mock.AsyncMock,
+        spotify_oauth: SpotifyOAuthAdapter,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
@@ -267,7 +267,7 @@ class TestProviderCallback:
         auth_state: OAuthProviderState,
         auth_state_repository: OAuthProviderStateRepository,
         auth_token_repository: OAuthProviderTokenRepository,
-        spotify_oauth: mock.AsyncMock,
+        spotify_oauth: SpotifyOAuthAdapter,
         async_client: AsyncClient,
         spotify_wiremock: WireMockContext,
     ) -> None:
