@@ -4,7 +4,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.stats_tags import GetTopTagsResult
+from museflow.application.use_cases.stats_tags import TopTagsResult
 from museflow.application.use_cases.stats_tags import get_top_tags
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
@@ -94,7 +94,7 @@ async def stats_tags_logic(
     confidence: int,
     sort: RankingSortBy,
     limit: int,
-) -> GetTopTagsResult:
+) -> TopTagsResult:
     uow = get_unit_of_work()
 
     async with uow:

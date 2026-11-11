@@ -134,7 +134,7 @@ apart from its function (`user_create.create_user`).
 | Use case module | `<object>_<action>.py`, grouped by object | `ratings_import.py` |
 | Use case function / class | `<verb>_<object>` / `<Verb><Object>UseCase` | `import_ratings`, `EnrichTracksUseCase` |
 | Read use case | `get_`, the plural says a collection; `count_` a number | `get_taste_profile`, `get_taste_profiles` |
-| Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise | `ImportRatingsResult` |
+| Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise; a read names the object alone, its verb only says how the data is fetched | `ImportRatingsResult`, `TopTagsResult` |
 | Entity write input | `<Entity><Action>Input` | `UserCreateInput` |
 | Flow config input | `<Verb><Object>ConfigInput` | `EnrichTracksConfigInput` |
 | Imported file entry | `<Noun>EntryInput` | `RatingEntryInput` |
