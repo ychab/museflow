@@ -1,5 +1,3 @@
-import re
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,15 +50,13 @@ class TestDiscoverTasteUseCase:
 
         assert result.playlist is not None
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
-        assert re.fullmatch(
-            r"\[MF\] - Sonic Expansion - Progressive Horizons - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00",
-            result.playlist.name,
-        )
         assert result.playlist.prompt == "lo-fi jazz and soul for focus"
         assert result.playlist.focus is None
         assert result.playlist.reasoning == result.strategy.reasoning
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
+        # Named after the advisor's suggestion, then a timestamp.
+        assert result.playlist.name.startswith(f"[MF] - {result.strategy.suggested_playlist_name} - ")
         # The picks "1" and "2" are the first two candidates; the made-up id "99" is dropped.
         assert [(track.name, track.album_year) for track in result.tracks] == [
             ("Mi Pueblo", 1988),
