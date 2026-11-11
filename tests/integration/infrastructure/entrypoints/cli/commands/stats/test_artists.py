@@ -1,5 +1,5 @@
 from museflow.domain.entities.user import User
-from museflow.domain.enums import ArtistSortBy
+from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import stats_artists_logic
 
@@ -26,16 +26,16 @@ class TestStatsArtistsLogic:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.OVERALL,
+            sort=RankingSortBy.OVERALL,
         )
 
         assert len(result) == 2
-        assert result[0].artist == "Artist A"
-        assert result[0].rated_count == 2
-        assert result[0].track_count == 2
-        assert result[0].plays_count == 2
-        assert result[1].artist == "Artist B"
-        assert result[1].rated_count == 1
-        assert result[1].track_count == 1
-        assert result[1].plays_count == 1
+        assert result[0].stats.artist == "Artist A"
+        assert result[0].stats.rated_count == 2
+        assert result[0].stats.track_count == 2
+        assert result[0].stats.plays_count == 2
+        assert result[1].stats.artist == "Artist B"
+        assert result[1].stats.rated_count == 1
+        assert result[1].stats.track_count == 1
+        assert result[1].stats.plays_count == 1
         assert result[0].rate_avg == 7.0

@@ -97,10 +97,11 @@ class SourceFilter(StrEnum):
         return None
 
 
-class ArtistSortBy(StrEnum):
-    TRACK_COUNT = "track_count"  # Raw breadth: distinct tracks by the artist
-    PLAYS_COUNT = "plays_count"  # Raw depth: total plays across the artist's tracks
-    RATE_AVG = "rate_avg"  # Raw quality: simple average of the artist's track ratings
+class RankingSortBy(StrEnum):
+    # A ranking groups tracks: by artist or by tag
+    TRACK_COUNT = "track_count"  # Raw breadth: distinct tracks in the group
+    PLAYS_COUNT = "plays_count"  # Raw depth: total plays across the group's tracks
+    RATE_AVG = "rate_avg"  # Raw quality: simple average of the group's track ratings
     QUALITY = "quality"  # Smoothed quality: confidence-weighted average, small samples pulled toward the mean
     OVERALL = "overall"  # Blended ranking: breadth x depth x smoothed quality (default sort)
 

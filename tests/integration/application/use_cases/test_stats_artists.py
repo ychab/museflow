@@ -1,7 +1,7 @@
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.stats_artists import get_top_artists
 from museflow.domain.entities.user import User
-from museflow.domain.enums import ArtistSortBy
+from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 
 from tests.integration.factories.models.track import TrackModelFactory
@@ -27,19 +27,19 @@ class TestGetTopArtistsUseCase:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.OVERALL,
+            sort=RankingSortBy.OVERALL,
             uow=uow,
         )
 
         assert len(result) == 2
-        assert result[0].artist == "Artist A"
-        assert result[0].rated_count == 2
-        assert result[0].track_count == 2
-        assert result[0].plays_count == 2
-        assert result[1].artist == "Artist B"
-        assert result[1].rated_count == 1
-        assert result[1].track_count == 1
-        assert result[1].plays_count == 1
+        assert result[0].stats.artist == "Artist A"
+        assert result[0].stats.rated_count == 2
+        assert result[0].stats.track_count == 2
+        assert result[0].stats.plays_count == 2
+        assert result[1].stats.artist == "Artist B"
+        assert result[1].stats.rated_count == 1
+        assert result[1].stats.track_count == 1
+        assert result[1].stats.plays_count == 1
         assert result[0].rate_avg == 7.0
 
     async def test__unrated_tracks_count_toward_total_but_not_rated(self, uow: UnitOfWorkPort, user: User) -> None:
@@ -53,14 +53,14 @@ class TestGetTopArtistsUseCase:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.OVERALL,
+            sort=RankingSortBy.OVERALL,
             uow=uow,
         )
 
         assert len(result) == 1
-        assert result[0].artist == "Artist A"
-        assert result[0].rated_count == 1
-        assert result[0].track_count == 2
+        assert result[0].stats.artist == "Artist A"
+        assert result[0].stats.rated_count == 1
+        assert result[0].stats.track_count == 2
 
     async def test__artist_with_only_unrated_tracks__included(self, uow: UnitOfWorkPort, user: User) -> None:
         # An artist with only unrated tracks appears ranked by volume alone (rate_avg=None).
@@ -74,16 +74,16 @@ class TestGetTopArtistsUseCase:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.OVERALL,
+            sort=RankingSortBy.OVERALL,
             uow=uow,
         )
 
         assert len(result) == 1
-        assert result[0].artist == "Artist A"
+        assert result[0].stats.artist == "Artist A"
         assert result[0].rate_avg is None
         assert result[0].quality_score is None
-        assert result[0].rated_count == 0
-        assert result[0].track_count == 2
+        assert result[0].stats.rated_count == 0
+        assert result[0].stats.track_count == 2
 
     async def test__sort_by_plays_count(self, uow: UnitOfWorkPort, user: User) -> None:
         # Artist A: 1 track with played_count=50. Artist B: 3 tracks with played_count=1 each.
@@ -99,12 +99,12 @@ class TestGetTopArtistsUseCase:
             score_min=None,
             score_max=None,
             confidence=5,
-            sort=ArtistSortBy.PLAYS_COUNT,
+            sort=RankingSortBy.PLAYS_COUNT,
             uow=uow,
         )
 
         assert len(result) == 2
-        assert result[0].artist == "Artist A"
-        assert result[0].plays_count == 50
-        assert result[1].artist == "Artist B"
-        assert result[1].plays_count == 3
+        assert result[0].stats.artist == "Artist A"
+        assert result[0].stats.plays_count == 50
+        assert result[1].stats.artist == "Artist B"
+        assert result[1].stats.plays_count == 3
