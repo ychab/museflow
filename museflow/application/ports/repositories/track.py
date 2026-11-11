@@ -6,12 +6,15 @@ from datetime import date
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
+from museflow.domain.enums import GenreTier
 from museflow.domain.enums import MoodTag
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
 from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import LibraryStats
+from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
 
@@ -114,6 +117,38 @@ class TrackRepository(ABC):
 
         The score bounds only narrow the ratings (`rated_count`, `rated_sum`): every track of the artist still counts
         in `track_count` and `plays_count`, rated or not.
+        """
+        ...
+
+    @abstractmethod
+    async def get_tag_stats(
+        self,
+        user_id: uuid.UUID,
+        field: EnrichField,
+        tier: GenreTier | None = None,
+        source: TrackSource | None = None,
+        score_min: int | None = None,
+        score_max: int | None = None,
+    ) -> list[TagStats]:
+        """Returns the track count, plays and ratings of each tag of `field` on the user's tracks, in no order.
+
+        A track counts once in each of its tags; `tier` (genres only) keeps the genre at that position. The score
+        bounds narrow the ratings only, as in `get_artist_stats`. Tracks without a tag are not counted.
+        """
+        ...
+
+    @abstractmethod
+    async def get_library_stats(
+        self,
+        user_id: uuid.UUID,
+        field: EnrichField,
+        source: TrackSource | None = None,
+        score_min: int | None = None,
+        score_max: int | None = None,
+    ) -> LibraryStats:
+        """Returns the totals of all the user's tracks, and how many have no tag of `field` (not enriched).
+
+        The score bounds narrow the ratings only, as in `get_artist_stats`.
         """
         ...
 

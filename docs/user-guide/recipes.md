@@ -132,6 +132,16 @@ museflow stats artists --sort quality --limit 10
 
 See [`stats`](commands/stats.md).
 
+## Check the taste profile against the library
+
+```bash
+museflow stats tags --by genre --tier macro
+museflow stats tags --by mood --sort quality
+museflow taste view
+```
+
+The tags ranked from the tracks alone, next to what the LLM made of them. See [`stats`](commands/stats.md#stats-tags).
+
 ## Track what the LLM costs
 
 ```bash

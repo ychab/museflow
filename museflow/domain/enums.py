@@ -111,6 +111,17 @@ class TrackSortBy(StrEnum):
     PLAYED_COUNT = "played_count"  # how many times the track was played, most first
 
 
+class GenreTier(StrEnum):
+    MACRO = "macro"  # broad umbrella, first genre of a track (e.g. rock)
+    MESO = "meso"  # subgenre, second genre (e.g. post-rock)
+    MICRO = "micro"  # specific variant, third genre when the track has one
+
+    @property
+    def position(self) -> int:
+        """Index of the tier in `Track.genres`, ordered [macro, meso, micro?]."""
+        return list(GenreTier).index(self)
+
+
 class GenreTag(StrEnum):
     # Convention: genres list is ordered [macro, meso, micro?]
     # ── L1 Macro (broad umbrella) ────────────────────────────────────────────
