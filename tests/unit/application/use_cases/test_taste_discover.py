@@ -1,6 +1,5 @@
 import itertools
 import logging
-import re
 import uuid
 from collections.abc import Callable
 from collections.abc import Iterator
@@ -436,43 +435,6 @@ class TestDiscoverTasteUseCase:
 
         mock_track_repository.get_covered_artists.assert_called_once_with(user_id=user.id, limit=2)
         assert mock_advisor.get_discovery_artists.call_args.kwargs["covered_artists"] == covered_artists
-
-    async def test__playlist_name__title(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-        discovery_artist_strategy: DiscoveryArtistStrategy,
-    ) -> None:
-        mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
-        artist = discovery_artist_strategy.artists[0].name
-        mock_provider_library.search_artist_tracks.return_value = [TrackFactory.build(artists=[artist])]
-
-        await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(title="Friday night", playlist_limit=1),
-        )
-
-        assert mock_provider_library.create_playlist.call_args.kwargs["name"] == "Friday night"
-
-    async def test__playlist_name__default(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-        discovery_artist_strategy: DiscoveryArtistStrategy,
-    ) -> None:
-        mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
-        artist = discovery_artist_strategy.artists[0].name
-        mock_provider_library.search_artist_tracks.return_value = [TrackFactory.build(artists=[artist])]
-
-        await use_case.create_suggestions_playlist(user=user, config=DiscoverTasteConfigInput(playlist_limit=1))
-
-        name = mock_provider_library.create_playlist.call_args.kwargs["name"]
-        suggested = re.escape(discovery_artist_strategy.suggested_playlist_name)
-        assert re.fullmatch(rf"\[MF\] - {suggested} - \d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}:\d{{2}}:\d{{2}}\+00:00", name)
 
     async def test__remote_playlist_creation_fails__nothing_written(
         self,

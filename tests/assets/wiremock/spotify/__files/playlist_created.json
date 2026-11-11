@@ -12,7 +12,7 @@
   "id": "5ta70oLZcXLReU7bEEXQXy",
   "images": [],
   "primary_color": null,
-  "name": "test",
+  "name": "{{jsonPath request.body '$.name'}}",
   "type": "playlist",
   "uri": "spotify:playlist:5ta70oLZcXLReU7bEEXQXy",
   "owner": {
