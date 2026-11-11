@@ -307,6 +307,7 @@ exclude_lines = [
     "def __str__",
     "def __repr__",
     "@abstractmethod",
+    "class .*\\bProtocol\\):",
     "if __name__ == .__main__.:",
 ]
 fail_under = 100

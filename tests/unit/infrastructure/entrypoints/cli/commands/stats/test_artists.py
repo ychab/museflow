@@ -5,13 +5,14 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.domain.enums import ArtistSortBy
+from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistRanking
+from museflow.domain.value_objects.stats import Ranking
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import stats_artists_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
+from tests.unit.factories.value_objects.stats import ArtistStatsFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.artists"
@@ -84,14 +85,11 @@ class TestStatsArtistsCommand:
         assert "No artist stats found." in result.output
 
     def test__with_artists_table(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        row = ArtistRanking(
-            artist="Artist X",
+        row = Ranking(
+            stats=ArtistStatsFactory.build(artist="Artist X", rated_count=3, track_count=5, plays_count=12),
             quality_score=8.2,
             overall_score=37.1,
             rate_avg=9.0,
-            rated_count=3,
-            track_count=5,
-            plays_count=12,
         )
         mock_stats_artists_logic.return_value = [row]
 
@@ -111,14 +109,11 @@ class TestStatsArtistsCommand:
     def test__with_artists_table__rate_avg_sort(
         self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner
     ) -> None:
-        row = ArtistRanking(
-            artist="Artist X",
+        row = Ranking(
+            stats=ArtistStatsFactory.build(artist="Artist X", rated_count=3, track_count=5, plays_count=12),
             quality_score=8.2,
             overall_score=37.1,
             rate_avg=9.0,
-            rated_count=3,
-            track_count=5,
-            plays_count=12,
         )
         mock_stats_artists_logic.return_value = [row]
 
@@ -130,14 +125,11 @@ class TestStatsArtistsCommand:
         assert "37.1" not in result.output
 
     def test__with_unrated_artist(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        row = ArtistRanking(
-            artist="Unrated Artist",
+        row = Ranking(
+            stats=ArtistStatsFactory.build(artist="Unrated Artist", rated_count=0, track_count=5, plays_count=7),
             quality_score=None,
             overall_score=1.8,
             rate_avg=None,
-            rated_count=0,
-            track_count=5,
-            plays_count=7,
         )
         mock_stats_artists_logic.return_value = [row]
 
@@ -186,5 +178,5 @@ class TestStatsArtistsLogic:
                 score_min=None,
                 score_max=None,
                 confidence=5,
-                sort=ArtistSortBy.OVERALL,
+                sort=RankingSortBy.OVERALL,
             )

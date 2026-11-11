@@ -3,21 +3,21 @@ import asyncio
 from pydantic import EmailStr
 
 import typer
-from rich.table import Table
 
 from museflow.application.use_cases.stats_artists import get_top_artists
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
-from museflow.domain.enums import ArtistSortBy
+from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistRanking
+from museflow.domain.types import ArtistRanking
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
+from museflow.infrastructure.entrypoints.cli.utils.display import build_ranking_table
 
 
 @app.command("artists", help="Show top artists ranked by overall score (breadth x depth x quality).")
@@ -43,7 +43,7 @@ def stats_artists_command(
         "--confidence",
         help="Bayesian confidence constant: artists with fewer rated tracks than this are pulled toward the mean",
     ),
-    sort: ArtistSortBy = typer.Option(ArtistSortBy.OVERALL, "--sort", help="Ranking strategy"),
+    sort: RankingSortBy = typer.Option(RankingSortBy.OVERALL, "--sort", help="Ranking strategy"),
     limit: int = typer.Option(20, help="Max rows in the table", min=1),
 ) -> None:
     validate_score_range(score_min, score_max)
@@ -70,32 +70,7 @@ def stats_artists_command(
         typer.secho("No artist stats found.", fg=typer.colors.YELLOW)
         return
 
-    table = Table(title="Top Artists")
-    table.add_column("#", justify="right", style="dim")
-    table.add_column("Artist")
-    table.add_column("Quality", justify="center")
-    table.add_column("Rate Avg", justify="center")
-    table.add_column("Rated", justify="right")
-    table.add_column("Tracks", justify="right")
-    table.add_column("Played", justify="right")
-    if sort == ArtistSortBy.OVERALL:
-        table.add_column("Overall", justify="center")
-
-    for i, row in enumerate(rows, start=1):
-        cells = [
-            str(i),
-            row.artist,
-            f"{row.quality_score:.1f}" if row.quality_score is not None else "—",
-            f"{row.rate_avg:.1f}" if row.rate_avg is not None else "—",
-            str(row.rated_count),
-            str(row.track_count),
-            str(row.plays_count),
-        ]
-        if sort == ArtistSortBy.OVERALL:
-            cells.append(f"{row.overall_score:.1f}")
-
-        table.add_row(*cells)
-
+    table = build_ranking_table("Top Artists", "Artist", rows, sort)
     console.print(table)
 
 
@@ -106,7 +81,7 @@ async def stats_artists_logic(
     score_min: int | None,
     score_max: int | None,
     confidence: int,
-    sort: ArtistSortBy,
+    sort: RankingSortBy,
 ) -> list[ArtistRanking]:
     uow = get_unit_of_work()
 
