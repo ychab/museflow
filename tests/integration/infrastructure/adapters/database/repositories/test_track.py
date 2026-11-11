@@ -24,7 +24,7 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
-from museflow.domain.value_objects.stats import ArtistTally
+from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.track import TrackPlay
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 
@@ -354,7 +354,7 @@ class TestTrackSQLRepository:
 
         assert list(covered_artists.items()) == [("The Fictional Band", 3), ("Another Band", 2), ("Tied Band", 2)]
 
-    async def test__get_artist_tallies__nominal(self, user: User, track_repository: TrackRepository) -> None:
+    async def test__get_artist_stats__nominal(self, user: User, track_repository: TrackRepository) -> None:
         """Grouped on the primary artist; unrated tracks count in the tracks and plays only; other users ignored."""
         await TrackModelFactory.create_async(user_id=user.id, artists=["Band A", "A Featured Artist"], score=8)
         await TrackModelFactory.create_async(user_id=user.id, artists=["Band A"], score=6, played_count=3)
@@ -362,23 +362,23 @@ class TestTrackSQLRepository:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Band B"], score=None)
         await TrackModelFactory.create_async(artists=["Band A"], score=10, played_count=5)  # Another user
 
-        tallies = await track_repository.get_artist_tallies(user_id=user.id)
+        all_stats = await track_repository.get_artist_stats(user_id=user.id)
 
-        assert sorted(tallies, key=operator.attrgetter("artist")) == [
-            ArtistTally(artist="Band A", track_count=3, plays_count=5, rated_count=2, rated_sum=14),
-            ArtistTally(artist="Band B", track_count=1, plays_count=0, rated_count=0, rated_sum=0),
+        assert sorted(all_stats, key=operator.attrgetter("artist")) == [
+            ArtistStats(artist="Band A", track_count=3, plays_count=5, rated_count=2, rated_sum=14),
+            ArtistStats(artist="Band B", track_count=1, plays_count=0, rated_count=0, rated_sum=0),
         ]
 
-    async def test__get_artist_tallies__score_range(self, user: User, track_repository: TrackRepository) -> None:
+    async def test__get_artist_stats__score_range(self, user: User, track_repository: TrackRepository) -> None:
         """Out-of-range scores leave the ratings, not the track count."""
         for score in (2, 5, 7, 9):
             await TrackModelFactory.create_async(user_id=user.id, artists=["Band A"], score=score)
 
-        tallies = await track_repository.get_artist_tallies(user_id=user.id, score_min=5, score_max=7)
+        all_stats = await track_repository.get_artist_stats(user_id=user.id, score_min=5, score_max=7)
 
-        assert tallies == [ArtistTally(artist="Band A", track_count=4, plays_count=0, rated_count=2, rated_sum=12)]
+        assert all_stats == [ArtistStats(artist="Band A", track_count=4, plays_count=0, rated_count=2, rated_sum=12)]
 
-    async def test__get_artist_tallies__source(self, user: User, track_repository: TrackRepository) -> None:
+    async def test__get_artist_stats__source(self, user: User, track_repository: TrackRepository) -> None:
         await TrackModelFactory.create_async(user_id=user.id, artists=["Band A"], score=8, source=TrackSource.HISTORY)
         await TrackModelFactory.create_async(
             user_id=user.id,
@@ -390,9 +390,9 @@ class TestTrackSQLRepository:
             user_id=user.id, artists=["Band B"], score=6, source=TrackSource.DISCOVERY
         )
 
-        tallies = await track_repository.get_artist_tallies(user_id=user.id, source=TrackSource.HISTORY)
+        all_stats = await track_repository.get_artist_stats(user_id=user.id, source=TrackSource.HISTORY)
 
-        assert tallies == [ArtistTally(artist="Band A", track_count=2, plays_count=0, rated_count=2, rated_sum=12)]
+        assert all_stats == [ArtistStats(artist="Band A", track_count=2, plays_count=0, rated_count=2, rated_sum=12)]
 
     async def test__bulk_upsert__create(
         self,

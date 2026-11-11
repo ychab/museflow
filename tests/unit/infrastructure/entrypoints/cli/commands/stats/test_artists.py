@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import ArtistRanking
 from museflow.infrastructure.entrypoints.cli.commands.stats.artists import stats_artists_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -84,7 +84,7 @@ class TestStatsArtistsCommand:
         assert "No artist stats found." in result.output
 
     def test__with_artists_table(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        row = ArtistStats(
+        row = ArtistRanking(
             artist="Artist X",
             quality_score=8.2,
             overall_score=37.1,
@@ -111,7 +111,7 @@ class TestStatsArtistsCommand:
     def test__with_artists_table__rate_avg_sort(
         self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner
     ) -> None:
-        row = ArtistStats(
+        row = ArtistRanking(
             artist="Artist X",
             quality_score=8.2,
             overall_score=37.1,
@@ -130,7 +130,7 @@ class TestStatsArtistsCommand:
         assert "37.1" not in result.output
 
     def test__with_unrated_artist(self, mock_stats_artists_logic: mock.AsyncMock, runner: CliRunner) -> None:
-        row = ArtistStats(
+        row = ArtistRanking(
             artist="Unrated Artist",
             quality_score=None,
             overall_score=1.8,

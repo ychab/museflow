@@ -11,7 +11,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.stats import ArtistTally
+from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
 
@@ -103,13 +103,13 @@ class TrackRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_artist_tallies(
+    async def get_artist_stats(
         self,
         user_id: uuid.UUID,
         source: TrackSource | None = None,
         score_min: int | None = None,
         score_max: int | None = None,
-    ) -> list[ArtistTally]:
+    ) -> list[ArtistStats]:
         """Returns the track count, plays and ratings of each primary artist of the user, in no particular order.
 
         The score bounds only narrow the ratings (`rated_count`, `rated_sum`): every track of the artist still counts

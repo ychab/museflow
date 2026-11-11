@@ -9,7 +9,7 @@ from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
 
-from tests.unit.factories.value_objects.stats import ArtistTallyFactory
+from tests.unit.factories.value_objects.stats import ArtistStatsFactory
 
 
 class TestGetTopArtistsUseCase:
@@ -19,7 +19,7 @@ class TestGetTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_artist_tallies.return_value = []
+        mock_track_repository.get_artist_stats.return_value = []
 
         result = await get_top_artists(
             user_id=user.id,
@@ -33,7 +33,7 @@ class TestGetTopArtistsUseCase:
         )
 
         assert result == []
-        mock_track_repository.get_artist_tallies.assert_awaited_once_with(
+        mock_track_repository.get_artist_stats.assert_awaited_once_with(
             user_id=user.id, source=TrackSource.HISTORY, score_min=3, score_max=8
         )
 
@@ -45,9 +45,9 @@ class TestGetTopArtistsUseCase:
     ) -> None:
         # Artist A: 5 unrated tracks. Artist B: 1 track rated 8.
         # Volume first: Artist A (quality_ratio=1.0) outranks Artist B.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=5, plays_count=5, rated_count=0, rated_sum=0),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=5, plays_count=5, rated_count=0, rated_sum=0),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
         ]
 
         result = await get_top_artists(
@@ -73,9 +73,9 @@ class TestGetTopArtistsUseCase:
     ) -> None:
         # Artist A: 10 tracks at 7. Artist B: 1 track at 10. global_mean = (70 + 10) / 11.
         # Quality sort ignores volume: B's smoothed quality, pulled toward the mean, still beats A's.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=10, rated_sum=70),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=10, rated_sum=70),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
         ]
 
         result = await get_top_artists(
@@ -101,9 +101,9 @@ class TestGetTopArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # Artist A: 20 tracks at 7. Artist B: 1 track at 10: A's volume outweighs B's quality.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=20, plays_count=20, rated_count=20, rated_sum=140),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=20, plays_count=20, rated_count=20, rated_sum=140),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
         ]
 
         result = await get_top_artists(
@@ -127,8 +127,8 @@ class TestGetTopArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # No rating in range: global_mean = 0, the artist is ranked by volume alone.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=1, plays_count=1, rated_count=0, rated_sum=0),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=1, plays_count=1, rated_count=0, rated_sum=0),
         ]
 
         result = await get_top_artists(
@@ -152,9 +152,9 @@ class TestGetTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Zara", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
-            ArtistTallyFactory.build(artist="Aaron", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Zara", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
+            ArtistStatsFactory.build(artist="Aaron", track_count=1, plays_count=1, rated_count=1, rated_sum=8),
         ]
 
         result = await get_top_artists(
@@ -176,12 +176,12 @@ class TestGetTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist 1", track_count=1, plays_count=1, rated_count=1, rated_sum=1),
-            ArtistTallyFactory.build(artist="Artist 2", track_count=1, plays_count=1, rated_count=1, rated_sum=2),
-            ArtistTallyFactory.build(artist="Artist 3", track_count=1, plays_count=1, rated_count=1, rated_sum=3),
-            ArtistTallyFactory.build(artist="Artist 4", track_count=1, plays_count=1, rated_count=1, rated_sum=4),
-            ArtistTallyFactory.build(artist="Artist 5", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist 1", track_count=1, plays_count=1, rated_count=1, rated_sum=1),
+            ArtistStatsFactory.build(artist="Artist 2", track_count=1, plays_count=1, rated_count=1, rated_sum=2),
+            ArtistStatsFactory.build(artist="Artist 3", track_count=1, plays_count=1, rated_count=1, rated_sum=3),
+            ArtistStatsFactory.build(artist="Artist 4", track_count=1, plays_count=1, rated_count=1, rated_sum=4),
+            ArtistStatsFactory.build(artist="Artist 5", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
         ]
 
         result = await get_top_artists(
@@ -204,9 +204,9 @@ class TestGetTopArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # Artist B (3 tracks) ranks first despite a lower average.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=1, plays_count=1, rated_count=1, rated_sum=9),
-            ArtistTallyFactory.build(artist="Artist B", track_count=3, plays_count=3, rated_count=3, rated_sum=15),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=1, plays_count=1, rated_count=1, rated_sum=9),
+            ArtistStatsFactory.build(artist="Artist B", track_count=3, plays_count=3, rated_count=3, rated_sum=15),
         ]
 
         result = await get_top_artists(
@@ -229,9 +229,9 @@ class TestGetTopArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         # Artist B (avg 10) ranks first despite fewer tracks.
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=10, rated_sum=60),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=10, rated_sum=60),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=10),
         ]
 
         result = await get_top_artists(
@@ -253,9 +253,9 @@ class TestGetTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=0, rated_sum=0),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=0, rated_sum=0),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
         ]
 
         result = await get_top_artists(
@@ -278,9 +278,9 @@ class TestGetTopArtistsUseCase:
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
-        mock_track_repository.get_artist_tallies.return_value = [
-            ArtistTallyFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=0, rated_sum=0),
-            ArtistTallyFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Artist A", track_count=10, plays_count=10, rated_count=0, rated_sum=0),
+            ArtistStatsFactory.build(artist="Artist B", track_count=1, plays_count=1, rated_count=1, rated_sum=5),
         ]
 
         result = await get_top_artists(

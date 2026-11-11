@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, kw_only=True)
-class ArtistTally:
+class ArtistStats:
     artist: str
     track_count: int
     plays_count: int
@@ -11,7 +11,7 @@ class ArtistTally:
 
 
 @dataclass(frozen=True, kw_only=True)
-class ArtistStats:
+class ArtistRanking:
     artist: str
     quality_score: float | None  # None for artists with no rated tracks
     overall_score: float

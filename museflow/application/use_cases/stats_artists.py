@@ -5,7 +5,7 @@ from museflow.domain.enums import ArtistSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.utils.stats import compute_overall
 from museflow.domain.utils.stats import compute_quality
-from museflow.domain.value_objects.stats import ArtistStats
+from museflow.domain.value_objects.stats import ArtistRanking
 
 
 async def get_top_artists(
@@ -17,32 +17,32 @@ async def get_top_artists(
     sort: ArtistSortBy,
     limit: int,
     uow: UnitOfWorkPort,
-) -> list[ArtistStats]:
+) -> list[ArtistRanking]:
     async with uow:
-        tallies = await uow.tracks.get_artist_tallies(
+        all_stats = await uow.tracks.get_artist_stats(
             user_id=user_id,
             source=source.to_track_source(),
             score_min=score_min,
             score_max=score_max,
         )
 
-    # Each track has one primary artist: the tallies add up to the whole library
-    rated_count_total = sum(tally.rated_count for tally in tallies)
-    global_mean = sum(tally.rated_sum for tally in tallies) / rated_count_total if rated_count_total else 0.0
+    # Each track has one primary artist: their stats add up to the whole library
+    rated_count_total = sum(stats.rated_count for stats in all_stats)
+    global_mean = sum(stats.rated_sum for stats in all_stats) / rated_count_total if rated_count_total else 0.0
 
-    rows: list[ArtistStats] = []
-    for tally in tallies:
-        rate_avg = tally.rated_sum / tally.rated_count if tally.rated_count else None
-        quality = compute_quality(rate_avg, tally.rated_count, global_mean, confidence)
+    rows: list[ArtistRanking] = []
+    for stats in all_stats:
+        rate_avg = stats.rated_sum / stats.rated_count if stats.rated_count else None
+        quality = compute_quality(rate_avg, stats.rated_count, global_mean, confidence)
         rows.append(
-            ArtistStats(
-                artist=tally.artist,
+            ArtistRanking(
+                artist=stats.artist,
                 quality_score=quality if rate_avg is not None else None,
-                overall_score=compute_overall(tally.track_count, tally.plays_count, quality, global_mean),
+                overall_score=compute_overall(stats.track_count, stats.plays_count, quality, global_mean),
                 rate_avg=rate_avg,
-                rated_count=tally.rated_count,
-                track_count=tally.track_count,
-                plays_count=tally.plays_count,
+                rated_count=stats.rated_count,
+                track_count=stats.track_count,
+                plays_count=stats.plays_count,
             )
         )
 
