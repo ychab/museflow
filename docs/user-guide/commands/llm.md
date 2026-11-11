@@ -22,7 +22,7 @@ museflow llm usage [--email <email>] [--by operation|model|step|month|profile|us
 | `--by` | One row per | Order |
 | --- | --- | --- |
 | `operation` | command: `taste_build`, `discover`, `enrich` | most expensive first |
-| `model` | model OpenRouter actually served, fallbacks included | most expensive first |
+| `model` | model OpenRouter actually served, fallbacks included, and its reasoning effort: `google/gemini-3.8-flash (low)`, the model alone when the effort is the provider's default | most expensive first |
 | `step` | pipeline step: `advisor`, `enricher`, `profiler segment`, `profiler merge`, `profiler reflect` | most expensive first |
 | `month` | calendar month, in UTC | chronological |
 | `profile` | taste profile the run built or used; `(none)` for an enrichment or a deleted profile. Without `--email`, prefixed with the user's email (`user@example.com / evening`), since profile names are unique per user only | most expensive first |
@@ -46,8 +46,8 @@ steps) counts once in the total. `No LLM usage recorded.` when nothing matches.
 
 ## `llm export`
 
-Exports the user's LLM usage history to a YAML file, one entry per row: run, operation, step, model, tokens, cost,
-time and date. The profile travels by name, the playlist link is dropped (playlists are not exported).
+Exports the user's LLM usage history to a YAML file, one entry per row: run, operation, step, model, reasoning effort,
+tokens, cost, time and date. The profile travels by name, the playlist link is dropped (playlists are not exported).
 
 ```bash
 museflow llm export [--email <email>] --output <path>
@@ -63,7 +63,8 @@ museflow llm export [--email <email>] --output <path>
 ## `llm import`
 
 Imports a file produced by `llm export`, in one transaction. A row already there (same run, step and model) is
-skipped, so importing twice adds nothing. Each row keeps its date, so `--by month` and `--since` give the same
+skipped, so importing twice adds nothing. A file without the reasoning effort (exported before it was recorded)
+imports with the provider's default. Each row keeps its date, so `--by month` and `--since` give the same
 figures as before the export. The profile link is restored when a profile of that name exists: import the profiles
 first ([`taste import`](taste.md#taste-import)).
 

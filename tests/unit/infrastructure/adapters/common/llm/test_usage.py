@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -25,10 +26,22 @@ class TestLLMUsageMeter:
         )
 
         second = timedelta(seconds=1)
-        meter.record("profiler segment", "google/gemini-2.5-flash", usage, 2 * second)
-        meter.record("profiler segment", "google/gemini-2.5-flash", usage, 3 * second)
-        meter.record("profiler segment", "openai/gpt-5-mini", ChatUsage(prompt_tokens=10, completion_tokens=5), second)
-        meter.record("profiler merge", "google/gemini-2.5-flash", ChatUsage(cost=Decimal("0.002")), second)
+        meter.record("profiler segment", "google/gemini-2.5-flash", None, usage, 2 * second)
+        meter.record("profiler segment", "google/gemini-2.5-flash", None, usage, 3 * second)
+        meter.record(
+            "profiler segment",
+            "openai/gpt-5-mini",
+            None,
+            ChatUsage(prompt_tokens=10, completion_tokens=5),
+            second,
+        )
+        meter.record(
+            "profiler merge",
+            "google/gemini-2.5-flash",
+            ReasoningEffort.LOW,
+            ChatUsage(cost=Decimal("0.002")),
+            second,
+        )
 
         assert meter.usages == [
             LLMUsage(
@@ -52,6 +65,7 @@ class TestLLMUsageMeter:
             LLMUsage(
                 step="profiler merge",
                 model="google/gemini-2.5-flash",
+                reasoning_effort=ReasoningEffort.LOW,
                 calls=1,
                 cost=Decimal("0.002"),
                 duration=second,

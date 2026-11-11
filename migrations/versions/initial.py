@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e259afccbe6b
+Revision ID: a06454cb62d0
 Revises:
-Create Date: 2026-11-08 11:34:49.451919
+Create Date: 2026-11-11 22:04:04.540844
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e259afccbe6b'
+revision: str = 'a06454cb62d0'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -154,6 +154,7 @@ def upgrade() -> None:
     sa.Column('playlist_id', sa.UUID(), nullable=True),
     sa.Column('step', sa.String(length=64), nullable=False),
     sa.Column('model', sa.String(length=255), nullable=False),
+    sa.Column('reasoning_effort', sa.Enum('NONE', 'MINIMAL', 'LOW', 'MEDIUM', 'HIGH', 'XHIGH', 'MAX', name='reasoningeffort'), nullable=True),
     sa.Column('calls', sa.Integer(), nullable=False),
     sa.Column('prompt_tokens', sa.Integer(), nullable=False),
     sa.Column('completion_tokens', sa.Integer(), nullable=False),

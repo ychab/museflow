@@ -112,12 +112,19 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             name = func.concat_ws(" ", started_at, operation, TasteProfileModel.name, user)
             return [LLMUsageModel.run_id, LLMUsageModel.operation, TasteProfileModel.name, UserModel.email], name
 
+        if group_by == LLMUsageGroupBy.MODEL:
+            # One row per model and effort. The column holds the enum names: cast and lowercased, they are the values.
+            # `||` yields NULL without an effort (the provider's default), and concat() drops it: the model alone
+            # names that row.
+            effort = " (" + func.lower(cast(LLMUsageModel.reasoning_effort, String)) + ")"
+            name = func.concat(LLMUsageModel.model, effort)
+            return [LLMUsageModel.model, LLMUsageModel.reasoning_effort], name
+
         # Profile names are unique per user only: across users, the email tells two "evening" profiles apart.
         # `||` gives NULL without a profile, so these runs still fall in the "no profile" group.
         profile = UserModel.email + " / " + TasteProfileModel.name if all_users else TasteProfileModel.name
         expressions: dict[LLMUsageGroupBy, SQLColumnExpression[object]] = {
             LLMUsageGroupBy.OPERATION: LLMUsageModel.operation,
-            LLMUsageGroupBy.MODEL: LLMUsageModel.model,
             LLMUsageGroupBy.STEP: LLMUsageModel.step,
             LLMUsageGroupBy.MONTH: func.to_char(func.timezone("UTC", LLMUsageModel.created_at), "YYYY-MM"),
             LLMUsageGroupBy.PROFILE: profile,

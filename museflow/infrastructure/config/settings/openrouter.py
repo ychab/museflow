@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from museflow import BASE_DIR
-from museflow.infrastructure.types import ReasoningEffort
+from museflow.domain.enums import ReasoningEffort
 
 
 class LLMSettings(BaseModel):

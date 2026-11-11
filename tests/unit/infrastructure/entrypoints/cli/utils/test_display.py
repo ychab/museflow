@@ -8,6 +8,7 @@ import pytest
 from rich.logging import RichHandler
 from rich.status import Status
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
@@ -42,10 +43,11 @@ class TestPrintLLMUsage:
     def test__prints_each_step_and_the_total(self, capsys: pytest.CaptureFixture[str]) -> None:
         meter = LLMUsageMeter()
         usage = ChatUsage(prompt_tokens=12000, cost=Decimal("0.1234"))
-        meter.record("advisor", "openai/gpt-5-mini", usage, timedelta(seconds=50))
+        meter.record("advisor", "openai/gpt-5-mini", None, usage, timedelta(seconds=50))
         meter.record(
             "advisor",
             "openai/gpt-5-mini",
+            None,
             ChatUsage(prompt_tokens=1000, cost=Decimal("0.0100")),
             timedelta(seconds=20),
         )
@@ -60,6 +62,15 @@ class TestPrintLLMUsage:
         assert "Total" in output
         assert "1m10s" in output
         assert "Elapsed: " in output
+
+    def test__prints_the_reasoning_effort(self, capsys: pytest.CaptureFixture[str]) -> None:
+        meter = LLMUsageMeter()
+        meter.record("enricher", "openai/gpt-5-mini", ReasoningEffort.MINIMAL, ChatUsage(), timedelta(seconds=1))
+
+        print_llm_usage(meter)
+
+        output = capsys.readouterr().out
+        assert "(minimal)" in output  # under the model, wrapped or not by the terminal width
 
 
 class TestFormatDuration:

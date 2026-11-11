@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRequest
 from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionResponse
@@ -9,7 +10,6 @@ from museflow.infrastructure.adapters.common.llm.schemas import JsonSchemaFormat
 from museflow.infrastructure.adapters.common.llm.schemas import ProviderPreferences
 from museflow.infrastructure.adapters.common.llm.schemas import ReasoningConfig
 from museflow.infrastructure.adapters.common.llm.schemas import ResponseFormat
-from museflow.infrastructure.types import ReasoningEffort
 
 
 class TestChatCompletionRequest:

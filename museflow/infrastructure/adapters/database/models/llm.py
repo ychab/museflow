@@ -14,6 +14,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.llm import LLMUsageRecord
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
@@ -50,6 +51,11 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     # Usage
     step: Mapped[str] = mapped_column(String(64), nullable=False)
     model: Mapped[str] = mapped_column(String(255), nullable=False)
+    reasoning_effort: Mapped[ReasoningEffort | None] = mapped_column(
+        Enum(ReasoningEffort),
+        nullable=True,
+        default=None,
+    )
     calls: Mapped[int] = mapped_column(Integer, nullable=False)
     prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -68,6 +74,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             playlist_id=entity.playlist_id,
             step=entity.usage.step,
             model=entity.usage.model,
+            reasoning_effort=entity.usage.reasoning_effort,
             calls=entity.usage.calls,
             prompt_tokens=entity.usage.prompt_tokens,
             completion_tokens=entity.usage.completion_tokens,
@@ -88,6 +95,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             usage=LLMUsage(
                 step=self.step,
                 model=self.model,
+                reasoning_effort=self.reasoning_effort,
                 calls=self.calls,
                 prompt_tokens=self.prompt_tokens,
                 completion_tokens=self.completion_tokens,

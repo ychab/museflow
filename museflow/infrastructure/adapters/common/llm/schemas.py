@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import JsonValue
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
-from museflow.infrastructure.types import ReasoningEffort
 
 # --- Request models ---
 

@@ -92,7 +92,8 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
     for usage in usages:
         table.add_row(
             usage.step,
-            usage.model,
+            # Named as `llm usage --by model` names it: the effort follows the model, unless left to the provider
+            f"{usage.model} ({usage.reasoning_effort})" if usage.reasoning_effort else usage.model,
             str(usage.calls),
             f"{usage.prompt_tokens:,}",
             f"{usage.completion_tokens:,}",

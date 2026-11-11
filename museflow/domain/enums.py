@@ -64,6 +64,17 @@ class LLMOperation(StrEnum):
     ENRICH = "enrich"  # `enrich tracks`: enricher batches
 
 
+class ReasoningEffort(StrEnum):
+    # How much an LLM step thinks before answering (OpenRouter `reasoning.effort`); unset: the provider's default
+    NONE = "none"  # Reasoning disabled
+    MINIMAL = "minimal"  # ~10% of max_tokens spent on reasoning
+    LOW = "low"  # ~20%
+    MEDIUM = "medium"  # ~50%
+    HIGH = "high"  # ~80%
+    XHIGH = "xhigh"  # ~95%
+    MAX = "max"  # ~95%, the model's ceiling
+
+
 class LLMUsageGroupBy(StrEnum):
     OPERATION = "operation"  # the command that paid: taste build, discover, enrich
     MODEL = "model"  # the model OpenRouter actually served, fallbacks included

@@ -285,7 +285,7 @@ class OpenRouterClient(HttpClientMixin):
             extra={"adapter": adapter, "model": model, "cost": usage.cost},
         )
         # Recorded before parsing: an unusable reply is billed too
-        self._meter.record(adapter, model, usage, duration)
+        self._meter.record(adapter, model, llm.REASONING_EFFORT, usage, duration)
 
         return parse_completion(envelope, response_model, adapter)
 
