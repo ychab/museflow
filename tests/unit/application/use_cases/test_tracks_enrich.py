@@ -55,7 +55,7 @@ class TestEnrichTracksUseCase:
         assert result == EnrichTracksReport(enriched_count=3, error_count=0)
         mock_track_repository.bulk_update.assert_awaited_once()
         mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, missing_fields=frozenset(EnrichField), limit=None
+            user_id=user.id, fingerprints=None, missing_fields=frozenset(EnrichField), limit=None
         )
 
     async def test__force__disables_unenriched_only_filter(
@@ -69,7 +69,9 @@ class TestEnrichTracksUseCase:
 
         await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(force=True))
 
-        mock_track_repository.get_list.assert_awaited_once_with(user_id=user.id, missing_fields=None, limit=None)
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=user.id, fingerprints=None, missing_fields=None, limit=None
+        )
 
     async def test__limit__forwarded_to_repository(
         self,
@@ -83,7 +85,7 @@ class TestEnrichTracksUseCase:
         await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput(limit=50))
 
         mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, missing_fields=frozenset(EnrichField), limit=50
+            user_id=user.id, fingerprints=None, missing_fields=frozenset(EnrichField), limit=50
         )
 
     async def test__enricher_call__runs_outside_any_block(
@@ -376,7 +378,7 @@ class TestEnrichTracksUseCase:
         )
 
         mock_track_repository.get_list.assert_awaited_once_with(
-            user_id=user.id, missing_fields=frozenset({EnrichField.LOCALE}), limit=None
+            user_id=user.id, fingerprints=None, missing_fields=frozenset({EnrichField.LOCALE}), limit=None
         )
 
     async def test__genre_only__locales_field_not_written(
