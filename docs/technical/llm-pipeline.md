@@ -209,8 +209,8 @@ time the reply took. The meter sums the calls, tokens, cost and time per step an
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
 - **Reasoning effort**: the step's `REASONING_EFFORT`, always sent. A step keeps one setting through a run, so it is
   recorded with the step and model, not as a key of its own: two runs of one model at two efforts can then be
-  compared. The table printed at the end of a command has an `Effort` column, and `llm usage --by model` names a
-  model with its effort: `google/gemini-3.8-flash (low)`.
+  compared. The table printed at the end of a command has an `Effort` column, and `llm usage --by model --by effort`
+  splits a model per effort.
 - **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
   since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
 - **Time**: from sending the request to receiving the reply, transient retries and rate-limit waits included: the time

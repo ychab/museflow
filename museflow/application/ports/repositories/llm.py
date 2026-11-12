@@ -4,6 +4,7 @@ from abc import abstractmethod
 from datetime import date
 
 from museflow.domain.entities.llm import LLMUsageRecord
+from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.value_objects.llm import LLMUsageSummary
 
@@ -23,14 +24,21 @@ class LLMUsageRepository(ABC):
     async def summarize(
         self,
         user_id: uuid.UUID | None,
-        group_by: LLMUsageGroupBy,
+        group_by: list[LLMUsageGroupBy],
+        operation: LLMOperation | None = None,
         since: date | None = None,
+        until: date | None = None,
     ) -> LLMUsageSummary:
-        """Sums the LLM usage per group, months in chronological order, other groups by decreasing cost.
+        """Sums the LLM usage per group, with the grand total.
+
+        The groups are sorted level by level, in the `group_by` order: months and runs chronologically, the other
+        groupings by decreasing cost of the level (e.g. the priciest model first, then its efforts, priciest first).
 
         Args:
             user_id: The user whose usage is summed, or None for all the users.
-            group_by: The grouping of the rows.
+            group_by: The groupings of the rows, one value per grouping in each group.
+            operation: Only the runs of this operation, when given.
             since: Only the runs from this day on (UTC), when given.
+            until: Only the runs up to this day included (UTC), when given.
         """
         ...

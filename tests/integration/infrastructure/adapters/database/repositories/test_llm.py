@@ -95,7 +95,7 @@ class TestLLMUsageSQLRepository:
         assert playlist_id is None
 
     async def test__summarize__empty(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.OPERATION)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.OPERATION])
         assert summary == LLMUsageSummary(groups=[], total=LLMUsageTotals())
 
     async def test__summarize__by_operation(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
@@ -123,12 +123,12 @@ class TestLLMUsageSQLRepository:
         # Another user's spending stays out.
         await LLMUsageModelFactory.create_async(operation=LLMOperation.DISCOVER)
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.OPERATION)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.OPERATION])
 
         assert summary == LLMUsageSummary(
             groups=[
                 LLMUsageGroup(
-                    name="discover",
+                    values=["discover"],
                     totals=LLMUsageTotals(
                         runs=2,
                         calls=6,
@@ -140,7 +140,7 @@ class TestLLMUsageSQLRepository:
                     ),
                 ),
                 LLMUsageGroup(
-                    name="enrich",
+                    values=["enrich"],
                     totals=LLMUsageTotals(
                         runs=1,
                         calls=1,
@@ -176,52 +176,84 @@ class TestLLMUsageSQLRepository:
             user_id=user.id, run_id=run_id, step="profiler merge", cost=Decimal("0.100000")
         )
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.STEP)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.STEP])
 
-        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
-            ("profiler segment", 1, Decimal("0.300000")),
-            ("profiler merge", 1, Decimal("0.100000")),
+        assert [(group.values, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            (["profiler segment"], 1, Decimal("0.300000")),
+            (["profiler merge"], 1, Decimal("0.100000")),
         ]
         assert summary.total.runs == 1
         assert summary.total.cost == Decimal("0.400000")
 
     async def test__summarize__by_model(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
-        await LLMUsageModelFactory.create_async(
-            user_id=user.id, model="google/gemini-3.5-flash", reasoning_effort=ReasoningEffort.MEDIUM, cost=Decimal(1)
-        )
-        await LLMUsageModelFactory.create_async(
-            user_id=user.id, model="openai/gpt-5-mini", reasoning_effort=ReasoningEffort.MINIMAL, cost=Decimal(2)
-        )
+        await LLMUsageModelFactory.create_async(user_id=user.id, model="google/gemini-3.5-flash", cost=Decimal(1))
+        await LLMUsageModelFactory.create_async(user_id=user.id, model="openai/gpt-5-mini", cost=Decimal(2))
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MODEL)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.MODEL])
 
-        assert [group.name for group in summary.groups] == [
-            "openai/gpt-5-mini (minimal)",
-            "google/gemini-3.5-flash (medium)",
+        assert [group.values for group in summary.groups] == [["openai/gpt-5-mini"], ["google/gemini-3.5-flash"]]
+
+    async def test__summarize__by_effort(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        for effort, cost in ((ReasoningEffort.MEDIUM, 1), (ReasoningEffort.LOW, 3), (ReasoningEffort.LOW, 1)):
+            await LLMUsageModelFactory.create_async(user_id=user.id, reasoning_effort=effort, cost=Decimal(cost))
+
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.EFFORT])
+
+        assert [(group.values, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            (["low"], 2, Decimal("4.000000")),
+            (["medium"], 1, Decimal("1.000000")),
         ]
 
-    async def test__summarize__by_model__one_row_per_effort(
-        self,
-        user: User,
-        llm_usage_repository: LLMUsageRepository,
-    ) -> None:
-        model = "google/gemini-3.8-flash"
-        for effort, cost in (
-            (ReasoningEffort.MEDIUM, 1),
-            (ReasoningEffort.LOW, 3),
-            (ReasoningEffort.LOW, 1),
-            (ReasoningEffort.HIGH, 2),
+    async def test__summarize__by_model__by_effort(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        # The flash model costs 5 in all, so it comes first, even though the pro model has the priciest effort (4).
+        for model, effort, cost in (
+            ("google/gemini-3.1-pro-preview", ReasoningEffort.HIGH, 4),
+            ("google/gemini-3.8-flash", ReasoningEffort.MEDIUM, 1),
+            ("google/gemini-3.8-flash", ReasoningEffort.LOW, 3),
+            ("google/gemini-3.8-flash", ReasoningEffort.LOW, 1),
         ):
             await LLMUsageModelFactory.create_async(
                 user_id=user.id, model=model, reasoning_effort=effort, cost=Decimal(cost)
             )
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MODEL)
+        summary = await llm_usage_repository.summarize(
+            user_id=user.id, group_by=[LLMUsageGroupBy.MODEL, LLMUsageGroupBy.EFFORT]
+        )
 
-        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
-            (f"{model} (low)", 2, Decimal("4.000000")),
-            (f"{model} (high)", 1, Decimal("2.000000")),
-            (f"{model} (medium)", 1, Decimal("1.000000")),
+        assert [(group.values, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            (["google/gemini-3.8-flash", "low"], 2, Decimal("4.000000")),
+            (["google/gemini-3.8-flash", "medium"], 1, Decimal("1.000000")),
+            (["google/gemini-3.1-pro-preview", "high"], 1, Decimal("4.000000")),
+        ]
+        assert summary.total.runs == 4
+        assert summary.total.cost == Decimal(9)
+
+    async def test__summarize__by_month__by_operation(
+        self,
+        user: User,
+        llm_usage_repository: LLMUsageRepository,
+    ) -> None:
+        # Months stay chronological whatever they cost; operations follow their cost within each month.
+        for month, operation, cost in (
+            (11, LLMOperation.ENRICH, 1),
+            (11, LLMOperation.DISCOVER, 2),
+            (10, LLMOperation.ENRICH, 5),
+        ):
+            await LLMUsageModelFactory.create_async(
+                user_id=user.id,
+                operation=operation,
+                created_at=datetime(2026, month, 15, tzinfo=UTC),
+                cost=Decimal(cost),
+            )
+
+        summary = await llm_usage_repository.summarize(
+            user_id=user.id, group_by=[LLMUsageGroupBy.MONTH, LLMUsageGroupBy.OPERATION]
+        )
+
+        assert [group.values for group in summary.groups] == [
+            ["2026-10", "enrich"],
+            ["2026-11", "discover"],
+            ["2026-11", "enrich"],
         ]
 
     async def test__summarize__by_month__chronological(
@@ -234,33 +266,47 @@ class TestLLMUsageSQLRepository:
                 user_id=user.id, created_at=datetime(2026, month, 15, tzinfo=UTC), cost=Decimal(cost)
             )
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MONTH)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.MONTH])
 
-        assert [group.name for group in summary.groups] == ["2026-09", "2026-10", "2026-11"]
+        assert [group.values for group in summary.groups] == [["2026-09"], ["2026-10"], ["2026-11"]]
 
     async def test__summarize__by_profile(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="evening")
         await LLMUsageModelFactory.create_async(user_id=user.id, profile_id=profile_db.id, cost=Decimal(2))
         await LLMUsageModelFactory.create_async(user_id=user.id, profile_id=None, cost=Decimal(1))
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.PROFILE)
+        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=[LLMUsageGroupBy.PROFILE])
 
-        assert [group.name for group in summary.groups] == ["evening", None]
+        assert [group.values for group in summary.groups] == [["evening"], [None]]
 
-    async def test__summarize__since(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
-        await LLMUsageModelFactory.create_async(
-            user_id=user.id, created_at=datetime(2026, 10, 31, 23, 59, tzinfo=UTC), cost=Decimal(1)
-        )
-        await LLMUsageModelFactory.create_async(
-            user_id=user.id, created_at=datetime(2026, 11, 1, 0, 0, tzinfo=UTC), cost=Decimal(2)
-        )
+    async def test__summarize__since__until(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        # Both days are included, from the first minute of `since` to the last one of `until`.
+        for created_at, cost in (
+            (datetime(2026, 10, 31, 23, 59, tzinfo=UTC), 1),
+            (datetime(2026, 11, 1, 0, 0, tzinfo=UTC), 2),
+            (datetime(2026, 11, 2, 23, 59, tzinfo=UTC), 4),
+            (datetime(2026, 11, 3, 0, 0, tzinfo=UTC), 8),
+        ):
+            await LLMUsageModelFactory.create_async(user_id=user.id, created_at=created_at, cost=Decimal(cost))
 
         summary = await llm_usage_repository.summarize(
-            user_id=user.id, group_by=LLMUsageGroupBy.MONTH, since=date(2026, 11, 1)
+            user_id=user.id, group_by=[LLMUsageGroupBy.MONTH], since=date(2026, 11, 1), until=date(2026, 11, 2)
         )
 
-        assert [group.name for group in summary.groups] == ["2026-11"]
-        assert summary.total.cost == Decimal(2)
+        assert [group.values for group in summary.groups] == [["2026-11"]]
+        assert summary.total.runs == 2
+        assert summary.total.cost == Decimal(6)
+
+    async def test__summarize__operation(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
+        await LLMUsageModelFactory.create_async(user_id=user.id, operation=LLMOperation.ENRICH, cost=Decimal(1))
+        await LLMUsageModelFactory.create_async(user_id=user.id, operation=LLMOperation.DISCOVER, cost=Decimal(2))
+
+        summary = await llm_usage_repository.summarize(
+            user_id=user.id, group_by=[LLMUsageGroupBy.OPERATION], operation=LLMOperation.ENRICH
+        )
+
+        assert [group.values for group in summary.groups] == [["enrich"]]
+        assert summary.total.cost == Decimal(1)
 
     async def test__summarize__all_users__by_user(self, llm_usage_repository: LLMUsageRepository) -> None:
         alice_db = await UserModelFactory.create_async(email="alice@example.com")
@@ -269,11 +315,11 @@ class TestLLMUsageSQLRepository:
         await LLMUsageModelFactory.create_async(user_id=bob_db.id, cost=Decimal(2))
         await LLMUsageModelFactory.create_async(user_id=bob_db.id, cost=Decimal(3))
 
-        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.USER)
+        summary = await llm_usage_repository.summarize(user_id=None, group_by=[LLMUsageGroupBy.USER])
 
-        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
-            ("bob@example.com", 2, Decimal(5)),
-            ("alice@example.com", 1, Decimal(1)),
+        assert [(group.values, group.totals.runs, group.totals.cost) for group in summary.groups] == [
+            (["bob@example.com"], 2, Decimal(5)),
+            (["alice@example.com"], 1, Decimal(1)),
         ]
         assert summary.total.runs == 3
         assert summary.total.cost == Decimal(6)
@@ -287,50 +333,37 @@ class TestLLMUsageSQLRepository:
             await LLMUsageModelFactory.create_async(user_id=user_db.id, profile_id=profile_db.id, cost=Decimal(cost))
         await LLMUsageModelFactory.create_async(user_id=bob_db.id, profile_id=None, cost=Decimal(1))
 
-        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.PROFILE)
+        summary = await llm_usage_repository.summarize(user_id=None, group_by=[LLMUsageGroupBy.PROFILE])
 
-        assert [group.name for group in summary.groups] == [
-            "alice@example.com / evening",
-            "bob@example.com / evening",
-            None,
+        assert [group.values for group in summary.groups] == [
+            ["alice@example.com / evening"],
+            ["bob@example.com / evening"],
+            [None],
         ]
 
-    async def test__summarize__by_run(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
-        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id, name="evening")
+    async def test__summarize__by_run__by_step(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         build_id = uuid.uuid4()
-        # A build saves one row per step: they make one run, dated by its first row.
-        for second, cost in ((1, 2), (2, 1)):
+        # A build saves its rows together, one per step: they make one run, dated by its first row.
+        for step, cost in (("profiler merge", 1), ("profiler segment", 2)):
             await LLMUsageModelFactory.create_async(
                 user_id=user.id,
                 run_id=build_id,
-                operation=LLMOperation.TASTE_BUILD,
-                profile_id=profile_db.id,
-                created_at=datetime(2026, 11, 3, 10, 0, second, tzinfo=UTC),
+                step=step,
+                created_at=datetime(2026, 11, 3, 10, 0, tzinfo=UTC),
                 cost=Decimal(cost),
             )
+        # Older, and pricier: runs stay chronological.
         await LLMUsageModelFactory.create_async(
-            user_id=user.id,
-            operation=LLMOperation.ENRICH,
-            created_at=datetime(2026, 11, 2, 9, 30, tzinfo=UTC),
-            cost=Decimal(5),
+            user_id=user.id, step="enricher", created_at=datetime(2026, 11, 2, 9, 30, tzinfo=UTC), cost=Decimal(5)
         )
 
-        summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.RUN)
+        summary = await llm_usage_repository.summarize(
+            user_id=user.id, group_by=[LLMUsageGroupBy.RUN, LLMUsageGroupBy.STEP]
+        )
 
-        assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
-            ("2026-11-02 09:30:00 enrich", 1, Decimal(5)),
-            ("2026-11-03 10:00:01 taste_build evening", 1, Decimal(3)),
+        assert [(group.values, group.totals.cost) for group in summary.groups] == [
+            (["2026-11-02 09:30:00", "enricher"], Decimal(5)),
+            (["2026-11-03 10:00:00", "profiler segment"], Decimal(2)),
+            (["2026-11-03 10:00:00", "profiler merge"], Decimal(1)),
         ]
         assert summary.total.runs == 2
-
-    async def test__summarize__all_users__by_run(self, llm_usage_repository: LLMUsageRepository) -> None:
-        alice_db = await UserModelFactory.create_async(email="alice@example.com")
-        await LLMUsageModelFactory.create_async(
-            user_id=alice_db.id,
-            operation=LLMOperation.DISCOVER,
-            created_at=datetime(2026, 11, 3, 10, 0, tzinfo=UTC),
-        )
-
-        summary = await llm_usage_repository.summarize(user_id=None, group_by=LLMUsageGroupBy.RUN)
-
-        assert [group.name for group in summary.groups] == ["2026-11-03 10:00:00 discover (alice@example.com)"]
