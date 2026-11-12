@@ -22,7 +22,7 @@ class LLMUsageEntryInput(BaseModel):
     profile_name: str | None = None
     step: str
     model: str
-    reasoning_effort: ReasoningEffort | None = None  # absent from the exports taken before it was recorded
+    reasoning_effort: ReasoningEffort
     calls: int = Field(ge=0)
     prompt_tokens: int = Field(ge=0)
     completion_tokens: int = Field(ge=0)

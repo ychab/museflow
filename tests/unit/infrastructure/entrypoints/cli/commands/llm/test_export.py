@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.llm import LLMUsageEntryInput
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.llm.export import llm_export_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -113,6 +114,7 @@ class TestLlmExportCommand:
                 profile_name="my-profile",
                 step="advisor",
                 model="google/gemini-3.5-flash",
+                reasoning_effort=ReasoningEffort.MEDIUM,
                 calls=2,
                 prompt_tokens=5000,
                 completion_tokens=6000,

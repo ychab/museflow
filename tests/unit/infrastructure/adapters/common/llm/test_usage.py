@@ -26,12 +26,12 @@ class TestLLMUsageMeter:
         )
 
         second = timedelta(seconds=1)
-        meter.record("profiler segment", "google/gemini-2.5-flash", None, usage, 2 * second)
-        meter.record("profiler segment", "google/gemini-2.5-flash", None, usage, 3 * second)
+        meter.record("profiler segment", "google/gemini-2.5-flash", ReasoningEffort.MINIMAL, usage, 2 * second)
+        meter.record("profiler segment", "google/gemini-2.5-flash", ReasoningEffort.MINIMAL, usage, 3 * second)
         meter.record(
             "profiler segment",
             "openai/gpt-5-mini",
-            None,
+            ReasoningEffort.MINIMAL,
             ChatUsage(prompt_tokens=10, completion_tokens=5),
             second,
         )
@@ -47,6 +47,7 @@ class TestLLMUsageMeter:
             LLMUsage(
                 step="profiler segment",
                 model="google/gemini-2.5-flash",
+                reasoning_effort=ReasoningEffort.MINIMAL,
                 calls=2,
                 prompt_tokens=2000,
                 completion_tokens=400,
@@ -57,6 +58,7 @@ class TestLLMUsageMeter:
             LLMUsage(
                 step="profiler segment",
                 model="openai/gpt-5-mini",
+                reasoning_effort=ReasoningEffort.MINIMAL,
                 calls=1,
                 prompt_tokens=10,
                 completion_tokens=5,

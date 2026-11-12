@@ -11,7 +11,7 @@ class LLMUsage:
 
     step: str
     model: str
-    reasoning_effort: ReasoningEffort | None = None  # None: the provider's default
+    reasoning_effort: ReasoningEffort
     calls: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0  # reasoning tokens included

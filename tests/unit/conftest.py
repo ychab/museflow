@@ -282,7 +282,7 @@ def spotify_library(
 async def openrouter_advisor() -> AsyncGenerator[OpenRouterAdvisorAdapter]:
     async with OpenRouterAdvisorAdapter(
         client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
-        llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as advisor:
         yield advisor
 
@@ -291,7 +291,7 @@ async def openrouter_advisor() -> AsyncGenerator[OpenRouterAdvisorAdapter]:
 async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter]:
     async with OpenRouterTrackEnricherAdapter(
         client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
-        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as enricher:
         yield enricher
 
@@ -300,8 +300,8 @@ async def openrouter_enricher() -> AsyncGenerator[OpenRouterTrackEnricherAdapter
 async def openrouter_profiler() -> AsyncGenerator[OpenRouterTasteProfileAdapter]:
     async with OpenRouterTasteProfileAdapter(
         client=OpenRouterClient(api_key="dummy-api-key", max_retry_wait=5),
-        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
-        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite", REASONING_EFFORT=ReasoningEffort.LOW),
+        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
         reflect_llm=LLMSettings(MODEL="google/gemini-2.5-pro", REASONING_EFFORT=ReasoningEffort.HIGH),
     ) as profiler:
         yield profiler

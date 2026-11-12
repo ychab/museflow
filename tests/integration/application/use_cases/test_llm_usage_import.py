@@ -30,6 +30,7 @@ class TestImportLLMUsageUseCase:
             profile_name="my-profile",
             step="profiler_merge",
             model="google/gemini-3.5-flash",
+            reasoning_effort=ReasoningEffort.LOW,
             calls=3,
             prompt_tokens=1200,
             completion_tokens=900,
@@ -54,7 +55,10 @@ class TestImportLLMUsageUseCase:
                 profile_id=source_profile_db.id,
                 usage=LLMUsageFactory.build(reasoning_effort=ReasoningEffort.LOW),
             ),
-            LLMUsageRecordFactory.build(user_id=source_user_db.id, usage=LLMUsageFactory.build(reasoning_effort=None)),
+            LLMUsageRecordFactory.build(
+                user_id=source_user_db.id,
+                usage=LLMUsageFactory.build(reasoning_effort=ReasoningEffort.HIGH),
+            ),
         ]
         await llm_usage_repository.bulk_create(records)
         entries = await export_llm_usage(user_id=source_user_db.id, uow=uow)
@@ -95,18 +99,3 @@ class TestImportLLMUsageUseCase:
         assert result.imported_count == 1
         [record] = await llm_usage_repository.get_list(user_id=user.id)
         assert record.profile_id is None
-
-    async def test__effort_absent__provider_default(
-        self,
-        user: User,
-        uow: UnitOfWorkPort,
-        llm_usage_repository: LLMUsageRepository,
-        entry: LLMUsageEntryInput,
-    ) -> None:
-        # The exports taken before the effort was recorded have no such field.
-        legacy = LLMUsageEntryInput.model_validate(entry.model_dump(exclude={"reasoning_effort"}))
-
-        await import_llm_usage(user_id=user.id, entries=[legacy], uow=uow)
-
-        [record] = await llm_usage_repository.get_list(user_id=user.id)
-        assert record.usage.reasoning_effort is None

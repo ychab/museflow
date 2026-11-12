@@ -215,7 +215,7 @@ Document storage fits because the profile is read and written as a whole, never 
 ## LLM usage
 
 `museflow_llm_usage` keeps what the LLM calls cost: one row per command run, step and model, with the reasoning effort (`ReasoningEffort`,
-`NULL` for the provider's default), the calls, tokens,
+always sent, see [Model choice per step](llm-pipeline.md#model-choice-per-step)), the calls, tokens,
 cost (`NUMERIC(12, 6)`, in USD) and the time spent waiting for the replies (`INTERVAL`). `run_id` groups the rows of one run and `operation` (`LLMOperation`) names the command:
 `taste_build`, `discover` or `enrich`. Rows are written at the end of the command, whatever its outcome (see
 [Cost tracking](llm-pipeline.md#cost-tracking)).

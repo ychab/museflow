@@ -13,11 +13,15 @@ from museflow.domain.enums import ReasoningEffort
 
 
 class LLMSettings(BaseModel):
-    """Model tuning for one LLM step; `None` leaves the provider's default."""
+    """Model tuning for one LLM step; `None` leaves the provider's default.
+
+    The reasoning effort is always sent: OpenRouter's reply does not say which effort a provider applied by default,
+    so an explicit one is the only way to know, and record, what a call ran at.
+    """
 
     MODEL: str
+    REASONING_EFFORT: ReasoningEffort
     MAX_TOKENS: int | None = Field(default=None, gt=0)
-    REASONING_EFFORT: ReasoningEffort | None = None
     TEMPERATURE: float | None = Field(default=None, ge=0.0, le=2.0)
     FALLBACK_MODELS: list[str] = Field(default_factory=list)
 
@@ -46,14 +50,21 @@ class OpenRouterSettings(BaseSettings):
     # Off only for a local test server with a self-signed certificate (WireMock)
     VERIFY_SSL: bool = True
 
-    ADVISOR: LLMSettings = LLMSettings(MODEL="anthropic/claude-sonnet-5.5")
+    # The efforts are each model's default in OpenRouter's catalogue, made explicit (`reasoning.default_effort`)
+    ADVISOR: LLMSettings = LLMSettings(MODEL="anthropic/claude-sonnet-5.5", REASONING_EFFORT=ReasoningEffort.HIGH)
 
-    ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
+    ENRICHER: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite", REASONING_EFFORT=ReasoningEffort.MINIMAL)
 
-    PROFILER_SEGMENT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-flash-lite")
+    PROFILER_SEGMENT: LLMSettings = LLMSettings(
+        MODEL="google/gemini-3.1-flash-lite",
+        REASONING_EFFORT=ReasoningEffort.MINIMAL,
+    )
     # Low effort: same profile as the default effort for 56% less on the merge step (#82). This model rejects `none`.
     PROFILER_MERGE: LLMSettings = LLMSettings(MODEL="google/gemini-3.5-flash", REASONING_EFFORT=ReasoningEffort.LOW)
-    PROFILER_REFLECT: LLMSettings = LLMSettings(MODEL="google/gemini-3.1-pro-preview")
+    PROFILER_REFLECT: LLMSettings = LLMSettings(
+        MODEL="google/gemini-3.1-pro-preview",
+        REASONING_EFFORT=ReasoningEffort.MEDIUM,
+    )
 
     # Zero Data Retention: only route to provider endpoints that neither store prompts and completions nor train on
     # them, since our prompts carry the user's listening history. Narrows the models available; `data_collection:

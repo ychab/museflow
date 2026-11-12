@@ -187,15 +187,18 @@ class TestLLMUsageSQLRepository:
 
     async def test__summarize__by_model(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         await LLMUsageModelFactory.create_async(
-            user_id=user.id, model="google/gemini-3.5-flash", reasoning_effort=None, cost=Decimal(1)
+            user_id=user.id, model="google/gemini-3.5-flash", reasoning_effort=ReasoningEffort.MEDIUM, cost=Decimal(1)
         )
         await LLMUsageModelFactory.create_async(
-            user_id=user.id, model="openai/gpt-5-mini", reasoning_effort=None, cost=Decimal(2)
+            user_id=user.id, model="openai/gpt-5-mini", reasoning_effort=ReasoningEffort.MINIMAL, cost=Decimal(2)
         )
 
         summary = await llm_usage_repository.summarize(user_id=user.id, group_by=LLMUsageGroupBy.MODEL)
 
-        assert [group.name for group in summary.groups] == ["openai/gpt-5-mini", "google/gemini-3.5-flash"]
+        assert [group.name for group in summary.groups] == [
+            "openai/gpt-5-mini (minimal)",
+            "google/gemini-3.5-flash (medium)",
+        ]
 
     async def test__summarize__by_model__one_row_per_effort(
         self,
@@ -203,7 +206,12 @@ class TestLLMUsageSQLRepository:
         llm_usage_repository: LLMUsageRepository,
     ) -> None:
         model = "google/gemini-3.8-flash"
-        for effort, cost in ((None, 1), (ReasoningEffort.LOW, 3), (ReasoningEffort.LOW, 1), (ReasoningEffort.HIGH, 2)):
+        for effort, cost in (
+            (ReasoningEffort.MEDIUM, 1),
+            (ReasoningEffort.LOW, 3),
+            (ReasoningEffort.LOW, 1),
+            (ReasoningEffort.HIGH, 2),
+        ):
             await LLMUsageModelFactory.create_async(
                 user_id=user.id, model=model, reasoning_effort=effort, cost=Decimal(cost)
             )
@@ -213,7 +221,7 @@ class TestLLMUsageSQLRepository:
         assert [(group.name, group.totals.runs, group.totals.cost) for group in summary.groups] == [
             (f"{model} (low)", 2, Decimal("4.000000")),
             (f"{model} (high)", 1, Decimal("2.000000")),
-            (model, 1, Decimal("1.000000")),
+            (f"{model} (medium)", 1, Decimal("1.000000")),
         ]
 
     async def test__summarize__by_month__chronological(

@@ -6,7 +6,8 @@
       "name": "Google: Gemini 2.5 Flash",
       "context_length": 1048576,
       "pricing": { "prompt": "0.0000003", "completion": "0.0000025" },
-      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"],
+      "reasoning": { "supported_efforts": ["high", "medium", "low", "minimal"], "default_effort": "medium" }
     },
     {
       "id": "google/gemini-2.5-flash-lite",
@@ -14,7 +15,8 @@
       "name": "Google: Gemini 2.5 Flash Lite",
       "context_length": 1048576,
       "pricing": { "prompt": "0.0000001", "completion": "0.0000004" },
-      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"],
+      "reasoning": { "supported_efforts": ["high", "medium", "low", "minimal", "none"], "default_effort": "minimal" }
     },
     {
       "id": "meta-llama/llama-3-8b-instruct",
@@ -30,7 +32,8 @@
       "name": "Google: Gemini 3.1 Flash Lite",
       "context_length": 1048576,
       "pricing": { "prompt": "0.00000025", "completion": "0.0000015" },
-      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"],
+      "reasoning": { "supported_efforts": ["high", "medium", "low", "minimal", "none"], "default_effort": "minimal" }
     },
     {
       "id": "google/gemini-3.5-flash",
@@ -38,7 +41,8 @@
       "name": "Google: Gemini 3.5 Flash",
       "context_length": 1048576,
       "pricing": { "prompt": "0.0000015", "completion": "0.000009" },
-      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"],
+      "reasoning": { "supported_efforts": ["high", "medium", "low", "minimal"], "default_effort": "medium" }
     },
     {
       "id": "google/gemini-3.1-pro-preview",
@@ -46,7 +50,8 @@
       "name": "Google: Gemini 3.1 Pro Preview",
       "context_length": 1048576,
       "pricing": { "prompt": "0.000002", "completion": "0.000012" },
-      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"]
+      "supported_parameters": ["max_tokens", "reasoning", "response_format", "structured_outputs", "temperature"],
+      "reasoning": { "supported_efforts": ["high", "medium", "low"], "default_effort": "medium" }
     }
   ]
 }

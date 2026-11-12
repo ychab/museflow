@@ -114,11 +114,8 @@ class LLMUsageSQLRepository(LLMUsageRepository):
 
         if group_by == LLMUsageGroupBy.MODEL:
             # One row per model and effort. The column holds the enum names: cast and lowercased, they are the values.
-            # `||` yields NULL without an effort (the provider's default), and concat() drops it: the model alone
-            # names that row.
-            effort = " (" + func.lower(cast(LLMUsageModel.reasoning_effort, String)) + ")"
-            name = func.concat(LLMUsageModel.model, effort)
-            return [LLMUsageModel.model, LLMUsageModel.reasoning_effort], name
+            effort = func.lower(cast(LLMUsageModel.reasoning_effort, String))
+            return [LLMUsageModel.model, LLMUsageModel.reasoning_effort], LLMUsageModel.model + " (" + effort + ")"
 
         # Profile names are unique per user only: across users, the email tells two "evening" profiles apart.
         # `||` gives NULL without a profile, so these runs still fall in the "no profile" group.

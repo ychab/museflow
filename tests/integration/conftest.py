@@ -39,6 +39,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -443,7 +444,7 @@ async def openrouter_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[
             base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
             verify_ssl=False,
         ),
-        llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as advisor:
         yield advisor
 
@@ -458,7 +459,7 @@ async def openrouter_enricher(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator
             base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
             verify_ssl=False,
         ),
-        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
+        llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as enricher:
         yield enricher
 
@@ -473,9 +474,9 @@ async def openrouter_profiler(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator
             base_url=HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]),
             verify_ssl=False,
         ),
-        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite"),
-        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
-        reflect_llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+        segment_llm=LLMSettings(MODEL="google/gemini-2.5-flash-lite", REASONING_EFFORT=ReasoningEffort.LOW),
+        merge_llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
+        reflect_llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as profiler:
         yield profiler
 

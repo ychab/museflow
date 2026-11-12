@@ -59,7 +59,7 @@ class TestOpenRouterTasteProfileAdapter:
         assert metadata["steps"]["segment"] == {
             "model": "google/gemini-2.5-flash-lite",
             "fallback_models": [],
-            "reasoning_effort": None,
+            "reasoning_effort": "low",
             "max_tokens": None,
             "temperature": None,
         }
@@ -111,7 +111,7 @@ class TestOpenRouterTasteProfileAdapter:
 
         body = json.loads(httpx_mock.get_requests()[0].content)
         assert body["model"] == "google/gemini-2.5-flash"
-        assert "reasoning" not in body
+        assert body["reasoning"] == {"effort": "low"}
         prompt = body["messages"][0]["content"]
         assert "Late-Night Indie" in prompt
         assert "More Indie" in prompt

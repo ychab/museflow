@@ -43,11 +43,11 @@ class TestPrintLLMUsage:
     def test__prints_each_step_and_the_total(self, capsys: pytest.CaptureFixture[str]) -> None:
         meter = LLMUsageMeter()
         usage = ChatUsage(prompt_tokens=12000, cost=Decimal("0.1234"))
-        meter.record("advisor", "openai/gpt-5-mini", None, usage, timedelta(seconds=50))
+        meter.record("advisor", "openai/gpt-5-mini", ReasoningEffort.LOW, usage, timedelta(seconds=50))
         meter.record(
             "advisor",
             "openai/gpt-5-mini",
-            None,
+            ReasoningEffort.LOW,
             ChatUsage(prompt_tokens=1000, cost=Decimal("0.0100")),
             timedelta(seconds=20),
         )
@@ -70,7 +70,8 @@ class TestPrintLLMUsage:
         print_llm_usage(meter)
 
         output = capsys.readouterr().out
-        assert "(minimal)" in output  # under the model, wrapped or not by the terminal width
+        assert "Effort" in output
+        assert "minimal" in output
 
 
 class TestFormatDuration:
