@@ -20,7 +20,7 @@ Each request carries:
 - **Provider preferences**: `require_parameters: true`, so OpenRouter only routes to endpoints that support structured outputs and every tuning parameter the step sends; `zdr: true` (Zero Data Retention, `OPENROUTER_ZDR`, on by default) and `data_collection: deny`, see [Privacy and data](privacy-and-data.md).
 - **Fallback models**, tried in order by OpenRouter when the main model fails. The model that actually answered is logged at DEBUG.
 
-**Fail fast on a misconfigured model.** Before any paid call, each command checks its step models (and their fallbacks) against OpenRouter's public model catalog: an unknown id fails with a "Did you mean" suggestion, and a model that lacks a parameter the step sends (structured outputs, reasoning, temperature, max tokens) fails with the missing list. With ZDR on, it also reads the public list of Zero Data Retention endpoints (`GET /endpoints/zdr`): a model with no ZDR endpoint, or whose ZDR endpoints lack one of those parameters, fails before any paid call too. Without that check, OpenRouter only refuses it on the first completion, with a 404 "No endpoints found matching your data policy". The check remains a necessary condition: OpenRouter picks the endpoint at request time.
+**Fail fast on a misconfigured model.** Before any paid call, each command checks its step models (and their fallbacks) against OpenRouter's public model catalog: an unknown id fails with a "Did you mean" suggestion, a model that lacks a parameter the step sends (structured outputs, reasoning, temperature, max tokens) fails with the missing list, and a model that does not accept the step's reasoning effort fails with the efforts it accepts (the catalog's `reasoning.supported_efforts`; a model listed without them is not checked). With ZDR on, it also reads the public list of Zero Data Retention endpoints (`GET /endpoints/zdr`): a model with no ZDR endpoint, or whose ZDR endpoints lack one of those parameters, fails before any paid call too. Without that check, OpenRouter only refuses it on the first completion, with a 404 "No endpoints found matching your data policy". The check remains a necessary condition: OpenRouter picks the endpoint at request time.
 
 ## Portable response schemas
 
@@ -34,7 +34,7 @@ The live suite (`tests/integration/live/openrouter`) sends the real schemas to a
 
 ## Model choice per step
 
-Each step has its own `LLMSettings` ([`museflow/infrastructure/config/settings/openrouter.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/config/settings/openrouter.py)): `MODEL`, `MAX_TOKENS`, `REASONING_EFFORT`, `TEMPERATURE` and `FALLBACK_MODELS`. Only the model has a default, plus a low reasoning effort on the merge step; the others are left to the provider. A field is overridden with a nested environment variable, and the step keeps its other defaults:
+Each step has its own `LLMSettings` ([`museflow/infrastructure/config/settings/openrouter.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/config/settings/openrouter.py)): `MODEL`, `MAX_TOKENS`, `REASONING_EFFORT`, `TEMPERATURE` and `FALLBACK_MODELS`. `MODEL` and `REASONING_EFFORT` are required and have a default per step; the others are left to the provider. The effort is always sent because OpenRouter's reply does not say which effort a provider applied by default: an explicit one is the only way to know what a call ran at, and to record it. The defaults are each model's own default in OpenRouter's catalog (`reasoning.default_effort`), made explicit, except a low effort on the merge step. A model that does not reason cannot be used, since it rejects the `reasoning` parameter; `none` turns reasoning off on the models that accept it. Changing a step's model may require changing its effort too: not every model accepts every effort, and the check below says which. A field is overridden with a nested environment variable, and the step keeps its other defaults:
 
 ```bash
 OPENROUTER_ENRICHER__MODEL=openai/gpt-5-nano
@@ -207,10 +207,10 @@ time the reply took. The meter sums the calls, tokens, cost and time per step an
 - **Step**: `advisor_artists`, `advisor_picks`, `enricher`, or `profiler segment`, `profiler merge`,
   `profiler reflect`, so a run shows what each phase costs.
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
-- **Reasoning effort**: the step's `REASONING_EFFORT`, none when left to the provider's default. A step keeps one
-  setting through a run, so it is recorded with the step and model, not as a key of its own: two runs of one model at
-  two efforts can then be compared. The table printed at the end of a command and `llm usage --by model` show it
-  after the model: `google/gemini-3.8-flash (low)`.
+- **Reasoning effort**: the step's `REASONING_EFFORT`, always sent. A step keeps one setting through a run, so it is
+  recorded with the step and model, not as a key of its own: two runs of one model at two efforts can then be
+  compared. The table printed at the end of a command has an `Effort` column, and `llm usage --by model` names a
+  model with its effort: `google/gemini-3.8-flash (low)`.
 - **What counts**: every reply, recorded before it is parsed. A self-healing retry and an unusable reply count too,
   since they are billed. A rejected request (4xx, 503) or a rate-limited one returns no usage and counts nothing.
 - **Time**: from sending the request to receiving the reply, transient retries and rate-limit waits included: the time

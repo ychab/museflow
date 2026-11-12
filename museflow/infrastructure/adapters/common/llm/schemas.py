@@ -99,9 +99,14 @@ class ErrorResponse(BaseModel):
 # --- Model catalog ---
 
 
+class CatalogReasoning(BaseModel):
+    supported_efforts: list[str] = Field(default_factory=list)
+
+
 class CatalogModel(BaseModel):
     id: str
     supported_parameters: list[str] = Field(default_factory=list)  # union over the model's provider endpoints
+    reasoning: CatalogReasoning | None = None  # absent for a model that does not reason
 
 
 class ModelCatalogResponse(BaseModel):

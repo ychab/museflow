@@ -44,10 +44,16 @@ INVALID_RESPONSE: dict[str, Any] = {
 }
 CATALOG: dict[str, Any] = {
     "data": [
-        {"id": "google/gemini-2.5-flash", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
+        {
+            "id": "google/gemini-2.5-flash",
+            "supported_parameters": ["structured_outputs", "reasoning", "temperature"],
+            "reasoning": {"supported_efforts": ["high", "medium", "low"], "default_effort": "medium"},
+        },
+        # No effort list: the effort is not checked
         {"id": "openai/gpt-5-mini", "supported_parameters": ["structured_outputs", "reasoning", "temperature"]},
-        {"id": "mistralai/mistral-small", "supported_parameters": ["structured_outputs"]},
-        {"id": "anthropic/claude-sonnet-4.5", "supported_parameters": ["structured_outputs"]},
+        {"id": "mistralai/mistral-small", "supported_parameters": ["structured_outputs", "reasoning"]},
+        {"id": "anthropic/claude-sonnet-4.5", "supported_parameters": ["structured_outputs", "reasoning"]},
+        {"id": "openai/gpt-4o-mini", "supported_parameters": ["structured_outputs"]},  # does not reason
         {"id": "meta-llama/llama-3-8b-instruct"},
     ]
 }
@@ -100,7 +106,7 @@ class TestOpenRouterClient:
 
     @pytest.fixture
     def llm(self) -> LLMSettings:
-        return LLMSettings(MODEL="google/gemini-2.5-flash")
+        return LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW)
 
     @pytest.fixture
     def messages(self) -> list[ChatMessage]:
@@ -141,6 +147,7 @@ class TestOpenRouterClient:
                 "type": "json_schema",
                 "json_schema": {"name": "Answer", "strict": True, "schema": SCHEMA.model_dump(exclude_none=True)},
             },
+            "reasoning": {"effort": "low"},  # always sent
             "provider": {"require_parameters": True, "zdr": True, "data_collection": "deny"},
         }
 
@@ -227,6 +234,7 @@ class TestOpenRouterClient:
         assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
             step="test",
             model="google/gemini-2.5-flash",
+            reasoning_effort=ReasoningEffort.LOW,
             calls=2,
             prompt_tokens=200,
             completion_tokens=80,
@@ -250,7 +258,7 @@ class TestOpenRouterClient:
 
         [recorded] = meter.usages
         assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
-            step="test", model="google/gemini-2.5-flash", calls=1
+            step="test", model="google/gemini-2.5-flash", reasoning_effort=ReasoningEffort.LOW, calls=1
         )
 
     async def test__complete__records_the_reasoning_effort(
@@ -267,12 +275,12 @@ class TestOpenRouterClient:
             messages,
             response_model=Answer,
             schema=SCHEMA,
-            llm=llm.model_copy(update={"REASONING_EFFORT": ReasoningEffort.LOW}),
+            llm=llm.model_copy(update={"REASONING_EFFORT": ReasoningEffort.HIGH}),
             adapter="test",
         )
 
         [recorded] = meter.usages
-        assert recorded.reasoning_effort == ReasoningEffort.LOW
+        assert recorded.reasoning_effort == ReasoningEffort.HIGH
 
     async def test__complete__rejected__records_nothing(
         self,
@@ -562,7 +570,9 @@ class TestOpenRouterClient:
             FALLBACK_MODELS=["openai/gpt-5-mini:nitro"],
         )
 
-        await client.check_models({"enricher": llm, "advisor": LLMSettings(MODEL="openai/gpt-5-mini")})
+        await client.check_models(
+            {"enricher": llm, "advisor": LLMSettings(MODEL="openai/gpt-5-mini", REASONING_EFFORT=ReasoningEffort.LOW)}
+        )
 
         assert len(httpx_mock.get_requests()) == 2
         assert all("Authorization" not in request.headers for request in httpx_mock.get_requests())
@@ -574,7 +584,9 @@ class TestOpenRouterClient:
     ) -> None:
         httpx_mock.add_response(url=MODELS_URL, method="GET", json=CATALOG)
 
-        await client_without_zdr.check_models({"enricher": LLMSettings(MODEL="anthropic/claude-sonnet-4.5")})
+        await client_without_zdr.check_models(
+            {"enricher": LLMSettings(MODEL="anthropic/claude-sonnet-4.5", REASONING_EFFORT=ReasoningEffort.LOW)}
+        )
 
         assert [request.url for request in httpx_mock.get_requests()] == [MODELS_URL]
 
@@ -582,7 +594,11 @@ class TestOpenRouterClient:
         ("llm", "expected_model", "expected_message"),
         [
             pytest.param(
-                LLMSettings(MODEL="google/gemini-2.5-flash", FALLBACK_MODELS=["anthropic/claude-sonnet-4.5"]),
+                LLMSettings(
+                    MODEL="google/gemini-2.5-flash",
+                    REASONING_EFFORT=ReasoningEffort.LOW,
+                    FALLBACK_MODELS=["anthropic/claude-sonnet-4.5"],
+                ),
                 "anthropic/claude-sonnet-4.5",
                 "OpenRouter model 'anthropic/claude-sonnet-4.5' for the enricher step has no Zero Data Retention "
                 "endpoint. Pick another model (GET https://openrouter.test/api/v1/endpoints/zdr lists them) "
@@ -590,10 +606,10 @@ class TestOpenRouterClient:
                 id="no_zdr_endpoint",
             ),
             pytest.param(
-                LLMSettings(MODEL="mistralai/mistral-small"),
+                LLMSettings(MODEL="mistralai/mistral-small", REASONING_EFFORT=ReasoningEffort.LOW),
                 "mistralai/mistral-small",
                 "OpenRouter model 'mistralai/mistral-small' for the enricher step does not support on its Zero Data "
-                "Retention endpoints: structured_outputs.",
+                "Retention endpoints: structured_outputs, reasoning.",
                 id="zdr_endpoint_missing_parameter",
             ),
         ],
@@ -620,31 +636,56 @@ class TestOpenRouterClient:
         ("llm", "expected_model", "expected_message"),
         [
             pytest.param(
-                LLMSettings(MODEL="google/gemni-2.5-flash"),
+                LLMSettings(MODEL="google/gemni-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
                 "google/gemni-2.5-flash",
                 "Unknown OpenRouter model 'google/gemni-2.5-flash' for the enricher step. "
                 "Did you mean 'google/gemini-2.5-flash'?",
                 id="typo",
             ),
             pytest.param(
-                LLMSettings(MODEL="google/gemini-2.5-flash", FALLBACK_MODELS=["foo"]),
+                LLMSettings(
+                    MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW, FALLBACK_MODELS=["foo"]
+                ),
                 "foo",
                 "Unknown OpenRouter model 'foo' for the enricher step. See https://openrouter.ai/models.",
                 id="unknown_fallback",
             ),
             pytest.param(
-                LLMSettings(MODEL="meta-llama/llama-3-8b-instruct"),
+                LLMSettings(MODEL="meta-llama/llama-3-8b-instruct", REASONING_EFFORT=ReasoningEffort.LOW),
                 "meta-llama/llama-3-8b-instruct",
                 "OpenRouter model 'meta-llama/llama-3-8b-instruct' for the enricher step does not support: "
-                "structured_outputs.",
+                "structured_outputs, reasoning.",
                 id="no_structured_outputs",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="openai/gpt-4o-mini", REASONING_EFFORT=ReasoningEffort.NONE),
+                "openai/gpt-4o-mini",
+                "OpenRouter model 'openai/gpt-4o-mini' for the enricher step does not support: reasoning.",
+                id="no_reasoning",
             ),
             pytest.param(
                 LLMSettings(MODEL="mistralai/mistral-small", REASONING_EFFORT=ReasoningEffort.HIGH, MAX_TOKENS=1000),
                 "mistralai/mistral-small",
-                "OpenRouter model 'mistralai/mistral-small' for the enricher step does not support: "
-                "reasoning, max_tokens.",
+                "OpenRouter model 'mistralai/mistral-small' for the enricher step does not support: max_tokens.",
                 id="missing_step_parameters",
+            ),
+            pytest.param(
+                LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.MINIMAL),
+                "google/gemini-2.5-flash",
+                "OpenRouter model 'google/gemini-2.5-flash' for the enricher step does not support the 'minimal' "
+                "reasoning effort (supported: high, medium, low).",
+                id="unsupported_effort",
+            ),
+            pytest.param(
+                LLMSettings(
+                    MODEL="openai/gpt-5-mini",
+                    REASONING_EFFORT=ReasoningEffort.MINIMAL,
+                    FALLBACK_MODELS=["google/gemini-2.5-flash"],
+                ),
+                "google/gemini-2.5-flash",
+                "OpenRouter model 'google/gemini-2.5-flash' for the enricher step does not support the 'minimal' "
+                "reasoning effort (supported: high, medium, low).",
+                id="fallback_unsupported_effort",
             ),
         ],
     )

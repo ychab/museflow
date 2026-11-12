@@ -11,22 +11,38 @@ class TestOpenRouterSettings:
     def test__defaults(self) -> None:
         settings = OpenRouterSettings(_env_file=None)
 
-        assert settings.ENRICHER == LLMSettings(MODEL="google/gemini-3.1-flash-lite")
+        # Every step sends an explicit effort: the model's default in OpenRouter's catalogue
+        assert {
+            step: (llm.MODEL, llm.REASONING_EFFORT)
+            for step, llm in {
+                "advisor": settings.ADVISOR,
+                "enricher": settings.ENRICHER,
+                "segment": settings.PROFILER_SEGMENT,
+                "merge": settings.PROFILER_MERGE,
+                "reflect": settings.PROFILER_REFLECT,
+            }.items()
+        } == {
+            "advisor": ("anthropic/claude-sonnet-5.5", ReasoningEffort.HIGH),
+            "enricher": ("google/gemini-3.1-flash-lite", ReasoningEffort.MINIMAL),
+            "segment": ("google/gemini-3.1-flash-lite", ReasoningEffort.MINIMAL),
+            "merge": ("google/gemini-3.5-flash", ReasoningEffort.LOW),
+            "reflect": ("google/gemini-3.1-pro-preview", ReasoningEffort.MEDIUM),
+        }
         assert settings.ZDR is True
         assert "dummy-api-key" not in repr(settings)  # the key stays masked
 
     def test__nested_override__keeps_step_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("OPENROUTER_ADVISOR__REASONING_EFFORT", "high")
+        monkeypatch.setenv("OPENROUTER_ADVISOR__REASONING_EFFORT", "low")
         monkeypatch.setenv("OPENROUTER_ADVISOR__FALLBACK_MODELS", '["openai/gpt-5-mini"]')
 
         settings = OpenRouterSettings(_env_file=None)
 
         assert settings.ADVISOR == LLMSettings(
             MODEL="anthropic/claude-sonnet-5.5",
-            REASONING_EFFORT=ReasoningEffort.HIGH,
+            REASONING_EFFORT=ReasoningEffort.LOW,
             FALLBACK_MODELS=["openai/gpt-5-mini"],
         )
-        assert settings.ENRICHER.REASONING_EFFORT is None
+        assert settings.ENRICHER.REASONING_EFFORT == ReasoningEffort.MINIMAL
 
     def test__nested_override__model(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OPENROUTER_PROFILER_REFLECT__MODEL", "anthropic/claude-sonnet-4.5")
@@ -53,12 +69,14 @@ class TestOpenRouterSettings:
 
 class TestLLMSettings:
     def test__with_model__overrides_model_only(self) -> None:
-        llm = LLMSettings(MODEL="google/gemini-2.5-flash", MAX_TOKENS=1000)
+        llm = LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW, MAX_TOKENS=1000)
 
-        assert llm.with_model("openai/gpt-5-mini") == LLMSettings(MODEL="openai/gpt-5-mini", MAX_TOKENS=1000)
+        assert llm.with_model("openai/gpt-5-mini") == LLMSettings(
+            MODEL="openai/gpt-5-mini", REASONING_EFFORT=ReasoningEffort.LOW, MAX_TOKENS=1000
+        )
         assert llm.MODEL == "google/gemini-2.5-flash"
 
     def test__with_model__none__unchanged(self) -> None:
-        llm = LLMSettings(MODEL="google/gemini-2.5-flash")
+        llm = LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW)
 
         assert llm.with_model(None) is llm

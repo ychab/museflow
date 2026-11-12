@@ -7,6 +7,7 @@ from pydantic import HttpUrl
 import pytest
 from tenacity import stop_after_attempt
 
+from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 from museflow.infrastructure.adapters.common.llm.schemas import ChatMessage
@@ -35,11 +36,13 @@ class TestOpenRouterClient:
             [ChatMessage(role="user", content="Integration test of the OpenRouter client")],
             response_model=Answer,
             schema=JsonSchemaProperty.object({"value": JsonSchemaProperty.integer()}),
-            llm=LLMSettings(MODEL="google/gemini-2.5-flash"),
+            llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
             adapter="test",
         )
 
         assert result == Answer(value=42)
 
     async def test__check_models__nominal(self, openrouter_client: OpenRouterClient) -> None:
-        await openrouter_client.check_models({"enricher": LLMSettings(MODEL="google/gemini-3.1-flash-lite")})
+        await openrouter_client.check_models(
+            {"enricher": LLMSettings(MODEL="google/gemini-3.1-flash-lite", REASONING_EFFORT=ReasoningEffort.LOW)}
+        )

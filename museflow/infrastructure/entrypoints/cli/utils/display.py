@@ -83,6 +83,7 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
     table = Table(title="LLM usage", show_footer=True)
     table.add_column("Step", footer="Total")
     table.add_column("Model")
+    table.add_column("Effort")
     table.add_column("Calls", justify="right", footer=str(sum(usage.calls for usage in usages)))
     table.add_column("Prompt", justify="right", footer=f"{sum(usage.prompt_tokens for usage in usages):,}")
     table.add_column("Completion", justify="right", footer=f"{sum(usage.completion_tokens for usage in usages):,}")
@@ -92,8 +93,8 @@ def print_llm_usage(meter: LLMUsageMeter) -> None:
     for usage in usages:
         table.add_row(
             usage.step,
-            # Named as `llm usage --by model` names it: the effort follows the model, unless left to the provider
-            f"{usage.model} ({usage.reasoning_effort})" if usage.reasoning_effort else usage.model,
+            usage.model,
+            usage.reasoning_effort,
             str(usage.calls),
             f"{usage.prompt_tokens:,}",
             f"{usage.completion_tokens:,}",

@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
+from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 
@@ -33,7 +34,7 @@ def spend(meter: LLMUsageMeter) -> None:
     meter.record(
         "advisor",
         "google/gemini-2.5-flash",
-        None,
+        ReasoningEffort.LOW,
         ChatUsage(prompt_tokens=1000, cost=Decimal("0.0123")),
         timedelta(seconds=2),
     )

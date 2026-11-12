@@ -154,7 +154,8 @@ class OpenRouterClient(HttpClientMixin):
         the provider endpoint at request time.
 
         Raises:
-            LLMModelError: If a model is unknown, lacks a required parameter or, with ZDR on, a ZDR endpoint.
+            LLMModelError: If a model is unknown, lacks a required parameter, rejects the step's reasoning effort or,
+                with ZDR on, has no ZDR endpoint.
         """
         response_data = await self.make_api_call(method="GET", endpoint="/models")
         catalog = {model.id: model for model in ModelCatalogResponse.model_validate(response_data).data}
@@ -176,6 +177,16 @@ class OpenRouterClient(HttpClientMixin):
                 if missing:
                     raise LLMModelError(
                         f"OpenRouter model '{model_id}' for the {step} step does not support: {', '.join(missing)}.",
+                        step=step,
+                        model=model_id,
+                    )
+
+                # Not every model accepts every effort; a catalogue entry without the list is not checked.
+                efforts = model.reasoning.supported_efforts if model.reasoning else []
+                if efforts and llm.REASONING_EFFORT not in efforts:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step does not support the "
+                        f"'{llm.REASONING_EFFORT}' reasoning effort (supported: {', '.join(efforts)}).",
                         step=step,
                         model=model_id,
                     )
@@ -238,7 +249,7 @@ class OpenRouterClient(HttpClientMixin):
             response_format=ResponseFormat(json_schema=JsonSchemaFormat(name=response_model.__name__, schema_=schema)),
             max_tokens=llm.MAX_TOKENS,
             temperature=llm.TEMPERATURE,
-            reasoning=ReasoningConfig(effort=llm.REASONING_EFFORT) if llm.REASONING_EFFORT else None,
+            reasoning=ReasoningConfig(effort=llm.REASONING_EFFORT),
             provider=ProviderPreferences(zdr=self._zdr),
         )
         started_at = time.monotonic()
@@ -293,11 +304,10 @@ class OpenRouterClient(HttpClientMixin):
 def _required_parameters(llm: LLMSettings) -> list[str]:
     """Parameters the request carries for this step, which `require_parameters` makes mandatory for the provider."""
     optional = {
-        "reasoning": llm.REASONING_EFFORT is not None,
         "temperature": llm.TEMPERATURE is not None,
         "max_tokens": llm.MAX_TOKENS is not None,
     }
-    return ["structured_outputs", *(name for name, sent in optional.items() if sent)]
+    return ["structured_outputs", "reasoning", *(name for name, sent in optional.items() if sent)]
 
 
 def _parse_error(response: httpx.Response) -> ChatCompletionError | None:

@@ -51,11 +51,7 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     # Usage
     step: Mapped[str] = mapped_column(String(64), nullable=False)
     model: Mapped[str] = mapped_column(String(255), nullable=False)
-    reasoning_effort: Mapped[ReasoningEffort | None] = mapped_column(
-        Enum(ReasoningEffort),
-        nullable=True,
-        default=None,
-    )
+    reasoning_effort: Mapped[ReasoningEffort] = mapped_column(Enum(ReasoningEffort), nullable=False)
     calls: Mapped[int] = mapped_column(Integer, nullable=False)
     prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)

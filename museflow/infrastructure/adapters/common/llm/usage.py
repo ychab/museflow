@@ -34,7 +34,7 @@ class LLMUsageMeter:
         self,
         step: str,
         model: str,
-        reasoning_effort: ReasoningEffort | None,
+        reasoning_effort: ReasoningEffort,
         usage: ChatUsage,
         duration: timedelta,
     ) -> None:
