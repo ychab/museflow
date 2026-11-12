@@ -35,14 +35,15 @@ class LLMUsageTotals:
 
 @dataclass(frozen=True, kw_only=True)
 class LLMUsageGroup:
-    # None when the runs have no value for the grouping: no profile (enrich) or a deleted one.
-    name: str | None
+    # One value per grouping, in the requested order. None when the runs have no value for a grouping: no profile
+    # (enrich) or a deleted one.
+    values: list[str | None]
     totals: LLMUsageTotals
 
 
 @dataclass(frozen=True, kw_only=True)
 class LLMUsageSummary:
-    """The LLM usage of a user, per group, with the grand total.
+    """The LLM usage of a user, per group, with the grand total (no subtotals).
 
     A run may span several groups (one per step or model), so the total counts its runs on its own.
     """

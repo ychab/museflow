@@ -147,10 +147,12 @@ The tags ranked from the tracks alone, next to what the LLM made of them. See [`
 ```bash
 museflow llm usage --email user@example.com --by month
 museflow llm usage --email user@example.com --by step --since 2026-11-01
+museflow llm usage --by model --by effort --operation enrich
 museflow llm usage --by user
 ```
 
-`--by step` shows which phase of a build is worth moving to a cheaper model, `--by run` lists the runs one by one.
+`--by step` shows which phase of a build is worth moving to a cheaper model, `--by model --by effort` compares the
+settings tried, `--by run` lists the runs one by one.
 Without `--email`, the command sums all the users; `--by user` shows who spends what. See [`llm`](commands/llm.md).
 
 ## Clean up after experiments

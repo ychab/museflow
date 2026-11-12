@@ -78,11 +78,12 @@ class ReasoningEffort(StrEnum):
 class LLMUsageGroupBy(StrEnum):
     OPERATION = "operation"  # the command that paid: taste build, discover, enrich
     MODEL = "model"  # the model OpenRouter actually served, fallbacks included
+    EFFORT = "effort"  # the reasoning effort asked for the step
     STEP = "step"  # the pipeline step: advisor, enricher, profiler segment / merge / reflect
     MONTH = "month"  # the calendar month of the run, in UTC
     PROFILE = "profile"  # the taste profile the run built or used; across users, prefixed with the user's email
     USER = "user"  # the user's email: the overview across users
-    RUN = "run"  # one command run: its start, operation and profile, oldest first
+    RUN = "run"  # one command run, shown by its start, oldest first
 
 
 class PlaylistHistoryOrderBy(StrEnum):
