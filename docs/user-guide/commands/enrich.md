@@ -17,6 +17,7 @@ museflow enrich tracks [--email <email>] [OPTIONS]
 | `--only-genre` | off | Enrich genre tags only. |
 | `--only-mood` | off | Enrich mood labels only. |
 | `--only-locale` | off | Enrich locales (sung languages) only. |
+| `--input` | none | YAML file listing the tracks to enrich by `fingerprint`, in the [`enrich export`](#enrich-export) format (the other fields are ignored). Only these tracks are processed. |
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
 | `--batch-size` | `200` | Number of tracks per LLM request. |
 | `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.1-flash-lite`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
@@ -24,6 +25,10 @@ museflow enrich tracks [--email <email>] [OPTIONS]
 
 Without any `--only-*` flag, all three fields are enriched. The flags can be combined. By default only tracks
 missing a requested field are processed, so the command is safe to re-run after a new import.
+
+With `--input` and `--force`, the same tracks are enriched again on every run: a fixed sample to compare models or
+reasoning efforts on, before reading the cost with `llm usage --by model --by effort`. Cut the sample from an
+`enrich export` file. Each run overwrites the sample's tags: export them between runs to keep each result.
 
 **Prerequisites.** Imported tracks and an OpenRouter API key (`OPENROUTER_API_KEY`). This command calls the LLM: use `--limit` to try it
 on a small sample first.
@@ -38,10 +43,12 @@ labels, and the locales are the ISO 639-1 codes of every language sung in the tr
 museflow enrich tracks --limit 200
 museflow enrich tracks --only-mood --force
 museflow enrich tracks --limit 20 --model openai/gpt-5-mini
+museflow enrich tracks --input sample.yaml --force --model openai/gpt-5-mini
 ```
 
 **Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
-re-run processes the missing tracks), or `No tracks to enrich.`. When every batch failed, it prints
+re-run processes the missing tracks), or `No tracks to enrich.`. With `--input`, a warning counts the fingerprints
+that match none of the user's tracks. When every batch failed, it prints
 `No track enriched: N batch(es) failed` and exits with code 1. Last, an `LLM usage` table gives the calls, tokens,
 cost and time of the run, then the total and the elapsed time of the command, whatever the outcome.
 

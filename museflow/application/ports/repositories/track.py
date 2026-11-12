@@ -38,6 +38,7 @@ class TrackRepository(ABC):
         played_last_min: date | None = None,
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
+        fingerprints: list[str] | None = None,
         missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
@@ -72,6 +73,7 @@ class TrackRepository(ABC):
             played_last_min: When set, only tracks last played on or after this date are returned.
             played_last_max: When set, only tracks last played on or before this date are returned.
             exclude_ids: When set, tracks whose id is in this list are excluded.
+            fingerprints: When set, only tracks whose fingerprint is in this list are returned (none when empty).
             missing_fields: When set, only tracks missing at least one of the given enrichment fields are returned.
             genres: When set, only tracks whose genres array overlaps (OR) with any listed tag are returned.
             moods: When set, only tracks whose moods array overlaps (OR) with any listed tag are returned.

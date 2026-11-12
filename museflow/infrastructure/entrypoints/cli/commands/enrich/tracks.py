@@ -1,10 +1,14 @@
 import asyncio
 from contextlib import AsyncExitStack
+from pathlib import Path
+from typing import Any
 
 from pydantic import EmailStr
+from pydantic import TypeAdapter
 
 import typer
 
+from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
@@ -18,6 +22,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import spinner
+from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -26,6 +31,11 @@ def enrich_tracks_command(
     only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
     only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
     only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locales (sung languages) only."),
+    input_path: Path | None = typer.Option(
+        None,
+        "--input",
+        help="YAML file listing the tracks to enrich by fingerprint, as written by `enrich export` (e.g. a sample).",
+    ),
     force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have the requested fields."),
     batch_size: int = typer.Option(
         EnrichTracksConfigInput.batch_size,
@@ -39,6 +49,8 @@ def enrich_tracks_command(
     ),
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
+    data = read_yaml(input_path) if input_path is not None else None
+
     meter = LLMUsageMeter()
     try:
         with spinner("Enriching tracks…"):
@@ -48,6 +60,7 @@ def enrich_tracks_command(
                     only_genre=only_genre,
                     only_mood=only_mood,
                     only_locale=only_locale,
+                    data=data,
                     force=force,
                     batch_size=batch_size,
                     model=model,
@@ -72,6 +85,12 @@ def enrich_tracks_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     else:
+        if result.not_found_count:
+            typer.secho(
+                f"{result.not_found_count} fingerprint(s) of the input match no track.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
         if result.enriched_count == 0 and result.error_count == 0:
             typer.secho("No tracks to enrich.", fg=typer.colors.YELLOW)
             return
@@ -96,6 +115,7 @@ async def enrich_tracks_logic(
     only_genre: bool = False,
     only_mood: bool = False,
     only_locale: bool = False,
+    data: list[Any] | None = None,
     force: bool = False,
     batch_size: int = 200,
     model: str | None = None,
@@ -113,7 +133,18 @@ async def enrich_tracks_logic(
     }
     fields = frozenset(selected) if selected else frozenset(EnrichField)
 
-    config = EnrichTracksConfigInput(fields=fields, force=force, batch_size=batch_size, limit=limit)
+    fingerprints = None
+    if data is not None:
+        entries = TypeAdapter(list[EnrichmentEntryInput]).validate_python(data)
+        fingerprints = list(dict.fromkeys(entry.fingerprint for entry in entries))
+
+    config = EnrichTracksConfigInput(
+        fields=fields,
+        fingerprints=fingerprints,
+        force=force,
+        batch_size=batch_size,
+        limit=limit,
+    )
 
     async with AsyncExitStack() as stack:
         enricher = await stack.enter_async_context(get_enricher(model=model, meter=meter))

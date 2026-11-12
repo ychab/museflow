@@ -48,6 +48,26 @@ class TestEnrichTracksUseCase:
         ).scalar_one()
         assert (row.operation, row.step, row.calls) == (LLMOperation.ENRICH, "enricher", 1)
 
+    async def test__fingerprints__only_those_tracks(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
+    ) -> None:
+        sample_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
+        other_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
+
+        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+            user,
+            EnrichTracksConfigInput(fingerprints=[sample_db.fingerprint, "unknown"]),
+        )
+
+        assert (result.enriched_count, result.not_found_count) == (1, 1)
+        async with uow:
+            tracks = {track.id: track for track in await uow.tracks.get_list(user_id=user.id)}
+        assert tracks[sample_db.id].genres
+        assert tracks[other_db.id].genres == []
+
     async def test__unenriched_only__skips_already_enriched(
         self,
         uow: UnitOfWorkPort,

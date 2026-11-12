@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class EnrichTracksReport:
     enriched_count: int
     error_count: int
+    not_found_count: int = 0  # fingerprints asked for that match none of the user's tracks
 
 
 class EnrichTracksUseCase:
@@ -57,15 +58,20 @@ class EnrichTracksUseCase:
     async def _enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
         missing_fields = None if config.force else config.fields
 
+        not_found_count = 0
         async with self._uow as uow:
             tracks = await uow.tracks.get_list(
                 user_id=user.id,
+                fingerprints=config.fingerprints,
                 missing_fields=missing_fields,
                 limit=config.limit,
             )
+            if config.fingerprints is not None:
+                known = await uow.tracks.get_known_identifiers(user.id, config.fingerprints)
+                not_found_count = len(set(config.fingerprints) - known.fingerprints)
 
         if not tracks:
-            return EnrichTracksReport(enriched_count=0, error_count=0)
+            return EnrichTracksReport(enriched_count=0, error_count=0, not_found_count=not_found_count)
 
         batches = [tracks[i : i + config.batch_size] for i in range(0, len(tracks), config.batch_size)]
         total_batches = len(batches)
@@ -125,7 +131,11 @@ class EnrichTracksUseCase:
                 extra={"batch": i, "total": total_batches, "count": len(enriched_tracks)},
             )
 
-        return EnrichTracksReport(enriched_count=enriched_count, error_count=error_count)
+        return EnrichTracksReport(
+            enriched_count=enriched_count,
+            error_count=error_count,
+            not_found_count=not_found_count,
+        )
 
     def _apply_enrichments(
         self,

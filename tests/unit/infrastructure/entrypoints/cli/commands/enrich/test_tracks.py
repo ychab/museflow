@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 from typing import Final
 from unittest import mock
@@ -62,6 +63,27 @@ class TestEnrichTracksParserCommand:
         runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--model", "openai/gpt-5-mini"])
         assert mock_enrich_tracks_logic.call_args.kwargs["model"] == "openai/gpt-5-mini"
 
+    def test__input__defaults_to_none(self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock) -> None:
+        runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert mock_enrich_tracks_logic.call_args.kwargs["data"] is None
+
+    def test__input__read(
+        self,
+        runner: CliRunner,
+        mock_enrich_tracks_logic: mock.AsyncMock,
+        tmp_path: Path,
+    ) -> None:
+        sample = tmp_path / "sample.yaml"
+        sample.write_text("- fingerprint: abc\n  genres: [folk]\n- fingerprint: def\n")
+
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--input", str(sample)])
+
+        assert result.exit_code == 0
+        assert mock_enrich_tracks_logic.call_args.kwargs["data"] == [
+            {"fingerprint": "abc", "genres": ["folk"]},
+            {"fingerprint": "def"},
+        ]
+
     def test__only_flags__all_default_to_false(
         self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock
     ) -> None:
@@ -115,6 +137,15 @@ class TestEnrichTracksCommand:
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No tracks to enrich" in result.output
+
+    def test__not_found_count__shows_warning(
+        self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock
+    ) -> None:
+        mock_enrich_tracks_logic.return_value = EnrichTracksReport(enriched_count=3, error_count=0, not_found_count=2)
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        assert result.exit_code == 0
+        assert "2 fingerprint(s) of the input match no track." in result.output
+        assert "Enriched 3 track(s)" in result.output
 
     def test__error_count__shows_warning(self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock) -> None:
         mock_enrich_tracks_logic.return_value = EnrichTracksReport(enriched_count=3, error_count=2)
@@ -218,8 +249,28 @@ class TestEnrichTracksLogic:
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
+            fingerprints=None,
             missing_fields=None,
             limit=100,
+        )
+
+    async def test__data__fingerprints_deduplicated(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_list.return_value = []
+
+        await enrich_tracks_logic(
+            email="test@example.com",
+            data=[{"fingerprint": "abc", "genres": ["folk"]}, {"fingerprint": "def"}, {"fingerprint": "abc"}],
+        )
+
+        mock_track_repository.get_list.assert_awaited_once_with(
+            user_id=mock_user_repository.get_by_email.return_value.id,
+            fingerprints=["abc", "def"],
+            missing_fields=frozenset(EnrichField),
+            limit=None,
         )
 
     async def test__only_locale__missing_fields_scoped_to_locale(
@@ -236,6 +287,7 @@ class TestEnrichTracksLogic:
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
+            fingerprints=None,
             missing_fields=frozenset({EnrichField.LOCALE}),
             limit=None,
         )
@@ -251,6 +303,7 @@ class TestEnrichTracksLogic:
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,
+            fingerprints=None,
             missing_fields=frozenset(EnrichField),
             limit=None,
         )

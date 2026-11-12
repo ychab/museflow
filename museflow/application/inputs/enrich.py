@@ -13,6 +13,8 @@ from museflow.domain.utils.text import validate_locales
 @dataclass(frozen=True, kw_only=True)
 class EnrichTracksConfigInput:
     fields: frozenset[EnrichField] = frozenset(EnrichField)
+    # Only these tracks, e.g. a fixed sample to compare models on; all the user's tracks when None
+    fingerprints: list[str] | None = None
     force: bool = False
     batch_size: int = 200
     limit: int | None = None

@@ -199,6 +199,29 @@ class TestTrackSQLRepository:
 
         assert [t.id for t in result] == [kept.id]
 
+    async def test__get_list__fingerprints(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        kept = await TrackModelFactory.create_async(user_id=user.id)
+        await TrackModelFactory.create_async(user_id=user.id)
+
+        result = await track_repository.get_list(user.id, fingerprints=[kept.fingerprint, "unknown"])
+
+        assert [t.id for t in result] == [kept.id]
+
+    async def test__get_list__fingerprints__empty(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id)
+
+        result = await track_repository.get_list(user.id, fingerprints=[])
+
+        assert result == []
+
     async def test__get_list__exclude_skipped(
         self,
         user: User,
