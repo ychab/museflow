@@ -105,7 +105,7 @@ titles they invented some and kept to the genre's canon (the measure behind this
 
 **Step 1, artists** (`get_discovery_artists`, usage step `advisor_artists`). It returns a `DiscoveryArtistStrategy`:
 a reasoning paragraph, a strategy label, the artists each with the `sound` wanted from them for this playlist (era,
-mood, texture) and a confidence score, and a playlist name. The prompt is assembled in
+mood, texture), a confidence score and a `requested` flag, and a playlist name. The prompt is assembled in
 [`advisors/openrouter/client.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/advisors/openrouter/client.py),
 as a system message (the role and rules) and a user message (the session's focus and prompt), from:
 
@@ -114,15 +114,16 @@ as a system message (the role and rules) and a user message (the session's focus
 | Profile summaries | Archetype, core identity, current vibe, behavioural traits and era timeline rendered by pure helpers in `domain/utils/taste.py` | Who the listener is |
 | Risk calibration | Derived from the `openness` and `adventurousness` traits: both below 0.4 means stay in the comfort zone, either above 0.7 means push into adjacent territory | How far to stray |
 | Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
-| Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words. With a prompt, a rule says what it settles over the profile: the sound it implies (a calm genre sets aside a high-energy trait), and the artists when it names a genre with its own sound; a language counts only when stated, and the profile's languages no longer break ties among the artists (#184). The profile keeps the rest, and a prompt implying no sound ("US rap") is answered from the profile alone (#177) |
+| Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words. With a prompt, a rule says what it settles over the profile: the sound it implies (a calm genre sets aside a high-energy trait), and the artists when it names a genre with its own sound; a language counts only when stated, and the profile's languages no longer break ties among the artists (#184). The profile keeps the rest, and a prompt implying no sound ("US rap") is answered from the profile alone (#177). An artist the prompt names is either the request ("tracks of Artist X I don't know": suggested with `requested` set, even if covered, and alone when the prompt names only artists) or a sound reference ("sounds like Artist X": kept out) (#200) |
 | Exclusion list | The artists asked in earlier rounds of the same run | Other artists in the next round |
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
 | Liked tracks | Tracks rated 7 or more, at most 200, highest first; not filtered on the prompt | Concrete taste anchors beyond statistics |
 | Disliked tracks | Tracks rated 2 or less, at most 50, lowest first (`DISCOVERY_DISLIKED_SCORE_THRESHOLD`, `DISCOVERY_DISLIKED_TRACKS_LIMIT`) | What to steer away from, beyond the blacklist |
-| Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists |
+| Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists, unless the prompt asks for one of them |
 
 **Between the calls, no LLM.** For each artist, the provider is searched by artist only
-(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify), a [strict match](#strict-artist-match) keeps the tracks crediting that
+(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify, `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` for a requested
+artist, as the search ranks by popularity and its first pages hold the tracks the user knows), a [strict match](#strict-artist-match) keeps the tracks crediting that
 exact artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
 provider rejects as malformed skips that artist with a warning instead of ending the run.
 
@@ -131,7 +132,8 @@ artist with its wanted sound, and the remaining tracks as `id | title | album | 
 ids and a fit score. The ids are short numbers given in the prompt: the adapter maps them back to the candidates and
 drops any other, so a title cannot be invented. The prompt asks to judge a track by its sound (the artist's style on
 that album, in that year), never by its words, and to leave out a track it cannot place: seeing only titles, the model
-had picked tracks whose title echoed the theme. The profile is not sent again: the strategy carries the intent, and the
+had picked tracks whose title echoed the theme. A requested artist is marked in the list: no per-artist limit for them,
+and their original tracks only (no remix, live or re-recording of a track the user likely knows). The profile is not sent again: the strategy carries the intent, and the
 call stays cheap.
 
 **Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
@@ -150,7 +152,8 @@ artist got 10 search results, all by other artists, and all were rejected.
 
 The tracks picked are sorted by fit score, then capped per artist (`DISCOVERY_MAX_TRACKS_PER_ARTIST`, default 3),
 counting every credited artist: the artists of one scene feature on each other's tracks, and a cap on the primary
-artist alone let one of them fill the playlist.
+artist alone let one of them fill the playlist. A requested artist is not capped, nor counted: their tracks are the
+playlist itself.
 
 The match is a pure function, deterministic and cheap to test with table-driven cases.
 

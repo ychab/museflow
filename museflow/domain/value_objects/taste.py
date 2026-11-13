@@ -9,6 +9,9 @@ class ArtistSuggested:
     name: str
     sound: str  # what the advisor wants from this artist for the request, to guide the pick among their tracks
     score: float
+    # The request asks for this artist's own tracks ("tracks of X I don't know"), not for their sound: their search
+    # goes deeper and their tracks are not capped per artist.
+    requested: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -38,6 +38,12 @@ then may pick as many tracks, `DISCOVERY_ARTIST_TRACKS_PAGES` (2) search pages o
 `DISCOVERY_MAX_ATTEMPTS` (3) rounds at most, and `DISCOVERY_MAX_TRACKS_PER_ARTIST` (3) tracks per artist, a featured
 appearance included.
 
+**Naming an artist.** The advisor reads what the prompt asks of an artist it names. "Tracks of Artist X I don't know"
+asks for that artist's own tracks: Artist X is suggested even if your library already covers them, their search goes
+deeper (`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 5 pages), their tracks are not capped per artist, and a prompt
+naming only artists gets only them, in a single round. "Something that sounds like Artist X" uses the artist as a sound reference: the
+playlist holds other artists.
+
 **Focus strategies**
 
 - `expansion`: cousin genres that have not been explored yet.
@@ -60,6 +66,7 @@ library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are n
 museflow playlist discover --limit 15
 museflow playlist discover "chill jazz and soul, mostly instrumental" --dry-run
 museflow playlist discover "lo-fi beats for a rainy evening" --title "Friday night"
+museflow playlist discover "tracks of The Fictional Band I don't know"
 museflow playlist discover --focus roots_revival
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```

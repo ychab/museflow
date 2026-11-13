@@ -7,6 +7,7 @@ from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 
 class ArtistSuggestedFactory(DataclassFactory[ArtistSuggested]):
     __model__ = ArtistSuggested
+    __use_defaults__ = True
 
     name = Use(DataclassFactory.__faker__.name)
 

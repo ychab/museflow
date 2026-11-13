@@ -15,7 +15,7 @@ class TestToDiscoveryArtistStrategy:
             strategy_label="label",
             recommended_artists=[
                 SuggestedArtist(name="\x00\x19", sound="sound", score=0.9),
-                SuggestedArtist(name="The\x1bBand", sound="Warm brass", score=1.4),
+                SuggestedArtist(name="The\x1bBand", sound="Warm brass", score=1.4, requested=True),
             ],
             suggested_playlist_name="name",
         )
@@ -23,7 +23,9 @@ class TestToDiscoveryArtistStrategy:
         result = to_discovery_artist_strategy(content)
 
         # A name of control characters only has nothing to search: dropped.
-        assert [(a.name, a.sound, a.score) for a in result.artists] == [("The Band", "Warm brass", 1.0)]
+        assert [(a.name, a.sound, a.score, a.requested) for a in result.artists] == [
+            ("The Band", "Warm brass", 1.0, True)
+        ]
 
 
 class TestToTracksPicked:
