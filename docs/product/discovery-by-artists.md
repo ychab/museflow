@@ -89,7 +89,9 @@ writes reliable titles, the archive and #174 say exactly what was tried, and how
 - **A request leads only on what it settles.** Asked for a calm sound, the model used to lean toward the energy my
   profile shows. Now the request wins on the sound it implies, and a genre with its own sound decides which artists
   come in; the profile keeps the rest, and a request like "US rap" is answered from the profile alone (#177). On a
-  niche genre, 0 of 5 playlists were on theme before, 2 of 3 after. A few artists of my usual scene still slip in on
-  such a genre, given a made-up sound (#184).
+  niche genre, 0 of 5 playlists were on theme before, 2 of 3 after. The profile's languages then still broke ties and
+  brought in a few artists of my usual scene, given a made-up sound; without that tie-break, 3 runs out of 3 kept to
+  the genre (#184). The genre is the model's reading of it, which may not be mine; and on a genre far from my profile
+  (calm acoustic folk), the playlist fits the theme but no longer sounds like me.
 - **The same artists come back** across runs on one theme, deeper into their catalogue each time. That will run out
   one day; how the model reacts then is still to see.

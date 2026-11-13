@@ -64,7 +64,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
 
         # With a request, the profile still leads, except on what the request settles: the sound it implies, and the
-        # artists when it names a genre with its own sound (#177). Off-genre artists still slip in at the edge (#184).
+        # artists when it names a genre with its own sound (#177). Without a stated language, the profile's languages
+        # no longer break ties: they brought in artists of the user's usual scene, given a made-up genre sound (#184).
         request_block = ""
         if prompt:
             request_block = (
@@ -82,7 +83,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "  sits next to it: a rapper with no cloud sound is no cloud rap artist, however close to the profile.\n"
                 "- A language or region counts only when the request states it. Never infer one from the wording or\n"
                 "  the language of the request (e.g. 'rap cloud' written in French does not ask for French artists).\n"
-                "  Among the artists that fit, the profile's languages and scenes may still break ties.\n"
+                "  Without one stated, the profile's languages never choose an artist: one who fits the genre fully\n"
+                "  beats one who fits it less but shares the user's language.\n"
                 "- The pioneers and best-known artists of a requested genre are likely known to the user already:\n"
                 "  favour the next generation, the lesser-known and the international scenes of that genre.\n"
                 "- Everything else still comes from the profile: the scenes, eras and production the user loves, the\n"
