@@ -12,12 +12,13 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.exceptions import AdvisorRateLimitExceededError
 from museflow.domain.exceptions import DiscoveryTasteStrategyError
-from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 
 from tests.unit.factories.entities.taste import TasteProfileDataFactory
 from tests.unit.factories.entities.taste import TasteProfileFactory
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.discovery import ArtistSuggestedFactory
+from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -105,6 +106,7 @@ class TestOpenRouterAdvisorAdapter:
         assert ("### FOCUS STRATEGY" in system_message["content"]) is (focus is not None)
         # Without a request, the profile leads alone: no rule on what a request settles.
         assert ("### USER REQUEST VS TASTE PROFILE" in system_message["content"]) is (prompt is not None)
+        assert ("### ARTISTS NAMED IN THE REQUEST" in system_message["content"]) is (prompt is not None)
         assert user_message["content"] == expected_message
 
     async def test__get_discovery_artists__with_excluded_artists_builds_exclusion_block(
@@ -319,7 +321,6 @@ class TestOpenRouterAdvisorAdapter:
     async def test__pick_discovery_tracks__candidates_listed_by_id(
         self,
         openrouter_advisor: OpenRouterAdvisorAdapter,
-        discovery_artist_strategy: DiscoveryArtistStrategy,
         httpx_mock: HTTPXMock,
     ) -> None:
         httpx_mock.add_response(
@@ -331,13 +332,16 @@ class TestOpenRouterAdvisorAdapter:
                 ]
             },
         )
-        artist = discovery_artist_strategy.artists[0]
+        artist = ArtistSuggestedFactory.build()
+        requested = ArtistSuggestedFactory.build(requested=True)
+        strategy = DiscoveryArtistStrategyFactory.build(artists=[artist, requested])
         dated = TrackFactory.build(name="Neon Harbor", album_name="Night Drive", album_year=1999)
         undated = TrackFactory.build(name="Glass Rain", album_name=None, album_year=None)
+        requested_track = TrackFactory.build(name="Paper Moon", album_name="Late Lights", album_year=2021)
 
         tracks_picked = await openrouter_advisor.pick_discovery_tracks(
-            strategy=discovery_artist_strategy,
-            candidates={artist.name: [dated, undated]},
+            strategy=strategy,
+            candidates={artist.name: [dated, undated], requested.name: [requested_track]},
             tracks_limit=5,
             max_tracks_per_artist=3,
         )
@@ -348,4 +352,7 @@ class TestOpenRouterAdvisorAdapter:
         system_message, user_message = body["messages"]
         assert f"#### {artist.name}\nWanted sound: {artist.sound}\n" in system_message["content"]
         assert "- 1 | Neon Harbor | Night Drive | 1999\n- 2 | Glass Rain | ? | ?" in system_message["content"]
+        # The artist whose own tracks the request asks for is marked: no per-artist limit for them.
+        assert f"#### {requested.name} (REQUESTED)\nWanted sound: {requested.sound}\n" in system_message["content"]
+        assert "- 3 | Paper Moon | Late Lights | 2021" in system_message["content"]
         assert user_message["content"] == "Choose the tracks for this playlist."

@@ -85,6 +85,7 @@ def playlist_discover_command(
                         title=title,
                         advisor_limit=math.ceil(limit * app_settings.DISCOVERY_ADVISOR_LIMIT_RATIO),
                         artist_tracks_pages=app_settings.DISCOVERY_ARTIST_TRACKS_PAGES,
+                        requested_artist_tracks_pages=app_settings.DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES,
                         liked_tracks_score_threshold=app_settings.DISCOVERY_LIKED_SCORE_THRESHOLD,
                         liked_tracks_limit=app_settings.DISCOVERY_LIKED_TRACKS_LIMIT,
                         disliked_tracks_score_threshold=app_settings.DISCOVERY_DISLIKED_SCORE_THRESHOLD,

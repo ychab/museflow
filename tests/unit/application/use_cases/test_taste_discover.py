@@ -366,6 +366,93 @@ class TestDiscoverTasteUseCase:
         # The featured appearance counts for the artist: the fourth track is over the cap.
         assert result.tracks == [high, featured, capped]
 
+    async def test__requested_artist__searched_deeper__uncapped(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        """The artist whose own tracks the request asks for is searched deeper and neither limits nor counts."""
+        requested = ArtistSuggestedFactory.build(requested=True)
+        other = ArtistSuggestedFactory.build()
+        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(
+            artists=[requested, other]
+        )
+        tracks_requested = TrackFactory.batch(3, artists=[requested.name])
+        # Counts for the other artist only: the requested one is not capped.
+        featuring = TrackFactory.build(artists=[requested.name, other.name])
+        track_other = TrackFactory.build(artists=[other.name])
+        mock_provider_library.search_artist_tracks.side_effect = [[*tracks_requested, featuring], [track_other]]
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(
+                playlist_limit=10,
+                max_attempts=1,
+                max_tracks_per_artist=1,
+                artist_tracks_pages=2,
+                requested_artist_tracks_pages=5,
+                dry_run=True,
+            ),
+        )
+
+        assert result.tracks == [*tracks_requested, featuring]
+        mock_provider_library.search_artist_tracks.assert_any_await(
+            artist=requested.name, max_pages=5, log_enabled=False
+        )
+        mock_provider_library.search_artist_tracks.assert_any_await(artist=other.name, max_pages=2, log_enabled=False)
+
+    async def test__attempts__only_requested_artists__stops(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        """A request naming only artists has no other artist to ask for: no further paid attempt."""
+        requested = ArtistSuggestedFactory.build(requested=True)
+        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(artists=[requested])
+        track = TrackFactory.build(artists=[requested.name])
+        mock_provider_library.search_artist_tracks.return_value = [track]
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=10, max_attempts=3, dry_run=True),
+        )
+
+        mock_advisor.get_discovery_artists.assert_awaited_once()
+        assert result.tracks == [track]
+
+    async def test__attempts__no_artist_left__stops(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        """An attempt suggesting no artist ends the run: the next ones would be paid for nothing."""
+        artist = ArtistSuggestedFactory.build()
+        strategy = DiscoveryArtistStrategyFactory.build(artists=[artist])
+        mock_advisor.get_discovery_artists.side_effect = [
+            strategy,
+            DiscoveryArtistStrategyFactory.build(artists=[]),
+        ]
+        track = TrackFactory.build(artists=[artist.name])
+        mock_provider_library.search_artist_tracks.return_value = [track]
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=10, max_attempts=3, dry_run=True),
+        )
+
+        assert mock_advisor.get_discovery_artists.await_count == 2
+        mock_advisor.pick_discovery_tracks.assert_awaited_once()
+        # The strategy that chose the tracks is kept.
+        assert result.strategy == strategy
+        assert result.tracks == [track]
+        assert [r.attempt for r in result.reports] == [1]
+
     async def test__attempts__capped_below_limit__next_attempt(
         self,
         user: User,

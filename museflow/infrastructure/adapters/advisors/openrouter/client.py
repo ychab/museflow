@@ -66,6 +66,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         # With a request, the profile still leads, except on what the request settles: the sound it implies, and the
         # artists when it names a genre with its own sound (#177). Without a stated language, the profile's languages
         # no longer break ties: they brought in artists of the user's usual scene, given a made-up genre sound (#184).
+        # An artist the request names is either the request itself, uncapped and searched deeper, or a sound reference
+        # kept out (#200).
         request_block = ""
         if prompt:
             request_block = (
@@ -92,6 +94,16 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "  entirely.\n"
                 "- In the reasoning, name each profile dimension you set aside because the request overrides it, or\n"
                 "  say that none was.\n\n"
+                "### ARTISTS NAMED IN THE REQUEST\n"
+                "Read what the wording asks of each artist the request names:\n"
+                "- The request asks for the artist's OWN tracks (e.g. 'tracks of Artist X I don't know', 'more from\n"
+                "  Artist X', 'Artist X deep cuts'): the artist IS the request. Recommend them with `requested` true,\n"
+                "  even when the library already covers them: the user wants their tracks they have not heard yet.\n"
+                "  A request naming only such artists gets ONLY them: no other artist. Once they are all in the\n"
+                "  exclusion list, return no artist at all.\n"
+                "- The request uses the artist as a REFERENCE (e.g. 'something that sounds like Artist X', 'in the\n"
+                "  vein of Artist X'): the artist is the sound wanted, not the playlist. Never recommend them: suggest\n"
+                "  other artists with that sound, `requested` false.\n\n"
             )
 
         constraints = (
@@ -102,6 +114,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "  and a second step chooses among them. Do not name any track.\n"
             "- recommended_artists MUST have tracks the user has NOT heard before — they are new discoveries.\n"
             "- recommended_artists MUST NOT appear in any exclusion or blacklist section above.\n"
+            "- `requested` is true ONLY for an artist whose own tracks the user request asks for; false for every\n"
+            "  other artist, and always false without a user request.\n"
             "- A user request, when given, sets the playlist theme: every recommended artist MUST have tracks that\n"
             "  fit it.\n"
             "- Every artist MUST be real and present in the streaming catalogues: give the name exactly as credited.\n"
@@ -133,6 +147,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         focus: DiscoveryFocus | None = None,
     ) -> list[TrackPicked]:
         sounds = {artist.name: artist.sound for artist in strategy.artists}
+        artists_requested = {artist.name for artist in strategy.artists if artist.requested}
         # Short ids instead of titles: the reply can only point at a listed track, never write a new one.
         candidates_by_id: dict[str, Track] = {}
         artist_blocks: list[str] = []
@@ -144,7 +159,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 album = track.album_name or "?"
                 year = track.album_year or "?"
                 lines.append(f"- {track_id} | {track.name} | {album} | {year}")
-            artist_blocks.append(f"#### {artist}\nWanted sound: {sounds.get(artist, '')}\n" + "\n".join(lines))
+            requested = " (REQUESTED)" if artist in artists_requested else ""
+            artist_blocks.append(
+                f"#### {artist}{requested}\nWanted sound: {sounds.get(artist, '')}\n" + "\n".join(lines)
+            )
 
         focus_line = f"- Focus strategy: {focus.value}\n" if focus else ""
         system_prompt = (
@@ -170,6 +188,9 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "  how it sounds, leave it out.\n"
             f"- Pick up to {tracks_limit} tracks, at most {max_tracks_per_artist} per artist, featured appearances\n"
             "  included (a track crediting two artists counts for both): spread the picks across the artists.\n"
+            "- An artist marked (REQUESTED) is one whose own tracks the user asked for: no per-artist limit, pick as\n"
+            "  many of their tracks as fit. Their original tracks only: leave out remixes, live, acoustic, sped-up\n"
+            "  or slowed versions and re-recordings, as the user likely knows the original.\n"
             "- Quality over quantity: pick fewer tracks, or none of an artist, when nothing fits — never pad.\n"
             f"  {tracks_limit} is a ceiling, not a target: a short list is a valid answer, as the app then runs\n"
             "  another round with other artists. A track off the requested sound is worse than no track.\n"
@@ -316,7 +337,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "### ARTISTS ALREADY COVERED IN THE LIBRARY\n"
                 "The user already owns many tracks of these artists (count in brackets): their well-known tracks "
                 "are already known. A rare deep cut of theirs is still welcome, but most picks should come from "
-                "other artists:\n"
+                "other artists, unless the user request asks for one of these artists' own tracks:\n"
                 f"{formatted}"
             )
         if blacklisted_artists:

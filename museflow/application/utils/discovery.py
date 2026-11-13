@@ -39,13 +39,21 @@ def filter_by_artist(artist: str, tracks: list[Track]) -> list[Track]:
     return kept
 
 
-def apply_artist_cap(tracks: list[Track], max_tracks_per_artist: int) -> list[Track]:
-    """Keeps at most `max_tracks_per_artist` tracks per credited artist: a featured appearance counts too."""
+def apply_artist_cap(
+    tracks: list[Track],
+    max_tracks_per_artist: int,
+    uncapped_artists: set[str] | None = None,
+) -> list[Track]:
+    """Keeps at most `max_tracks_per_artist` tracks per credited artist: a featured appearance counts too.
+
+    The `uncapped_artists` neither limit a track nor count: a track of theirs is limited by its other artists only.
+    """
     tracks_filtered: list[Track] = []
     artist_counts: Counter[str] = Counter()
+    uncapped = {normalize_text(a) for a in uncapped_artists or ()}
 
     for track in tracks:
-        artists = {normalize_text(a) for a in track.artists}
+        artists = {normalize_text(a) for a in track.artists} - uncapped
         if all(artist_counts[artist] < max_tracks_per_artist for artist in artists):
             tracks_filtered.append(track)
             artist_counts.update(artists)

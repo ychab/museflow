@@ -13,7 +13,12 @@ def to_discovery_artist_strategy(content: DiscoveryArtistsResponse) -> Discovery
         strategy_label=content.strategy_label,
         # Nothing to search when a name holds nothing but control characters.
         artists=[
-            ArtistSuggested(name=name, sound=artist.sound, score=_clamp_score(artist.score))
+            ArtistSuggested(
+                name=name,
+                sound=artist.sound,
+                score=_clamp_score(artist.score),
+                requested=artist.requested,
+            )
             for artist in content.recommended_artists
             if (name := strip_control_chars(artist.name))
         ],

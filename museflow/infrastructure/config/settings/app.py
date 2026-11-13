@@ -51,6 +51,8 @@ class AppSettings(BaseSettings):
     # returning fewer picks than asked both eat into them.
     DISCOVERY_ADVISOR_LIMIT_RATIO: float = 1.5
     DISCOVERY_ARTIST_TRACKS_PAGES: int = Field(default=2, ge=1)  # pages of 10 search results per suggested artist
+    # Per artist whose own tracks the request asks for: the first pages hold their best-known tracks
+    DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES: int = Field(default=5, ge=1)
     DISCOVERY_MAX_ATTEMPTS: int = 3
     DISCOVERY_MAX_TRACKS_PER_ARTIST: int = 3
     DISCOVERY_BLACKLIST_SCORE_THRESHOLD: int = 3

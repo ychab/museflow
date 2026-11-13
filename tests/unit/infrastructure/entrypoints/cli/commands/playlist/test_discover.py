@@ -61,6 +61,7 @@ class TestPlaylistDiscoverParserCommand:
         assert config.playlist_limit == 15
         assert config.advisor_limit == 23
         assert config.artist_tracks_pages == 2
+        assert config.requested_artist_tracks_pages == 5
 
     def test__prompt__omitted(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com"])

@@ -8,6 +8,8 @@ class SuggestedArtist(BaseModel):
     name: str = Field(..., min_length=1)
     sound: str
     score: float
+    # Required by the strict schema; a model that leaves it out asks for no artist's own tracks.
+    requested: bool = False
 
 
 class DiscoveryArtistsResponse(BaseModel):
@@ -27,6 +29,7 @@ DISCOVERY_ARTISTS_SCHEMA = JsonSchemaProperty.object(
                     "name": JsonSchemaProperty.string(),
                     "sound": JsonSchemaProperty.string(),
                     "score": JsonSchemaProperty.number(),
+                    "requested": JsonSchemaProperty.boolean(),
                 }
             )
         ),

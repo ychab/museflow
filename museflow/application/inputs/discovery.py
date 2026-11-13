@@ -15,11 +15,14 @@ class DiscoverTasteConfigInput:
         title: Optional playlist name, used as is; if omitted the name is built from the advisor's suggestion.
         advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
         artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
+        requested_artist_tracks_pages: Search pages fetched for an artist whose own tracks the request asks for:
+            deeper, as the first pages hold the artist's best-known tracks, likely known to the user.
         artist_tracks_concurrency: Artists whose catalogue tracks are searched at the same time, few enough for the
             provider not to rate limit the run.
         playlist_limit: Target number of tracks in the generated playlist.
         max_attempts: Maximum number of advisor rounds before stopping.
-        max_tracks_per_artist: Maximum tracks per credited artist in the final playlist.
+        max_tracks_per_artist: Maximum tracks per credited artist in the final playlist, except an artist whose own
+            tracks the request asks for.
         liked_tracks_score_threshold: Minimum user score for a track to be sent to the advisor as a positive example.
         liked_tracks_limit: Maximum number of liked tracks to send (top-scored first).
         disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
@@ -35,6 +38,7 @@ class DiscoverTasteConfigInput:
 
     advisor_limit: int = 15
     artist_tracks_pages: int = 2
+    requested_artist_tracks_pages: int = 5
     artist_tracks_concurrency: int = 4
     playlist_limit: int = 10
 
