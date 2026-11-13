@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
@@ -287,19 +288,25 @@ class DiscoverTasteUseCase:
         A track is kept only when it credits the artist, and is neither blacklisted nor kept by an earlier attempt.
         """
         logger.debug("--- Artist tracks ---")
+        # Searched concurrently, a few at a time not to hit the rate limit; gather keeps the artists' order, so the
+        # first artist still keeps a track two of them share.
+        semaphore = asyncio.Semaphore(config.artist_tracks_concurrency)
+        searches = [
+            asyncio.create_task(self._search_artist_tracks(artist=artist.name, config=config, semaphore=semaphore))
+            for artist in strategy.artists
+        ]
+        try:
+            results = await asyncio.gather(*searches)
+        finally:
+            # A failed search leaves the others running: cancel them (a no-op on those already done).
+            for search in searches:
+                search.cancel()
+
         candidates: dict[str, list[Track]] = {}
         fingerprints_seen = set(fingerprints_kept)
         found = matched = 0
-        for artist in strategy.artists:
-            try:
-                tracks = await self._provider_library.search_artist_tracks(
-                    artist=artist.name,
-                    max_pages=config.artist_tracks_pages,
-                    log_enabled=False,
-                )
-            except ProviderSearchQueryInvalidError:
-                # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
-                logger.warning(f"Artist skipped, its search query was rejected: '{artist.name}'")
+        for artist, tracks in zip(strategy.artists, results, strict=True):
+            if tracks is None:
                 continue
 
             tracks_matched = filter_by_artist(artist=artist.name, tracks=tracks)
@@ -333,6 +340,25 @@ class DiscoverTasteUseCase:
             extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
         )
         return candidates
+
+    async def _search_artist_tracks(
+        self,
+        artist: str,
+        config: DiscoverTasteConfigInput,
+        semaphore: asyncio.Semaphore,
+    ) -> list[Track] | None:
+        """Returns the catalogue tracks found for the artist, or None if the provider rejected its search query."""
+        async with semaphore:
+            try:
+                return await self._provider_library.search_artist_tracks(
+                    artist=artist,
+                    max_pages=config.artist_tracks_pages,
+                    log_enabled=False,
+                )
+            except ProviderSearchQueryInvalidError:
+                # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
+                logger.warning(f"Artist skipped, its search query was rejected: '{artist}'")
+                return None
 
     @staticmethod
     def _select_tracks(tracks_picked: list[TrackPicked], config: DiscoverTasteConfigInput) -> list[Track]:
