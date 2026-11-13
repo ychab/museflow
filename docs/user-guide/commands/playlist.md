@@ -40,7 +40,7 @@ appearance included.
 
 **Naming an artist.** The advisor reads what the prompt asks of an artist it names. "Tracks of Artist X I don't know"
 asks for that artist's own tracks: Artist X is suggested even if your library already covers them, their search goes
-deeper (`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 5 pages), their tracks are not capped per artist, and a prompt
+deeper (`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 10 pages), their tracks are not capped per artist, and a prompt
 naming only artists gets only them, in a single round. "Something that sounds like Artist X" uses the artist as a sound reference: the
 playlist holds other artists.
 

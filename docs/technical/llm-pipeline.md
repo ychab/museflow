@@ -122,8 +122,8 @@ as a system message (the role and rules) and a user message (the session's focus
 | Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists, unless the prompt asks for one of them |
 
 **Between the calls, no LLM.** For each artist, the provider is searched by artist only
-(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify, `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` for a requested
-artist, as the search ranks by popularity and its first pages hold the tracks the user knows), a [strict match](#strict-artist-match) keeps the tracks crediting that
+(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify, the first ones holding only 5 (#203);
+`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 10, for a requested artist, as the search ranks by popularity and its first pages hold the tracks the user knows), a [strict match](#strict-artist-match) keeps the tracks crediting that
 exact artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
 provider rejects as malformed skips that artist with a warning instead of ending the run.
 

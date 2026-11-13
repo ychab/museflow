@@ -38,7 +38,7 @@ class DiscoverTasteConfigInput:
 
     advisor_limit: int = 15
     artist_tracks_pages: int = 2
-    requested_artist_tracks_pages: int = 5
+    requested_artist_tracks_pages: int = 10
     artist_tracks_concurrency: int = 4
     playlist_limit: int = 10
 
