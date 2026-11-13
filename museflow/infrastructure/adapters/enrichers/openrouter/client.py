@@ -59,7 +59,8 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         if EnrichField.MOOD in fields:
             parts.append(
                 "### MOOD RULES\n"
-                f"- Return 1 to 2 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
+                f"- Return 2 to 3 mood labels chosen ONLY from this exact vocabulary: {', '.join(m.value for m in MoodTag)}.\n"
+                "- Return a single label only when one mood clearly dominates the whole track.\n"
                 "- Do NOT use any mood word outside this list.\n"
             )
 
