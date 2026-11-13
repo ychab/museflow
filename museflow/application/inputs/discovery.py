@@ -15,6 +15,8 @@ class DiscoverTasteConfigInput:
         title: Optional playlist name, used as is; if omitted the name is built from the advisor's suggestion.
         advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
         artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
+        artist_tracks_concurrency: Artists whose catalogue tracks are searched at the same time, few enough for the
+            provider not to rate limit the run.
         playlist_limit: Target number of tracks in the generated playlist.
         max_attempts: Maximum number of advisor rounds before stopping.
         max_tracks_per_artist: Maximum tracks per credited artist in the final playlist.
@@ -33,6 +35,7 @@ class DiscoverTasteConfigInput:
 
     advisor_limit: int = 15
     artist_tracks_pages: int = 2
+    artist_tracks_concurrency: int = 4
     playlist_limit: int = 10
 
     max_attempts: int = 3
@@ -51,5 +54,7 @@ class DiscoverTasteConfigInput:
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
+        if self.artist_tracks_concurrency < 1:
+            raise ValueError("artist_tracks_concurrency must be at least 1")
         if self.focus is None and not self.prompt:
             object.__setattr__(self, "focus", DiscoveryFocus.EXPANSION)
