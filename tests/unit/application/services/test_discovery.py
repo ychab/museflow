@@ -4,8 +4,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.services.discovery import create_discovery_playlist
-from museflow.application.services.discovery import get_unknown_artist_tracks
+from museflow.application.services.discovery import DiscoveryService
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ProviderRateLimitExceededError
@@ -17,6 +16,11 @@ from tests.unit.factories.entities.blacklist import BlacklistedTrackFactory
 from tests.unit.factories.entities.track import TrackFactory
 
 
+@pytest.fixture
+def service(mock_uow: mock.AsyncMock, mock_provider_library: mock.AsyncMock) -> DiscoveryService:
+    return DiscoveryService(uow=mock_uow, provider_library=mock_provider_library)
+
+
 class TestGetUnknownArtistTracks:
     @pytest.fixture(autouse=True)
     def nothing_known(self, mock_track_repository: mock.AsyncMock) -> None:
@@ -24,6 +28,7 @@ class TestGetUnknownArtistTracks:
 
     async def test__candidates__filtered(
         self,
+        service: DiscoveryService,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
@@ -54,7 +59,7 @@ class TestGetUnknownArtistTracks:
             is_known=mock.Mock(side_effect=lambda track: track in (known, only_known))
         )
 
-        candidates = await get_unknown_artist_tracks(
+        candidates = await service.get_unknown_artist_tracks(
             user=user,
             artists=[first, second, third],
             artists_deep=set(),
@@ -63,8 +68,6 @@ class TestGetUnknownArtistTracks:
             artist_tracks_pages=2,
             catalogue_tracks_pages=10,
             concurrency=4,
-            uow=mock_uow,
-            provider_library=mock_provider_library,
         )
 
         # The second and third artists are left without any track: not offered at all.
@@ -73,6 +76,7 @@ class TestGetUnknownArtistTracks:
 
     async def test__artists_deep__catalogue_searched(
         self,
+        service: DiscoveryService,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -83,7 +87,7 @@ class TestGetUnknownArtistTracks:
         mock_provider_library.search_artist_catalogue.return_value = [track_deep]
         mock_provider_library.search_artist_tracks.return_value = [track_plain]
 
-        candidates = await get_unknown_artist_tracks(
+        candidates = await service.get_unknown_artist_tracks(
             user=user,
             artists=[deep, plain],
             artists_deep={deep},
@@ -92,8 +96,6 @@ class TestGetUnknownArtistTracks:
             artist_tracks_pages=2,
             catalogue_tracks_pages=10,
             concurrency=4,
-            uow=mock_uow,
-            provider_library=mock_provider_library,
         )
 
         assert candidates == {deep: [track_deep], plain: [track_plain]}
@@ -104,6 +106,7 @@ class TestGetUnknownArtistTracks:
 
     async def test__search_query_invalid__artist_skipped(
         self,
+        service: DiscoveryService,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -114,7 +117,7 @@ class TestGetUnknownArtistTracks:
         mock_provider_library.search_artist_tracks.side_effect = [ProviderSearchQueryInvalidError(), [track]]
 
         with caplog.at_level(logging.WARNING):
-            candidates = await get_unknown_artist_tracks(
+            candidates = await service.get_unknown_artist_tracks(
                 user=user,
                 artists=[malformed, valid],
                 artists_deep=set(),
@@ -123,8 +126,6 @@ class TestGetUnknownArtistTracks:
                 artist_tracks_pages=2,
                 catalogue_tracks_pages=10,
                 concurrency=4,
-                uow=mock_uow,
-                provider_library=mock_provider_library,
             )
 
         assert candidates == {valid: [track]}
@@ -132,6 +133,7 @@ class TestGetUnknownArtistTracks:
 
     async def test__searches__concurrent__bounded__artists_order_kept(
         self,
+        service: DiscoveryService,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -158,7 +160,7 @@ class TestGetUnknownArtistTracks:
 
         mock_provider_library.search_artist_tracks.side_effect = _search
 
-        candidates = await get_unknown_artist_tracks(
+        candidates = await service.get_unknown_artist_tracks(
             user=user,
             artists=artists,
             artists_deep=set(),
@@ -167,8 +169,6 @@ class TestGetUnknownArtistTracks:
             artist_tracks_pages=2,
             catalogue_tracks_pages=10,
             concurrency=2,
-            uow=mock_uow,
-            provider_library=mock_provider_library,
         )
 
         assert running_max == 2
@@ -178,6 +178,7 @@ class TestGetUnknownArtistTracks:
 
     async def test__search_fails__other_searches_cancelled(
         self,
+        service: DiscoveryService,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
@@ -193,7 +194,7 @@ class TestGetUnknownArtistTracks:
         mock_provider_library.search_artist_tracks.side_effect = _search
 
         with pytest.raises(ProviderRateLimitExceededError):
-            await get_unknown_artist_tracks(
+            await service.get_unknown_artist_tracks(
                 user=user,
                 artists=[failing, pending],
                 artists_deep=set(),
@@ -202,8 +203,6 @@ class TestGetUnknownArtistTracks:
                 artist_tracks_pages=2,
                 catalogue_tracks_pages=10,
                 concurrency=4,
-                uow=mock_uow,
-                provider_library=mock_provider_library,
             )
 
         assert never.cancelled()
@@ -212,6 +211,7 @@ class TestGetUnknownArtistTracks:
 class TestCreateDiscoveryPlaylist:
     async def test__remote_creation_fails__nothing_written(
         self,
+        service: DiscoveryService,
         mock_uow: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
         mock_playlist_repository: mock.AsyncMock,
@@ -220,11 +220,9 @@ class TestCreateDiscoveryPlaylist:
         mock_provider_library.create_playlist.side_effect = ProviderRateLimitExceededError("Spotify rate limit")
 
         with pytest.raises(ProviderRateLimitExceededError):
-            await create_discovery_playlist(
+            await service.create_playlist(
                 name="Friday night",
                 tracks=TrackFactory.batch(2),
-                uow=mock_uow,
-                provider_library=mock_provider_library,
             )
 
         mock_uow.__aenter__.assert_not_awaited()

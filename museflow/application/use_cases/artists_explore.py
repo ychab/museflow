@@ -10,8 +10,7 @@ from museflow.application.inputs.explore import ExploreArtistsConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.services.discovery import create_discovery_playlist
-from museflow.application.services.discovery import get_unknown_artist_tracks
+from museflow.application.services.discovery import DiscoveryService
 from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import filter_by_artist
 from museflow.application.utils.discovery import rank_favourite_artists
@@ -58,8 +57,9 @@ class ExploreArtistsUseCase:
         advisor: AdvisorPort,
     ) -> None:
         self._uow = uow
-        self._provider_library = provider_library
         self._advisor = advisor
+        # Application code built from the ports above, not a port: never injected
+        self._discovery = DiscoveryService(uow=uow, provider_library=provider_library)
 
     async def create_playlist(self, user: User, config: ExploreArtistsConfigInput) -> ExploreArtistsResult:
         """Creates a playlist of the catalogue tracks the user does not know, from their favourite artists.
@@ -122,7 +122,7 @@ class ExploreArtistsUseCase:
             logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
             for artist in artists_now:
                 logger.debug(f"Favourite artist '{artist}'")
-            candidates = await get_unknown_artist_tracks(
+            candidates = await self._discovery.get_unknown_artist_tracks(
                 user=user,
                 artists=artists_now,
                 # Their best-known tracks are the user's already: the catalogue search reaches the others.
@@ -132,8 +132,6 @@ class ExploreArtistsUseCase:
                 artist_tracks_pages=config.catalogue_tracks_pages,
                 catalogue_tracks_pages=config.catalogue_tracks_pages,
                 concurrency=config.artist_tracks_concurrency,
-                uow=self._uow,
-                provider_library=self._provider_library,
             )
 
             tracks_picked_now: list[TrackPicked] = []
@@ -186,12 +184,10 @@ class ExploreArtistsUseCase:
             return ExploreArtistsResult(playlist=None, reports=reports, tracks=tracks)
 
         name = config.title or f"[MF] - {self._PLAYLIST_NAME} - {datetime.now(UTC).isoformat(timespec='seconds')}"
-        playlist = await create_discovery_playlist(
+        playlist = await self._discovery.create_playlist(
             name=name,
             tracks=tracks,
             prompt=config.prompt,
-            uow=self._uow,
-            provider_library=self._provider_library,
         )
         return ExploreArtistsResult(playlist=playlist, reports=reports, tracks=playlist.tracks)
 
