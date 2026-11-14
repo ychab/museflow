@@ -2,6 +2,7 @@ import dataclasses
 import uuid
 from datetime import date
 from typing import Any
+from typing import Final
 
 from sqlalchemy import BigInteger
 from sqlalchemy import Boolean
@@ -46,7 +47,7 @@ from museflow.infrastructure.adapters.database.repositories.track_play import Tr
 
 
 class TrackSQLRepository(TrackRepository):
-    _ENRICH_FIELD_TO_COLUMN: dict[EnrichField, str] = {
+    _ENRICH_FIELD_TO_COLUMN: Final[dict[EnrichField, str]] = {
         EnrichField.GENRE: "genres",
         EnrichField.MOOD: "moods",
         EnrichField.LOCALE: "locales",

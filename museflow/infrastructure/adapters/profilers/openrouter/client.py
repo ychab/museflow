@@ -1,5 +1,6 @@
 import json
 from typing import Any
+from typing import Final
 from typing import cast
 
 from pydantic import BaseModel
@@ -33,16 +34,16 @@ from museflow.infrastructure.adapters.profilers.openrouter.schemas import Timeli
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
-# Without it, labels leak the processing ("2025 Current Batch") or keep dates a later merge makes stale
-_ERA_LABEL_RULE = (
-    'era_label names the music of the era (e.g. "Late-Night French Rap"): never dates, years, or words about the '
-    "data or its processing (batch, segment, current, period). Dates belong in time_range only, as "
-    '"YYYY-MM-DD to YYYY-MM-DD".'
-)
-
 
 class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
     """Adapter that builds a taste profile through OpenRouter, each step (segment, merge, reflect) with its own model."""
+
+    # Without it, labels leak the processing ("2025 Current Batch") or keep dates a later merge makes stale
+    _ERA_LABEL_RULE: Final[str] = (
+        'era_label names the music of the era (e.g. "Late-Night French Rap"): never dates, years, or words about the '
+        "data or its processing (batch, segment, current, period). Dates belong in time_range only, as "
+        '"YYYY-MM-DD to YYYY-MM-DD".'
+    )
 
     def __init__(
         self,
@@ -111,7 +112,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             f"({period.plays} plays in this period). Build a musical taste profile segment.\n"
             "Return JSON with exactly these keys:\n"
             f'- "taste_timeline": one TasteEra covering these tracks, with time_range "{date_range}". '
-            f"{_ERA_LABEL_RULE}\n"
+            f"{self._ERA_LABEL_RULE}\n"
             '- "core_identity": long-term affinity signals, as {"genre_macro": [{"key": tag, "value": weight 0-1}], '
             '"genre_meso": [...], "genre_micro": [...], "mood": [...]}, each tag in the list of its tier\n'
             '- "current_vibe": what this batch reveals right now, same shape as core_identity\n'
@@ -170,7 +171,7 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             prompt += (
                 '- "oldest_label": the timeline is full, so if the new era is added, its two oldest eras become one:\n'
                 f"{_era_json(timeline[0])}\n{_era_json(timeline[1])}\n"
-                f"Name the era covering both. {_ERA_LABEL_RULE}\n"
+                f"Name the era covering both. {self._ERA_LABEL_RULE}\n"
             )
         else:
             prompt += '- "oldest_label": null\n'

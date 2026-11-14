@@ -1,5 +1,6 @@
 from datetime import UTC
 from datetime import datetime
+from typing import Final
 from typing import Self
 
 from pydantic import BaseModel
@@ -9,10 +10,10 @@ from pydantic import Field
 # A search returns one ranking, capped around 250 tracks for a prolific artist, and its first tracks are the best
 # known: split by release year, each range gets its own ranking, and together they reach far more of the catalogue
 # (#203: 290 distinct tracks of the artist instead of 217 for 30 pages, 98 unknown to the user instead of 34).
-CATALOGUE_OLDEST_YEAR = 1900
-CATALOGUE_DECADES_FROM = 1980  # a single range before it: the older catalogues are small
-CATALOGUE_SPANS_FROM = 2000  # 5-year ranges from there: the catalogues are denser
-CATALOGUE_SPAN_YEARS = 5
+CATALOGUE_OLDEST_YEAR: Final[int] = 1900
+CATALOGUE_DECADES_FROM: Final[int] = 1980  # a single range before it: the older catalogues are small
+CATALOGUE_SPANS_FROM: Final[int] = 2000  # 5-year ranges from there: the catalogues are denser
+CATALOGUE_SPAN_YEARS: Final[int] = 5
 
 
 class SpotifySearchArtistQuery(BaseModel):

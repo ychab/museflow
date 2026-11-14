@@ -1,3 +1,5 @@
+from typing import Final
+
 import typer
 
 from museflow.infrastructure.config.settings.app import app_settings
@@ -13,7 +15,7 @@ def resolve_email(value: str | None) -> str:
 
 
 # The setting is validated on load: only the option needs the parser.
-EMAIL_OPTION: str = typer.Option(
+EMAIL_OPTION: Final[str] = typer.Option(
     None,
     help="User email address [default: MUSEFLOW_CLI_DEFAULT_EMAIL]",
     parser=parse_email,

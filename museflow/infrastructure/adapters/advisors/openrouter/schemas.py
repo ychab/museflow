@@ -1,3 +1,5 @@
+from typing import Final
+
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -19,7 +21,7 @@ class DiscoveryArtistsResponse(BaseModel):
     suggested_playlist_name: str
 
 
-DISCOVERY_ARTISTS_SCHEMA = JsonSchemaProperty.object(
+DISCOVERY_ARTISTS_SCHEMA: Final[JsonSchemaProperty] = JsonSchemaProperty.object(
     {
         "reasoning": JsonSchemaProperty.string(),
         "strategy_label": JsonSchemaProperty.string(),
@@ -47,7 +49,7 @@ class DiscoveryPicksResponse(BaseModel):
     picks: list[PickedTrack]
 
 
-DISCOVERY_PICKS_SCHEMA = JsonSchemaProperty.object(
+DISCOVERY_PICKS_SCHEMA: Final[JsonSchemaProperty] = JsonSchemaProperty.object(
     {
         "picks": JsonSchemaProperty.array(
             JsonSchemaProperty.object(

@@ -7,6 +7,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from datetime import timedelta
 from typing import Any
+from typing import Final
 from typing import cast
 
 import httpx
@@ -51,7 +52,7 @@ from museflow.infrastructure.config.settings.openrouter import openrouter_settin
 logger = logging.getLogger(__name__)
 
 # The upstream provider's error can be a long JSON document: enough to read the cause
-_RAW_ERROR_MAX_LENGTH = 300
+_RAW_ERROR_MAX_LENGTH: Final[int] = 300
 
 
 def _is_retryable_error(exception: BaseException) -> bool:

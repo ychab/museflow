@@ -1,3 +1,5 @@
+from typing import Final
+
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
@@ -10,20 +12,22 @@ from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.infrastructure.adapters.common.llm.json_schema import JsonSchemaProperty
 
-_VALID_IDENTITY_KEYS: frozenset[str] = frozenset(t.value for t in GenreTag) | frozenset(m.value for m in MoodTag)
+_VALID_IDENTITY_KEYS: Final[frozenset[str]] = frozenset(t.value for t in GenreTag) | frozenset(
+    m.value for m in MoodTag
+)
 
 # One weight list per vocabulary tier: a single enum of every tag (178) is too large for some providers (Gemini)
-_WEIGHT_TIERS: dict[str, list[str]] = {
+_WEIGHT_TIERS: Final[dict[str, list[str]]] = {
     "genre_macro": [t.value for t in GENRE_MACRO_TAGS],
     "genre_meso": [t.value for t in GENRE_MESO_TAGS],
     "genre_micro": [t.value for t in GENRE_MICRO_TAGS],
     "mood": [m.value for m in MoodTag],
 }
 
-_MOOD_ENUM: list[str] = _WEIGHT_TIERS["mood"]
+_MOOD_ENUM: Final[list[str]] = _WEIGHT_TIERS["mood"]
 
 # Every tag sits in one tier only: `core_identity` keys the weights by tag alone
-_TIER_BY_TAG: dict[str, str] = {tag: tier for tier, tags in _WEIGHT_TIERS.items() for tag in tags}
+_TIER_BY_TAG: Final[dict[str, str]] = {tag: tier for tier, tags in _WEIGHT_TIERS.items() for tag in tags}
 
 
 def _weighted_tags() -> JsonSchemaProperty:
@@ -107,7 +111,7 @@ class TimelineMergeResponse(BaseModel):
     oldest_label: str | None = None
 
 
-TASTE_PROFILE_SCHEMA = JsonSchemaProperty.object(
+TASTE_PROFILE_SCHEMA: Final[JsonSchemaProperty] = JsonSchemaProperty.object(
     {
         "taste_timeline": JsonSchemaProperty.array(
             JsonSchemaProperty.object(
@@ -145,7 +149,7 @@ TASTE_PROFILE_SCHEMA = JsonSchemaProperty.object(
     }
 )
 
-TIMELINE_MERGE_SCHEMA = JsonSchemaProperty.object(
+TIMELINE_MERGE_SCHEMA: Final[JsonSchemaProperty] = JsonSchemaProperty.object(
     {
         "absorb": JsonSchemaProperty.boolean(),
         "oldest_label": JsonSchemaProperty.string(nullable=True),

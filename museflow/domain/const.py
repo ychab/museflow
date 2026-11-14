@@ -1,21 +1,23 @@
+from typing import Final
+
 from museflow.domain.enums import GenreTag
 
-OAUTH_STATE_TTL_SECONDS: int = 60 * 10
+OAUTH_STATE_TTL_SECONDS: Final[int] = 60 * 10
 
-DISCOVERY_TRACK_SCORE_MIN: int = 0
-DISCOVERY_TRACK_SCORE_MAX: int = 10
+DISCOVERY_TRACK_SCORE_MIN: Final[int] = 0
+DISCOVERY_TRACK_SCORE_MAX: Final[int] = 10
 
 # Default tracks per listening period, the period count it aims at past that: each period should hold about one era of
 # the timeline, so a large library is not folded down to 15 eras by many forced merges (10,155 seeds: 50 merges in
 # batches of 200, 20 in batches of 500, for a cheaper build and a timeline spread over the whole history)
-TASTE_BATCH_SIZE_MIN: int = 200
-TASTE_BATCH_COUNT_TARGET: int = 20
+TASTE_BATCH_SIZE_MIN: Final[int] = 200
+TASTE_BATCH_COUNT_TARGET: Final[int] = 20
 # Past this many eras, the two oldest become one: a long library keeps a readable timeline
-TASTE_TIMELINE_MAX_ERAS: int = 15
+TASTE_TIMELINE_MAX_ERAS: Final[int] = 15
 # Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
-TASTE_WEIGHT_DECIMALS: int = 3
+TASTE_WEIGHT_DECIMALS: Final[int] = 3
 
-GENRE_MACRO_TAGS: tuple[GenreTag, ...] = (
+GENRE_MACRO_TAGS: Final[tuple[GenreTag, ...]] = (
     GenreTag.HIP_HOP,
     GenreTag.ELECTRONIC,
     GenreTag.ROCK,
@@ -31,7 +33,7 @@ GENRE_MACRO_TAGS: tuple[GenreTag, ...] = (
     GenreTag.WORLD,
 )
 
-GENRE_MESO_TAGS: tuple[GenreTag, ...] = (
+GENRE_MESO_TAGS: Final[tuple[GenreTag, ...]] = (
     # hip-hop
     GenreTag.RAP,
     GenreTag.TRAP,
@@ -107,7 +109,7 @@ GENRE_MESO_TAGS: tuple[GenreTag, ...] = (
     GenreTag.CELTIC,
 )
 
-GENRE_MICRO_TAGS: tuple[GenreTag, ...] = (
+GENRE_MICRO_TAGS: Final[tuple[GenreTag, ...]] = (
     # rap
     GenreTag.AFRO_RAP,
     GenreTag.CLOUD_RAP,
