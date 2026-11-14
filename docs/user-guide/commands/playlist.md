@@ -103,7 +103,8 @@ museflow playlist explore [PROMPT] [--email <email>] [OPTIONS]
 The best `EXPLORE_ARTISTS_LIMIT` (20) favourites not blacklisted are shuffled, so that two runs start with other
 artists, and each round takes the next `EXPLORE_ARTISTS_PER_ATTEMPT` (5). Their whole catalogue is searched as for an
 artist a `discover` prompt names (one search per release year range, `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` pages
-each), and the advisor picks among the tracks you don't know, guided by up to 5 of your best-rated tracks of each
+each, one artist at a time by default, `EXPLORE_ARTISTS_CONCURRENCY`, as each search already runs
+`SPOTIFY_SEARCH_CONCURRENCY` queries at once), and the advisor picks among the tracks you don't know, guided by up to 5 of your best-rated tracks of each
 artist. One LLM call per round; a round usually fills the playlist, and another one runs with the next artists until
 `--limit` tracks are kept, `DISCOVERY_MAX_ATTEMPTS` is reached or no favourite is left. Tracks stay capped per artist
 (`DISCOVERY_MAX_TRACKS_PER_ARTIST`), so the playlist mixes several of them.

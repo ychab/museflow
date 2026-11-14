@@ -68,6 +68,9 @@ class AppSettings(BaseSettings):
     # search, the rounds and the per-artist cap follow the DISCOVERY_ settings above.
     EXPLORE_ARTISTS_LIMIT: int = Field(default=20, ge=1)
     EXPLORE_ARTISTS_PER_ATTEMPT: int = Field(default=5, ge=1)
+    # Artists whose catalogue is searched at the same time, each with SPOTIFY_SEARCH_CONCURRENCY queries in flight:
+    # 4 artists (16 queries) met 22 to 28 retried 429s a run (#208); 1 keeps the 4 queries of a single artist's search
+    EXPLORE_ARTISTS_CONCURRENCY: int = Field(default=1, ge=1)
 
     STATS_BAYESIAN_CONFIDENCE: int = 5
 
