@@ -1,5 +1,6 @@
 import re
 from typing import TYPE_CHECKING
+from typing import Final
 
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.const import TASTE_WEIGHT_DECIMALS
@@ -9,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from museflow.domain.entities.taste import TasteProfileData
     from museflow.domain.entities.taste import TechnicalFingerprint
 
-_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+_DATE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 def blend_weights(

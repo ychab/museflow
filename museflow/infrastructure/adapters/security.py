@@ -6,6 +6,7 @@ from datetime import datetime
 from datetime import timedelta
 from functools import cache
 from typing import Any
+from typing import Final
 
 import jwt
 from argon2 import PasswordHasher as Argon2Hasher
@@ -71,7 +72,7 @@ class SystemStateTokenGenerator(StateTokenGeneratorPort):
     state tokens in OAuth flows.
     """
 
-    UNICODE_ASCII_CHARACTER_SET = string.ascii_letters + string.digits
+    UNICODE_ASCII_CHARACTER_SET: Final[str] = string.ascii_letters + string.digits
 
     def generate(self, length: int = 30) -> str:
         rand = random.SystemRandom()

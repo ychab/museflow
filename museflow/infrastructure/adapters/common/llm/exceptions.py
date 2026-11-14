@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Final
 
 
 class LLMFailureKind(StrEnum):
@@ -11,12 +12,13 @@ class LLMFailureKind(StrEnum):
     SCHEMA_VIOLATION = "schema_violation"  # The JSON is valid but rejected by the Pydantic model
 
 
-# Kinds a follow-up message showing the error to the model can fix (see `self_heal`)
-_SELF_HEALABLE_KINDS = frozenset({LLMFailureKind.INVALID_JSON, LLMFailureKind.SCHEMA_VIOLATION})
-
-
 class LLMResponseError(Exception):
     """An LLM reply that could not be turned into the expected model."""
+
+    # Kinds a follow-up message showing the error to the model can fix (see `self_heal`)
+    _SELF_HEALABLE_KINDS: Final[frozenset[LLMFailureKind]] = frozenset(
+        {LLMFailureKind.INVALID_JSON, LLMFailureKind.SCHEMA_VIOLATION}
+    )
 
     def __init__(
         self,
@@ -37,7 +39,7 @@ class LLMResponseError(Exception):
 
     @property
     def self_healable(self) -> bool:
-        return self.failure_kind in _SELF_HEALABLE_KINDS
+        return self.failure_kind in self._SELF_HEALABLE_KINDS
 
 
 class LLMRequestError(Exception):

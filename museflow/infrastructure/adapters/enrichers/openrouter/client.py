@@ -1,4 +1,5 @@
 import json
+from typing import Final
 
 import httpx
 from httpx import codes
@@ -25,15 +26,17 @@ from museflow.infrastructure.adapters.enrichers.openrouter.schemas import Enrich
 from museflow.infrastructure.adapters.enrichers.openrouter.schemas import build_enrichment_schema
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 
-# Rejections that may depend on the batch content: the next batch can still succeed. A 403 is batch-scoped only when
-# moderation flagged the input (`LLMRequestError.moderated`), not for a key limit. Any other rejection fails every batch
-# alike: auth, credits, unknown model, no provider, outage, and 400 too, since `check_models` already validated the
-# model and its parameters, so a 400 means the request shape (e.g. the response schema) was refused.
-_BATCH_STATUS_CODES = frozenset({codes.REQUEST_ENTITY_TOO_LARGE, codes.UNPROCESSABLE_ENTITY})
-
 
 class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
     """Adapter that infers genre, mood and locale metadata for tracks through OpenRouter."""
+
+    # Rejections that may depend on the batch content: the next batch can still succeed. A 403 is batch-scoped only
+    # when moderation flagged the input (`LLMRequestError.moderated`), not for a key limit. Any other rejection fails
+    # every batch alike: auth, credits, unknown model, no provider, outage, and 400 too, since `check_models` already
+    # validated the model and its parameters, so a 400 means the request shape (e.g. the response schema) was refused.
+    _BATCH_STATUS_CODES: Final[frozenset[int]] = frozenset(
+        {codes.REQUEST_ENTITY_TOO_LARGE, codes.UNPROCESSABLE_ENTITY}
+    )
 
     def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
         super().__init__(client=client)
@@ -113,7 +116,7 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         except LLMRateLimitError as e:
             raise EnricherRateLimitExceededError(str(e)) from e
         except LLMRequestError as e:
-            if e.moderated or e.status_code in _BATCH_STATUS_CODES:
+            if e.moderated or e.status_code in self._BATCH_STATUS_CODES:
                 raise TrackEnrichmentError(str(e)) from e
             raise EnricherUnavailableError(str(e)) from e
         except httpx.RequestError as e:

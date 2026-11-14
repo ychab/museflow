@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Final
 
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -10,10 +11,10 @@ from museflow.infrastructure.adapters.common.llm.schemas import ChatCompletionRe
 
 logger = logging.getLogger(__name__)
 
-_LENGTH_FINISH_REASON = "length"
-_REFUSAL_FINISH_REASON = "content_filter"
-_RAW_PREVIEW_LENGTH = 200
-_DETAIL_LENGTH = 500
+_LENGTH_FINISH_REASON: Final[str] = "length"
+_REFUSAL_FINISH_REASON: Final[str] = "content_filter"
+_RAW_PREVIEW_LENGTH: Final[int] = 200
+_DETAIL_LENGTH: Final[int] = 500
 
 
 def parse_completion[T: BaseModel](envelope: ChatCompletionResponse, response_model: type[T], adapter: str) -> T:
