@@ -70,8 +70,11 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   (`use_cases/taste_profile_list.py`): the use cases list what the application does, and an API reuses them as is.
   The entrypoint keeps only its own concerns (parsing, finding the user, output).
 - **Application services** (`services/`) hold orchestration shared by several use cases, ports included
-  (`services/llm_usage.py`). Only use cases call them, never an entrypoint; a use case never calls another use case.
-  Pure helpers without ports go in `utils/`.
+  (`services/discovery.py`). A service is a class: the ports it uses go in `__init__`, the per-call inputs in its
+  methods. A use case builds it in its own `__init__` from the ports injected there; it is never injected itself, as it
+  is application code, not a boundary: tests mock its ports, not the service. Only use cases call them, never an
+  entrypoint; a use case never calls another use case. Pure helpers without ports go in `utils/`, and a step of a
+  service that needs no port moves there too (`utils/discovery.keep_new_tracks`).
 - Ports come in as parameters (DI). Never instantiate a repository in a use case: reach it through the unit of work
   (`uow.tracks`, `uow.playlists`, …).
 - **The use case owns the transactions.** Each `async with uow:` block is one short transaction: a clean exit commits,
