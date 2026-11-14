@@ -88,7 +88,19 @@ def select_tracks(
     return tracks[:playlist_limit]
 
 
-def is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:
+def keep_new_tracks(tracks: list[Track], blacklist: UserBlacklist, fingerprints_seen: set[str]) -> list[Track]:
+    """Keeps one track per fingerprint, neither blacklisted nor among `fingerprints_seen` (left unchanged)."""
+    kept: list[Track] = []
+    fingerprints_kept: set[str] = set()
+    for track in tracks:
+        if track.fingerprint in fingerprints_seen | fingerprints_kept or _is_blacklisted(track, blacklist):
+            continue
+        fingerprints_kept.add(track.fingerprint)
+        kept.append(track)
+    return kept
+
+
+def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:
     if track.fingerprint in blacklist.track_fingerprints:
         return True
     return bool({normalize_text(a) for a in track.artists} & blacklist.artist_fingerprints)

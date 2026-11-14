@@ -8,8 +8,7 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.services.discovery import create_discovery_playlist
-from museflow.application.services.discovery import get_unknown_artist_tracks
+from museflow.application.services.discovery import DiscoveryService
 from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import select_tracks
 from museflow.domain.entities.playlist import Playlist
@@ -56,8 +55,9 @@ class DiscoverTasteUseCase:
         advisor: AdvisorPort,
     ) -> None:
         self._uow = uow
-        self._provider_library = provider_library
         self._advisor = advisor
+        # Application code built from the ports above, not a port: never injected
+        self._discovery = DiscoveryService(uow=uow, provider_library=provider_library)
 
     async def create_suggestions_playlist(
         self,
@@ -190,7 +190,7 @@ class DiscoverTasteUseCase:
                 extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
             )
 
-            candidates = await get_unknown_artist_tracks(
+            candidates = await self._discovery.get_unknown_artist_tracks(
                 user=user,
                 artists=[artist.name for artist in strategy.artists],
                 # Their own tracks are what the request asks for: the catalogue search reaches past the best-known.
@@ -200,8 +200,6 @@ class DiscoverTasteUseCase:
                 artist_tracks_pages=config.artist_tracks_pages,
                 catalogue_tracks_pages=config.requested_artist_tracks_pages,
                 concurrency=config.artist_tracks_concurrency,
-                uow=self._uow,
-                provider_library=self._provider_library,
             )
 
             tracks_picked_now: list[TrackPicked] = []
@@ -265,14 +263,12 @@ class DiscoverTasteUseCase:
         name = config.title or (
             f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}"
         )
-        playlist = await create_discovery_playlist(
+        playlist = await self._discovery.create_playlist(
             name=name,
             tracks=tracks,
             profile_id=profile.id,
             reasoning=strategy.reasoning,
             prompt=config.prompt,
             focus=config.focus,
-            uow=self._uow,
-            provider_library=self._provider_library,
         )
         return DiscoverTasteResult(playlist=playlist, strategy=strategy, reports=reports, tracks=playlist.tracks)
