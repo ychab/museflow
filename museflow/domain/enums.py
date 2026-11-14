@@ -12,9 +12,11 @@ class MusicProvider(StrEnum):
 
 
 class DiscoveryFocus(StrEnum):
-    EXPANSION = "expansion"
-    ROOTS_REVIVAL = "roots_revival"
-    CULTURAL_BRIDGE = "cultural_bridge"
+    # Where the artists come from: the advisor suggests them, except for favourite_artists
+    EXPANSION = "expansion"  # cousin genres not explored yet
+    ROOTS_REVIVAL = "roots_revival"  # modern artists echoing the oldest era of the profile
+    CULTURAL_BRIDGE = "cultural_bridge"  # artists between the oldest and the current era of the profile
+    FAVOURITE_ARTISTS = "favourite_artists"  # the user's favourites, from their ratings then plays: no artists call
 
 
 class PlaylistType(StrEnum):

@@ -139,15 +139,18 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
 
     async def pick_discovery_tracks(
         self,
-        strategy: DiscoveryArtistStrategy,
+        strategy: DiscoveryArtistStrategy | None,
         candidates: dict[str, list[Track]],
         tracks_limit: int,
         max_tracks_per_artist: int,
         prompt: str | None = None,
         focus: DiscoveryFocus | None = None,
+        liked_tracks: dict[str, list[Track]] | None = None,
     ) -> list[TrackPicked]:
-        sounds = {artist.name: artist.sound for artist in strategy.artists}
-        artists_requested = {artist.name for artist in strategy.artists if artist.requested}
+        artists = strategy.artists if strategy else []
+        sounds = {artist.name: artist.sound for artist in artists}
+        artists_requested = {artist.name for artist in artists if artist.requested}
+        liked_tracks = liked_tracks or {}
         # Short ids instead of titles: the reply can only point at a listed track, never write a new one.
         candidates_by_id: dict[str, Track] = {}
         artist_blocks: list[str] = []
@@ -160,19 +163,39 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 year = track.album_year or "?"
                 lines.append(f"- {track_id} | {track.name} | {album} | {year}")
             requested = " (REQUESTED)" if artist in artists_requested else ""
-            artist_blocks.append(
-                f"#### {artist}{requested}\nWanted sound: {sounds.get(artist, '')}\n" + "\n".join(lines)
-            )
+            header = [f"#### {artist}{requested}"]
+            if artist in sounds:
+                header.append(f"Wanted sound: {sounds[artist]}")
+            if liked := liked_tracks.get(artist):
+                header.append("Liked by the user: " + "; ".join(track.name for track in liked))
+            artist_blocks.append("\n".join(header + lines))
 
         focus_line = f"- Focus strategy: {focus.value}\n" if focus else ""
+        if strategy:
+            context = (
+                "You chose the artists below for this user; their real catalogue tracks the user does not know yet are\n"
+                "listed under each one. Now choose the tracks.\n\n"
+                "### YOUR STRATEGY\n"
+                f"- {strategy.strategy_label}: {strategy.reasoning}\n"
+                f"{focus_line}\n"
+            )
+        else:
+            # The user's favourite artists, drawn from their ratings and plays: no artists step, no strategy (#200).
+            context = (
+                "The artists below are the user's favourites, drawn from their ratings and listens; their real\n"
+                "catalogue tracks the user does not know yet are listed under each one, with the user's best-rated\n"
+                "tracks of theirs when any. Now choose the tracks the user missed.\n"
+                f"{focus_line}\n"
+                "### FAVOURITE ARTISTS\n"
+                "- The user loves these artists: choose the tracks closest to what they love in them (the liked\n"
+                "  tracks, their albums and eras). Without liked tracks, choose the artist's strongest tracks.\n"
+                "- Their original tracks only: leave out remixes, live, acoustic, sped-up or slowed versions and\n"
+                "  re-recordings, as the user likely knows the original.\n\n"
+            )
         system_prompt = (
             "### ROLE\n"
             'You are the "MuseFlow Navigator," a world-class musicologist curating a playlist.\n'
-            "You chose the artists below for this user; their real catalogue tracks the user does not know yet are\n"
-            "listed under each one. Now choose the tracks.\n\n"
-            "### YOUR STRATEGY\n"
-            f"- {strategy.strategy_label}: {strategy.reasoning}\n"
-            f"{focus_line}\n"
+            f"{context}"
             "### CANDIDATES (id | title | album | album release year)\n" + "\n\n".join(artist_blocks) + "\n\n"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
@@ -274,6 +297,8 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             DiscoveryFocus.EXPANSION: "Find high-probability cousin genres not yet explored.",
             DiscoveryFocus.ROOTS_REVIVAL: f"Find modern tracks replicating the technical fingerprint of the oldest era ({oldest_era}).",
             DiscoveryFocus.CULTURAL_BRIDGE: f"Find music at the intersection of {oldest_era} and {current_era}.",
+            # Never sent: the use case draws the favourite artists from the user's data, without this step.
+            DiscoveryFocus.FAVOURITE_ARTISTS: "Find the tracks the user has not heard from their favourite artists.",
         }
 
         focus_block = ""

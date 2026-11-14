@@ -27,9 +27,9 @@ museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to use. |
 | `--name` | latest profile | Taste profile name (defaults to latest). |
-| `--focus` | `expansion` without a prompt, none with one | The discovery focus strategy: `expansion`, `roots_revival` or `cultural_bridge`. With a prompt, no focus is applied unless given: it would pull the advisor away from the requested theme. |
+| `--focus` | `expansion` without a prompt, none with one | The discovery focus strategy: `expansion`, `roots_revival`, `cultural_bridge` or `favourite_artists`. With a prompt, no focus is applied unless given: it would pull the advisor away from the requested theme. |
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
-| `--title` | advisor's suggestion | Playlist name, used as is. Without it, the playlist is named `[MF] - <name suggested by the advisor> - <timestamp>`. |
+| `--title` | advisor's suggestion | Playlist name, used as is. Without it, the playlist is named `[MF] - <name suggested by the advisor> - <timestamp>` (`[MF] - Favourite artists - <timestamp>` with that focus). |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
@@ -50,6 +50,12 @@ playlist holds other artists.
 - `expansion`: cousin genres that have not been explored yet.
 - `roots_revival`: modern tracks that echo the oldest era of the profile.
 - `cultural_bridge`: music at the intersection of the oldest and the current era.
+- `favourite_artists`: the tracks you don't know from your favourite artists. No advisor call chooses them: they
+  come from your data, the artists you rate above your mean first (a Bayesian average, `STATS_BAYESIAN_CONFIDENCE`),
+  then the ones you play most. The best `DISCOVERY_FAVOURITE_ARTISTS_LIMIT` (20) are shuffled, each round takes the
+  next `DISCOVERY_FAVOURITE_ARTISTS_PER_ATTEMPT` (5), searches their whole catalogue as for a named artist, and the
+  advisor picks among their tracks you don't know, guided by the ones you rated highest. Their tracks stay capped per
+  artist, so the playlist mixes several of them. A prompt is optional and only steers the sound ("calm and acoustic").
 
 **Prerequisites**
 
@@ -57,8 +63,8 @@ playlist holds other artists.
 - A connected Spotify account ([`provider connect`](provider.md#provider-connect)).
 - An OpenRouter API key (`OPENROUTER_API_KEY`).
 
-One round is two LLM calls (the artists, then the picks); a round usually fills the playlist, and another one runs,
-with other artists, until `--limit` tracks are picked or `DISCOVERY_MAX_ATTEMPTS` is reached. Tracks already in the
+One round is two LLM calls (the artists, then the picks), one with `favourite_artists`; a round usually fills the
+playlist, and another one runs, with other artists, until `--limit` tracks are picked or `DISCOVERY_MAX_ATTEMPTS` is reached. Tracks already in the
 library, and blacklisted artists and tracks ([`blacklist`](blacklist.md)), are never offered to the advisor.
 
 **Examples**
@@ -69,6 +75,7 @@ museflow playlist discover "chill jazz and soul, mostly instrumental" --dry-run
 museflow playlist discover "lo-fi beats for a rainy evening" --title "Friday night"
 museflow playlist discover "tracks of The Fictional Band I don't know"
 museflow playlist discover --focus roots_revival
+museflow playlist discover --focus favourite_artists --dry-run
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
 

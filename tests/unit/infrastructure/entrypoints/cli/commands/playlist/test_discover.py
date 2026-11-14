@@ -321,6 +321,28 @@ class TestPlaylistDiscoverCommand:
         output = clean_typer_text(result.stdout)
         assert "Tracks discovered but playlist not created (dry-run mode)" in output
 
+    def test__output__no_strategy(
+        self,
+        mock_playlist_discover_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        """The favourite artists focus has no advisor strategy: no panel, the tracks are still listed."""
+        track = TrackFactory.build(name="Neon Harbor")
+        mock_playlist_discover_logic.return_value = DiscoverTasteResult(
+            playlist=None, strategy=None, reports=[], tracks=[track]
+        )
+
+        result = runner.invoke(
+            app,
+            ["playlist", "discover", "--email", "test@example.com", "--focus", "favourite_artists", "--dry-run"],
+        )
+        assert result.exit_code == 0
+
+        output = clean_typer_text(result.stdout)
+        assert "Neon Harbor" in output
+        assert "Tracks discovered but playlist not created (dry-run mode)" in output
+
     def test__output__reports_table_rendered(
         self,
         mock_playlist_discover_logic: mock.AsyncMock,

@@ -1,10 +1,12 @@
 import asyncio
 import logging
+import random
 import uuid
 from dataclasses import dataclass
 from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
+from typing import Final
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
@@ -14,11 +16,13 @@ from museflow.application.services.llm_usage import record_llm_usage
 from museflow.application.utils.discovery import apply_artist_cap
 from museflow.application.utils.discovery import drop_known_tracks
 from museflow.application.utils.discovery import filter_by_artist
+from museflow.application.utils.discovery import rank_favourite_artists
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import SortOrder
@@ -30,7 +34,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.taste import ArtistSuggested
+from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 
@@ -48,13 +52,18 @@ class DiscoverTasteAttemptReport:
 @dataclass(frozen=True, kw_only=True)
 class DiscoverTasteResult:
     playlist: Playlist | None
-    strategy: DiscoveryArtistStrategy
+    strategy: DiscoveryArtistStrategy | None  # None when the artists come from the user's data, not the advisor
     reports: list[DiscoverTasteAttemptReport]
     tracks: list[Track]
 
 
 class DiscoverTasteUseCase:
     """Use case for discovering new tracks guided by the user's AI taste profile."""
+
+    # The playlist name without an advisor's suggestion, with the `favourite_artists` focus
+    _FAVOURITE_ARTISTS_PLAYLIST_NAME: Final[str] = "Favourite artists"
+    # The user's best-rated tracks of a favourite artist shown to the advisor: what they love in them
+    _FAVOURITE_ARTIST_LIKED_TRACKS_LIMIT: Final[int] = 5
 
     def __init__(
         self,
@@ -78,6 +87,10 @@ class DiscoverTasteUseCase:
         each time excluding the artists already asked, and stops once `playlist_limit` tracks are kept after the
         per-artist cap, or once no other artist is wanted: an attempt suggests none, or only artists whose own tracks
         the request asks for. Those are searched deeper and not capped.
+
+        With the `favourite_artists` focus, no advisor call chooses the artists: each attempt takes the next ones
+        among the user's favourites (ratings first, then plays), searched deeper but capped, and the run stops once
+        none is left.
 
         Args:
             user: The user for whom to create the playlist.
@@ -109,28 +122,35 @@ class DiscoverTasteUseCase:
                 min_score=config.liked_tracks_score_threshold,
                 limit=config.liked_tracks_limit,
             )
-            disliked_tracks = await uow.tracks.get_list(
-                user_id=user.id,
-                max_score=config.disliked_tracks_score_threshold,
-                exclude_skipped=True,
-                order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
-                limit=config.disliked_tracks_limit,
-            )
-            # Told from the first attempt on, so that it suggests fewer known tracks (#154). It mirrors the
-            # known-tracks filter, which drops any track of the library: if that filter changes, this count must
-            # follow. The most played tracks were measured too: no gain, as 100 tracks barely cover a library of
-            # thousands.
+            disliked_tracks: list[Track] = []
             covered_artists: dict[str, int] = {}
-            if config.covered_artists_limit > 0:
-                covered_artists = await uow.tracks.get_covered_artists(
-                    user_id=user.id, limit=config.covered_artists_limit
+            favourite_artists: list[str] = []
+            # The favourites come from the user's data: no artists step, which alone reads the dislikes and coverage.
+            if config.focus == DiscoveryFocus.FAVOURITE_ARTISTS:
+                artist_stats = await uow.tracks.get_artist_stats(user_id=user.id)
+                favourite_artists = self._draw_favourite_artists(artist_stats, blacklist, config)
+            else:
+                disliked_tracks = await uow.tracks.get_list(
+                    user_id=user.id,
+                    max_score=config.disliked_tracks_score_threshold,
+                    exclude_skipped=True,
+                    order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
+                    limit=config.disliked_tracks_limit,
                 )
+                # Told from the first attempt on, so that it suggests fewer known tracks (#154). It mirrors the
+                # known-tracks filter, which drops any track of the library: if that filter changes, this count must
+                # follow. The most played tracks were measured too: no gain, as 100 tracks barely cover a library of
+                # thousands.
+                if config.covered_artists_limit > 0:
+                    covered_artists = await uow.tracks.get_covered_artists(
+                        user_id=user.id, limit=config.covered_artists_limit
+                    )
 
         # What the advisor spent is saved whatever the outcome: a failed discovery was billed too.
         playlist_id: uuid.UUID | None = None
         try:
             result = await self._discover(
-                user, config, profile, blacklist, liked_tracks, disliked_tracks, covered_artists
+                user, config, profile, blacklist, liked_tracks, disliked_tracks, covered_artists, favourite_artists
             )
             playlist_id = result.playlist.id if result.playlist else None
         finally:
@@ -153,54 +173,72 @@ class DiscoverTasteUseCase:
         liked_tracks: list[Track],
         disliked_tracks: list[Track],
         covered_artists: dict[str, int],
+        favourite_artists: list[str],
     ) -> DiscoverTasteResult:
         tracks_picked: list[TrackPicked] = []
         # What the playlist would hold now: the loop stops on it, so an attempt cut by the per-artist cap needs another.
         tracks: list[Track] = []
         reports: list[DiscoverTasteAttemptReport] = []
+        # Stays None with the `favourite_artists` focus: no advisor call chooses the artists.
         strategy: DiscoveryArtistStrategy | None = None
         # The artists asked in earlier attempts, not to be suggested again.
         artists_asked: list[str] = []
         # The artists whose own tracks the request asks for, kept over the attempts: their tracks stay uncapped.
         artists_requested: set[str] = set()
+        from_favourites = config.focus == DiscoveryFocus.FAVOURITE_ARTISTS
 
         for attempt in range(1, config.max_attempts + 1):
             logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
 
-            logger.debug("--- Discovery artists ---")
-            strategy_now = await self._advisor.get_discovery_artists(
-                profile=profile,
-                artists_limit=config.advisor_limit,
-                prompt=config.prompt,
-                focus=config.focus,
-                excluded_artists=list(artists_asked) or None,
-                blacklisted_artists=blacklist.artist_names or None,
-                blacklisted_tracks=blacklist.track_display_strings or None,
-                liked_tracks=liked_tracks,
-                disliked_tracks=disliked_tracks,
-                covered_artists=covered_artists or None,
-            )
-            # No artist left: a request naming only artists already got them, another attempt would be paid for
-            # nothing. The previous strategy is kept, as it chose the tracks.
-            if not strategy_now.artists and strategy is not None:
-                logger.info(f"Attempt {attempt}/{config.max_attempts}: no artist left to suggest, stopping")
-                break
-            strategy = strategy_now
+            if from_favourites:
+                start = (attempt - 1) * config.favourite_artists_per_attempt
+                artists = favourite_artists[start : start + config.favourite_artists_per_attempt]
+                if not artists:
+                    logger.info(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
+                    break
+                # Their best-known tracks are the user's already: the catalogue search reaches the others.
+                artists_deep = set(artists)
+                for artist_name in artists:
+                    logger.debug(f"Favourite artist '{artist_name}'")
+                logger.info(f"Favourite artists: {len(artists)}", extra={"artists": len(artists)})
+            else:
+                logger.debug("--- Discovery artists ---")
+                strategy_now = await self._advisor.get_discovery_artists(
+                    profile=profile,
+                    artists_limit=config.advisor_limit,
+                    prompt=config.prompt,
+                    focus=config.focus,
+                    excluded_artists=list(artists_asked) or None,
+                    blacklisted_artists=blacklist.artist_names or None,
+                    blacklisted_tracks=blacklist.track_display_strings or None,
+                    liked_tracks=liked_tracks,
+                    disliked_tracks=disliked_tracks,
+                    covered_artists=covered_artists or None,
+                )
+                # No artist left: a request naming only artists already got them, another attempt would be paid for
+                # nothing. The previous strategy is kept, as it chose the tracks.
+                if not strategy_now.artists and strategy is not None:
+                    logger.info(f"Attempt {attempt}/{config.max_attempts}: no artist left to suggest, stopping")
+                    break
+                strategy = strategy_now
 
-            artists_asked.extend(artist.name for artist in strategy.artists)
-            artists_requested.update(artist.name for artist in strategy.artists if artist.requested)
-            for artist in strategy.artists:
-                requested = " [requested]" if artist.requested else ""
-                logger.debug(f"Artist suggested '{artist.name}'{requested} ({artist.score:.2f}): {artist.sound}")
-            logger.info(
-                f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
-                extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
-            )
+                artists = [artist.name for artist in strategy.artists]
+                artists_deep = {artist.name for artist in strategy.artists if artist.requested}
+                artists_asked.extend(artists)
+                artists_requested.update(artists_deep)
+                for artist in strategy.artists:
+                    requested = " [requested]" if artist.requested else ""
+                    logger.debug(f"Artist suggested '{artist.name}'{requested} ({artist.score:.2f}): {artist.sound}")
+                logger.info(
+                    f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
+                    extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
+                )
 
             candidates = await self._get_candidates(
                 user=user,
                 config=config,
-                strategy=strategy,
+                artists=artists,
+                artists_deep=artists_deep,
                 blacklist=blacklist,
                 fingerprints_kept={tp.track.fingerprint for tp in tracks_picked},
             )
@@ -215,6 +253,9 @@ class DiscoverTasteUseCase:
                     max_tracks_per_artist=config.max_tracks_per_artist,
                     prompt=config.prompt,
                     focus=config.focus,
+                    liked_tracks=self._group_liked_tracks(liked_tracks, artists=list(candidates))
+                    if from_favourites
+                    else None,
                 )
                 for track_picked in tracks_picked_now:
                     logger.debug(f"Picked ({track_picked.score:.2f}): '{track_picked.track}'")
@@ -222,7 +263,7 @@ class DiscoverTasteUseCase:
             reports.append(
                 DiscoverTasteAttemptReport(
                     attempt=attempt,
-                    artists=len(strategy.artists),
+                    artists=len(artists),
                     candidates=sum(len(tracks) for tracks in candidates.values()),
                     tracks_picked=len(tracks_picked_now),
                 )
@@ -243,12 +284,11 @@ class DiscoverTasteUseCase:
             if len(tracks) >= config.playlist_limit:
                 break
             # Only artists the request asks for: it names no other, and theirs were searched as deep as configured.
-            if all(artist.requested for artist in strategy.artists):
+            if strategy is not None and all(artist.requested for artist in strategy.artists):
                 logger.info(f"Attempt {attempt}/{config.max_attempts}: only requested artists, stopping")
                 break
 
-        # strategy can only be None if no attempt ran, which DiscoverTasteConfigInput forbids (max_attempts >= 1)
-        if strategy is None or not tracks:
+        if not tracks:
             raise DiscoveryTrackNoNewError()
 
         if len(tracks) < config.playlist_limit:
@@ -261,9 +301,8 @@ class DiscoverTasteUseCase:
             logger.info("Dry-run mode: skipping playlist creation.")
             return DiscoverTasteResult(playlist=None, strategy=strategy, reports=reports, tracks=tracks)
 
-        name = config.title or (
-            f"[MF] - {strategy.suggested_playlist_name} - {datetime.now(UTC).isoformat(timespec='seconds')}"
-        )
+        suggested_name = strategy.suggested_playlist_name if strategy else self._FAVOURITE_ARTISTS_PLAYLIST_NAME
+        name = config.title or f"[MF] - {suggested_name} - {datetime.now(UTC).isoformat(timespec='seconds')}"
         # Remote first: if the provider call fails, nothing has been written locally.
         playlist = await self._provider_library.create_playlist(
             name=name,
@@ -282,7 +321,7 @@ class DiscoverTasteUseCase:
             playlist = replace(
                 playlist,
                 profile_id=profile.id,
-                reasoning=strategy.reasoning,
+                reasoning=strategy.reasoning if strategy else None,
                 prompt=config.prompt,
                 focus=config.focus,
                 tracks=tracks_with_ids,
@@ -300,21 +339,30 @@ class DiscoverTasteUseCase:
         self,
         user: User,
         config: DiscoverTasteConfigInput,
-        strategy: DiscoveryArtistStrategy,
+        artists: list[str],
+        artists_deep: set[str],
         blacklist: UserBlacklist,
         fingerprints_kept: set[str],
     ) -> dict[str, list[Track]]:
-        """Returns the catalogue tracks of each suggested artist the user does not know, per artist name.
+        """Returns the catalogue tracks of each artist the user does not know, per artist name.
 
-        A track is kept only when it credits the artist, and is neither blacklisted nor kept by an earlier attempt.
+        The `artists_deep` get the catalogue search, deeper than the plain one. A track is kept only when it credits
+        the artist, and is neither blacklisted nor kept by an earlier attempt.
         """
         logger.debug("--- Artist tracks ---")
         # Searched concurrently, a few at a time not to hit the rate limit; gather keeps the artists' order, so the
         # first artist still keeps a track two of them share.
         semaphore = asyncio.Semaphore(config.artist_tracks_concurrency)
         searches = [
-            asyncio.create_task(self._search_artist_tracks(artist=artist, config=config, semaphore=semaphore))
-            for artist in strategy.artists
+            asyncio.create_task(
+                self._search_artist_tracks(
+                    artist=artist,
+                    deep=artist in artists_deep,
+                    config=config,
+                    semaphore=semaphore,
+                )
+            )
+            for artist in artists
         ]
         try:
             results = await asyncio.gather(*searches)
@@ -326,11 +374,11 @@ class DiscoverTasteUseCase:
         candidates: dict[str, list[Track]] = {}
         fingerprints_seen = set(fingerprints_kept)
         found = matched = 0
-        for artist, tracks in zip(strategy.artists, results, strict=True):
+        for artist, tracks in zip(artists, results, strict=True):
             if tracks is None:
                 continue
 
-            tracks_matched = filter_by_artist(artist=artist.name, tracks=tracks)
+            tracks_matched = filter_by_artist(artist=artist, tracks=tracks)
             found += len(tracks)
             matched += len(tracks_matched)
             kept: list[Track] = []
@@ -339,9 +387,9 @@ class DiscoverTasteUseCase:
                     continue
                 fingerprints_seen.add(track.fingerprint)
                 kept.append(track)
-            logger.debug(f"Artist '{artist.name}': {len(tracks)} found, {len(tracks_matched)} matched")
+            logger.debug(f"Artist '{artist}': {len(tracks)} found, {len(tracks_matched)} matched")
             if kept:
-                candidates[artist.name] = kept
+                candidates[artist] = kept
 
         # Known tracks dropped locally: the advisor never sees them, so it cannot pick them.
         tracks_unknown = await drop_known_tracks(
@@ -357,35 +405,36 @@ class DiscoverTasteUseCase:
         }
         logger.info(
             f"Artist tracks: {found} found, {matched} by the artist, {len(tracks_unknown)} unknown "
-            f"({len(candidates)}/{len(strategy.artists)} artists left)",
+            f"({len(candidates)}/{len(artists)} artists left)",
             extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
         )
         return candidates
 
     async def _search_artist_tracks(
         self,
-        artist: ArtistSuggested,
+        artist: str,
+        deep: bool,
         config: DiscoverTasteConfigInput,
         semaphore: asyncio.Semaphore,
     ) -> list[Track] | None:
         """Returns the catalogue tracks found for the artist, or None if the provider rejected its search query."""
         async with semaphore:
             try:
-                # The search ranks by popularity: for an artist the request asks for, the first results are their
-                # best-known tracks, likely known to the user already.
-                if artist.requested:
+                # The search ranks by popularity: for an artist the request asks for, or a favourite one, the first
+                # results are their best-known tracks, likely known to the user already.
+                if deep:
                     return await self._provider_library.search_artist_catalogue(
-                        artist=artist.name,
+                        artist=artist,
                         max_pages=config.requested_artist_tracks_pages,
                     )
                 return await self._provider_library.search_artist_tracks(
-                    artist=artist.name,
+                    artist=artist,
                     max_pages=config.artist_tracks_pages,
                     log_enabled=False,
                 )
             except ProviderSearchQueryInvalidError:
                 # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
-                logger.warning(f"Artist skipped, its search query was rejected: '{artist.name}'")
+                logger.warning(f"Artist skipped, its search query was rejected: '{artist}'")
                 return None
 
     @staticmethod
@@ -405,6 +454,38 @@ class DiscoverTasteUseCase:
             uncapped_artists=artists_requested,
         )
         return tracks[: config.playlist_limit]
+
+    @staticmethod
+    def _draw_favourite_artists(
+        artist_stats: list[ArtistStats],
+        blacklist: UserBlacklist,
+        config: DiscoverTasteConfigInput,
+    ) -> list[str]:
+        """Returns the user's best favourite artists, not blacklisted, in a random order.
+
+        Shuffled so that two runs start with other artists: the attempts take them in this order.
+        """
+        favourite_artists = [
+            artist
+            for artist in rank_favourite_artists(artist_stats, confidence=config.favourite_artists_confidence)
+            if normalize_text(artist) not in blacklist.artist_fingerprints
+        ][: config.favourite_artists_limit]
+        random.shuffle(favourite_artists)
+        logger.info(
+            f"Favourite artists drawn: {len(favourite_artists)}",
+            extra={"favourite_artists": len(favourite_artists)},
+        )
+        return favourite_artists
+
+    @classmethod
+    def _group_liked_tracks(cls, liked_tracks: list[Track], artists: list[str]) -> dict[str, list[Track]]:
+        """Returns the user's best-rated tracks crediting each artist, best first, for the artists with any."""
+        liked_by_artist: dict[str, list[Track]] = {}
+        for artist in artists:
+            liked = filter_by_artist(artist=artist, tracks=liked_tracks, log_enabled=False)
+            if liked:
+                liked_by_artist[artist] = liked[: cls._FAVOURITE_ARTIST_LIKED_TRACKS_LIMIT]
+        return liked_by_artist
 
     @staticmethod
     def _is_blacklisted(track: Track, blacklist: UserBlacklist) -> bool:
