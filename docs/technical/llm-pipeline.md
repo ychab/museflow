@@ -147,7 +147,8 @@ The artists are the user's favourites, drawn without an LLM call: `rank_favourit
 average then plays, then the never-rated ones by plays. Their catalogue is searched as a requested artist's, and their
 tracks stay capped per artist. With no strategy, the picks prompt says they are the user's favourites, lists under each
 one up to 5 of the user's best-rated tracks of theirs (from the liked tracks above, so an artist ranked by plays alone
-may have none), and asks for original tracks only. The candidate search, the known-tracks filter and the playlist
+may have none), and asks for original tracks only, leaving out the artist's hits: the first measured runs picked
+them, unknown to the library but likely heard (#208). The candidate search, the known-tracks filter and the playlist
 creation are shared with `discover` in `application/services/discovery.py`.
 
 **Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
