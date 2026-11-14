@@ -16,8 +16,8 @@ class DiscoverTasteConfigInput:
         advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
         artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
         requested_artist_tracks_pages: Search pages per query of the catalogue search, for an artist whose own tracks
-            the request asks for: the plain search's first pages hold their best-known tracks, likely known to the
-            user.
+            the request asks for, or a favourite artist: the plain search's first pages hold their best-known tracks,
+            likely known to the user.
         artist_tracks_concurrency: Artists whose catalogue tracks are searched at the same time, few enough for the
             provider not to rate limit the run.
         playlist_limit: Target number of tracks in the generated playlist.
@@ -29,6 +29,11 @@ class DiscoverTasteConfigInput:
         disliked_tracks_score_threshold: Maximum user score for a track to be sent to the advisor as a negative example.
         disliked_tracks_limit: Maximum number of disliked tracks to send (lowest-scored first).
         covered_artists_limit: Maximum number of artists the user owns the most tracks of to send (0 sends none).
+        favourite_artists_limit: With the `favourite_artists` focus, the favourite artists the attempts draw from,
+            best first; shuffled, so that two runs do not start with the same artists.
+        favourite_artists_per_attempt: With the `favourite_artists` focus, the favourite artists searched per attempt.
+        favourite_artists_confidence: Bayesian confidence constant ranking the favourite artists: an artist with fewer
+            rated tracks than this is pulled toward the user's mean rating.
         dry_run: If True, skip playlist creation.
     """
 
@@ -54,6 +59,10 @@ class DiscoverTasteConfigInput:
 
     covered_artists_limit: int = 100
 
+    favourite_artists_limit: int = 20
+    favourite_artists_per_attempt: int = 5
+    favourite_artists_confidence: int = 5
+
     dry_run: bool = False
 
     def __post_init__(self) -> None:
@@ -61,5 +70,9 @@ class DiscoverTasteConfigInput:
             raise ValueError("max_attempts must be at least 1")
         if self.artist_tracks_concurrency < 1:
             raise ValueError("artist_tracks_concurrency must be at least 1")
+        if self.favourite_artists_limit < 1:
+            raise ValueError("favourite_artists_limit must be at least 1")
+        if self.favourite_artists_per_attempt < 1:
+            raise ValueError("favourite_artists_per_attempt must be at least 1")
         if self.focus is None and not self.prompt:
             object.__setattr__(self, "focus", DiscoveryFocus.EXPANSION)

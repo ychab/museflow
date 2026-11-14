@@ -44,7 +44,10 @@ def playlist_discover_command(
     focus: DiscoveryFocus | None = typer.Option(
         None,
         "--focus",
-        help="The discovery focus strategy (defaults to expansion without a prompt, none with one)",
+        help=(
+            "The discovery focus strategy (defaults to expansion without a prompt, none with one); favourite_artists "
+            "plays your favourite artists' tracks you don't know"
+        ),
     ),
     model: str | None = typer.Option(
         None,
@@ -91,6 +94,9 @@ def playlist_discover_command(
                         disliked_tracks_score_threshold=app_settings.DISCOVERY_DISLIKED_SCORE_THRESHOLD,
                         disliked_tracks_limit=app_settings.DISCOVERY_DISLIKED_TRACKS_LIMIT,
                         covered_artists_limit=app_settings.DISCOVERY_COVERED_ARTISTS_LIMIT,
+                        favourite_artists_limit=app_settings.DISCOVERY_FAVOURITE_ARTISTS_LIMIT,
+                        favourite_artists_per_attempt=app_settings.DISCOVERY_FAVOURITE_ARTISTS_PER_ATTEMPT,
+                        favourite_artists_confidence=app_settings.STATS_BAYESIAN_CONFIDENCE,
                         playlist_limit=limit,
                         max_attempts=app_settings.DISCOVERY_MAX_ATTEMPTS,
                         max_tracks_per_artist=app_settings.DISCOVERY_MAX_TRACKS_PER_ARTIST,
@@ -123,13 +129,15 @@ def playlist_discover_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     else:
-        console.print(
-            Panel(
-                result.strategy.reasoning,
-                title=result.strategy.strategy_label,
-                border_style="blue",
+        # No strategy with the favourite artists focus: they come from the user's data, not the advisor.
+        if result.strategy is not None:
+            console.print(
+                Panel(
+                    result.strategy.reasoning,
+                    title=result.strategy.strategy_label,
+                    border_style="blue",
+                )
             )
-        )
 
         report_table = Table(title="Discovery Report")
         report_table.add_column("Attempt", justify="right")

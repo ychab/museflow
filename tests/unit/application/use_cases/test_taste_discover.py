@@ -13,6 +13,7 @@ from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
@@ -33,6 +34,7 @@ from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.discovery import ArtistSuggestedFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
 from tests.unit.factories.value_objects.llm import LLMUsageFactory
+from tests.unit.factories.value_objects.stats import ArtistStatsFactory
 
 
 class TestDiscoverTasteUseCase:
@@ -403,6 +405,120 @@ class TestDiscoverTasteUseCase:
         mock_provider_library.search_artist_tracks.assert_awaited_once_with(
             artist=other.name, max_pages=2, log_enabled=False
         )
+
+    async def test__favourite_artists__drawn__searched_deep__capped(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_blacklist_repository: mock.AsyncMock,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        """The best favourites not blacklisted are searched deep with no artists call, their tracks still capped."""
+        mock_track_repository.get_artist_stats.return_value = [
+            ArtistStatsFactory.build(artist="Most Played", plays_count=30),
+            ArtistStatsFactory.build(artist="A Blacklisted Band", plays_count=20),
+            ArtistStatsFactory.build(artist="Played", plays_count=10),
+            ArtistStatsFactory.build(artist="Least Played", plays_count=5),
+        ]
+        mock_blacklist_repository.get.return_value = UserBlacklist(
+            artists=[BlacklistedArtistFactory.build(artist_name="A Blacklisted Band")],
+        )
+        liked_most_played = TrackFactory.batch(6, artists=["Most Played"], score=9)
+        liked_other = TrackFactory.build(artists=["Someone Else"], score=9)
+        mock_track_repository.get_list.return_value = [*liked_most_played, liked_other]
+        tracks_most_played = TrackFactory.batch(2, artists=["Most Played"])
+        track_played = TrackFactory.build(artists=["Played"])
+        mock_provider_library.search_artist_catalogue.side_effect = lambda artist, **_: {
+            "Most Played": tracks_most_played,
+            "Played": [track_played],
+        }[artist]
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(
+                focus=DiscoveryFocus.FAVOURITE_ARTISTS,
+                favourite_artists_limit=2,
+                favourite_artists_per_attempt=2,
+                requested_artist_tracks_pages=5,
+                max_tracks_per_artist=1,
+                playlist_limit=10,
+                max_attempts=1,
+                dry_run=True,
+            ),
+        )
+
+        mock_track_repository.get_artist_stats.assert_awaited_once_with(user_id=user.id)
+        # Only the liked tracks are read: the dislikes and the coverage serve the skipped artists step.
+        mock_track_repository.get_list.assert_awaited_once()
+        mock_track_repository.get_covered_artists.assert_not_called()
+        mock_advisor.get_discovery_artists.assert_not_called()
+        mock_provider_library.search_artist_tracks.assert_not_called()
+        assert sorted(
+            call.kwargs["artist"] for call in mock_provider_library.search_artist_catalogue.await_args_list
+        ) == [
+            "Most Played",
+            "Played",
+        ]
+        assert {
+            call.kwargs["max_pages"] for call in mock_provider_library.search_artist_catalogue.await_args_list
+        } == {5}
+        picks_kwargs = mock_advisor.pick_discovery_tracks.call_args.kwargs
+        assert picks_kwargs["strategy"] is None
+        # The liked tracks of each candidate artist, at most 5: "Played" has none.
+        assert picks_kwargs["liked_tracks"] == {"Most Played": liked_most_played[:5]}
+        assert result.strategy is None
+        assert sorted(result.tracks, key=lambda track: track.artists[0]) == [tracks_most_played[0], track_played]
+
+    async def test__favourite_artists__none_left__stops(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_provider_library: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Each attempt takes the next favourites; once none is left, the run ends short of the limit."""
+        mock_track_repository.get_artist_stats.return_value = ArtistStatsFactory.batch(2)
+        mock_provider_library.search_artist_catalogue.side_effect = lambda artist, **_: [
+            TrackFactory.build(artists=[artist])
+        ]
+
+        with caplog.at_level(logging.INFO):
+            result = await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(
+                    focus=DiscoveryFocus.FAVOURITE_ARTISTS,
+                    favourite_artists_per_attempt=1,
+                    playlist_limit=10,
+                    max_attempts=3,
+                    dry_run=True,
+                ),
+            )
+
+        assert [(r.attempt, r.artists) for r in result.reports] == [(1, 1), (2, 1)]
+        assert mock_advisor.pick_discovery_tracks.await_count == 2
+        assert len(result.tracks) == 2
+        assert "Attempt 3/3: no favourite artist left, stopping" in caplog.text
+
+    async def test__favourite_artists__none__no_new_tracks(
+        self,
+        user: User,
+        use_case: DiscoverTasteUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_advisor: mock.AsyncMock,
+    ) -> None:
+        mock_track_repository.get_artist_stats.return_value = []
+
+        with pytest.raises(DiscoveryTrackNoNewError):
+            await use_case.create_suggestions_playlist(
+                user=user,
+                config=DiscoverTasteConfigInput(focus=DiscoveryFocus.FAVOURITE_ARTISTS),
+            )
+
+        mock_advisor.pick_discovery_tracks.assert_not_called()
 
     async def test__attempts__only_requested_artists__stops(
         self,

@@ -8,6 +8,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
+from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
@@ -52,6 +53,7 @@ class TestDiscoverTasteUseCase:
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert result.playlist.prompt == "lo-fi jazz and soul for focus"
         assert result.playlist.focus is None
+        assert result.strategy is not None
         assert result.playlist.reasoning == result.strategy.reasoning
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
@@ -80,6 +82,45 @@ class TestDiscoverTasteUseCase:
             (LLMOperation.DISCOVER, "advisor_artists"),
             (LLMOperation.DISCOVER, "advisor_picks"),
         ]
+        assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, result.playlist.id)}
+
+    async def test__favourite_artists(
+        self,
+        async_session_db: AsyncSession,
+        use_case: DiscoverTasteUseCase,
+        user: User,
+    ) -> None:
+        """The favourite artist comes from the user's ratings: no artists call, its catalogue searched by year."""
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
+        await TrackModelFactory.create_async(
+            user_id=user.id, name="Cali Pachanguero", artists=["Grupo Niche"], score=9
+        )
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            # The search stub serves 2 pages per query, here one per release year range.
+            config=DiscoverTasteConfigInput(
+                focus=DiscoveryFocus.FAVOURITE_ARTISTS,
+                requested_artist_tracks_pages=2,
+                playlist_limit=2,
+                dry_run=False,
+            ),
+        )
+
+        assert result.strategy is None
+        assert result.playlist is not None
+        assert result.playlist.focus == DiscoveryFocus.FAVOURITE_ARTISTS
+        assert result.playlist.reasoning is None
+        assert result.playlist.name.startswith("[MF] - Favourite artists - ")
+        assert [track.name for track in result.tracks] == ["Mi Pueblo", "Mi Pueblo Natal"]
+        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 2, 2)]
+
+        rows = (
+            (await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id)))
+            .scalars()
+            .all()
+        )
+        assert [(row.operation, row.step) for row in rows] == [(LLMOperation.DISCOVER, "advisor_picks")]
         assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, result.playlist.id)}
 
     async def test__title(

@@ -356,3 +356,44 @@ class TestOpenRouterAdvisorAdapter:
         assert f"#### {requested.name} (REQUESTED)\nWanted sound: {requested.sound}\n" in system_message["content"]
         assert "- 3 | Paper Moon | Late Lights | 2021" in system_message["content"]
         assert user_message["content"] == "Choose the tracks for this playlist."
+
+    async def test__pick_discovery_tracks__favourite_artists(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        """Without a strategy, the artists are the user's favourites, shown with the tracks they rated high."""
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            json={
+                "choices": [
+                    {"message": {"content": '{"picks": [{"id": "1", "score": 0.9}]}'}, "finish_reason": "stop"}
+                ]
+            },
+        )
+        unknown = TrackFactory.build(name="Neon Harbor", album_name="Night Drive", album_year=1999)
+        other = TrackFactory.build(name="Glass Rain", album_name="Late Lights", album_year=2021)
+        liked = TrackFactory.batch(2, artists=["The Fictional Band"])
+
+        tracks_picked = await openrouter_advisor.pick_discovery_tracks(
+            strategy=None,
+            candidates={"The Fictional Band": [unknown], "Another Band": [other]},
+            tracks_limit=5,
+            max_tracks_per_artist=3,
+            focus=DiscoveryFocus.FAVOURITE_ARTISTS,
+            liked_tracks={"The Fictional Band": liked},
+        )
+
+        assert [tp.track for tp in tracks_picked] == [unknown]
+        system_message, user_message = json.loads(httpx_mock.get_requests()[0].content)["messages"]
+        assert "### YOUR STRATEGY" not in system_message["content"]
+        assert "Wanted sound" not in system_message["content"]
+        assert "- Focus strategy: favourite_artists\n" in system_message["content"]
+        assert "### FAVOURITE ARTISTS\n" in system_message["content"]
+        assert (
+            f"#### The Fictional Band\nLiked by the user: {liked[0].name}; {liked[1].name}\n"
+            "- 1 | Neon Harbor | Night Drive | 1999"
+        ) in system_message["content"]
+        assert "#### Another Band\n- 2 | Glass Rain | Late Lights | 2021" in system_message["content"]
+        assert user_message["content"] == "Apply the 'favourite_artists' focus strategy."

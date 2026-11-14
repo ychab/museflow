@@ -15,6 +15,16 @@ class TestDiscoverTasteConfigInput:
         with pytest.raises(ValueError, match="artist_tracks_concurrency must be at least 1"):
             DiscoverTasteConfigInput(artist_tracks_concurrency=artist_tracks_concurrency)
 
+    @pytest.mark.parametrize("favourite_artists_limit", [0, -1])
+    def test__favourite_artists_limit__below_one(self, favourite_artists_limit: int) -> None:
+        with pytest.raises(ValueError, match="favourite_artists_limit must be at least 1"):
+            DiscoverTasteConfigInput(favourite_artists_limit=favourite_artists_limit)
+
+    @pytest.mark.parametrize("favourite_artists_per_attempt", [0, -1])
+    def test__favourite_artists_per_attempt__below_one(self, favourite_artists_per_attempt: int) -> None:
+        with pytest.raises(ValueError, match="favourite_artists_per_attempt must be at least 1"):
+            DiscoverTasteConfigInput(favourite_artists_per_attempt=favourite_artists_per_attempt)
+
     @pytest.mark.parametrize(
         ("prompt", "focus", "expected_focus"),
         [

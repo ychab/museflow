@@ -52,7 +52,7 @@ class AppSettings(BaseSettings):
     DISCOVERY_ADVISOR_LIMIT_RATIO: float = 1.5
     DISCOVERY_ARTIST_TRACKS_PAGES: int = Field(default=2, ge=1)  # pages of 10 search results per suggested artist
     # Per query of the catalogue search (one per release year range on Spotify), for an artist whose own tracks the
-    # request asks for: the plain search's first pages hold their best-known tracks (#203)
+    # request asks for, or a favourite artist: the plain search's first pages hold their best-known tracks (#203)
     DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES: int = Field(default=10, ge=1)
     DISCOVERY_MAX_ATTEMPTS: int = 3
     DISCOVERY_MAX_TRACKS_PER_ARTIST: int = 3
@@ -62,6 +62,10 @@ class AppSettings(BaseSettings):
     DISCOVERY_DISLIKED_SCORE_THRESHOLD: int = 2
     DISCOVERY_DISLIKED_TRACKS_LIMIT: int = 50
     DISCOVERY_COVERED_ARTISTS_LIMIT: int = 100  # 0 sends none
+    # The `favourite_artists` focus: the favourites drawn from (ratings first, then plays), then searched per attempt.
+    # 5 per attempt fill 10 tracks at 3 per artist, with room for those whose unknown tracks don't fit.
+    DISCOVERY_FAVOURITE_ARTISTS_LIMIT: int = Field(default=20, ge=1)
+    DISCOVERY_FAVOURITE_ARTISTS_PER_ATTEMPT: int = Field(default=5, ge=1)
 
     STATS_BAYESIAN_CONFIDENCE: int = 5
 

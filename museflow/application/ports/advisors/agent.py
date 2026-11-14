@@ -52,19 +52,23 @@ class AdvisorPort(ABC):
     @abstractmethod
     async def pick_discovery_tracks(
         self,
-        strategy: DiscoveryArtistStrategy,
+        strategy: DiscoveryArtistStrategy | None,
         candidates: dict[str, list[Track]],
         tracks_limit: int,
         max_tracks_per_artist: int,
         prompt: str | None = None,
         focus: DiscoveryFocus | None = None,
+        liked_tracks: dict[str, list[Track]] | None = None,
     ) -> list[TrackPicked]:
         """Asks to choose, among the candidates only, the tracks that fit the strategy and the request.
 
         Args:
-            strategy: The artists step's reply, whose reasoning and per-artist sound guide the choice.
-            candidates: Catalogue tracks unknown to the user, per suggested artist name.
+            strategy: The artists step's reply, whose reasoning and per-artist sound guide the choice. None when the
+                artists are the user's favourites, drawn from their data without an artists step.
+            candidates: Catalogue tracks unknown to the user, per artist name.
             tracks_limit: The most tracks to pick: fewer, or none, when nothing fits.
+            liked_tracks: The user's best-rated tracks of a candidate artist, per artist name: what the user loves in
+                them, to guide the choice without a strategy.
 
         Returns:
             The picked candidates; a pick that is not one of them is dropped.

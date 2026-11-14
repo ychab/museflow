@@ -113,7 +113,7 @@ as a system message (the role and rules) and a user message (the session's focus
 |---|---|---|
 | Profile summaries | Archetype, core identity, current vibe, behavioural traits and era timeline rendered by pure helpers in `domain/utils/taste.py` | Who the listener is |
 | Risk calibration | Derived from the `openness` and `adventurousness` traits: both below 0.4 means stay in the comfort zone, either above 0.7 means push into adjacent territory | How far to stray |
-| Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
+| Focus strategy | `expansion`, `roots_revival` or `cultural_bridge`, only the chosen one is described (`expansion` by default without a prompt, none with one; `favourite_artists` skips this step, see below); the last two interpolate the oldest and current era labels from the profile | What kind of discovery |
 | Prompt | Optional CLI argument | Per-session steering: the playlist theme, in the user's words. With a prompt, a rule says what it settles over the profile: the sound it implies (a calm genre sets aside a high-energy trait), and the artists when it names a genre with its own sound; a language counts only when stated, and the profile's languages no longer break ties among the artists (#184). The profile keeps the rest, and a prompt implying no sound ("US rap") is answered from the profile alone (#177). An artist the prompt names is either the request ("tracks of Artist X I don't know": suggested with `requested` set, even if covered, and alone when the prompt names only artists) or a sound reference ("sounds like Artist X": kept out) (#200) |
 | Exclusion list | The artists asked in earlier rounds of the same run | Other artists in the next round |
 | Blacklist | Blacklisted artists and tracks | Hard "never suggest" |
@@ -132,6 +132,14 @@ on an artist with 172 tracks in the library: 290 distinct tracks of theirs and 9
 exact artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
 provider rejects as malformed skips that artist with a warning instead of ending the run.
 
+**Favourite artists, no step 1.** With the `favourite_artists` focus, the artists come from the user's data, with no
+LLM call: `rank_favourite_artists` (`application/utils/discovery.py`) ranks the primary artists rated at or above the
+user's mean first, by Bayesian average then plays, then the never-rated ones by plays; an artist rated below the mean
+is left out. The best `DISCOVERY_FAVOURITE_ARTISTS_LIMIT` not blacklisted are shuffled, so that two runs start with
+other artists, and each round takes the next `DISCOVERY_FAVOURITE_ARTISTS_PER_ATTEMPT`, until the playlist is full or
+none is left. Their catalogue is searched as a requested artist's, but their tracks stay capped per artist: the
+playlist is a mix of favourites (#200).
+
 **Step 2, picks** (`pick_discovery_tracks`, usage step `advisor_picks`). The model gets the strategy of step 1, each
 artist with its wanted sound, and the remaining tracks as `id | title | album | album release year`, then answers with
 ids and a fit score. The ids are short numbers given in the prompt: the adapter maps them back to the candidates and
@@ -139,7 +147,9 @@ drops any other, so a title cannot be invented. The prompt asks to judge a track
 that album, in that year), never by its words, and to leave out a track it cannot place: seeing only titles, the model
 had picked tracks whose title echoed the theme. A requested artist is marked in the list: no per-artist limit for them,
 and their original tracks only (no remix, live or re-recording of a track the user likely knows). The profile is not sent again: the strategy carries the intent, and the
-call stays cheap.
+call stays cheap. With favourite artists there is no strategy: the prompt says they are the user's favourites, lists
+under each one up to 5 of the user's best-rated tracks of theirs as what they love in them (taken from the liked
+tracks above, so a favourite ranked by plays alone may have none), and asks for original tracks only.
 
 **Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
 0.7, and return fewer than the limit rather than pad. This is an instruction to the model, not a post-filter in code;
