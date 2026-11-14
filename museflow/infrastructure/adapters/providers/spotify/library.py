@@ -1,7 +1,10 @@
+import asyncio
 import itertools
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -24,12 +27,14 @@ from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchArtistQuery
+from museflow.infrastructure.adapters.providers.spotify.queries import get_release_year_ranges
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 from museflow.infrastructure.adapters.providers.spotify.types import SPOTIFY_PLAYLIST_ITEMS_LIMIT
 from museflow.infrastructure.adapters.providers.spotify.types import LocalUnsupported
+from museflow.infrastructure.config.settings.spotify import spotify_settings
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +84,11 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         self,
         user: User,
         session_client: SpotifyOAuthSessionClient,
+        search_concurrency: int = spotify_settings.SEARCH_CONCURRENCY,
     ) -> None:
         self.user = user
         self.session_client = session_client
+        self.search_concurrency = search_concurrency
 
     # -------------------------------------------------------------------------
     # Public API
@@ -94,28 +101,36 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         page_size: int = 10,
         log_enabled: bool = True,
     ) -> list[Track]:
-        query = SpotifySearchArtistQuery(artist=artist).get_query()
-        try:
-            tracks = await self._fetch_pages(
-                endpoint="/search",
-                page_model=SpotifyPage[SpotifyTrack],
-                page_processor=self._extract_search_tracks,
-                page_size=page_size,
-                max_pages=max_pages,
-                log_enabled=log_enabled,
-                log_prefix=f"[Search artist {artist!r}]",
-                params={
-                    "q": query,
-                    "type": "track",
-                },
-                response_key="tracks",
-                ignored_status_codes=frozenset({400}),
-            )
-        except SpotifyApiError as e:
-            # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
-            raise ProviderSearchQueryInvalidError(f"Spotify rejected the search query for artist {artist!r}") from e
+        query = SpotifySearchArtistQuery(artist=artist)
+        tracks = await self._search_tracks(query, max_pages=max_pages, page_size=page_size, log_enabled=log_enabled)
+        logger.debug(f"Search query {query.get_query()!r} returned {len(tracks)} track(s)")
+        return tracks
 
-        logger.debug(f"Search query {query!r} returned {len(tracks)} track(s)")
+    async def search_artist_catalogue(self, artist: str, max_pages: int) -> list[Track]:
+        # One search per release year range, a few at a time not to hit the rate limit; gather keeps the ranges'
+        # order. The ranges do not overlap: a track, on one album, comes from one range only.
+        semaphore = asyncio.Semaphore(self.search_concurrency)
+        searches = [
+            asyncio.create_task(
+                self._search_tracks_bounded(
+                    SpotifySearchArtistQuery(artist=artist, years=years),
+                    max_pages=max_pages,
+                    semaphore=semaphore,
+                )
+            )
+            for years in get_release_year_ranges(current_year=datetime.now(UTC).year)
+        ]
+        try:
+            results = await asyncio.gather(*searches)
+        finally:
+            # A failed search leaves the others running: cancel them (a no-op on those already done).
+            for search in searches:
+                search.cancel()
+
+        tracks = [track for tracks in results for track in tracks]
+        logger.debug(
+            f"Catalogue search of {artist!r} returned {len(tracks)} track(s) over {len(searches)} year ranges"
+        )
         return tracks
 
     async def create_playlist(
@@ -197,10 +212,12 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
     ) -> list[Track]:
         """Fetches the pages of a Spotify resource, until `max_pages` or an empty page.
 
-        A short page does not end the walk. Temporary workaround, seen in November 2026 (#174): for an `artist:"…"`
-        search with a limit of 10, the first page held 5 to 7 tracks with a `total` equal to that count, while the
-        next page held 10 more tracks with a total above 100. Once a short page comes with a consistent total again,
-        a short page, or reaching the `total`, can end the walk.
+        A short page does not end the walk. Seen in November 2026 (#174, #203): for an `artist:"…"` search with a limit
+        of 10, the first pages, up to about offset 90, hold 5 tracks with a `total` equal to that count, then the
+        pages are full and the `total` real (142, later 242). No track is skipped: over those first pages the offset
+        advances at half speed too (offset 10 returns the 6th to 10th tracks), so stepping by `page_size` reads the
+        same tracks as a walk by 5. Once a short page comes with a consistent total again, a short page, or reaching
+        the `total`, can end the walk.
         """
         items: list[Track] = []
         pages_count = 0
@@ -265,6 +282,44 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             json_data=json_data,
             ignored_status_codes=ignored_status_codes,
         )
+
+    async def _search_tracks(
+        self,
+        query: SpotifySearchArtistQuery,
+        max_pages: int,
+        page_size: int = 10,
+        log_enabled: bool = False,
+    ) -> list[Track]:
+        try:
+            return await self._fetch_pages(
+                endpoint="/search",
+                page_model=SpotifyPage[SpotifyTrack],
+                page_processor=self._extract_search_tracks,
+                page_size=page_size,
+                max_pages=max_pages,
+                log_enabled=log_enabled,
+                log_prefix=f"[Search {query.get_query()!r}]",
+                params={
+                    "q": query.get_query(),
+                    "type": "track",
+                },
+                response_key="tracks",
+                ignored_status_codes=frozenset({400}),
+            )
+        except SpotifyApiError as e:
+            # Only a 400 is let through: Spotify rejects the query itself (e.g. control characters in a name).
+            raise ProviderSearchQueryInvalidError(
+                f"Spotify rejected the search query for artist {query.artist!r}"
+            ) from e
+
+    async def _search_tracks_bounded(
+        self,
+        query: SpotifySearchArtistQuery,
+        max_pages: int,
+        semaphore: asyncio.Semaphore,
+    ) -> list[Track]:
+        async with semaphore:
+            return await self._search_tracks(query, max_pages=max_pages)
 
     # -------------------------------------------------------------------------
     # Extractors

@@ -30,6 +30,19 @@ class ProviderLibraryPort(ABC):
         ...
 
     @abstractmethod
+    async def search_artist_catalogue(self, artist: str, max_pages: int) -> list[Track]:
+        """Retrieves as much of an artist's catalogue as the provider's search reaches, `max_pages` per query.
+
+        Deeper than `search_artist_tracks`, whose first results are the artist's best-known tracks, and costlier: the
+        provider may run several queries. For an artist whose own tracks the user asks for. The provider may also
+        return tracks of artists with a close name: the caller checks the candidates.
+
+        Raises:
+            ProviderSearchQueryInvalidError: If the provider rejects the query as malformed.
+        """
+        ...
+
+    @abstractmethod
     async def create_playlist(
         self,
         name: str,

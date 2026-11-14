@@ -369,14 +369,18 @@ class DiscoverTasteUseCase:
         semaphore: asyncio.Semaphore,
     ) -> list[Track] | None:
         """Returns the catalogue tracks found for the artist, or None if the provider rejected its search query."""
-        # The search ranks by popularity: for an artist the request asks for, the first pages are their best-known
-        # tracks, likely known to the user already.
-        max_pages = config.requested_artist_tracks_pages if artist.requested else config.artist_tracks_pages
         async with semaphore:
             try:
+                # The search ranks by popularity: for an artist the request asks for, the first results are their
+                # best-known tracks, likely known to the user already.
+                if artist.requested:
+                    return await self._provider_library.search_artist_catalogue(
+                        artist=artist.name,
+                        max_pages=config.requested_artist_tracks_pages,
+                    )
                 return await self._provider_library.search_artist_tracks(
                     artist=artist.name,
-                    max_pages=max_pages,
+                    max_pages=config.artist_tracks_pages,
                     log_enabled=False,
                 )
             except ProviderSearchQueryInvalidError:

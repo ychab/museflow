@@ -122,8 +122,13 @@ as a system message (the role and rules) and a user message (the session's focus
 | Covered artists | The primary artists the user owns the most tracks of, with their track count, at most 100 (`DISCOVERY_COVERED_ARTISTS_LIMIT`, 0 sends none) | A coverage, not a preference (plays and scores do not count, as the known-tracks filter drops any track of the library): a rare deep cut is welcome, most picks should come from other artists, unless the prompt asks for one of them |
 
 **Between the calls, no LLM.** For each artist, the provider is searched by artist only
-(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify, the first ones holding only 5 (#203);
-`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 10, for a requested artist, as the search ranks by popularity and its first pages hold the tracks the user knows), a [strict match](#strict-artist-match) keeps the tracks crediting that
+(`DISCOVERY_ARTIST_TRACKS_PAGES` pages of 10 on Spotify, the first ones holding only 5 with no track skipped, #203). A
+requested artist gets a catalogue search instead (`search_artist_catalogue`): the plain search ranks by popularity, so
+its first pages hold the tracks the user knows, and one query is capped around 250 tracks. Spotify's adapter runs one
+`artist:"X" year:<range>` search per release year range (one range before 1980, decades, then 5-year ranges up to the
+current year), `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` pages each, `SPOTIFY_SEARCH_CONCURRENCY` at a time. Measured
+on an artist with 172 tracks in the library: 290 distinct tracks of theirs and 98 unknown to the user, against 217 and
+34 for 30 pages of the plain search. Then a [strict match](#strict-artist-match) keeps the tracks crediting that
 exact artist, and the tracks already in the library, blacklisted, or kept by an earlier round are dropped. A search the
 provider rejects as malformed skips that artist with a warning instead of ending the run.
 

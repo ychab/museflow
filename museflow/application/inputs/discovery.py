@@ -15,8 +15,9 @@ class DiscoverTasteConfigInput:
         title: Optional playlist name, used as is; if omitted the name is built from the advisor's suggestion.
         advisor_limit: Number of artists asked from the advisor, then of tracks it may pick among theirs.
         artist_tracks_pages: Search pages of catalogue tracks fetched per suggested artist.
-        requested_artist_tracks_pages: Search pages fetched for an artist whose own tracks the request asks for:
-            deeper, as the first pages hold the artist's best-known tracks, likely known to the user.
+        requested_artist_tracks_pages: Search pages per query of the catalogue search, for an artist whose own tracks
+            the request asks for: the plain search's first pages hold their best-known tracks, likely known to the
+            user.
         artist_tracks_concurrency: Artists whose catalogue tracks are searched at the same time, few enough for the
             provider not to rate limit the run.
         playlist_limit: Target number of tracks in the generated playlist.

@@ -28,6 +28,9 @@ class SpotifySettings(BaseSettings):
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5
     HTTP_MAX_RETRY_WAIT: int = 60
+    # Searches run at the same time for one artist's catalogue, one per release year range: few enough for the
+    # rate limit, whose 429 is retried after its Retry-After
+    SEARCH_CONCURRENCY: int = Field(default=4, ge=1)
 
     TOKEN_BUFFER_SECONDS: int = 60 * 5
 
