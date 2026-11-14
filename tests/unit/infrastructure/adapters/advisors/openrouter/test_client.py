@@ -405,4 +405,6 @@ class TestOpenRouterAdvisorAdapter:
         ) in system_message["content"]
         assert "#### Another Band\n- 2 | Glass Rain | Late Lights | 2021" in system_message["content"]
         assert "- Pick up to 5 tracks, at most 3 per artist" in system_message["content"]
+        # Hits are unknown to the library but likely heard: the picks went to them without this rule (#208).
+        assert "hits and best-known singles already" in system_message["content"]
         assert user_message["content"] == expected_user_message
