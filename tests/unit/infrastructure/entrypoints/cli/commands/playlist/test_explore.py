@@ -59,6 +59,7 @@ class TestPlaylistExploreParserCommand:
         assert config.picks_limit == 23
         assert (config.artists_limit, config.artists_per_attempt) == (20, 5)
         assert config.catalogue_tracks_pages == 10
+        assert config.artist_tracks_concurrency == 1
 
     def test__prompt__omitted(self, mock_playlist_explore_logic: mock.AsyncMock, runner: CliRunner) -> None:
         result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com"])

@@ -76,6 +76,7 @@ def playlist_explore_command(
                         ratings_confidence=app_settings.STATS_BAYESIAN_CONFIDENCE,
                         picks_limit=math.ceil(limit * app_settings.DISCOVERY_ADVISOR_LIMIT_RATIO),
                         catalogue_tracks_pages=app_settings.DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES,
+                        artist_tracks_concurrency=app_settings.EXPLORE_ARTISTS_CONCURRENCY,
                         playlist_limit=limit,
                         max_attempts=app_settings.DISCOVERY_MAX_ATTEMPTS,
                         max_tracks_per_artist=app_settings.DISCOVERY_MAX_TRACKS_PER_ARTIST,
