@@ -39,9 +39,10 @@ then may pick as many tracks, `DISCOVERY_ARTIST_TRACKS_PAGES` (2) search pages o
 appearance included.
 
 **Naming an artist.** The advisor reads what the prompt asks of an artist it names. "Tracks of Artist X I don't know"
-asks for that artist's own tracks: Artist X is suggested even if your library already covers them, their search goes
-deeper (`DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES`, 10 pages), their tracks are not capped per artist, and a prompt
-naming only artists gets only them, in a single round. "Something that sounds like Artist X" uses the artist as a sound reference: the
+asks for that artist's own tracks: Artist X is suggested even if your library already covers them, their whole
+catalogue is searched (on Spotify, one search per release year range, `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` pages
+of 10 each, `SPOTIFY_SEARCH_CONCURRENCY` at a time), their tracks are not capped per artist, and a prompt naming only
+artists gets only them, in a single round. "Something that sounds like Artist X" uses the artist as a sound reference: the
 playlist holds other artists.
 
 **Focus strategies**

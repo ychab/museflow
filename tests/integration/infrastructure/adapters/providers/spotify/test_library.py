@@ -1,4 +1,6 @@
+import json
 import logging
+from typing import Any
 
 import pytest
 
@@ -9,6 +11,7 @@ from museflow.domain.exceptions import ProviderPageValidationError
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 
+from tests import ASSETS_DIR
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.utils.wiremock import WireMockContext
 
@@ -93,6 +96,54 @@ class TestSpotifyLibrary:
         tracks = await spotify_library.search_artist_tracks(artist="Grupo Niche", max_pages=10)
 
         assert len(tracks) == 8
+
+    async def test__search_artist_catalogue__nominal(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        """One search per release year range, newest first: here only two ranges hold tracks."""
+        search_page = json.loads(
+            (ASSETS_DIR / "wiremock" / "spotify" / "__files" / "search_track_page_1.json").read_text()
+        )
+        items = search_page["tracks"]["items"]
+
+        def page(tracks: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"tracks": {**search_page["tracks"], "items": tracks, "total": len(tracks)}}
+
+        spotify_wiremock.create_mapping(method="GET", url_path="/search", status=200, json_body=EMPTY_SEARCH_PAGE)
+        for years, tracks in [("1980-1989", items[:1]), ("2005-2009", items[2:4])]:
+            spotify_wiremock.create_mapping(
+                method="GET",
+                url_path="/search",
+                status=200,
+                query_params={"q": f'artist:"Grupo Niche" year:{years}'},
+                json_body=page(tracks),
+                priority=0,
+            )
+
+        tracks = await spotify_library.search_artist_catalogue(artist="Grupo Niche", max_pages=1)
+
+        assert [(track.name, track.album_year) for track in tracks] == [
+            ("Mi Pueblo Natal", 2005),
+            ("Mi Pueblo", 2007),
+            ("Mi Pueblo", 1988),
+        ]
+
+    async def test__search_artist_catalogue__query_invalid(
+        self,
+        spotify_library: SpotifyLibraryAdapter,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="GET",
+            url_path="/search",
+            status=400,
+            json_body={"error": {"status": 400, "message": "Bad request."}},
+        )
+
+        with pytest.raises(ProviderSearchQueryInvalidError, match="Spotify rejected the search query for artist"):
+            await spotify_library.search_artist_catalogue(artist="Caf\x00\x19", max_pages=1)
 
     async def test__play_track__nominal(self, spotify_library: SpotifyLibraryAdapter) -> None:
         await spotify_library.play_track("6rqhFgbbKwnb9MLmUQDhG6")
