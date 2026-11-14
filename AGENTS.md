@@ -157,6 +157,10 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   statement, so the exit point stays visible.
 - No duplicated inner functions: a closure repeated in several places becomes a decorator or shared helper
   (e.g. `@self_heal`).
+- A helper that only builds instances of one class is a classmethod of it, an alternative constructor named after
+  what it builds from (`SpotifySearchArtistQuery.by_release_years`), not a module function next to it; what only
+  shapes the build (the current year) is a parameter, not a field. A mapper between two shapes (DTO or input to
+  entity) stays a standalone function, as does a builder from an input the class's layer must not know.
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
   repeating the types.
 
