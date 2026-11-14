@@ -3,8 +3,6 @@ import itertools
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC
-from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -27,7 +25,6 @@ from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain
 from museflow.infrastructure.adapters.providers.spotify.mappers import to_domain_track
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.queries import SpotifySearchArtistQuery
-from museflow.infrastructure.adapters.providers.spotify.queries import get_release_year_ranges
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPlaylist
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
@@ -111,14 +108,8 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         # order. The ranges do not overlap: a track, on one album, comes from one range only.
         semaphore = asyncio.Semaphore(self.search_concurrency)
         searches = [
-            asyncio.create_task(
-                self._search_tracks_bounded(
-                    SpotifySearchArtistQuery(artist=artist, years=years),
-                    max_pages=max_pages,
-                    semaphore=semaphore,
-                )
-            )
-            for years in get_release_year_ranges(current_year=datetime.now(UTC).year)
+            asyncio.create_task(self._search_tracks_bounded(query, max_pages=max_pages, semaphore=semaphore))
+            for query in SpotifySearchArtistQuery.by_release_years(artist=artist)
         ]
         try:
             results = await asyncio.gather(*searches)
