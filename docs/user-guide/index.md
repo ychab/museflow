@@ -33,6 +33,8 @@ flowchart TD
     E --> F
     C --> F
     F --> G["playlist discover<br/>(LLM, cheap)"]
+    D --> X["playlist explore<br/>(LLM, cheap)"]
+    C --> X
     C --> H["playlist history<br/>(local, no LLM)"]
     D --> H
     E --> H
@@ -103,6 +105,17 @@ museflow playlist discover
 Asks the advisor for new tracks guided by the profile, matches them on Spotify, and creates a playlist.
 Add `--dry-run` to preview the result without creating anything. See [`playlist`](commands/playlist.md).
 
+## Your artists' tracks you missed
+
+Once tracks are rated or the history is imported, `explore` plays the tracks you don't know from your favourite
+artists, with no taste profile needed:
+
+```bash
+museflow playlist explore
+```
+
+See [`playlist explore`](commands/playlist.md#playlist-explore).
+
 ## The rediscovery path (no LLM call)
 
 A playlist can also be built from the library itself, filtered and ordered by play count or score:
@@ -121,6 +134,7 @@ This needs only steps 1 to 3 (a connected Spotify account is required to create 
 | `enrich tracks` | Yes | One request per batch of tracks (`--batch-size`). Use `--limit` to cap it. |
 | `taste build` | Yes | The most expensive step: processes up to `--track-limit` tracks in batches. Use `--resume` after an interruption. |
 | `playlist discover` | Yes | A few small advisor calls (`DISCOVERY_MAX_ATTEMPTS`, 3 by default). Use `--dry-run` to avoid creating a playlist. |
+| `playlist explore` | Yes | One advisor call per round, usually one round. Use `--dry-run` to avoid creating a playlist. |
 | everything else | No | `playlist history`, `rate`, `stats`, `blacklist`, `llm usage`, exports and imports run locally. |
 
 Each of them prints what it spent at the end; [`llm usage`](commands/llm.md) sums it over time.

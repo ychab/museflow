@@ -141,6 +141,15 @@ had picked tracks whose title echoed the theme. A requested artist is marked in 
 and their original tracks only (no remix, live or re-recording of a track the user likely knows). The profile is not sent again: the strategy carries the intent, and the
 call stays cheap.
 
+**Exploration, no step 1** (`playlist explore`, `pick_exploration_tracks`, usage step `advisor_exploration_picks`).
+The artists are the user's favourites, drawn without an LLM call: `rank_favourite_artists`
+(`application/utils/discovery.py`) ranks the primary artists rated at or above the user's mean first, by Bayesian
+average then plays, then the never-rated ones by plays. Their catalogue is searched as a requested artist's, and their
+tracks stay capped per artist. With no strategy, the picks prompt says they are the user's favourites, lists under each
+one up to 5 of the user's best-rated tracks of theirs (from the liked tracks above, so an artist ranked by plays alone
+may have none), and asks for original tracks only. The candidate search, the known-tracks filter and the playlist
+creation are shared with `discover` in `application/services/discovery.py`.
+
 **Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
 0.7, and return fewer than the limit rather than pad. This is an instruction to the model, not a post-filter in code;
 the fit scores are used afterwards for ranking. Both responses are constrained by a strict JSON schema and validated
@@ -212,7 +221,7 @@ OpenRouter credits (1 credit is 1 USD).
 ([source](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/adapters/common/llm/usage.py)), with the
 time the reply took. The meter sums the calls, tokens, cost and time per step and model:
 
-- **Step**: `advisor_artists`, `advisor_picks`, `enricher`, or `profiler segment`, `profiler merge`,
+- **Step**: `advisor_artists`, `advisor_picks`, `advisor_exploration_picks`, `enricher`, or `profiler segment`, `profiler merge`,
   `profiler reflect`, so a run shows what each phase costs.
 - **Model**: the one OpenRouter actually used, which differs from the configured one when a fallback served the call.
 - **Reasoning effort**: the step's `REASONING_EFFORT`, always sent. A step keeps one setting through a run, so it is

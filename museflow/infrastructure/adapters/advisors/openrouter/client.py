@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
-    """Adapter that asks an LLM, through OpenRouter, for artists matching a taste profile, then for picks."""
+    """Adapter that asks an LLM, through OpenRouter, for artists matching a taste profile, then for picks among theirs."""
 
     def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
         super().__init__(client=client)
@@ -148,21 +148,12 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
     ) -> list[TrackPicked]:
         sounds = {artist.name: artist.sound for artist in strategy.artists}
         artists_requested = {artist.name for artist in strategy.artists if artist.requested}
-        # Short ids instead of titles: the reply can only point at a listed track, never write a new one.
-        candidates_by_id: dict[str, Track] = {}
-        artist_blocks: list[str] = []
-        for artist, tracks in candidates.items():
-            lines: list[str] = []
-            for track in tracks:
-                track_id = str(len(candidates_by_id) + 1)
-                candidates_by_id[track_id] = track
-                album = track.album_name or "?"
-                year = track.album_year or "?"
-                lines.append(f"- {track_id} | {track.name} | {album} | {year}")
-            requested = " (REQUESTED)" if artist in artists_requested else ""
-            artist_blocks.append(
-                f"#### {artist}{requested}\nWanted sound: {sounds.get(artist, '')}\n" + "\n".join(lines)
-            )
+        headers = {
+            artist: f"#### {artist}{' (REQUESTED)' if artist in artists_requested else ''}\n"
+            f"Wanted sound: {sounds.get(artist, '')}"
+            for artist in candidates
+        }
+        candidates_block, candidates_by_id = self._candidates_block(candidates, headers)
 
         focus_line = f"- Focus strategy: {focus.value}\n" if focus else ""
         system_prompt = (
@@ -173,7 +164,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "### YOUR STRATEGY\n"
             f"- {strategy.strategy_label}: {strategy.reasoning}\n"
             f"{focus_line}\n"
-            "### CANDIDATES (id | title | album | album release year)\n" + "\n\n".join(artist_blocks) + "\n\n"
+            f"{candidates_block}"
             "### CONSTRAINTS\n"
             "- Return ONLY the JSON object (schema enforced).\n"
             "- Pick ONLY ids listed above: any other id is discarded.\n"
@@ -181,28 +172,73 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             "  sound.\n"
             "- Where the request implies a sound (energy, tempo, mood), it wins over the strategy above on that point:\n"
             "  a track that fits the strategy but not the requested sound is left out.\n"
-            "- Judge each track by its SOUND (production, mood, flow, the artist's style on that album and in that\n"
-            "  year), never by its words: a title or album name that echoes the theme (e.g. 'rain', 'night' for a\n"
-            "  rainy-night request) is no evidence of fit, and a track does not need one.\n"
-            "- A track you don't know: place it by its album and year in the artist's career. When you can't tell\n"
-            "  how it sounds, leave it out.\n"
-            f"- Pick up to {tracks_limit} tracks, at most {max_tracks_per_artist} per artist, featured appearances\n"
-            "  included (a track crediting two artists counts for both): spread the picks across the artists.\n"
+            f"{self._picks_rules(tracks_limit, max_tracks_per_artist)}"
             "- An artist marked (REQUESTED) is one whose own tracks the user asked for: no per-artist limit, pick as\n"
             "  many of their tracks as fit. Their original tracks only: leave out remixes, live, acoustic, sped-up\n"
             "  or slowed versions and re-recordings, as the user likely knows the original.\n"
-            "- Quality over quantity: pick fewer tracks, or none of an artist, when nothing fits — never pad.\n"
-            f"  {tracks_limit} is a ceiling, not a target: a short list is a valid answer, as the app then runs\n"
-            "  another round with other artists. A track off the requested sound is worse than no track.\n"
-            "- Avoid two versions of the same song (remix, live, edit) unless that version is the better fit.\n"
-            "- Give each pick a fit score (0.0–1.0): 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
+            f"{self._picks_quality_rules(tracks_limit)}"
         )
-        content = await self._complete(
+        return await self._pick(
             system_prompt=system_prompt,
             user_message=self._user_message(prompt, focus, default="Choose the tracks for this playlist."),
+            candidates_by_id=candidates_by_id,
+            step="advisor_picks",
+        )
+
+    async def pick_exploration_tracks(
+        self,
+        candidates: dict[str, list[Track]],
+        liked_tracks: dict[str, list[Track]],
+        tracks_limit: int,
+        max_tracks_per_artist: int,
+        prompt: str | None = None,
+    ) -> list[TrackPicked]:
+        headers: dict[str, str] = {}
+        for artist in candidates:
+            headers[artist] = f"#### {artist}"
+            if liked := liked_tracks.get(artist):
+                headers[artist] += "\nLiked by the user: " + "; ".join(track.name for track in liked)
+        candidates_block, candidates_by_id = self._candidates_block(candidates, headers)
+
+        system_prompt = (
+            "### ROLE\n"
+            'You are the "MuseFlow Navigator," a world-class musicologist curating a playlist.\n'
+            "The artists below are the user's favourites, drawn from their ratings and listens; their real catalogue\n"
+            "tracks the user does not know yet are listed under each one, with the user's best-rated tracks of theirs\n"
+            "when any. Now choose the tracks the user missed.\n\n"
+            f"{candidates_block}"
+            "### CONSTRAINTS\n"
+            "- Return ONLY the JSON object (schema enforced).\n"
+            "- Pick ONLY ids listed above: any other id is discarded.\n"
+            "- The user loves these artists: choose the tracks closest to what they love in them (the liked tracks,\n"
+            "  their albums and eras). Without liked tracks, choose the artist's strongest tracks.\n"
+            "- Where the user request implies a sound (energy, tempo, mood), it wins over the liked tracks on that\n"
+            "  point: a track that does not fit the requested sound is left out.\n"
+            "- Their original tracks only: leave out remixes, live, acoustic, sped-up or slowed versions and\n"
+            "  re-recordings, as the user likely knows the original.\n"
+            f"{self._picks_rules(tracks_limit, max_tracks_per_artist)}"
+            f"{self._picks_quality_rules(tracks_limit)}"
+        )
+        return await self._pick(
+            system_prompt=system_prompt,
+            user_message=f"User request: {prompt}" if prompt else "Choose the tracks for this playlist.",
+            candidates_by_id=candidates_by_id,
+            step="advisor_exploration_picks",
+        )
+
+    async def _pick(
+        self,
+        system_prompt: str,
+        user_message: str,
+        candidates_by_id: dict[str, Track],
+        step: str,
+    ) -> list[TrackPicked]:
+        content = await self._complete(
+            system_prompt=system_prompt,
+            user_message=user_message,
             response_model=DiscoveryPicksResponse,
             schema=DISCOVERY_PICKS_SCHEMA,
-            step="advisor_picks",
+            step=step,
         )
         tracks_picked = to_tracks_picked(content, candidates_by_id)
         if len(tracks_picked) < len(content.picks):
@@ -355,6 +391,51 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 f"{formatted}"
             )
         return parts
+
+    @staticmethod
+    def _candidates_block(
+        candidates: dict[str, list[Track]],
+        headers: dict[str, str],
+    ) -> tuple[str, dict[str, Track]]:
+        """Lists the candidates under each artist's header, and maps the ids given to them back to the tracks."""
+        # Short ids instead of titles: the reply can only point at a listed track, never write a new one.
+        candidates_by_id: dict[str, Track] = {}
+        artist_blocks: list[str] = []
+        for artist, tracks in candidates.items():
+            lines: list[str] = []
+            for track in tracks:
+                track_id = str(len(candidates_by_id) + 1)
+                candidates_by_id[track_id] = track
+                album = track.album_name or "?"
+                year = track.album_year or "?"
+                lines.append(f"- {track_id} | {track.name} | {album} | {year}")
+            artist_blocks.append(headers[artist] + "\n" + "\n".join(lines))
+        block = "### CANDIDATES (id | title | album | album release year)\n" + "\n\n".join(artist_blocks) + "\n\n"
+        return block, candidates_by_id
+
+    @staticmethod
+    def _picks_rules(tracks_limit: int, max_tracks_per_artist: int) -> str:
+        """The rules of every picks step on judging a track and spreading the picks."""
+        return (
+            "- Judge each track by its SOUND (production, mood, flow, the artist's style on that album and in that\n"
+            "  year), never by its words: a title or album name that echoes the theme (e.g. 'rain', 'night' for a\n"
+            "  rainy-night request) is no evidence of fit, and a track does not need one.\n"
+            "- A track you don't know: place it by its album and year in the artist's career. When you can't tell\n"
+            "  how it sounds, leave it out.\n"
+            f"- Pick up to {tracks_limit} tracks, at most {max_tracks_per_artist} per artist, featured appearances\n"
+            "  included (a track crediting two artists counts for both): spread the picks across the artists.\n"
+        )
+
+    @staticmethod
+    def _picks_quality_rules(tracks_limit: int) -> str:
+        """The rules of every picks step on returning fewer tracks rather than padding."""
+        return (
+            "- Quality over quantity: pick fewer tracks, or none of an artist, when nothing fits — never pad.\n"
+            f"  {tracks_limit} is a ceiling, not a target: a short list is a valid answer, as the app then runs\n"
+            "  another round with other artists. A track off the requested sound is worse than no track.\n"
+            "- Avoid two versions of the same song (remix, live, edit) unless that version is the better fit.\n"
+            "- Give each pick a fit score (0.0–1.0): 0.9+ = near-certain fit; 0.7–0.9 = solid pick; below 0.7 = omit.\n"
+        )
 
     @staticmethod
     def _user_message(prompt: str | None, focus: DiscoveryFocus | None, default: str) -> str:

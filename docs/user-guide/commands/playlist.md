@@ -6,6 +6,7 @@ and manage them.
 | Command | LLM call | Purpose |
 | --- | --- | --- |
 | [`playlist discover`](#playlist-discover) | Yes | New music guided by a taste profile. |
+| [`playlist explore`](#playlist-explore) | Yes | The tracks you don't know from your favourite artists. |
 | [`playlist history`](#playlist-history) | No | A "best of" from tracks already in the library. |
 | [`playlist list`](#playlist-list) | No | List playlists. |
 | [`playlist view`](#playlist-view) | No | Show a playlist and its ratings. |
@@ -77,6 +78,54 @@ discovered tracks (artist, track, album). Unless `--dry-run` is set, the playlis
 its ID and follow-up commands to view and rate it. Last, an `LLM usage` table gives the calls, tokens, cost and time of
 each advisor step (`advisor_artists`, `advisor_picks`), then the total and the elapsed time of the command, even when
 no new track was found.
+
+## `playlist explore`
+
+Plays the tracks you missed from the artists you already love: `history` replays what you know, `discover` brings new
+artists, `explore` brings the unknown tracks of your own artists. No LLM call chooses the artists: they come from your
+data, the artists you rate at or above your mean first (a Bayesian average, `STATS_BAYESIAN_CONFIDENCE`), then the
+ones you play most; an artist you rate below your mean is left out. No taste profile is needed.
+
+```bash
+museflow playlist explore [PROMPT] [--email <email>] [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `PROMPT` | none | Optional request on the sound wanted ("calm and acoustic"). The artists still come from your data. |
+| `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--provider` | `spotify` | The music provider to use. |
+| `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run, checked as for `discover`. |
+| `--title` | `[MF] - Explore - <timestamp>` | Playlist name, used as is. |
+| `--dry-run` | off | Explore tracks without creating a playlist. Still searches the provider catalogue. |
+| `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
+
+The best `EXPLORE_ARTISTS_LIMIT` (20) favourites not blacklisted are shuffled, so that two runs start with other
+artists, and each round takes the next `EXPLORE_ARTISTS_PER_ATTEMPT` (5). Their whole catalogue is searched as for an
+artist a `discover` prompt names (one search per release year range, `DISCOVERY_REQUESTED_ARTIST_TRACKS_PAGES` pages
+each), and the advisor picks among the tracks you don't know, guided by up to 5 of your best-rated tracks of each
+artist. One LLM call per round; a round usually fills the playlist, and another one runs with the next artists until
+`--limit` tracks are kept, `DISCOVERY_MAX_ATTEMPTS` is reached or no favourite is left. Tracks stay capped per artist
+(`DISCOVERY_MAX_TRACKS_PER_ARTIST`), so the playlist mixes several of them.
+
+**Prerequisites**
+
+- Rated tracks ([`rate`](rate.md)) or an imported history ([`tracks history`](tracks.md#tracks-history)), so that
+  your favourite artists are known.
+- A connected Spotify account and an OpenRouter API key, as for `discover`.
+
+**Examples**
+
+```bash
+museflow playlist explore
+museflow playlist explore "calm and acoustic" --dry-run
+museflow playlist explore --limit 20 --title "Missed favourites"
+```
+
+**Output.** A report table per round (artists searched, their tracks you don't know, tracks picked), the table of
+explored tracks, the playlist ID unless `--dry-run` is set, and the `LLM usage` table (step `advisor_exploration_picks`).
+The playlist is saved as a discovery playlist, and its LLM usage under the `discover` operation, until their own types
+come with the next database reset (#209).
 
 ## `playlist history`
 

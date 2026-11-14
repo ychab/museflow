@@ -63,6 +63,12 @@ class AppSettings(BaseSettings):
     DISCOVERY_DISLIKED_TRACKS_LIMIT: int = 50
     DISCOVERY_COVERED_ARTISTS_LIMIT: int = 100  # 0 sends none
 
+    # `playlist explore`: the favourites drawn from (ratings first, then plays), then searched per round; 5 per round
+    # fill 10 tracks at 3 per artist, with room for those whose unknown tracks don't fit. The picks, the catalogue
+    # search, the rounds and the per-artist cap follow the DISCOVERY_ settings above.
+    EXPLORE_ARTISTS_LIMIT: int = Field(default=20, ge=1)
+    EXPLORE_ARTISTS_PER_ATTEMPT: int = Field(default=5, ge=1)
+
     STATS_BAYESIAN_CONFIDENCE: int = 5
 
     BACKEND_CORS_ALLOW_ORIGINS: list[HttpUrl | Literal["*"]] = Field(default_factory=list)

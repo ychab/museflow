@@ -356,3 +356,53 @@ class TestOpenRouterAdvisorAdapter:
         assert f"#### {requested.name} (REQUESTED)\nWanted sound: {requested.sound}\n" in system_message["content"]
         assert "- 3 | Paper Moon | Late Lights | 2021" in system_message["content"]
         assert user_message["content"] == "Choose the tracks for this playlist."
+
+    @pytest.mark.parametrize(
+        ("prompt", "expected_user_message"),
+        [
+            pytest.param(None, "Choose the tracks for this playlist.", id="no_prompt"),
+            pytest.param("calm and acoustic", "User request: calm and acoustic", id="prompt"),
+        ],
+    )
+    async def test__pick_exploration_tracks__candidates_listed_with_liked_tracks(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        httpx_mock: HTTPXMock,
+        prompt: str | None,
+        expected_user_message: str,
+    ) -> None:
+        """No strategy: the artists are the user's favourites, shown with the tracks they rated high."""
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            json={
+                "choices": [
+                    {"message": {"content": '{"picks": [{"id": "1", "score": 0.9}]}'}, "finish_reason": "stop"}
+                ]
+            },
+        )
+        unknown = TrackFactory.build(name="Neon Harbor", album_name="Night Drive", album_year=1999)
+        other = TrackFactory.build(name="Glass Rain", album_name="Late Lights", album_year=2021)
+        liked = TrackFactory.batch(2, artists=["The Fictional Band"])
+
+        tracks_picked = await openrouter_advisor.pick_exploration_tracks(
+            candidates={"The Fictional Band": [unknown], "Another Band": [other]},
+            liked_tracks={"The Fictional Band": liked},
+            tracks_limit=5,
+            max_tracks_per_artist=3,
+            prompt=prompt,
+        )
+
+        assert [tp.track for tp in tracks_picked] == [unknown]
+        body = json.loads(httpx_mock.get_requests()[0].content)
+        assert body["response_format"]["json_schema"]["name"] == "DiscoveryPicksResponse"
+        system_message, user_message = body["messages"]
+        assert "The artists below are the user's favourites" in system_message["content"]
+        assert "### YOUR STRATEGY" not in system_message["content"]
+        assert (
+            f"#### The Fictional Band\nLiked by the user: {liked[0].name}; {liked[1].name}\n"
+            "- 1 | Neon Harbor | Night Drive | 1999"
+        ) in system_message["content"]
+        assert "#### Another Band\n- 2 | Glass Rain | Late Lights | 2021" in system_message["content"]
+        assert "- Pick up to 5 tracks, at most 3 per artist" in system_message["content"]
+        assert user_message["content"] == expected_user_message

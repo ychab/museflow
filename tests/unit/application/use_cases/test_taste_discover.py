@@ -1,4 +1,3 @@
-import asyncio
 import itertools
 import logging
 import uuid
@@ -17,8 +16,6 @@ from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
-from museflow.domain.exceptions import ProviderRateLimitExceededError
-from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -160,146 +157,6 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=profile.name)
         (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
         assert (record.operation, record.playlist_id) == (LLMOperation.DISCOVER, None)
-
-    async def test__search_query_invalid__artist_skipped(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        malformed, valid = ArtistSuggestedFactory.batch(2)
-        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(
-            artists=[malformed, valid]
-        )
-        track = TrackFactory.build(artists=[valid.name])
-        mock_provider_library.search_artist_tracks.side_effect = [ProviderSearchQueryInvalidError(), [track]]
-
-        with caplog.at_level(logging.WARNING):
-            result = await use_case.create_suggestions_playlist(
-                user=user,
-                config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
-            )
-
-        assert result.tracks == [track]
-        assert f"Artist skipped, its search query was rejected: '{malformed.name}'" in caplog.text
-
-    async def test__candidates__filtered(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_blacklist_repository: mock.AsyncMock,
-        mock_track_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-    ) -> None:
-        """Only the unknown, not blacklisted tracks crediting the asked artist are offered, each once."""
-        first, second, third = ArtistSuggestedFactory.batch(3)
-        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(
-            artists=[first, second, third]
-        )
-
-        kept = TrackFactory.build(artists=[first.name])
-        close_name = TrackFactory.build(artists=[f"{first.name}lee"])
-        blacklisted_artist = TrackFactory.build(artists=[first.name, "A Blacklisted Band"])
-        blacklisted_track = TrackFactory.build(artists=[first.name])
-        known = TrackFactory.build(artists=[first.name])
-        # Credits both artists: offered under the first one only.
-        shared = TrackFactory.build(artists=[first.name, second.name])
-        only_known = TrackFactory.build(artists=[second.name])
-        mock_provider_library.search_artist_tracks.side_effect = [
-            [kept, close_name, blacklisted_artist, blacklisted_track, known, shared],
-            [shared, only_known],
-            # Only an artist with a close name: nothing of the asked one.
-            [TrackFactory.build(artists=[f"{third.name} Jr"])],
-        ]
-        mock_blacklist_repository.get.return_value = UserBlacklist(
-            artists=[BlacklistedArtistFactory.build(artist_name="A Blacklisted Band", fingerprint="")],
-            tracks=[BlacklistedTrackFactory.build(fingerprint=blacklisted_track.fingerprint)],
-        )
-        mock_track_repository.get_known_identifiers.return_value = mock.Mock(
-            is_known=mock.Mock(side_effect=lambda track: track in (known, only_known))
-        )
-
-        await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(playlist_limit=10, max_attempts=1, dry_run=True),
-        )
-
-        # The second and third artists are left without any track: not offered at all.
-        assert mock_advisor.pick_discovery_tracks.call_args.kwargs["candidates"] == {first.name: [kept, shared]}
-        mock_provider_library.search_artist_tracks.assert_any_await(artist=first.name, max_pages=2, log_enabled=False)
-
-    async def test__searches__concurrent__bounded__artists_order_kept(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-    ) -> None:
-        """At most `artist_tracks_concurrency` searches run at once; a shared track stays with the first artist."""
-        artists = ArtistSuggestedFactory.batch(5)
-        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(artists=artists)
-        shared = TrackFactory.build(artists=[artists[0].name, artists[1].name])
-        tracks = {artist.name: [TrackFactory.build(artists=[artist.name])] for artist in artists}
-        tracks[artists[0].name].append(shared)
-        tracks[artists[1].name].append(shared)
-
-        # The first artists finish last: the candidates must still follow the artists' order.
-        yields = {artist.name: len(artists) - i for i, artist in enumerate(artists)}
-        running = running_max = 0
-
-        async def _search(artist: str, **_: object) -> list[Track]:
-            nonlocal running, running_max
-            running += 1
-            running_max = max(running_max, running)
-            for _turn in range(yields[artist]):
-                await asyncio.sleep(0)
-            running -= 1
-            return tracks[artist]
-
-        mock_provider_library.search_artist_tracks.side_effect = _search
-
-        await use_case.create_suggestions_playlist(
-            user=user,
-            config=DiscoverTasteConfigInput(artist_tracks_concurrency=2, max_attempts=1, dry_run=True),
-        )
-
-        assert running_max == 2
-        candidates = mock_advisor.pick_discovery_tracks.call_args.kwargs["candidates"]
-        assert list(candidates) == [artist.name for artist in artists]
-        assert candidates[artists[0].name] == tracks[artists[0].name]
-        assert candidates[artists[1].name] == tracks[artists[1].name][:1]
-
-    async def test__search_fails__other_searches_cancelled(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-    ) -> None:
-        failing, pending = ArtistSuggestedFactory.batch(2)
-        mock_advisor.get_discovery_artists.return_value = DiscoveryArtistStrategyFactory.build(
-            artists=[failing, pending]
-        )
-        never: asyncio.Future[list[Track]] = asyncio.get_running_loop().create_future()
-
-        async def _search(artist: str, **_: object) -> list[Track]:
-            if artist == failing.name:
-                raise ProviderRateLimitExceededError("Spotify rate limit")
-            return await never
-
-        mock_provider_library.search_artist_tracks.side_effect = _search
-
-        with pytest.raises(ProviderRateLimitExceededError):
-            await use_case.create_suggestions_playlist(
-                user=user,
-                config=DiscoverTasteConfigInput(max_attempts=1, dry_run=True),
-            )
-
-        assert never.cancelled()
-        mock_advisor.pick_discovery_tracks.assert_not_awaited()
 
     async def test__attempts__artists_and_tracks_not_offered_twice(
         self,
@@ -594,27 +451,3 @@ class TestDiscoverTasteUseCase:
 
         mock_track_repository.get_covered_artists.assert_called_once_with(user_id=user.id, limit=2)
         assert mock_advisor.get_discovery_artists.call_args.kwargs["covered_artists"] == covered_artists
-
-    async def test__remote_playlist_creation_fails__nothing_written(
-        self,
-        user: User,
-        use_case: DiscoverTasteUseCase,
-        mock_track_repository: mock.AsyncMock,
-        mock_playlist_repository: mock.AsyncMock,
-        mock_provider_library: mock.AsyncMock,
-        mock_advisor: mock.AsyncMock,
-        discovery_artist_strategy: DiscoveryArtistStrategy,
-    ) -> None:
-        mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
-        artist = discovery_artist_strategy.artists[0].name
-        mock_provider_library.search_artist_tracks.return_value = [TrackFactory.build(artists=[artist])]
-        mock_provider_library.create_playlist.side_effect = ProviderRateLimitExceededError("Spotify rate limit")
-
-        with pytest.raises(ProviderRateLimitExceededError):
-            await use_case.create_suggestions_playlist(
-                user=user,
-                config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=False),
-            )
-
-        mock_track_repository.bulk_upsert.assert_not_awaited()
-        mock_playlist_repository.create.assert_not_awaited()
