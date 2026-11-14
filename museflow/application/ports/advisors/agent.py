@@ -10,7 +10,10 @@ from museflow.domain.value_objects.taste import TrackPicked
 
 
 class AdvisorPort(ABC):
-    """Abstract port for an AI advisor that picks artists, then tracks among theirs, for a discovery playlist."""
+    """Abstract port for an AI advisor that picks artists, then tracks among theirs, for a discovery playlist.
+
+    It also picks among the unknown tracks of artists the user already knows, for an exploration playlist.
+    """
 
     @property
     @abstractmethod
@@ -65,6 +68,32 @@ class AdvisorPort(ABC):
             strategy: The artists step's reply, whose reasoning and per-artist sound guide the choice.
             candidates: Catalogue tracks unknown to the user, per suggested artist name.
             tracks_limit: The most tracks to pick: fewer, or none, when nothing fits.
+            max_tracks_per_artist: The most picks per credited artist, a featured appearance included.
+
+        Returns:
+            The picked candidates; a pick that is not one of them is dropped.
+        """
+        ...
+
+    @abstractmethod
+    async def pick_exploration_tracks(
+        self,
+        candidates: dict[str, list[Track]],
+        liked_tracks: dict[str, list[Track]],
+        tracks_limit: int,
+        max_tracks_per_artist: int,
+        prompt: str | None = None,
+    ) -> list[TrackPicked]:
+        """Asks to choose, among the candidates only, the tracks the user missed from artists they already love.
+
+        No strategy guides the choice: the artists come from the user's data, not from an artists step.
+
+        Args:
+            candidates: Catalogue tracks unknown to the user, per artist name.
+            liked_tracks: The user's best-rated tracks of a candidate artist, per artist name: what they love in them.
+            tracks_limit: The most tracks to pick: fewer, or none, when nothing fits.
+            max_tracks_per_artist: The most picks per credited artist, a featured appearance included.
+            prompt: An optional request on the sound wanted.
 
         Returns:
             The picked candidates; a pick that is not one of them is dropped.

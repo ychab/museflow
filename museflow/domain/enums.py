@@ -18,7 +18,7 @@ class DiscoveryFocus(StrEnum):
 
 
 class PlaylistType(StrEnum):
-    DISCOVERY = "discovery"  # AI-curated playlist
+    DISCOVERY = "discovery"  # AI-curated playlist: `playlist discover`, and `playlist explore` until #209
     HISTORY = "history"  # persisted "best of"
 
 
@@ -60,7 +60,7 @@ class TrackOrderBy(StrEnum):
 
 class LLMOperation(StrEnum):
     TASTE_BUILD = "taste_build"  # `taste build`: segment, merge and reflect steps
-    DISCOVER = "discover"  # `playlist discover`: advisor calls
+    DISCOVER = "discover"  # `playlist discover` and `playlist explore` (until #209): advisor calls
     ENRICH = "enrich"  # `enrich tracks`: enricher batches
 
 
