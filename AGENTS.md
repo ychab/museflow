@@ -161,6 +161,10 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   what it builds from (`SpotifySearchArtistQuery.by_release_years`), not a module function next to it; what only
   shapes the build (the current year) is a parameter, not a field. A mapper between two shapes (DTO or input to
   entity) stays a standalone function, as does a builder from an input the class's layer must not know.
+- Every constant is `Final[T]`: in a class body too, where `Final` alone already makes it a class variable. A constant
+  only one class uses lives in that class (`_`-prefixed when private); module level is for one several members of the
+  module share, one imported elsewhere, or one only a Pydantic model uses (in a model body, `Final` turns into a field
+  or a private attribute).
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
   repeating the types.
 
