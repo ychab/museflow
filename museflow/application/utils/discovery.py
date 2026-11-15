@@ -1,14 +1,24 @@
 import logging
+import re
 from collections import Counter
+from typing import Final
 
 from museflow.domain.entities.track import Track
 from museflow.domain.utils.stats import compute_quality
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.taste import TrackPicked
 
 logger = logging.getLogger(__name__)
+
+# A live recording: a version tag after a dash or in brackets, or "live at/from/in"; a bare "live" is a word of the
+# title too ("Live Your Life")
+_LIVE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"([-(\[]\s*(live|en vivo|ao vivo|en directo|en concierto|en concert)\b)|\blive (at|from|in)\b"
+)
+_MEDLEY_PATTERN: Final[re.Pattern[str]] = re.compile(r"\b(medley|popurri)\b")
 
 
 def rank_favourite_artists(all_stats: list[ArtistStats], confidence: int) -> list[str]:
@@ -68,6 +78,18 @@ def apply_artist_cap(
             artist_counts.update(artists)
 
     return tracks_filtered
+
+
+def is_live_or_medley(track: Track) -> bool:
+    """True for a live recording, by its title or album, or a medley: neither is a track a fan missed.
+
+    A medley is named so, or chains three titles or more with " / ".
+    """
+    name = unidecode_lower_text(track.name)
+    album = unidecode_lower_text(track.album_name or "")
+    if _LIVE_PATTERN.search(name) or _LIVE_PATTERN.search(album):
+        return True
+    return bool(_MEDLEY_PATTERN.search(name)) or name.count(" / ") >= 2
 
 
 def select_tracks(

@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from museflow.application.utils.discovery import filter_by_artist
+from museflow.application.utils.discovery import is_live_or_medley
 from museflow.application.utils.discovery import rank_favourite_artists
 
 from tests.unit.factories.entities.track import TrackFactory
@@ -61,3 +62,24 @@ class TestRankFavouriteArtists:
         ]
 
         assert rank_favourite_artists(all_stats, confidence=5) == ["More Played", "Less Played"]
+
+
+class TestIsLiveOrMedley:
+    @pytest.mark.parametrize(
+        ("name", "album_name", "expected"),
+        [
+            pytest.param("Sin Sentimientos - En Vivo", "12 Años", True, id="live_dash_spanish"),
+            pytest.param("Mi Pueblo (Live)", None, True, id="live_brackets"),
+            pytest.param("Or Nah - Live at the Village", None, True, id="live_at"),
+            pytest.param("Neon Harbor", "Live in Paris", True, id="live_album"),
+            pytest.param("Tania / El Caminante / Nadando", None, True, id="medley_chained_titles"),
+            pytest.param("Summer Medley", None, True, id="medley_named"),
+            pytest.param("Live Your Life", "Paper Trail", False, id="live_word_of_the_title"),
+            pytest.param("Mr. Williams / Where Is the Love", None, False, id="two_titles"),
+            pytest.param("Delivery", None, False, id="live_inside_a_word"),
+        ],
+    )
+    def test__nominal(self, name: str, album_name: str | None, expected: bool) -> None:
+        track = TrackFactory.build(name=name, album_name=album_name)
+
+        assert is_live_or_medley(track) is expected

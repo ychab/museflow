@@ -6,6 +6,7 @@ from dataclasses import replace
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.discovery import filter_by_artist
+from museflow.application.utils.discovery import is_live_or_medley
 from museflow.application.utils.discovery import keep_new_tracks
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
@@ -41,7 +42,8 @@ class DiscoveryService:
 
         The `artists_deep` get the catalogue search, `catalogue_tracks_pages` per query; the others the plain search,
         `artist_tracks_pages` deep. A track is kept only when it credits the artist, and is neither blacklisted nor in
-        `fingerprints_kept` (kept by an earlier round); an artist left with no track is left out.
+        `fingerprints_kept` (kept by an earlier round); an artist left with no track is left out. The `artists_deep`
+        are the ones whose original tracks are wanted: their live recordings and medleys are left out too.
         """
         logger.debug("--- Artist tracks ---")
         # Searched concurrently, a few at a time not to hit the rate limit; gather keeps the artists' order, so the
@@ -75,6 +77,8 @@ class DiscoveryService:
             tracks_matched = filter_by_artist(artist=artist, tracks=tracks)
             found += len(tracks)
             matched += len(tracks_matched)
+            if artist in artists_deep:
+                tracks_matched = [track for track in tracks_matched if not is_live_or_medley(track)]
             kept = keep_new_tracks(tracks=tracks_matched, blacklist=blacklist, fingerprints_seen=fingerprints_seen)
             fingerprints_seen.update(track.fingerprint for track in kept)
             logger.debug(f"Artist '{artist}': {len(tracks)} found, {len(tracks_matched)} matched")
