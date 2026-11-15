@@ -3,10 +3,16 @@ from copy import deepcopy
 from typing import Any
 from typing import Final
 
+from rich.console import Console
+
 from museflow.infrastructure.types import LogHandler
 from museflow.infrastructure.types import LogLevel
 
 LOGGER_MUSEFLOW: Final[str] = "museflow"
+
+# Logs go to stderr, so that stdout only carries a command's results. The spinners share this console: a log line
+# then prints above them.
+console_stderr: Final[Console] = Console(stderr=True)
 
 default_conf: Final[dict[str, Any]] = {
     "version": 1,
@@ -27,17 +33,18 @@ default_conf: Final[dict[str, Any]] = {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
             "formatter": "default",
-            "stream": "ext://sys.stdout",
+            "stream": "ext://sys.stderr",
         },
         "rich": {
             "class": "rich.logging.RichHandler",
             "formatter": "rich",
             "level": "NOTSET",
+            "console": f"ext://{__name__}.console_stderr",
             # Optional Rich settings
             "markup": False,
             "rich_tracebacks": True,
             "show_level": True,
-            "show_path": True,
+            "show_path": False,
             "show_time": True,
         },
         "null": {

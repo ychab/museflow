@@ -159,9 +159,8 @@ class DiscoverTasteUseCase:
         artists_requested: set[str] = set()
 
         for attempt in range(1, config.max_attempts + 1):
-            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
+            logger.info(f"Attempt {attempt}/{config.max_attempts}")
 
-            logger.debug("--- Discovery artists ---")
             strategy_now = await self._advisor.get_discovery_artists(
                 profile=profile,
                 artists_limit=config.advisor_limit,
@@ -205,7 +204,6 @@ class DiscoverTasteUseCase:
 
             tracks_picked_now: list[TrackPicked] = []
             if candidates:
-                logger.debug("--- Picks ---")
                 tracks_picked_now = await self._advisor.pick_discovery_tracks(
                     strategy=strategy,
                     candidates=candidates,
@@ -235,8 +233,8 @@ class DiscoverTasteUseCase:
                 uncapped_artists=artists_requested,
             )
             logger.info(
-                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
-                f"(total: {len(tracks_picked)}, {len(tracks)} kept)\n",
+                f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
+                f"(total: {len(tracks_picked)}, {len(tracks)} kept)",
                 extra={"attempt": attempt, "total": len(tracks_picked), "kept": len(tracks)},
             )
 

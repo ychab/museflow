@@ -257,9 +257,7 @@ class TestDiscoverTasteUseCase:
 
         assert result.tracks == [*tracks_requested, featuring]
         mock_provider_library.search_artist_catalogue.assert_awaited_once_with(artist=requested.name, max_pages=5)
-        mock_provider_library.search_artist_tracks.assert_awaited_once_with(
-            artist=other.name, max_pages=2, log_enabled=False
-        )
+        mock_provider_library.search_artist_tracks.assert_awaited_once_with(artist=other.name, max_pages=2)
 
     async def test__attempts__only_requested_artists__stops(
         self,

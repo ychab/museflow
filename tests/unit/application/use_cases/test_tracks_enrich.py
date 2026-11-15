@@ -44,15 +44,19 @@ class TestEnrichTracksUseCase:
         user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         tracks = TrackFactory.batch(3)
         mock_track_repository.get_list.return_value = tracks
         enrichments = [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks]
         mock_enricher.enrich_tracks.return_value = enrichments
 
-        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
+        with caplog.at_level(logging.WARNING):
+            result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=3, error_count=0)
+        # A complete batch says nothing
+        assert caplog.records == []
         mock_track_repository.bulk_update.assert_awaited_once()
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=user.id, fingerprints=None, missing_fields=frozenset(EnrichField), limit=None
@@ -304,15 +308,18 @@ class TestEnrichTracksUseCase:
         user: User,
         mock_track_repository: mock.AsyncMock,
         mock_enricher: mock.AsyncMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         tracks = TrackFactory.batch(3)
         mock_track_repository.get_list.return_value = tracks
         mock_enricher.enrich_tracks.return_value = [TrackEnrichmentFactory.build(track_id=tracks[0].id)]
 
-        result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
+        with caplog.at_level(logging.WARNING):
+            result = await EnrichTracksUseCase(mock_uow, mock_enricher).enrich(user, EnrichTracksConfigInput())
 
         assert result == EnrichTracksReport(enriched_count=1, error_count=0)
         mock_track_repository.bulk_update.assert_awaited_once()
+        assert "Enrichment batch 1/1: 2 track(s) skipped, left for the next run" in caplog.messages
 
     async def test__genres__written_directly_to_update(
         self,
@@ -446,7 +453,7 @@ class TestEnrichTracksUseCase:
         assert tracks_arg[0].genres == [GenreTag.HIP_HOP]
         assert tracks_arg[0].moods == [MoodTag.CHILL]
         assert tracks_arg[0].locales == ["fr"]
-        assert "Enrichment returned no genres" in caplog.messages
+        assert f"Enrichment returned no genres for '{track}'" in caplog.messages
 
     async def test__empty_moods_and_missing_locales__nothing_applied_and_not_counted(
         self,
@@ -469,4 +476,4 @@ class TestEnrichTracksUseCase:
 
         assert result == EnrichTracksReport(enriched_count=0, error_count=1)
         mock_track_repository.bulk_update.assert_not_awaited()
-        assert "Enrichment returned no moods" in caplog.messages
+        assert f"Enrichment returned no moods for '{track}'" in caplog.messages

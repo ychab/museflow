@@ -126,10 +126,13 @@ class EnrichTracksUseCase:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 
             enriched_count += len(enriched_tracks)
-            logger.info(
-                f"Enriched batch {i}/{total_batches} ({len(enriched_tracks)}/{len(batch)} tracks)",
-                extra={"batch": i, "total": total_batches, "count": len(enriched_tracks)},
-            )
+            logger.debug(f"Enriched batch {i}/{total_batches}", extra={"batch": i, "total": total_batches})
+            # Left out by the model or with no usable answer: those tracks stay eligible for the next run
+            if skipped := len(batch) - len(enriched_tracks):
+                logger.warning(
+                    f"Enrichment batch {i}/{total_batches}: {skipped} track(s) skipped, left for the next run",
+                    extra={"batch": i, "total": total_batches, "skipped": skipped},
+                )
 
         return EnrichTracksReport(
             enriched_count=enriched_count,
@@ -156,12 +159,12 @@ class EnrichTracksUseCase:
                 if enrichment.genres:
                     enriched = dataclasses.replace(enriched, genres=enrichment.genres)
                 else:
-                    logger.warning("Enrichment returned no genres", extra={"track_id": str(track.id)})
+                    logger.warning(f"Enrichment returned no genres for '{track}'", extra={"track_id": str(track.id)})
             if EnrichField.MOOD in fields:
                 if enrichment.moods:
                     enriched = dataclasses.replace(enriched, moods=enrichment.moods)
                 else:
-                    logger.warning("Enrichment returned no moods", extra={"track_id": str(track.id)})
+                    logger.warning(f"Enrichment returned no moods for '{track}'", extra={"track_id": str(track.id)})
             # An empty locales list is an answer (no sung language); None means no usable answer.
             if EnrichField.LOCALE in fields and enrichment.locales is not None:
                 enriched = dataclasses.replace(enriched, locales=enrichment.locales)

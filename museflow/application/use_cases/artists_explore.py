@@ -118,7 +118,7 @@ class ExploreArtistsUseCase:
                 logger.info(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
                 break
 
-            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
+            logger.info(f"Attempt {attempt}/{config.max_attempts}")
             for artist in artists_now:
                 logger.debug(f"Favourite artist '{artist}'")
             candidates = await self._discovery.get_unknown_artist_tracks(
@@ -135,7 +135,6 @@ class ExploreArtistsUseCase:
 
             tracks_picked_now: list[TrackPicked] = []
             if candidates:
-                logger.debug("--- Picks ---")
                 tracks_picked_now = await self._advisor.pick_exploration_tracks(
                     candidates=candidates,
                     liked_tracks=self._group_liked_tracks(liked_tracks, artists=list(candidates)),
@@ -162,8 +161,8 @@ class ExploreArtistsUseCase:
                 playlist_limit=config.playlist_limit,
             )
             logger.info(
-                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
-                f"(total: {len(tracks_picked)}, {len(tracks)} kept)\n",
+                f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
+                f"(total: {len(tracks_picked)}, {len(tracks)} kept)",
                 extra={"attempt": attempt, "total": len(tracks_picked), "kept": len(tracks)},
             )
             if len(tracks) >= config.playlist_limit:

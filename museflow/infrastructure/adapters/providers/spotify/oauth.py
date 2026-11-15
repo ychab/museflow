@@ -205,7 +205,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                     wait_seconds = int(retry_after) + 1
                     if wait_seconds > self.max_retry_wait:
                         logger.warning(
-                            "Spotify rate limit wait exceeds max, aborting",
+                            f"Spotify rate limit wait {retry_after}s exceeds max {self.max_retry_wait}s, aborting",
                             extra={"retry_after": retry_after, "max_retry_wait": self.max_retry_wait},
                         )
                         raise ProviderRateLimitExceededError(
@@ -222,7 +222,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                 raise SpotifyApiError(status_code=e.response.status_code) from e
 
             logger.exception(
-                "Spotify API Error",
+                f"Spotify API error {e.response.status_code} on {method} {endpoint}",
                 extra={
                     "status_code": e.response.status_code,
                     "method": method,
