@@ -156,7 +156,7 @@ class TestExploreArtistsUseCase:
 
         mock_advisor.pick_exploration_tracks.assert_not_awaited()
         (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
-        assert (record.operation, record.profile_id, record.playlist_id) == (LLMOperation.DISCOVER, None, None)
+        assert (record.operation, record.profile_id, record.playlist_id) == (LLMOperation.EXPLORE, None, None)
 
     async def test__remote_calls__run_outside_any_block(
         self,

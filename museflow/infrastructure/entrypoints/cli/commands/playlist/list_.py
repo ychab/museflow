@@ -28,7 +28,10 @@ def playlist_list_command(
         raise typer.Exit(code=1) from e
 
     if not playlists:
-        typer.secho("No playlists found. Run `museflow playlist discover` first.", fg=typer.colors.YELLOW)
+        typer.secho(
+            "No playlists found. Run `museflow playlist discover` or `museflow playlist explore` first.",
+            fg=typer.colors.YELLOW,
+        )
         return
 
     table = Table(title="Playlists")

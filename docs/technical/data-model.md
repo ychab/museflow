@@ -193,7 +193,7 @@ A track's `genres` list is ordered `[macro, meso, micro?]`, so the first element
 
 ## Playlist: one entity, a type discriminator
 
-`museflow_playlist` stores both kinds of playlists in one table with a `type` column (`PlaylistType`): `DISCOVERY` (AI-curated) and `HISTORY` (a persisted "best of" from the user's own library). They were once two separate concepts (an ephemeral playlist and a persisted discovery playlist) and were merged (commit `467a4ce`) so a new type does not need a new table. Columns specific to discovery (`profile_id`, `reasoning`, `prompt`, `focus`) are nullable and set only for that type, recording *why* the playlist exists. Membership and order live in `museflow_playlist_track` (`position`).
+`museflow_playlist` stores both kinds of playlists in one table with a `type` column (`PlaylistType`): `DISCOVERY` and `EXPLORE` (picked by the advisor, among new artists or among the favourite ones) and `HISTORY` (a persisted "best of" from the user's own library). They were once two separate concepts (an ephemeral playlist and a persisted discovery playlist) and were merged (commit `467a4ce`) so a new type does not need a new table. Columns specific to the advisor playlists (`profile_id`, `reasoning`, `prompt`, `focus`) are nullable and set only for those types, recording *why* the playlist exists. Membership and order live in `museflow_playlist_track` (`position`).
 
 `profile_id` references the taste profile with `ON DELETE SET NULL`: deleting a taste profile keeps the discovery playlists it guided (they can still be listed and rated) and only drops the link. The column is informational; no code reads it back.
 
@@ -217,7 +217,7 @@ Document storage fits because the profile is read and written as a whole, never 
 `museflow_llm_usage` keeps what the LLM calls cost: one row per command run, step and model, with the reasoning effort (`ReasoningEffort`,
 always sent, see [Model choice per step](llm-pipeline.md#model-choice-per-step)), the calls, tokens,
 cost (`NUMERIC(12, 6)`, in USD) and the time spent waiting for the replies (`INTERVAL`). `run_id` groups the rows of one run and `operation` (`LLMOperation`) names the command:
-`taste_build`, `discover` or `enrich`. Rows are written at the end of the command, whatever its outcome (see
+`taste_build`, `discover`, `explore` or `enrich`. Rows are written at the end of the command, whatever its outcome (see
 [Cost tracking](llm-pipeline.md#cost-tracking)).
 
 It is a table of its own rather than a `cost` column on the profile and the playlist, because some spending has no

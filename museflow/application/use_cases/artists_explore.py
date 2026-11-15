@@ -19,6 +19,7 @@ from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -89,11 +90,9 @@ class ExploreArtistsUseCase:
             result = await self._explore(user, config, artists, blacklist, liked_tracks)
             playlist_id = result.playlist.id if result.playlist else None
         finally:
-            # Accepted until the next database reset (#209): an exploration counts as a discovery, as a value of its
-            # own changes the enum's database type.
             await self._llm_usage.record(
                 user_id=user.id,
-                operation=LLMOperation.DISCOVER,
+                operation=LLMOperation.EXPLORE,
                 usages=self._advisor.usages,
                 playlist_id=playlist_id,
             )
@@ -186,6 +185,7 @@ class ExploreArtistsUseCase:
         name = config.title or f"[MF] - {self._PLAYLIST_NAME} - {datetime.now(UTC).isoformat(timespec='seconds')}"
         playlist = await self._discovery.create_playlist(
             name=name,
+            type=PlaylistType.EXPLORE,
             tracks=tracks,
             prompt=config.prompt,
         )

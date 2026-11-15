@@ -47,7 +47,7 @@ class TestExploreArtistsUseCase:
         )
 
         assert result.playlist is not None
-        assert result.playlist.type == PlaylistType.DISCOVERY
+        assert result.playlist.type == PlaylistType.EXPLORE
         assert result.playlist.profile_id is None
         assert result.playlist.name.startswith("[MF] - Explore - ")
         # The picks "1" and "2" are the first two candidates; the made-up id "99" is dropped.
@@ -68,7 +68,7 @@ class TestExploreArtistsUseCase:
             .all()
         )
         assert [(row.operation, row.step, row.playlist_id) for row in rows] == [
-            (LLMOperation.DISCOVER, "advisor_exploration_picks", result.playlist.id)
+            (LLMOperation.EXPLORE, "advisor_exploration_picks", result.playlist.id)
         ]
 
     async def test__dry_run(

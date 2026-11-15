@@ -107,18 +107,16 @@ class DiscoveryService:
         self,
         *,
         name: str,
+        type: PlaylistType,
         tracks: list[Track],
         profile_id: uuid.UUID | None = None,
         reasoning: str | None = None,
         prompt: str | None = None,
         focus: DiscoveryFocus | None = None,
     ) -> Playlist:
-        """Creates the playlist on the provider, then saves it with its tracks, as discoveries the next runs exclude.
-
-        Typed `discovery` for `playlist explore` too, until it gets a type of its own (#209).
-        """
+        """Creates the playlist on the provider, then saves it with its tracks, as discoveries the next runs exclude."""
         # Remote first: if the provider call fails, nothing has been written locally.
-        playlist = await self._provider_library.create_playlist(name=name, type=PlaylistType.DISCOVERY, tracks=tracks)
+        playlist = await self._provider_library.create_playlist(name=name, type=type, tracks=tracks)
 
         discovery_tracks = [replace(track, source=TrackSource.DISCOVERY) for track in tracks]
         # One block: the discovery tracks and their local playlist are saved together, or not at all.

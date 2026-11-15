@@ -237,6 +237,7 @@ class TestLLMUsageSQLRepository:
         for month, operation, cost in (
             (11, LLMOperation.ENRICH, 1),
             (11, LLMOperation.DISCOVER, 2),
+            (11, LLMOperation.EXPLORE, 3),
             (10, LLMOperation.ENRICH, 5),
         ):
             await LLMUsageModelFactory.create_async(
@@ -252,6 +253,7 @@ class TestLLMUsageSQLRepository:
 
         assert [group.values for group in summary.groups] == [
             ["2026-10", "enrich"],
+            ["2026-11", "explore"],
             ["2026-11", "discover"],
             ["2026-11", "enrich"],
         ]

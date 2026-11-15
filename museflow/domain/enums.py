@@ -18,8 +18,9 @@ class DiscoveryFocus(StrEnum):
 
 
 class PlaylistType(StrEnum):
-    DISCOVERY = "discovery"  # AI-curated playlist: `playlist discover`, and `playlist explore` until #209
-    HISTORY = "history"  # persisted "best of"
+    DISCOVERY = "discovery"  # `playlist discover`: tracks of new artists, picked by the advisor
+    HISTORY = "history"  # `playlist history`: persisted "best of"
+    EXPLORE = "explore"  # `playlist explore`: unknown tracks of the favourite artists, picked by the advisor
 
 
 class EnrichField(StrEnum):
@@ -60,8 +61,9 @@ class TrackOrderBy(StrEnum):
 
 class LLMOperation(StrEnum):
     TASTE_BUILD = "taste_build"  # `taste build`: segment, merge and reflect steps
-    DISCOVER = "discover"  # `playlist discover` and `playlist explore` (until #209): advisor calls
+    DISCOVER = "discover"  # `playlist discover`: advisor calls
     ENRICH = "enrich"  # `enrich tracks`: enricher batches
+    EXPLORE = "explore"  # `playlist explore`: advisor calls
 
 
 class ReasoningEffort(StrEnum):
@@ -76,7 +78,7 @@ class ReasoningEffort(StrEnum):
 
 
 class LLMUsageGroupBy(StrEnum):
-    OPERATION = "operation"  # the command that paid: taste build, discover, enrich
+    OPERATION = "operation"  # the command that paid: taste build, discover, explore, enrich
     MODEL = "model"  # the model OpenRouter actually served, fallbacks included
     EFFORT = "effort"  # the reasoning effort asked for the step
     STEP = "step"  # the pipeline step: advisor, enricher, profiler segment / merge / reflect
