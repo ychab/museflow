@@ -18,7 +18,7 @@ class TasteProfileDataFactory(TypedDictFactory[TasteProfileData]):
 class TasteProfileModelFactory(BaseModelFactory[TasteProfileModel]):
     __model__ = TasteProfileModel
 
-    # Never empty: String(n) gives polyfactory no min length, and record_llm_usage reads an empty name as no profile.
+    # Never empty: String(n) gives polyfactory no min length, and LLMUsageService.record reads an empty name as no profile.
     name = Use(BaseModelFactory.__faker__.sha256)
     profile = Use(TasteProfileDataFactory.build)
     status = TasteProfileStatus.FINISHED

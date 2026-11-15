@@ -8,7 +8,7 @@ from typing import cast
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.services.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import LLMUsageService
 from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
 from museflow.domain.const import TASTE_BATCH_SIZE_MIN
 from museflow.domain.entities.taste import TasteProfile
@@ -31,17 +31,17 @@ class BuildTasteProfileUseCase:
     ) -> None:
         self._uow = uow
         self._profiler = profiler
+        self._llm_usage = LLMUsageService(uow=uow)
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         # What the profiler spent is saved whatever the outcome: a paused build was billed too.
         try:
             profile = await self._build_profile(user, config)
         finally:
-            await record_llm_usage(
+            await self._llm_usage.record(
                 user_id=user.id,
                 operation=LLMOperation.TASTE_BUILD,
                 usages=self._profiler.usages,
-                uow=self._uow,
                 profile_name=config.name,
             )
         return profile
