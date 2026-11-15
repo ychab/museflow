@@ -152,8 +152,10 @@ them, unknown to the library but likely heard (#208). The candidate search, the 
 creation are shared with `discover` in `application/services/discovery.py`.
 
 **Quality over quantity** is stated in both prompts: only return an artist or a pick with a confidence of at least
-0.7, and return fewer than the limit rather than pad. This is an instruction to the model, not a post-filter in code;
-the fit scores are used afterwards for ranking. Both responses are constrained by a strict JSON schema and validated
+0.7, and return fewer than the limit rather than pad. For the artists it is an instruction to the model; a pick scored
+below 0.7 is also dropped in code, as the model returned some anyway (a live version scored 0.0, #208). The fit scores
+then rank the picks. The artists whose original tracks are wanted (requested in `discover`, every one in `explore`)
+lose their live recordings and medleys before the picks step (`is_live_or_medley`), by title and album. Both responses are constrained by a strict JSON schema and validated
 into Pydantic models; the mappers strip control characters from the artist names (an LLM may emit them in place of an
 accented letter).
 

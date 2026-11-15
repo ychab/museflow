@@ -81,10 +81,13 @@ class TestGetUnknownArtistTracks:
         mock_uow: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
     ) -> None:
+        """An artist searched deep gets the catalogue search, and only their studio tracks: no live, no medley."""
         deep, plain = "The Fictional Band", "Another Band"
-        track_deep = TrackFactory.build(artists=[deep])
-        track_plain = TrackFactory.build(artists=[plain])
-        mock_provider_library.search_artist_catalogue.return_value = [track_deep]
+        track_deep = TrackFactory.build(name="Neon Harbor", album_name="Night Drive", artists=[deep])
+        live_deep = TrackFactory.build(name="Neon Harbor - Live", artists=[deep])
+        medley_deep = TrackFactory.build(name="Glass Rain / Paper Moon / Neon Harbor", artists=[deep])
+        track_plain = TrackFactory.build(name="Glass Rain (Live)", artists=[plain])
+        mock_provider_library.search_artist_catalogue.return_value = [track_deep, live_deep, medley_deep]
         mock_provider_library.search_artist_tracks.return_value = [track_plain]
 
         candidates = await service.get_unknown_artist_tracks(
