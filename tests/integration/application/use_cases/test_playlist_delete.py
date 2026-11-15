@@ -23,6 +23,26 @@ class TestDeletePlaylistUseCase:
         await DeletePlaylistUseCase(user_id=user.id, uow=uow).delete(playlist_id=playlist_db.id)
         assert await playlist_repository.get(user.id, playlist_db.id) is None
 
+    async def test__find_matching__filtered(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+    ) -> None:
+        explore_db = await PlaylistModelFactory.create_async(
+            user_id=user.id,
+            type=PlaylistType.EXPLORE,
+            provider=MusicProvider.SPOTIFY,
+        )
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.DISCOVERY)
+        await PlaylistModelFactory.create_async(type=PlaylistType.EXPLORE)
+
+        playlists = await DeletePlaylistUseCase(user_id=user.id, uow=uow).find_matching(
+            type=PlaylistType.EXPLORE,
+            provider=MusicProvider.SPOTIFY,
+        )
+
+        assert [playlist.id for playlist in playlists] == [explore_db.id]
+
     async def test__purge__nominal(
         self,
         uow: UnitOfWorkPort,

@@ -14,8 +14,13 @@ class PlaylistRepository(ABC):
     async def create(self, playlist: Playlist) -> Playlist: ...
 
     @abstractmethod
-    async def get_list(self, user_id: uuid.UUID, type: PlaylistType | None = None) -> list[Playlist]:
-        """Return playlists for the user, of the given type if any, ordered by creation date descending.
+    async def get_list(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> list[Playlist]:
+        """Return playlists for the user, of the given type and provider if any, ordered by creation date descending.
 
         tracks=[] in all results.
         """

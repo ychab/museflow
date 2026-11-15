@@ -7,7 +7,6 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.playlist_delete import DeletePlaylistUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -36,21 +35,6 @@ class TestDeletePlaylistUseCase:
 
         with pytest.raises(PlaylistNotFoundError):
             await use_case.find(playlist_id=uuid.uuid4())
-
-    async def test__find_matching__filters_applied(
-        self,
-        use_case: DeletePlaylistUseCase,
-        user: User,
-        mock_playlist_repository: mock.AsyncMock,
-    ) -> None:
-        discovery = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY)
-        history = PlaylistFactory.build(user_id=user.id, type=PlaylistType.HISTORY)
-        other_provider = PlaylistFactory.build(user_id=user.id, type=PlaylistType.DISCOVERY, provider="foo")
-        mock_playlist_repository.get_list.return_value = [discovery, history, other_provider]
-
-        playlists = await use_case.find_matching(type=PlaylistType.DISCOVERY, provider=MusicProvider.SPOTIFY)
-
-        assert playlists == [discovery]
 
     async def test__delete__not_found(
         self,
