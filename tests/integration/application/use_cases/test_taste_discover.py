@@ -142,3 +142,17 @@ class TestDiscoverTasteUseCase:
         # The only candidate left gets the id "1": the picks "2" and "99" point at nothing.
         assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
         assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]
+
+    async def test__known_tracks__other_credits__not_offered(self, use_case: DiscoverTasteUseCase, user: User) -> None:
+        """A song the library credits in another order has another fingerprint: caught by its title and artists."""
+        await TasteProfileModelFactory.create_async(user_id=user.id)
+        known = TrackFactory.build(name="Mi Pueblo", artists=["The Fictional Orchestra", "Grupo Niche"])
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint=known.fingerprint, artists=known.artists)
+
+        result = await use_case.create_suggestions_playlist(
+            user=user,
+            config=DiscoverTasteConfigInput(playlist_limit=1, dry_run=True),
+        )
+
+        assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
+        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]

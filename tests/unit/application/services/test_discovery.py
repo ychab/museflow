@@ -26,6 +26,7 @@ class TestGetUnknownArtistTracks:
     @pytest.fixture(autouse=True)
     def nothing_known(self, mock_track_repository: mock.AsyncMock) -> None:
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=False))
+        mock_track_repository.get_list.return_value = []
 
     async def test__candidates__filtered(
         self,

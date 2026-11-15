@@ -5,6 +5,7 @@ from typing import Final
 
 from museflow.domain.entities.track import Track
 from museflow.domain.utils.stats import compute_quality
+from museflow.domain.utils.text import get_fingerprint_title
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -118,6 +119,28 @@ def keep_new_tracks(tracks: list[Track], blacklist: UserBlacklist, fingerprints_
         if track.fingerprint in fingerprints_seen | fingerprints_kept or _is_blacklisted(track, blacklist):
             continue
         fingerprints_kept.add(track.fingerprint)
+        kept.append(track)
+    return kept
+
+
+def drop_tracks_known_by_credits(tracks: list[Track], library_tracks: list[Track]) -> list[Track]:
+    """Drops the tracks the library holds under the same normalized title with at least one credited artist in common.
+
+    Catches what the fingerprint (title + first artist) misses: the same song credited in another order.
+    """
+    # Accepted risk (#214): two different songs with one title and one artist in common (an "Intro" on two albums)
+    # count as one, as the fingerprint already does when that artist is credited first.
+    library_artists: dict[str, set[str]] = {}
+    for library_track in library_tracks:
+        title = get_fingerprint_title(library_track.fingerprint)
+        library_artists.setdefault(title, set()).update(normalize_text(a) for a in library_track.artists)
+
+    kept: list[Track] = []
+    for track in tracks:
+        artists = library_artists.get(get_fingerprint_title(track.fingerprint), set())
+        if artists & {normalize_text(a) for a in track.artists}:
+            logger.debug(f"Excluded '{track}': known under other credits")
+            continue
         kept.append(track)
     return kept
 

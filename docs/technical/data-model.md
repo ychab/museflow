@@ -162,7 +162,7 @@ Why not the provider id:
 - **Re-releases.** The same song appears under several Spotify ids (single, album, remaster). History import collapses them (their play times are merged) and the discovery filter excludes anything whose fingerprint is already known.
 - **Blacklist and ratings follow the song**, not one catalogue entry.
 
-The cost is false merges (two different songs with the same normalised title and primary artist) and false splits (spelling variants). The fingerprint is computed in the entity's `__post_init__` and indexed; the unique constraint is `uq_museflow_track_user_fingerprint` on `(user_id, fingerprint)`.
+The cost is false merges (two different songs with the same normalised title and primary artist) and false splits (spelling variants). One split is caught at discovery: the same song credited in another order (`A, B` against `B, A`) has another primary artist, so the known-tracks filter also drops a candidate whose normalised title (the fingerprint's part before `|`) the library holds with at least one credited artist in common. The fingerprint is computed in the entity's `__post_init__` and indexed; the unique constraint is `uq_museflow_track_user_fingerprint` on `(user_id, fingerprint)`.
 
 !!! note "Uniqueness evolved"
     Commit `8b27c95` first made the constraint `(user_id, provider, fingerprint)`; `edb1fd9` ("splitting providers") replaced it with `(user_id, fingerprint)` plus the `provider_links` list. The provider is therefore not part of uniqueness today.

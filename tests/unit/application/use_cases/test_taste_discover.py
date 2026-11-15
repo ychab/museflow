@@ -395,7 +395,8 @@ class TestDiscoverTasteUseCase:
         """The liked and disliked tracks and the blacklist reach the advisor; covered artists are not read at 0."""
         liked_tracks = TrackFactory.batch(2, score=9)
         disliked_tracks = TrackFactory.batch(2, score=1)
-        mock_track_repository.get_list.side_effect = [liked_tracks, disliked_tracks]
+        # The third read is the known-tracks catch, by title: nothing in the library.
+        mock_track_repository.get_list.side_effect = [liked_tracks, disliked_tracks, []]
         mock_blacklist_repository.get.return_value = UserBlacklist(
             artists=[BlacklistedArtistFactory.build(artist_name="A Blacklisted Band")],
             tracks=[BlacklistedTrackFactory.build(name="A Song", artist_name="A Blacklisted Band")],

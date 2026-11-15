@@ -16,6 +16,7 @@ from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory
+from tests.unit.factories.entities.track import TrackFactory
 
 
 @pytest.mark.wiremock("openrouter", "spotify")
@@ -90,3 +91,23 @@ class TestExploreArtistsUseCase:
             await async_session_db.execute(select(TrackModel).where(TrackModel.source == TrackSource.DISCOVERY))
         ).all()
         assert tracks_db == []
+
+    async def test__known_tracks__other_credits__not_offered(
+        self, use_case: ExploreArtistsUseCase, user: User
+    ) -> None:
+        """A song the library credits in another order has another fingerprint: caught by its title and artists."""
+        await TrackModelFactory.create_async(user_id=user.id, artists=["Grupo Niche"], score=9)
+        known = TrackFactory.build(name="Mi Pueblo", artists=["The Fictional Orchestra", "Grupo Niche"])
+        # Neither rated nor played: its first artist is no favourite to explore.
+        await TrackModelFactory.create_async(
+            user_id=user.id, fingerprint=known.fingerprint, artists=known.artists, score=None
+        )
+
+        result = await use_case.create_playlist(
+            user=user,
+            config=ExploreArtistsConfigInput(catalogue_tracks_pages=2, playlist_limit=1, dry_run=True),
+        )
+
+        # The only candidate left gets the id "1": the picks "2" and "99" point at nothing.
+        assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
+        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]

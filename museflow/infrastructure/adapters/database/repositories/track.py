@@ -73,6 +73,7 @@ class TrackSQLRepository(TrackRepository):
         played_last_max: date | None = None,
         exclude_ids: list[uuid.UUID] | None = None,
         fingerprints: list[str] | None = None,
+        titles: list[str] | None = None,
         missing_fields: frozenset[EnrichField] | None = None,
         genres: list[GenreTag] | None = None,
         moods: list[MoodTag] | None = None,
@@ -122,6 +123,8 @@ class TrackSQLRepository(TrackRepository):
             stmt = stmt.where(TrackModel.id.notin_(exclude_ids))
         if fingerprints is not None:
             stmt = stmt.where(TrackModel.fingerprint.in_(fingerprints))
+        if titles is not None:
+            stmt = stmt.where(func.split_part(TrackModel.fingerprint, "|", 1).in_(titles))
         if missing_fields:
             stmt = stmt.where(
                 or_(*(self._missing_condition(field) for field in EnrichField if field in missing_fields))

@@ -2,6 +2,7 @@ import logging
 
 import pytest
 
+from museflow.application.utils.discovery import drop_tracks_known_by_credits
 from museflow.application.utils.discovery import filter_by_artist
 from museflow.application.utils.discovery import is_live_or_medley
 from museflow.application.utils.discovery import rank_favourite_artists
@@ -31,6 +32,35 @@ class TestFilterByArtist:
             filter_by_artist(artist="Nova", tracks=[TrackFactory.build(artists=["Novalee"])])
 
         assert "Artist 'Nova': rejected tracks of ['Novalee']" in caplog.text
+
+
+class TestDropTracksKnownByCredits:
+    @pytest.mark.parametrize(
+        ("name", "credited", "dropped"),
+        [
+            pytest.param("Neon Harbor", ["Nova", "The Fictional Band"], True, id="other_order"),
+            pytest.param("Neon Harbor", ["A Guest Band", "nova"], True, id="one_artist_shared__case"),
+            pytest.param("Néon Harbor (Remastered 2011)", ["Nóva", "A Guest Band"], True, id="title_and_accents"),
+            pytest.param("Neon Harbor", ["A Guest Band"], False, id="no_artist_shared"),
+            pytest.param("Neon Harbor Nights", ["Nova"], False, id="other_title"),
+        ],
+    )
+    def test__nominal(self, name: str, credited: list[str], dropped: bool) -> None:
+        library_track = TrackFactory.build(name="Neon Harbor", artists=["The Fictional Band", "Nova"])
+        track = TrackFactory.build(name=name, artists=credited)
+
+        result = drop_tracks_known_by_credits(tracks=[track], library_tracks=[library_track])
+
+        assert result == ([] if dropped else [track])
+
+    def test__dropped__logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        library_track = TrackFactory.build(name="Neon Harbor", artists=["The Fictional Band", "Nova"])
+        track = TrackFactory.build(name="Neon Harbor", artists=["Nova", "The Fictional Band"])
+
+        with caplog.at_level(logging.DEBUG):
+            drop_tracks_known_by_credits(tracks=[track], library_tracks=[library_track])
+
+        assert f"Excluded '{track}': known under other credits" in caplog.text
 
 
 class TestRankFavouriteArtists:
