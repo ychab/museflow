@@ -245,7 +245,7 @@ those calls were paid too. The table is skipped when no call was made.
 
 The same totals are saved to `museflow_llm_usage`, one row per step and model, under a `run_id` shared by the rows of
 the run ([Data model](data-model.md#llm-usage)). The advisor, profiler and enricher ports expose them as `usages`, and
-each use case saves them in a `finally:` block, through the application service `record_llm_usage`
+each use case saves them in a `finally:` block, through the application service `LLMUsageService`
 (`application/services/llm_usage.py`), in a transaction of its own:
 
 - `BuildTasteProfileUseCase` links the rows to the profile, once a checkpoint or the finished profile exists;

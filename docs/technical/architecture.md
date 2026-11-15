@@ -14,7 +14,7 @@ flowchart TB
     subgraph APP["application (orchestration)"]
         direction TB
         UC["use_cases"]
-        ASVC["services: record_llm_usage"]
+        ASVC["services: DiscoveryService, LLMUsageService"]
         PORTS["ports (ABCs)<br/>repositories, providers,<br/>advisors, profilers, enrichers, security"]
         INP["inputs (command schemas)"]
     end

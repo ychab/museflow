@@ -9,7 +9,7 @@ from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.discovery import DiscoveryService
-from museflow.application.services.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import LLMUsageService
 from museflow.application.utils.discovery import select_tracks
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
@@ -56,8 +56,9 @@ class DiscoverTasteUseCase:
     ) -> None:
         self._uow = uow
         self._advisor = advisor
-        # Application code built from the ports above, not a port: never injected
+        # Application services built from the ports above, not ports: never injected
         self._discovery = DiscoveryService(uow=uow, provider_library=provider_library)
+        self._llm_usage = LLMUsageService(uow=uow)
 
     async def create_suggestions_playlist(
         self,
@@ -127,11 +128,10 @@ class DiscoverTasteUseCase:
             )
             playlist_id = result.playlist.id if result.playlist else None
         finally:
-            await record_llm_usage(
+            await self._llm_usage.record(
                 user_id=user.id,
                 operation=LLMOperation.DISCOVER,
                 usages=self._advisor.usages,
-                uow=self._uow,
                 profile_name=profile.name,
                 playlist_id=playlist_id,
             )

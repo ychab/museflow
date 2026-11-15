@@ -11,7 +11,7 @@ from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.discovery import DiscoveryService
-from museflow.application.services.llm_usage import record_llm_usage
+from museflow.application.services.llm_usage import LLMUsageService
 from museflow.application.utils.discovery import filter_by_artist
 from museflow.application.utils.discovery import rank_favourite_artists
 from museflow.application.utils.discovery import select_tracks
@@ -58,8 +58,9 @@ class ExploreArtistsUseCase:
     ) -> None:
         self._uow = uow
         self._advisor = advisor
-        # Application code built from the ports above, not a port: never injected
+        # Application services built from the ports above, not ports: never injected
         self._discovery = DiscoveryService(uow=uow, provider_library=provider_library)
+        self._llm_usage = LLMUsageService(uow=uow)
 
     async def create_playlist(self, user: User, config: ExploreArtistsConfigInput) -> ExploreArtistsResult:
         """Creates a playlist of the catalogue tracks the user does not know, from their favourite artists.
@@ -90,11 +91,10 @@ class ExploreArtistsUseCase:
         finally:
             # Accepted until the next database reset (#209): an exploration counts as a discovery, as a value of its
             # own changes the enum's database type.
-            await record_llm_usage(
+            await self._llm_usage.record(
                 user_id=user.id,
                 operation=LLMOperation.DISCOVER,
                 usages=self._advisor.usages,
-                uow=self._uow,
                 playlist_id=playlist_id,
             )
         return result
