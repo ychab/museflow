@@ -56,3 +56,8 @@ def generate_fingerprint(name: str, artist_names: list[str]) -> str:
     clean_artist = normalize_text(artist_names[0]) if artist_names else "unknown"
 
     return f"{clean_track}|{clean_artist}"
+
+
+def get_fingerprint_title(fingerprint: str) -> str:
+    """Returns the normalized title of a fingerprint: its part before `|`, which the title never holds."""
+    return fingerprint.partition("|")[0]

@@ -222,6 +222,38 @@ class TestTrackSQLRepository:
 
         assert result == []
 
+    async def test__get_list__titles(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        """A title matches whatever the artists and their order: only the fingerprint's title part counts."""
+        reversed_credits = TrackFactory.build(name="Neon Harbor", artists=["Another Band", "The Fictional Band"])
+        other_artist = TrackFactory.build(name="Neon Harbor", artists=["Nova"])
+        other_title = TrackFactory.build(name="Neon Harbor Nights", artists=["The Fictional Band"])
+        kept_db = [
+            await TrackModelFactory.create_async(user_id=user.id, fingerprint=track.fingerprint)
+            for track in (reversed_credits, other_artist)
+        ]
+        await TrackModelFactory.create_async(user_id=user.id, fingerprint=other_title.fingerprint)
+        other_user_db = await UserModelFactory.create_async()
+        await TrackModelFactory.create_async(user_id=other_user_db.id, fingerprint=reversed_credits.fingerprint)
+
+        result = await track_repository.get_list(user.id, titles=["neon harbor", "unknown"])
+
+        assert {t.id for t in result} == {track_db.id for track_db in kept_db}
+
+    async def test__get_list__titles__empty(
+        self,
+        user: User,
+        track_repository: TrackRepository,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id)
+
+        result = await track_repository.get_list(user.id, titles=[])
+
+        assert result == []
+
     async def test__get_list__exclude_skipped(
         self,
         user: User,

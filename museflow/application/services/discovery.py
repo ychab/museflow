@@ -5,6 +5,7 @@ from dataclasses import replace
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.utils.discovery import drop_tracks_known_by_credits
 from museflow.application.utils.discovery import filter_by_artist
 from museflow.application.utils.discovery import is_live_or_medley
 from museflow.application.utils.discovery import keep_new_tracks
@@ -15,6 +16,7 @@ from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
+from museflow.domain.utils.text import get_fingerprint_title
 from museflow.domain.value_objects.blacklist import UserBlacklist
 
 logger = logging.getLogger(__name__)
@@ -162,16 +164,26 @@ class DiscoveryService:
     async def _drop_known_tracks(self, user: User, tracks: list[Track]) -> list[Track]:
         if not tracks:
             return []
+        library_tracks: list[Track] = []
+
         async with self._uow as uow:
             known_identifiers = await uow.tracks.get_known_identifiers(
                 user_id=user.id,
                 fingerprints=[track.fingerprint for track in tracks],
             )
+            tracks_unknown: list[Track] = []
+            for track in tracks:
+                if known_identifiers.is_known(track):
+                    logger.debug(f"Excluded '{track}'")
+                    continue
+                tracks_unknown.append(track)
 
-        result: list[Track] = []
-        for track in tracks:
-            if known_identifiers.is_known(track):
-                logger.debug(f"Excluded '{track}'")
-                continue
-            result.append(track)
-        return result
+            # The fingerprint holds the first artist only: the same song credited in another order is caught by its
+            # title, among the tracks the fingerprint let through only.
+            if tracks_unknown:
+                library_tracks = await uow.tracks.get_list(
+                    user_id=user.id,
+                    titles=sorted({get_fingerprint_title(track.fingerprint) for track in tracks_unknown}),
+                )
+
+        return drop_tracks_known_by_credits(tracks=tracks_unknown, library_tracks=library_tracks)
