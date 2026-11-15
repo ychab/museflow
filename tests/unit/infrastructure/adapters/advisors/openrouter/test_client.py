@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 from httpx import codes
@@ -356,6 +357,39 @@ class TestOpenRouterAdvisorAdapter:
         assert f"#### {requested.name} (REQUESTED)\nWanted sound: {requested.sound}\n" in system_message["content"]
         assert "- 3 | Paper Moon | Late Lights | 2021" in system_message["content"]
         assert user_message["content"] == "Choose the tracks for this playlist."
+
+    async def test__pick_discovery_tracks__score_below_min__dropped(
+        self,
+        openrouter_advisor: OpenRouterAdvisorAdapter,
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A pick scored below 0.7 is one the prompt says to omit: the model returned it anyway."""
+        httpx_mock.add_response(
+            url=URL,
+            method="POST",
+            json={
+                "choices": [
+                    {
+                        "message": {"content": '{"picks": [{"id": "1", "score": 0.7}, {"id": "2", "score": 0.0}]}'},
+                        "finish_reason": "stop",
+                    }
+                ]
+            },
+        )
+        artist = ArtistSuggestedFactory.build()
+        kept, omitted = TrackFactory.batch(2)
+
+        with caplog.at_level(logging.WARNING):
+            tracks_picked = await openrouter_advisor.pick_discovery_tracks(
+                strategy=DiscoveryArtistStrategyFactory.build(artists=[artist]),
+                candidates={artist.name: [kept, omitted]},
+                tracks_limit=5,
+                max_tracks_per_artist=3,
+            )
+
+        assert [tp.track for tp in tracks_picked] == [kept]
+        assert "Picks dropped, scored below 0.7: 1" in caplog.text
 
     @pytest.mark.parametrize(
         ("prompt", "expected_user_message"),

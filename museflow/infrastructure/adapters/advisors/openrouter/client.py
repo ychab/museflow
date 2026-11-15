@@ -1,4 +1,5 @@
 import logging
+from typing import Final
 
 from pydantic import BaseModel
 
@@ -31,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
     """Adapter that asks an LLM, through OpenRouter, for artists matching a taste profile, then for picks among theirs."""
+
+    # The fit score below which the picks prompt says to omit a track: a pick under it is dropped, as the model
+    # returned some anyway (a live version scored 0.0, #208)
+    _PICK_SCORE_MIN: Final[float] = 0.7
 
     def __init__(self, client: OpenRouterClient, llm: LLMSettings) -> None:
         super().__init__(client=client)
@@ -243,11 +248,17 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             schema=DISCOVERY_PICKS_SCHEMA,
             step=step,
         )
-        tracks_picked = to_tracks_picked(content, candidates_by_id)
-        if len(tracks_picked) < len(content.picks):
+        tracks_mapped = to_tracks_picked(content, candidates_by_id)
+        if len(tracks_mapped) < len(content.picks):
             logger.warning(
-                f"Picks dropped, not among the candidates or picked twice: {len(content.picks) - len(tracks_picked)}",
-                extra={"returned": len(content.picks), "kept": len(tracks_picked)},
+                f"Picks dropped, not among the candidates or picked twice: {len(content.picks) - len(tracks_mapped)}",
+                extra={"returned": len(content.picks), "kept": len(tracks_mapped)},
+            )
+        tracks_picked = [tp for tp in tracks_mapped if tp.score >= self._PICK_SCORE_MIN]
+        if len(tracks_picked) < len(tracks_mapped):
+            logger.warning(
+                f"Picks dropped, scored below {self._PICK_SCORE_MIN}: {len(tracks_mapped) - len(tracks_picked)}",
+                extra={"returned": len(tracks_mapped), "kept": len(tracks_picked)},
             )
         return tracks_picked
 
