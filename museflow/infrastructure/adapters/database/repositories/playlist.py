@@ -32,10 +32,17 @@ class PlaylistSQLRepository(PlaylistRepository):
 
         return replace(playlist_db.to_entity(), tracks=playlist.tracks)
 
-    async def get_list(self, user_id: uuid.UUID, type: PlaylistType | None = None) -> list[Playlist]:
+    async def get_list(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> list[Playlist]:
         stmt = select(PlaylistDB).where(PlaylistDB.user_id == user_id).order_by(PlaylistDB.created_at.desc())
         if type is not None:
             stmt = stmt.where(PlaylistDB.type == type)
+        if provider is not None:
+            stmt = stmt.where(PlaylistDB.provider == provider)
         result = await self.session.execute(stmt)
         return [row.to_entity() for row in result.scalars()]
 
