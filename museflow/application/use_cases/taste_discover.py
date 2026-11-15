@@ -17,6 +17,7 @@ from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
@@ -265,6 +266,7 @@ class DiscoverTasteUseCase:
         )
         playlist = await self._discovery.create_playlist(
             name=name,
+            type=PlaylistType.DISCOVERY,
             tracks=tracks,
             profile_id=profile.id,
             reasoning=strategy.reasoning,

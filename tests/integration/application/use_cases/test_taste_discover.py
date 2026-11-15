@@ -9,6 +9,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
@@ -52,6 +53,7 @@ class TestDiscoverTasteUseCase:
         assert result.playlist.provider_id == "5ta70oLZcXLReU7bEEXQXy"
         assert result.playlist.prompt == "lo-fi jazz and soul for focus"
         assert result.playlist.focus is None
+        assert result.playlist.type == PlaylistType.DISCOVERY
         assert result.playlist.reasoning == result.strategy.reasoning
         assert result.strategy.strategy_label == "Progressive Horizons"
         assert result.strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"

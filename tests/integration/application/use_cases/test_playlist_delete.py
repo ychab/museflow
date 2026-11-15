@@ -91,6 +91,11 @@ class TestDeletePlaylistUseCase:
             type=PlaylistType.HISTORY,
             provider=MusicProvider.SPOTIFY,
         )
+        explore_db = await PlaylistModelFactory.create_async(
+            user_id=user.id,
+            type=PlaylistType.EXPLORE,
+            provider=MusicProvider.SPOTIFY,
+        )
 
         count = await DeletePlaylistUseCase(user_id=user.id, uow=uow).purge(
             type=PlaylistType.DISCOVERY,
@@ -100,3 +105,4 @@ class TestDeletePlaylistUseCase:
         assert count == 1
         assert await playlist_repository.get(user.id, playlist_db.id) is None
         assert await playlist_repository.get(user.id, other_type_db.id) is not None
+        assert await playlist_repository.get(user.id, explore_db.id) is not None

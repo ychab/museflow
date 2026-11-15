@@ -7,6 +7,7 @@ import pytest
 from museflow.application.services.discovery import DiscoveryService
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.value_objects.blacklist import UserBlacklist
@@ -225,6 +226,7 @@ class TestCreateDiscoveryPlaylist:
         with pytest.raises(ProviderRateLimitExceededError):
             await service.create_playlist(
                 name="Friday night",
+                type=PlaylistType.DISCOVERY,
                 tracks=TrackFactory.batch(2),
             )
 

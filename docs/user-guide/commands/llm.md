@@ -24,7 +24,7 @@ museflow llm usage [--email <email>] [--operation taste_build|discover|enrich] [
 
 | `--by` | One row per | Order |
 | --- | --- | --- |
-| `operation` | command: `taste_build`, `discover`, `enrich` | most expensive first |
+| `operation` | command: `taste_build`, `discover`, `explore`, `enrich` | most expensive first |
 | `model` | model OpenRouter actually served, fallbacks included | most expensive first |
 | `effort` | reasoning effort asked for the step: `minimal`, `low`, `medium`, `high`… | most expensive first |
 | `step` | pipeline step: `advisor`, `enricher`, `profiler segment`, `profiler merge`, `profiler reflect` | most expensive first |

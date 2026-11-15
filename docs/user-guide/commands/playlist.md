@@ -125,8 +125,7 @@ museflow playlist explore --limit 20 --title "Missed favourites"
 
 **Output.** A report table per round (artists searched, their tracks you don't know, tracks picked), the table of
 explored tracks, the playlist ID unless `--dry-run` is set, and the `LLM usage` table (step `advisor_exploration_picks`).
-The playlist is saved as a discovery playlist, and its LLM usage under the `discover` operation, until their own types
-come with the next database reset (#209).
+The playlist is saved with the `explore` type, and its LLM usage under the `explore` operation.
 
 ## `playlist history`
 
@@ -253,7 +252,7 @@ museflow playlist delete [playlist_id] [--email <email>] [OPTIONS]
 | `playlist_id` | none | Playlist ID (required unless `--purge` is used). |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--purge` | off | Delete all matching playlists instead of a single one. |
-| `--type` | none | Filter by playlist type: `discovery` or `history` (only valid with `--purge`). |
+| `--type` | none | Filter by playlist type: `discovery`, `explore` or `history` (only valid with `--purge`). |
 | `--provider` | none | Filter by provider (only valid with `--purge`). |
 | `--include-remote` | off | Also unfollow/delete the playlist on the provider (e.g. Spotify). |
 | `--yes`, `-y` | off | Skip confirmation prompt. |

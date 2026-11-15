@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 3ead624187a6
+Revision ID: eb6dad24db18
 Revises:
-Create Date: 2026-11-12 09:18:22.690645
+Create Date: 2026-11-15 14:23:50.485210
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '3ead624187a6'
+revision: str = 'eb6dad24db18'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -124,7 +124,7 @@ def upgrade() -> None:
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
     sa.Column('provider_id', sa.String(length=512), nullable=False),
     sa.Column('snapshot_id', sa.String(length=512), nullable=True),
-    sa.Column('type', sa.Enum('DISCOVERY', 'HISTORY', name='playlisttype'), nullable=False),
+    sa.Column('type', sa.Enum('DISCOVERY', 'HISTORY', 'EXPLORE', name='playlisttype'), nullable=False),
     sa.Column('name', sa.String(length=512), nullable=False),
     sa.Column('profile_id', sa.UUID(), nullable=True),
     sa.Column('reasoning', sa.Text(), nullable=True),
@@ -149,7 +149,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('run_id', sa.Uuid(), nullable=False),
-    sa.Column('operation', sa.Enum('TASTE_BUILD', 'DISCOVER', 'ENRICH', name='llmoperation'), nullable=False),
+    sa.Column('operation', sa.Enum('TASTE_BUILD', 'DISCOVER', 'ENRICH', 'EXPLORE', name='llmoperation'), nullable=False),
     sa.Column('profile_id', sa.UUID(), nullable=True),
     sa.Column('playlist_id', sa.UUID(), nullable=True),
     sa.Column('step', sa.String(length=64), nullable=False),

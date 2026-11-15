@@ -16,7 +16,7 @@ class Playlist(BaseProviderEntity):
     snapshot_id: str | None = None
     tracks: list[Track] = field(default_factory=list)
 
-    # Discovery-specific — nullable, populated by the use case that creates a PlaylistType.DISCOVERY playlist.
+    # Advisor playlists only (discovery, explore) — nullable, populated by the use case that creates them.
     profile_id: uuid.UUID | None = None
     reasoning: str | None = None
     prompt: str | None = None
