@@ -6,6 +6,7 @@ from rich.table import Table
 
 from museflow.application.use_cases.playlist_list import get_playlists
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -17,16 +18,20 @@ console = Console()
 @app.command("list")
 def playlist_list_command(
     email: str = EMAIL_OPTION,
+    type: PlaylistType | None = typer.Option(None, "--type", help="Filter by playlist type"),
 ) -> None:
     """List all playlists for a user."""
     try:
-        playlists = asyncio.run(playlist_list_logic(email=email))
+        playlists = asyncio.run(playlist_list_logic(email=email, type=type))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
+    if not playlists and type:
+        typer.secho(f"No {type.value} playlists found.", fg=typer.colors.YELLOW)
+        return
     if not playlists:
         typer.secho(
             "No playlists found. Run `museflow playlist discover` or `museflow playlist explore` first.",
@@ -55,7 +60,7 @@ def playlist_list_command(
     console.print(table)
 
 
-async def playlist_list_logic(email: str) -> list[Playlist]:
+async def playlist_list_logic(email: str, type: PlaylistType | None = None) -> list[Playlist]:
     uow = get_unit_of_work()
 
     async with uow:
@@ -64,4 +69,4 @@ async def playlist_list_logic(email: str) -> list[Playlist]:
     if not user:
         raise UserNotFoundError()
 
-    return await get_playlists(user=user, uow=uow)
+    return await get_playlists(user=user, uow=uow, type=type)

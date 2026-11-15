@@ -100,6 +100,18 @@ class TestPlaylistSQLRepository:
         # Newer should appear before older
         assert ids.index(playlist_newer.id) < ids.index(playlist_older.id)
 
+    async def test__get_list__type(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        explore_db = await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.EXPLORE)
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY)
+
+        playlists = await playlist_repository.get_list(user.id, type=PlaylistType.EXPLORE)
+
+        assert [playlist.id for playlist in playlists] == [explore_db.id]
+
     async def test__get_list__returns_empty_for_unknown_user(
         self,
         playlist_repository: PlaylistRepository,

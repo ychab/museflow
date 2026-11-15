@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist.list_ import playlist_list_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -24,6 +25,16 @@ class TestPlaylistListParserCommand:
     def test__nominal(self, runner: CliRunner) -> None:
         result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
+
+    def test__type(self, mock_playlist_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com", "--type", "explore"])
+        assert result.exit_code == 0
+        mock_playlist_list_logic.assert_awaited_once_with(email="test@example.com", type=PlaylistType.EXPLORE)
+
+    def test__type__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com", "--type", "foo"])
+        assert result.exit_code != 0
+        assert "Invalid value for '--type'" in clean_typer_text(result.output)
 
     def test__email__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(app, ["playlist", "list", "--email", "notanemail"])
@@ -70,6 +81,13 @@ class TestPlaylistListCommand:
         result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com"])
         assert result.exit_code == 0
         assert "No playlists found" in result.output
+
+    def test__empty_playlists__type(self, mock_playlist_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        mock_playlist_list_logic.return_value = []
+
+        result = runner.invoke(app, ["playlist", "list", "--email", "test@example.com", "--type", "explore"])
+        assert result.exit_code == 0
+        assert "No explore playlists found." in result.output
 
     def test__with_playlists(self, mock_playlist_list_logic: mock.AsyncMock, runner: CliRunner) -> None:
         mock_playlist_list_logic.return_value = [PlaylistFactory.build()]
