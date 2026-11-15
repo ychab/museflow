@@ -210,17 +210,18 @@ micro tags, see `museflow playlist history --help` for the complete list). Macro
 
 ## `playlist list`
 
-Lists all playlists of a user.
+Lists the playlists of a user, all of them or one type only.
 
 ```bash
-museflow playlist list [--email <email>]
+museflow playlist list [--email <email>] [--type <type>]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
+| `--type` | none | Filter by playlist type: `discovery`, `explore` or `history`. |
 
-**Output.** A table with ID, name, type (`discovery` or `history`), prompt, focus and creation date, or a
+**Output.** A table with ID, name, type (`discovery`, `explore` or `history`), prompt, focus and creation date, or a
 notice when there is no playlist.
 
 ## `playlist view`
