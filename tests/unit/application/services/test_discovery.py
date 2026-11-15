@@ -74,7 +74,7 @@ class TestGetUnknownArtistTracks:
 
         # The second and third artists are left without any track: not offered at all.
         assert candidates == {first: [kept, shared]}
-        mock_provider_library.search_artist_tracks.assert_any_await(artist=first, max_pages=2, log_enabled=False)
+        mock_provider_library.search_artist_tracks.assert_any_await(artist=first, max_pages=2)
 
     async def test__artists_deep__catalogue_searched(
         self,
@@ -105,9 +105,7 @@ class TestGetUnknownArtistTracks:
 
         assert candidates == {deep: [track_deep], plain: [track_plain]}
         mock_provider_library.search_artist_catalogue.assert_awaited_once_with(artist=deep, max_pages=10)
-        mock_provider_library.search_artist_tracks.assert_awaited_once_with(
-            artist=plain, max_pages=2, log_enabled=False
-        )
+        mock_provider_library.search_artist_tracks.assert_awaited_once_with(artist=plain, max_pages=2)
 
     async def test__search_query_invalid__artist_skipped(
         self,

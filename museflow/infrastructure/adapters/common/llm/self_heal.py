@@ -44,6 +44,7 @@ def self_heal[T, S, **P](
             conversation = list(messages)
             max_attempts = max_retries + 1
             attempt = 0
+            adapter = ""  # of the last invalid reply, for the recovery log
 
             while True:
                 attempt += 1
@@ -59,6 +60,7 @@ def self_heal[T, S, **P](
                         "max_attempts": max_attempts,
                         "failure_kind": e.failure_kind.value,
                     }
+                    adapter = e.adapter
                     if attempt >= max_attempts:
                         logger.error(f"LLM {e.adapter} self-healing exhausted ({attempt}/{max_attempts})", extra=extra)
                         raise
@@ -78,8 +80,8 @@ def self_heal[T, S, **P](
                 else:
                     if attempt > 1:
                         logger.warning(
-                            f"LLM self-healing recovered after {attempt} attempts",
-                            extra={"attempt": attempt, "max_attempts": max_attempts},
+                            f"LLM {adapter} self-healing recovered after {attempt} attempts",
+                            extra={"adapter": adapter, "attempt": attempt, "max_attempts": max_attempts},
                         )
                     return result
 

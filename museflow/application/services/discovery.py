@@ -47,7 +47,6 @@ class DiscoveryService:
         `fingerprints_kept` (kept by an earlier round); an artist left with no track is left out. The `artists_deep`
         are the ones whose original tracks are wanted: their live recordings and medleys are left out too.
         """
-        logger.debug("--- Artist tracks ---")
         # Searched concurrently, a few at a time not to hit the rate limit; gather keeps the artists' order, so the
         # first artist still keeps a track two of them share.
         semaphore = asyncio.Semaphore(concurrency)
@@ -151,11 +150,7 @@ class DiscoveryService:
                 # tracks, likely known to the user already.
                 if deep:
                     return await self._provider_library.search_artist_catalogue(artist=artist, max_pages=max_pages)
-                return await self._provider_library.search_artist_tracks(
-                    artist=artist,
-                    max_pages=max_pages,
-                    log_enabled=False,
-                )
+                return await self._provider_library.search_artist_tracks(artist=artist, max_pages=max_pages)
             except ProviderSearchQueryInvalidError:
                 # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
                 logger.warning(f"Artist skipped, its search query was rejected: '{artist}'")

@@ -175,6 +175,8 @@ every annotation of the class that uses it (`list[Track]`) then names the method
 - `logger = logging.getLogger(__name__)`. Levels: ERROR unrecoverable, WARNING handled but unexpected, INFO milestones
   only, DEBUG flow.
 - f-strings are fine for messages. Add `extra={}` when the data is worth querying in an aggregator (IDs, counts).
+  The message stands alone all the same: the terminal handlers never print `extra`, so a warning needs its context
+  (status code, step, track) in the text.
   In `except` blocks: `logger.exception("Static message", extra={...})`, the traceback carries the detail.
 - Never log secrets (tokens, passwords): log IDs.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.

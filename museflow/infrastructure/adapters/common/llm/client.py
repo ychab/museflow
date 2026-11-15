@@ -132,7 +132,7 @@ class OpenRouterClient(HttpClientMixin):
                 if retry_delay is not None:
                     if retry_delay > self._max_retry_wait:
                         logger.warning(
-                            "OpenRouter rate limit wait exceeds max, aborting",
+                            f"OpenRouter rate limit wait {retry_delay}s exceeds max {self._max_retry_wait}s, aborting",
                             extra={"retry_delay": retry_delay, "max_retry_wait": self._max_retry_wait},
                         )
                         raise LLMRateLimitError(
@@ -270,7 +270,7 @@ class OpenRouterClient(HttpClientMixin):
 
             # The message travels in the exception: no traceback for a rejection OpenRouter explains
             logger.warning(
-                "OpenRouter API error",
+                f"OpenRouter API error {status_code} on {adapter} ({llm.MODEL})",
                 extra={"status_code": status_code, "adapter": adapter, "model": llm.MODEL},
             )
             error = _parse_error(e.response)

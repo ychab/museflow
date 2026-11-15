@@ -541,7 +541,7 @@ class TestOpenRouterClient:
         with caplog.at_level(logging.WARNING), pytest.raises(LLMRequestError):
             await client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        record = next(r for r in caplog.records if r.message == "OpenRouter API error")
+        record = next(r for r in caplog.records if r.message == f"OpenRouter API error 401 on test ({llm.MODEL})")
         assert record.levelname == "WARNING"
         assert record.exc_info is None
 

@@ -2,7 +2,6 @@ import logging
 from contextlib import nullcontext
 from datetime import timedelta
 
-from rich import get_console
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.status import Status
@@ -13,6 +12,7 @@ from museflow.domain.value_objects.stats import RankableStats
 from museflow.domain.value_objects.stats import Ranking
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
+from museflow.infrastructure.config.loggers import console_stderr
 
 console = Console()
 
@@ -30,9 +30,9 @@ def format_duration(duration: timedelta) -> str:
 
 
 def spinner(message: str) -> Status | nullcontext[None]:
-    """Shows a spinner with the `rich` log handler only: it shares Rich's console, so its logs print above the spinner."""
+    """Shows a spinner on stderr with the `rich` log handler only: it shares its console, so logs print above it."""
     if any(isinstance(handler, RichHandler) for handler in logging.getLogger(LOGGER_MUSEFLOW).handlers):
-        return get_console().status(message)
+        return console_stderr.status(message)
     return nullcontext()
 
 

@@ -12,6 +12,7 @@ from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
+from museflow.infrastructure.config.loggers import console_stderr
 from museflow.infrastructure.entrypoints.cli.utils.display import format_duration
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import spinner
@@ -28,7 +29,10 @@ class TestSpinner:
 
     @pytest.mark.usefixtures("rich_log_handler")
     def test__rich_log_handler(self) -> None:
-        assert isinstance(spinner("Working"), Status)
+        status = spinner("Working")
+        assert isinstance(status, Status)
+        # On the log handler's console: stdout only carries the results
+        assert status.console is console_stderr
 
     def test__other_log_handler(self) -> None:
         assert isinstance(spinner("Working"), nullcontext)

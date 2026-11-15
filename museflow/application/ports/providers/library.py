@@ -18,7 +18,6 @@ class ProviderLibraryPort(ABC):
         artist: str,
         max_pages: int,
         page_size: int = 10,
-        log_enabled: bool = True,
     ) -> list[Track]:
         """Retrieves tracks of an artist, in the provider's relevance order, over at most `max_pages` pages.
 
