@@ -27,6 +27,7 @@ from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import ProgressEvent
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -104,6 +105,8 @@ class RichProgressAdapter(ProgressPort):
         elif isinstance(event, StepAdvanced):
             if self._progress is not None and self._task is not None:
                 self._progress.update(self._task, completed=event.done, total=event.total)
+        elif isinstance(event, StepResumed):
+            self._resume(event)
         elif isinstance(event, StepDone):
             label, unit = self._DONE_LABELS[event.step]
             self._print_done(label, f"{self._total:,} {unit}" if self._total is not None else "")
@@ -130,20 +133,37 @@ class RichProgressAdapter(ProgressPort):
         self._cost_before = self._spent()
         self._total = event.total
 
+    def _resume(self, event: StepResumed) -> None:
+        if self._progress is not None and self._task is not None:
+            self._progress.update(self._task, completed=event.done, total=event.total)
+        _, unit = self._DONE_LABELS[event.step]
+        self._console.print(
+            self._line(
+                Text(" ↻", style="cyan"),
+                "Resumed",
+                f"at {event.done}/{event.total} {unit}, from the checkpoint",
+                "",
+            )
+        )
+
     def _print_done(self, label: str, detail: str) -> None:
         self._remove_task()
         timing = format_duration(timedelta(seconds=time.monotonic() - self._started_at))
         if cost := self._spent() - self._cost_before:
             timing += f" · ${cost:.4f}"
 
+        # Printed above the live line, which the console keeps at the bottom
+        self._console.print(self._line(Text(" ✓", style="green"), label, detail, timing))
+
+    @staticmethod
+    def _line(mark: Text, label: str, detail: str, timing: str) -> Table:
         line = Table.grid(padding=(0, 1), expand=True)
         line.add_column(width=2)
         line.add_column(width=19)
         line.add_column(ratio=1)
         line.add_column(justify="right", style="dim")
-        line.add_row(Text(" ✓", style="green"), label, detail, timing)
-        # Printed above the live line, which the console keeps at the bottom
-        self._console.print(line)
+        line.add_row(mark, label, detail, timing)
+        return line
 
     def _remove_task(self) -> None:
         if self._progress is not None and self._task is not None:

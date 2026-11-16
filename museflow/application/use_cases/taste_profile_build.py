@@ -23,6 +23,7 @@ from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ class BuildTasteProfileUseCase:
         await self._progress.publish(StepStarted(step=ProgressStep.TASTE_PERIODS, total=len(periods)))
         if start_batch_index:
             await self._progress.publish(
-                StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=start_batch_index, total=len(periods))
+                StepResumed(step=ProgressStep.TASTE_PERIODS, done=start_batch_index, total=len(periods))
             )
 
         # Index of the step in progress; len(periods) denotes the final reflection step.

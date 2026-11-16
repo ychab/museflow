@@ -159,8 +159,6 @@ class DiscoverTasteUseCase:
         attempts_run = 0  # the attempts that went through their picks step, for the log
 
         for attempt in range(1, config.max_attempts + 1):
-            logger.debug(f"Attempt {attempt}/{config.max_attempts}")
-
             await self._progress.publish(
                 StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=attempt, max_attempts=config.max_attempts)
             )
@@ -182,7 +180,6 @@ class DiscoverTasteUseCase:
                 logger.debug(f"Attempt {attempt}/{config.max_attempts}: no artist left to suggest, stopping")
                 break
             strategy = strategy_now
-            await self._progress.publish(StrategyChosen(attempt=attempt, strategy=strategy))
 
             artists_asked.extend(artist.name for artist in strategy.artists)
             artists_requested.update(artist.name for artist in strategy.artists if artist.requested)
@@ -193,6 +190,8 @@ class DiscoverTasteUseCase:
                 f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
                 extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
             )
+            # After its details: a log line shows above the display's line of the step
+            await self._progress.publish(StrategyChosen(attempt=attempt, strategy=strategy))
 
             await self._progress.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=attempt))
             candidates = await self._discovery.get_unknown_artist_tracks(

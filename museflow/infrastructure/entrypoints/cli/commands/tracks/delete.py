@@ -60,7 +60,7 @@ def tracks_delete_command(
         typer.secho("No tracks found matching the filters.", fg=typer.colors.YELLOW)
         return
 
-    typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.GREEN)
+    typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.YELLOW)
 
 
 async def tracks_delete_logic(

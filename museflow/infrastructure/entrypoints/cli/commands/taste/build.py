@@ -4,6 +4,9 @@ from contextlib import AsyncExitStack
 from pydantic import EmailStr
 
 import typer
+from rich.console import Group
+from rich.panel import Panel
+from rich.text import Text
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.progress import ProgressPort
@@ -23,6 +26,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.display import console
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 
@@ -101,20 +105,19 @@ def taste_build_command(
             err=True,
         )
         raise typer.Exit(code=1) from e
+    except KeyboardInterrupt as e:
+        # Each period done was checkpointed in its own transaction: --resume picks up after it
+        typer.secho(
+            "Build interrupted: the periods done are saved. Run with --resume to continue.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        raise typer.Exit(code=130) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     else:
-        typer.secho(f"\nTaste profile built: {profile.tracks_count} tracks processed", fg=typer.colors.GREEN)
-        typer.echo(f"Name: {profile.name}")
-        typer.echo(f"Logic version: {profile.logic_version}")
-        for step, step_metadata in profile.profiler_metadata["steps"].items():
-            typer.echo(f"Model ({step}): {step_metadata['model']}")
-        typer.echo(f"Eras: {len(profile.profile['taste_timeline'])}")
-        if profile.profile["personality_archetype"]:
-            typer.secho(f"Archetype: {profile.profile['personality_archetype']}", fg=typer.colors.CYAN)
-        for insight in profile.profile["life_phase_insights"]:
-            typer.echo(f"  - {insight}")
+        _print_profile(profile)
     finally:
         print_llm_usage(meter, verbose=verbose)
 
@@ -154,3 +157,33 @@ async def taste_build_logic(
         )
 
         return await use_case.build_profile(user=user, config=config)
+
+
+def _print_profile(profile: TasteProfile) -> None:
+    """Prints the built profile: its archetype, eras and insights in a panel, then the model of each step."""
+    data = profile.profile
+    eras = data["taste_timeline"]
+    # Text, not markup: an AI-written label may hold brackets
+    lines: list[Text] = []
+    if data["personality_archetype"]:
+        lines.append(Text(data["personality_archetype"], style="bold cyan"))
+    lines.append(
+        Text(f"{profile.tracks_count} tracks · {len(eras)} eras · logic {profile.logic_version}", style="dim")
+    )
+    if eras:
+        lines.append(Text())
+        lines.extend(Text.assemble((f"{era['time_range']:<9}", "dim"), "  ", era["era_label"]) for era in eras)
+    if data["life_phase_insights"]:
+        lines.append(Text())
+        lines.extend(Text(f"• {insight}") for insight in data["life_phase_insights"])
+
+    console.print(
+        Panel(
+            Group(*lines),
+            title=Text.assemble(("✓ ", "green"), f"Taste profile '{profile.name}'"),
+            title_align="left",
+            border_style="green",
+        )
+    )
+    models = " · ".join(f"{step} {meta['model']}" for step, meta in profile.profiler_metadata["steps"].items())
+    console.print(Text(f"Models: {models}", style="dim"))

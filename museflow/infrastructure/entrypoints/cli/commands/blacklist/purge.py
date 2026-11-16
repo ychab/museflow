@@ -27,7 +27,9 @@ def blacklist_purge_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Deleted {count} blacklist {'entry' if count == 1 else 'entries'} of {email}.", fg=typer.colors.GREEN)
+    typer.secho(
+        f"Deleted {count} blacklist {'entry' if count == 1 else 'entries'} of {email}.", fg=typer.colors.YELLOW
+    )
 
 
 async def blacklist_purge_logic(email: EmailStr) -> int:

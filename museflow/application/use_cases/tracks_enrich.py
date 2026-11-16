@@ -140,7 +140,6 @@ class EnrichTracksUseCase:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 
             enriched_count += len(enriched_tracks)
-            logger.debug(f"Enriched batch {i}/{total_batches}", extra={"batch": i, "total": total_batches})
             # Left out by the model or with no usable answer: those tracks stay eligible for the next run
             if skipped := len(batch) - len(enriched_tracks):
                 logger.warning(

@@ -117,7 +117,6 @@ class ExploreArtistsUseCase:
                 logger.debug(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
                 break
 
-            logger.debug(f"Attempt {attempt}/{config.max_attempts}")
             for artist in artists_now:
                 logger.debug(f"Favourite artist '{artist}'")
             await self._progress.publish(

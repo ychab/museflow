@@ -31,7 +31,7 @@ def users_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"User {email} deleted.", fg=typer.colors.GREEN)
+    typer.secho(f"User {email} deleted.", fg=typer.colors.YELLOW)
 
 
 async def users_delete_logic(email: EmailStr) -> None:
