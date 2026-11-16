@@ -32,6 +32,7 @@ museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--title` | advisor's suggestion | Playlist name, used as is. Without it, the playlist is named `[MF] - <name suggested by the advisor> - <timestamp>`. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
+| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
 The tuning lives in settings: the advisor is asked for `--limit` × `DISCOVERY_ADVISOR_LIMIT_RATIO` (1.5) artists,
@@ -73,11 +74,13 @@ museflow playlist discover --focus roots_revival
 museflow playlist discover --dry-run --model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** A report table per round (artists asked, their tracks you don't know, tracks picked), then the table of
-discovered tracks (artist, track, album). Unless `--dry-run` is set, the playlist is created and the command prints
-its ID and follow-up commands to view and rate it. Last, an `LLM usage` table gives the calls, tokens, cost and time of
-each advisor step (`advisor_artists`, `advisor_picks`), then the total and the elapsed time of the command, even when
-no new track was found.
+**Output.** While it runs, one line per finished step on stderr, grouped by round: artists suggested, catalogue
+searched (the tracks you don't know), tracks picked (and how many the playlist keeps after the per-artist cap), then
+the playlist created; each line gives its duration and, for an advisor step, its cost. Then the advisor's reasoning,
+the table of discovered tracks (artist, track, album), and unless `--dry-run` is set, the playlist name and follow-up
+commands to view and rate it; a warning follows when fewer tracks than `--limit` were found. Last, one line gives the
+LLM calls, their cost and the elapsed time, even when no new track was found; with `--verbose`, an `LLM usage` table
+details the calls, tokens, cost and time of each advisor step (`advisor_artists`, `advisor_picks`).
 
 ## `playlist explore`
 
@@ -98,6 +101,7 @@ museflow playlist explore [PROMPT] [--email <email>] [OPTIONS]
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run, checked as for `discover`. |
 | `--title` | `[MF] - Explore - <timestamp>` | Playlist name, used as is. |
 | `--dry-run` | off | Explore tracks without creating a playlist. Still searches the provider catalogue. |
+| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
 The best `EXPLORE_ARTISTS_LIMIT` (20) favourites not blacklisted are shuffled, so that two runs start with other
@@ -123,8 +127,9 @@ museflow playlist explore "calm and acoustic" --dry-run
 museflow playlist explore --limit 20 --title "Missed favourites"
 ```
 
-**Output.** A report table per round (artists searched, their tracks you don't know, tracks picked), the table of
-explored tracks, the playlist ID unless `--dry-run` is set, and the `LLM usage` table (step `advisor_exploration_picks`).
+**Output.** As for `discover`, without the artists step nor the reasoning: one line per finished step and round, the
+table of explored tracks, the playlist name unless `--dry-run` is set, and the LLM cost line (the `LLM usage` table of
+step `advisor_exploration_picks` with `--verbose`).
 The playlist is saved with the `explore` type, and its LLM usage under the `explore` operation.
 
 ## `playlist history`

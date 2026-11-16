@@ -1,3 +1,4 @@
+import io
 import os
 import re
 from collections.abc import AsyncGenerator
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import ORMExecuteState
 
 import pytest
+from rich.console import Console
 from tenacity import stop_after_attempt
 
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
@@ -58,6 +60,7 @@ from museflow.infrastructure.adapters.database.session import async_session_fact
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
@@ -447,6 +450,17 @@ async def openrouter_advisor(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[
         llm=LLMSettings(MODEL="google/gemini-2.5-flash", REASONING_EFFORT=ReasoningEffort.LOW),
     ) as advisor:
         yield advisor
+
+
+@pytest.fixture
+def progress_output() -> io.StringIO:
+    return io.StringIO()
+
+
+@pytest.fixture
+def progress(progress_output: io.StringIO) -> RichProgressAdapter:
+    """The CLI's progress display, writing its lines to `progress_output` (wide enough not to wrap)."""
+    return RichProgressAdapter(console=Console(file=progress_output, width=200), animated=False)
 
 
 @pytest.fixture

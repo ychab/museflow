@@ -9,6 +9,7 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -34,11 +35,11 @@ class TestPlaylistDiscoverLogic:
         auth_token: OAuthProviderUserToken,
         discovery_artist_strategy: DiscoveryArtistStrategy,
         mock_use_case: mock.Mock,
+        progress: RichProgressAdapter,
     ) -> None:
         expected_result = DiscoverTasteResult(
             playlist=PlaylistFactory.build(user_id=user.id),
             strategy=discovery_artist_strategy,
-            reports=[],
             tracks=[],
         )
         mock_use_case.create_suggestions_playlist.return_value = expected_result
@@ -47,6 +48,7 @@ class TestPlaylistDiscoverLogic:
             email=user.email,
             provider=MusicProvider.SPOTIFY,
             config=DiscoverTasteConfigInput(),
+            progress=progress,
             # The default advisor model is missing from the WireMock catalog: the check passes only with the override
             model="google/gemini-3.5-flash",
         )

@@ -6,10 +6,14 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.status import Status
 from rich.table import Table
+from rich.text import Text
 
+from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.value_objects.stats import RankableStats
 from museflow.domain.value_objects.stats import Ranking
+from museflow.infrastructure.adapters.common.duration import format_duration
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
 from museflow.infrastructure.config.loggers import console_stderr
@@ -17,21 +21,17 @@ from museflow.infrastructure.config.loggers import console_stderr
 console = Console()
 
 
-def format_duration(duration: timedelta) -> str:
-    """A short human duration: `8.4s`, `4m09s`, `1h02m`."""
-    seconds = duration.total_seconds()
-    if seconds < 60:
-        return f"{seconds:.1f}s"
-    minutes, seconds = divmod(int(seconds), 60)
-    if minutes < 60:
-        return f"{minutes}m{seconds:02d}s"
-    hours, minutes = divmod(minutes, 60)
-    return f"{hours}h{minutes:02d}m"
+def has_rich_log_handler() -> bool:
+    """Whether the logs print through the `rich` handler: a live line (spinner, progress) on its console is safe then.
+
+    Another handler writes to the stream directly, which would break the live line.
+    """
+    return any(isinstance(handler, RichHandler) for handler in logging.getLogger(LOGGER_MUSEFLOW).handlers)
 
 
 def spinner(message: str) -> Status | nullcontext[None]:
     """Shows a spinner on stderr with the `rich` log handler only: it shares its console, so logs print above it."""
-    if any(isinstance(handler, RichHandler) for handler in logging.getLogger(LOGGER_MUSEFLOW).handlers):
+    if has_rich_log_handler():
         return console_stderr.status(message)
     return nullcontext()
 
@@ -71,13 +71,52 @@ def build_ranking_table[S: RankableStats](
     return table
 
 
-def print_llm_usage(meter: LLMUsageMeter) -> None:
-    """Prints what the command spent on LLM calls, per step and model, then how long it ran.
+def print_playlist_outcome(tracks: list[Track], playlist: Playlist | None, target: int, hint: str) -> None:
+    """Prints the tracks of a generated playlist, then where to find it, or that the dry run created none.
+
+    When fewer tracks than the `target` were found, a warning ends with the `hint` on how to find more.
+    """
+    table = Table(box=None, header_style="bold dim", pad_edge=False)
+    table.add_column("#", justify="right", style="dim")
+    table.add_column("Artist(s)")
+    table.add_column("Track")
+    table.add_column("Album", style="dim")
+    for i, track in enumerate(tracks, start=1):
+        table.add_row(str(i), ", ".join(track.artists), track.name, track.album_name or "")
+    console.print(table)
+    console.print()
+
+    # Text, not markup: a playlist name like "[MF] - …" would be read as a style tag.
+    if playlist is None:
+        console.print(Text.assemble(("! ", "bold yellow"), ("Dry run: no playlist created", "yellow")))
+    else:
+        console.print(
+            Text.assemble(
+                ("✓ ", "green"),
+                ("Playlist ", "bold"),
+                (playlist.name, "bold green"),
+                f" · {len(tracks)}/{target} tracks",
+            )
+        )
+        console.print(Text(f"  View it: museflow playlist view {playlist.id}", style="cyan"))
+        console.print(Text("  Rate tracks: museflow rate playlist --play", style="cyan"))
+    if len(tracks) < target:
+        console.print(
+            Text.assemble(("! ", "bold yellow"), (f"Only {len(tracks)}/{target} tracks found: ", "yellow"), hint)
+        )
+
+
+def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
+    """Prints what the command spent on LLM calls and how long it ran: one line, or a table per step and model.
 
     Prints nothing when no call was made.
     """
     usages = meter.usages
     if not usages:
+        return
+    if not verbose:
+        calls = sum(usage.calls for usage in usages)
+        console.print(f"{calls} LLM call(s) · ${meter.total_cost:.4f} · {format_duration(meter.elapsed)}")
         return
 
     table = Table(title="LLM usage", show_footer=True)

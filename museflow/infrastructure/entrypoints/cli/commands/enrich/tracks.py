@@ -107,7 +107,7 @@ def enrich_tracks_command(
         if result.error_count:
             typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
     finally:
-        print_llm_usage(meter)
+        print_llm_usage(meter, verbose=True)
 
 
 async def enrich_tracks_logic(

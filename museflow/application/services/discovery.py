@@ -97,7 +97,7 @@ class DiscoveryService:
             for artist, tracks in candidates.items()
             if (unknown := [track for track in tracks if track.fingerprint in fingerprints_unknown])
         }
-        logger.info(
+        logger.debug(
             f"Artist tracks: {found} found, {matched} by the artist, {len(tracks_unknown)} unknown "
             f"({len(candidates)}/{len(artists)} artists left)",
             extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
