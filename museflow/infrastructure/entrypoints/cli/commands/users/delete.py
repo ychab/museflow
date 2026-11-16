@@ -18,8 +18,11 @@ def users_delete_command(
 ) -> None:
     if not yes:
         typer.confirm(
-            f"About to delete the user {email} and all of its data: tracks, playlists, taste profiles, blacklist, "
-            "provider tokens and LLM usage. This cannot be undone. Continue?",
+            typer.style(
+                f"About to delete the user {email} and all of its data: tracks, playlists, taste profiles, blacklist, "
+                "provider tokens and LLM usage. This cannot be undone. Continue?",
+                fg=typer.colors.YELLOW,
+            ),
             abort=True,
         )
 
@@ -31,7 +34,7 @@ def users_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"User {email} deleted.", fg=typer.colors.YELLOW)
+    typer.secho(f"User {email} deleted.", fg=typer.colors.GREEN)
 
 
 async def users_delete_logic(email: EmailStr) -> None:

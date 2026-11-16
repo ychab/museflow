@@ -132,7 +132,8 @@ class TestGetUnknownArtistTracks:
             )
 
         assert candidates == {valid: [track]}
-        assert f"Artist skipped, its search query was rejected: '{malformed}'" in caplog.text
+        # repr: the control character shows escaped
+        assert f"Artist skipped, its search query was rejected: {malformed!r}" in caplog.text
 
     async def test__searches__concurrent__bounded__artists_order_kept(
         self,

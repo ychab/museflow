@@ -118,7 +118,7 @@ class ExploreArtistsUseCase:
                 break
 
             for artist in artists_now:
-                logger.debug(f"Favourite artist '{artist}'")
+                logger.debug(f"Favourite artist {artist!r}")
             await self._progress.publish(
                 StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=attempt, max_attempts=config.max_attempts)
             )
@@ -153,7 +153,7 @@ class ExploreArtistsUseCase:
                     prompt=config.prompt,
                 )
                 for track_picked in tracks_picked_now:
-                    logger.debug(f"Picked ({track_picked.score:.2f}): '{track_picked.track}'")
+                    logger.debug(f"Picked ({track_picked.score:.2f}): {str(track_picked.track)!r}")
 
             attempts_run = attempt
             tracks_picked.extend(tracks_picked_now)

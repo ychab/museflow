@@ -60,7 +60,7 @@ def tracks_delete_command(
         typer.secho("No tracks found matching the filters.", fg=typer.colors.YELLOW)
         return
 
-    typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.YELLOW)
+    typer.secho(f"Deleted {result.deleted_count} track(s) of {email}.", fg=typer.colors.GREEN)
 
 
 async def tracks_delete_logic(
@@ -93,7 +93,9 @@ async def tracks_delete_logic(
 
     # The confirmation waits for the user: keep it out of any block.
     if not yes:
-        typer.confirm(f"About to delete {count} track(s) of {email}. Continue?", abort=True)
+        typer.confirm(
+            typer.style(f"About to delete {count} track(s) of {email}. Continue?", fg=typer.colors.YELLOW), abort=True
+        )
 
     if purge and source is None:
         deleted = await use_case.purge()
