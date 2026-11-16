@@ -1,3 +1,5 @@
+import io
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,7 @@ from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.unit.factories.entities.track import TrackFactory
@@ -27,14 +30,18 @@ class TestExploreArtistsUseCase:
         uow: UnitOfWorkPort,
         spotify_library: ProviderLibraryPort,
         openrouter_advisor: OpenRouterAdvisorAdapter,
+        progress: RichProgressAdapter,
     ) -> ExploreArtistsUseCase:
-        return ExploreArtistsUseCase(uow=uow, provider_library=spotify_library, advisor=openrouter_advisor)
+        return ExploreArtistsUseCase(
+            uow=uow, provider_library=spotify_library, advisor=openrouter_advisor, progress=progress
+        )
 
     async def test__nominal(
         self,
         async_session_db: AsyncSession,
         use_case: ExploreArtistsUseCase,
         user: User,
+        progress_output: io.StringIO,
     ) -> None:
         """The favourite artist comes from the user's ratings, with no taste profile: its catalogue is searched."""
         await TrackModelFactory.create_async(
@@ -54,7 +61,10 @@ class TestExploreArtistsUseCase:
         # The picks "1" and "2" are the first two candidates; the made-up id "99" is dropped.
         assert [track.name for track in result.tracks] == ["Mi Pueblo", "Mi Pueblo Natal"]
         # The catalogue holds 8 tracks of the artist, versions of 2 songs.
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 2, 2)]
+        output = progress_output.getvalue()
+        assert "2 unknown track(s) · 1/1 artists" in output
+        assert "2 → 2/2 kept" in output
+        assert "Playlist created" in output
 
         tracks_db = (
             (await async_session_db.execute(select(TrackModel).where(TrackModel.source == TrackSource.DISCOVERY)))
@@ -93,7 +103,10 @@ class TestExploreArtistsUseCase:
         assert tracks_db == []
 
     async def test__known_tracks__other_credits__not_offered(
-        self, use_case: ExploreArtistsUseCase, user: User
+        self,
+        use_case: ExploreArtistsUseCase,
+        user: User,
+        progress_output: io.StringIO,
     ) -> None:
         """A song the library credits in another order has another fingerprint: caught by its title and artists."""
         await TrackModelFactory.create_async(user_id=user.id, artists=["Grupo Niche"], score=9)
@@ -110,4 +123,6 @@ class TestExploreArtistsUseCase:
 
         # The only candidate left gets the id "1": the picks "2" and "99" point at nothing.
         assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]
+        output = progress_output.getvalue()
+        assert "1 unknown track(s) · 1/1 artists" in output
+        assert "1 → 1/1 kept" in output

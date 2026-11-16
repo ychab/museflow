@@ -110,7 +110,7 @@ def taste_build_command(
         for insight in profile.profile["life_phase_insights"]:
             typer.echo(f"  - {insight}")
     finally:
-        print_llm_usage(meter)
+        print_llm_usage(meter, verbose=True)
 
 
 async def taste_build_logic(

@@ -5,10 +5,9 @@ from contextlib import AsyncExitStack
 from pydantic import EmailStr
 
 import typer
-from rich.console import Console
-from rich.table import Table
 
 from museflow.application.inputs.explore import ExploreArtistsConfigInput
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.artists_explore import ExploreArtistsResult
 from museflow.application.use_cases.artists_explore import ExploreArtistsUseCase
 from museflow.domain.enums import MusicProvider
@@ -16,16 +15,18 @@ from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
+from museflow.infrastructure.config.loggers import console_stderr
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils.display import spinner
-
-console = Console()
+from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
 
 
 @app.command("explore")
@@ -51,6 +52,7 @@ def playlist_explore_command(
         "--dry-run",
         help="Explore tracks without creating a playlist (still searches the provider catalogue)",
     ),
+    verbose: bool = VERBOSE_OPTION,
     limit: int = typer.Option(
         ExploreArtistsConfigInput.playlist_limit,
         "--limit",
@@ -62,7 +64,7 @@ def playlist_explore_command(
     """Play the tracks you don't know from your favourite artists, drawn from your ratings and plays."""
     meter = LLMUsageMeter()
     try:
-        with spinner("Exploring your artists…"):
+        with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
             result = asyncio.run(
                 playlist_explore_logic(
                     email=email,
@@ -85,6 +87,7 @@ def playlist_explore_command(
                         dry_run=dry_run,
                     ),
                     meter=meter,
+                    progress=progress,
                 ),
             )
     except UserNotFoundError as e:
@@ -105,47 +108,21 @@ def playlist_explore_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     else:
-        report_table = Table(title="Exploration Report")
-        report_table.add_column("Attempt", justify="right")
-        report_table.add_column("Artists", justify="right")
-        report_table.add_column("Unknown tracks", justify="right")
-        report_table.add_column("Picked", justify="right")
-        for report in result.reports:
-            report_table.add_row(
-                str(report.attempt),
-                str(report.artists),
-                str(report.candidates),
-                str(report.tracks_picked),
-            )
-        console.print(report_table)
-
-        track_table = Table(title=f"Tracks added to playlist{' (dry mode)' if dry_run else ''}")
-        track_table.add_column("#", justify="right", style="dim")
-        track_table.add_column("Artist(s)")
-        track_table.add_column("Track")
-        track_table.add_column("Album", style="dim")
-        for i, track in enumerate(result.tracks, start=1):
-            track_table.add_row(str(i), ", ".join(track.artists), track.name, track.album_name or "")
-        console.print(track_table)
-
-        if result.playlist is None:
-            typer.secho("\n\nTracks explored but playlist not created (dry-run mode) ⚠️", fg=typer.colors.YELLOW)
-        else:
-            typer.secho(
-                f"\n\nExplored tracks successfully saved into playlist '{result.playlist.name}'! ✅",
-                fg=typer.colors.GREEN,
-            )
-            typer.secho(f"Saved playlist ID: {result.playlist.id}", fg=typer.colors.CYAN)
-            typer.secho(f"  View it: museflow playlist view {result.playlist.id}", fg=typer.colors.CYAN)
-            typer.secho("  Rate tracks: museflow rate playlist --play", fg=typer.colors.CYAN)
+        print_playlist_outcome(
+            tracks=result.tracks,
+            playlist=result.playlist,
+            target=limit,
+            hint="rate more tracks, so that more favourite artists are known.",
+        )
     finally:
-        print_llm_usage(meter)
+        print_llm_usage(meter, verbose=verbose)
 
 
 async def playlist_explore_logic(
     email: EmailStr,
     provider: MusicProvider,
     config: ExploreArtistsConfigInput,
+    progress: ProgressPort,
     model: str | None = None,
     meter: LLMUsageMeter | None = None,
 ) -> ExploreArtistsResult:
@@ -166,5 +143,7 @@ async def playlist_explore_logic(
         provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
         advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
 
-        use_case = ExploreArtistsUseCase(uow=uow, provider_library=provider_library, advisor=advisor)
+        use_case = ExploreArtistsUseCase(
+            uow=uow, provider_library=provider_library, advisor=advisor, progress=progress
+        )
         return await use_case.create_playlist(user=user, config=config)

@@ -7,7 +7,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.explore import ExploreArtistsConfigInput
-from museflow.application.use_cases.artists_explore import ExploreArtistsAttemptReport
 from museflow.application.use_cases.artists_explore import ExploreArtistsResult
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
@@ -29,7 +28,7 @@ class TestPlaylistExploreParserCommand:
     @pytest.fixture(autouse=True)
     def mock_playlist_explore_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.playlist_explore_logic", autospec=True) as patched:
-            patched.return_value = ExploreArtistsResult(playlist=None, reports=[], tracks=[])
+            patched.return_value = ExploreArtistsResult(playlist=None, tracks=[])
             yield patched
 
     def test__nominal(self, mock_playlist_explore_logic: mock.AsyncMock, runner: CliRunner) -> None:
@@ -125,7 +124,7 @@ class TestPlaylistExploreCommand:
 
         result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com"])
         assert result.exit_code == 1
-        assert result.output.index("No new tracks found") < result.output.index("LLM usage")
+        assert result.output.index("No new tracks found") < result.output.index("LLM call(s)")
         assert "$0.0123" in result.output
 
     def test__output__playlist_created(
@@ -140,21 +139,20 @@ class TestPlaylistExploreCommand:
             spend(kwargs["meter"])
             return ExploreArtistsResult(
                 playlist=playlist,
-                reports=[ExploreArtistsAttemptReport(attempt=1, artists=5, candidates=653, tracks_picked=15)],
                 tracks=[TrackFactory.build(name="Neon Harbor"), TrackFactory.build(album_name=None)],
             )
 
         mock_playlist_explore_logic.side_effect = explore
 
-        result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com"])
+        result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com", "--verbose"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Exploration Report" in output
-        assert "653" in output
         assert "Neon Harbor" in output
-        assert "Explored tracks successfully saved into playlist 'Friday night'!" in output
-        assert f"Saved playlist ID: {playlist.id}" in output
+        assert "✓ Playlist Friday night · 2/10 tracks" in output
+        assert f"View it: museflow playlist view {playlist.id}" in output
+        assert "Only 2/10 tracks found: rate more tracks, so that more favourite artists are known." in output
+        # --verbose: the table per step and model
         assert output.index("Rate tracks: museflow rate playlist") < output.index("LLM usage")
 
     def test__output__dry_run(
@@ -163,12 +161,12 @@ class TestPlaylistExploreCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_explore_logic.return_value = ExploreArtistsResult(playlist=None, reports=[], tracks=[])
+        mock_playlist_explore_logic.return_value = ExploreArtistsResult(playlist=None, tracks=[])
 
         result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
 
-        assert "Tracks explored but playlist not created (dry-run mode)" in clean_typer_text(result.stdout)
+        assert "Dry run: no playlist created" in clean_typer_text(result.stdout)
 
 
 @pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_get_provider_library")
@@ -183,7 +181,11 @@ class TestPlaylistExploreLogic:
         with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor", mock.AsyncMock()) as mock_client:
             yield mock_client
 
-    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
+    async def test__user__not_found(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
+    ) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFoundError):
@@ -191,4 +193,5 @@ class TestPlaylistExploreLogic:
                 "test@example.com",
                 provider=MusicProvider.SPOTIFY,
                 config=ExploreArtistsConfigInput(),
+                progress=mock_progress,
             )

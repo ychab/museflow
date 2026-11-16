@@ -13,12 +13,17 @@ from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.value_objects.blacklist import UserBlacklist
+from museflow.domain.value_objects.progress import CandidatesFound
+from museflow.domain.value_objects.progress import PicksMade
+from museflow.domain.value_objects.progress import StepStarted
+from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 
@@ -64,6 +69,7 @@ class TestDiscoverTasteUseCase:
         mock_taste_profile_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
         track_roundtrip: None,
         pick_all: None,
     ) -> DiscoverTasteUseCase:
@@ -76,6 +82,7 @@ class TestDiscoverTasteUseCase:
             uow=mock_uow,
             provider_library=mock_provider_library,
             advisor=mock_advisor,
+            progress=mock_progress,
         )
 
     async def test__profile_loaded_by_name(
@@ -164,13 +171,13 @@ class TestDiscoverTasteUseCase:
         use_case: DiscoverTasteUseCase,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         """The next attempt excludes the artists already asked, and is not offered the tracks already picked."""
         artist_1, artist_2 = ArtistSuggestedFactory.batch(2)
-        mock_advisor.get_discovery_artists.side_effect = [
-            DiscoveryArtistStrategyFactory.build(artists=[artist_1]),
-            DiscoveryArtistStrategyFactory.build(artists=[artist_2]),
-        ]
+        strategy_1 = DiscoveryArtistStrategyFactory.build(artists=[artist_1])
+        strategy_2 = DiscoveryArtistStrategyFactory.build(artists=[artist_2])
+        mock_advisor.get_discovery_artists.side_effect = [strategy_1, strategy_2]
         picked_1 = TrackFactory.build(artists=[artist_1.name, artist_2.name])
         picked_2 = TrackFactory.build(artists=[artist_2.name])
         mock_provider_library.search_artist_tracks.side_effect = [[picked_1], [picked_1, picked_2]]
@@ -181,9 +188,20 @@ class TestDiscoverTasteUseCase:
         )
 
         assert result.tracks == [picked_1, picked_2]
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [
-            (1, 1, 1, 1),
-            (2, 1, 1, 1),
+        # Each step announced, then its outcome; a dry run creates no playlist.
+        assert [call.args[0] for call in mock_progress.publish.await_args_list] == [
+            StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=1, max_attempts=3),
+            StrategyChosen(attempt=1, strategy=strategy_1),
+            StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1),
+            CandidatesFound(attempt=1, artists=1, artists_kept=1, tracks=1),
+            StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1),
+            PicksMade(attempt=1, picks=[TrackPicked(track=picked_1, score=0.9)], kept=1, target=2),
+            StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=2, max_attempts=3),
+            StrategyChosen(attempt=2, strategy=strategy_2),
+            StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=2),
+            CandidatesFound(attempt=2, artists=1, artists_kept=1, tracks=1),
+            StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=2),
+            PicksMade(attempt=2, picks=[TrackPicked(track=picked_2, score=0.9)], kept=2, target=2),
         ]
         first_call, second_call = mock_advisor.get_discovery_artists.call_args_list
         assert first_call.kwargs["excluded_artists"] is None
@@ -286,6 +304,7 @@ class TestDiscoverTasteUseCase:
         use_case: DiscoverTasteUseCase,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         """An attempt suggesting no artist ends the run: the next ones would be paid for nothing."""
         artist = ArtistSuggestedFactory.build()
@@ -307,7 +326,8 @@ class TestDiscoverTasteUseCase:
         # The strategy that chose the tracks is kept.
         assert result.strategy == strategy
         assert result.tracks == [track]
-        assert [r.attempt for r in result.reports] == [1]
+        picks = [call.args[0] for call in mock_progress.publish.await_args_list if isinstance(call.args[0], PicksMade)]
+        assert [event.attempt for event in picks] == [1]
 
     async def test__attempts__capped_below_limit__next_attempt(
         self,
@@ -315,6 +335,7 @@ class TestDiscoverTasteUseCase:
         use_case: DiscoverTasteUseCase,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """An attempt reaching the limit before the per-artist cap, but not after it, is followed by another one."""
@@ -327,7 +348,7 @@ class TestDiscoverTasteUseCase:
         track_2 = TrackFactory.build(artists=[artist_2.name])
         mock_provider_library.search_artist_tracks.side_effect = [tracks_1, [track_2]]
 
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.INFO):
             result = await use_case.create_suggestions_playlist(
                 user=user,
                 config=DiscoverTasteConfigInput(
@@ -336,7 +357,8 @@ class TestDiscoverTasteUseCase:
             )
 
         assert result.tracks == [tracks_1[0], track_2]
-        assert [r.tracks_picked for r in result.reports] == [3, 1]
+        picks = [call.args[0] for call in mock_progress.publish.await_args_list if isinstance(call.args[0], PicksMade)]
+        assert [(len(event.picks), event.kept) for event in picks] == [(3, 1), (1, 2)]
         assert "playlist_limit not reached (2/3) after 2 attempt(s)" in caplog.text
 
     async def test__remote_calls__run_outside_any_block(

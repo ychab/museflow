@@ -66,6 +66,14 @@ class LLMOperation(StrEnum):
     EXPLORE = "explore"  # `playlist explore`: advisor calls
 
 
+class ProgressStep(StrEnum):
+    # A step of a long-running flow, announced to the progress display before it runs
+    DISCOVERY_ARTISTS = "discovery_artists"  # the advisor suggests artists for the request
+    DISCOVERY_SEARCH = "discovery_search"  # the catalogue is searched for their tracks the user does not know
+    DISCOVERY_PICKS = "discovery_picks"  # the advisor picks among those tracks
+    PLAYLIST_CREATE = "playlist_create"  # the playlist is created on the provider, then saved
+
+
 class ReasoningEffort(StrEnum):
     # How much an LLM step thinks before answering (OpenRouter `reasoning.effort`); unset: the provider's default
     NONE = "none"  # Reasoning disabled
