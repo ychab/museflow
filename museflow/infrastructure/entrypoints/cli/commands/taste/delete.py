@@ -35,7 +35,7 @@ def taste_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.GREEN)
+    typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.YELLOW)
 
 
 async def taste_delete_logic(email: EmailStr, name: str) -> None:

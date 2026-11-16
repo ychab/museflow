@@ -140,7 +140,6 @@ class ImportStreamingHistoryUseCase:
                 )
             tracks_created += created
             tracks_done = min(offset + config.batch_size, len(fingerprints))
-            logger.debug(f"... upserted {tracks_done} / {len(fingerprints)}...")
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=tracks_done, total=len(fingerprints))
             )

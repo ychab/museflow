@@ -21,6 +21,7 @@ from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
@@ -409,7 +410,7 @@ class TestBuildTasteProfileUseCase:
         # The progress starts at the checkpoint
         assert [call.args[0] for call in mock_progress.publish.await_args_list] == [
             StepStarted(step=ProgressStep.TASTE_PERIODS, total=3),
-            StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=1, total=3),
+            StepResumed(step=ProgressStep.TASTE_PERIODS, done=1, total=3),
             StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=2, total=3),
             StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=3, total=3),
             StepDone(step=ProgressStep.TASTE_PERIODS),

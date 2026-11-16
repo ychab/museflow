@@ -24,6 +24,15 @@ class StepAdvanced:
 
 
 @dataclass(frozen=True, kw_only=True)
+class StepResumed:
+    """A step picks up from a checkpoint: the units before `done` were gone through by an earlier run."""
+
+    step: ProgressStep
+    done: int
+    total: int
+
+
+@dataclass(frozen=True, kw_only=True)
 class StepDone:
     """Ends a step that has no outcome of its own to publish."""
 
@@ -59,5 +68,12 @@ class PlaylistCreated:
 
 # Here rather than in domain/types.py, which the entities these events carry import: a cycle.
 type ProgressEvent = (
-    StepStarted | StepAdvanced | StepDone | StrategyChosen | CandidatesFound | PicksMade | PlaylistCreated
+    StepStarted
+    | StepAdvanced
+    | StepResumed
+    | StepDone
+    | StrategyChosen
+    | CandidatesFound
+    | PicksMade
+    | PlaylistCreated
 )

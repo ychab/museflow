@@ -74,7 +74,7 @@ def playlist_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Deleted {count} playlist(s) of {email}.", fg=typer.colors.GREEN)
+    typer.secho(f"Deleted {count} playlist(s) of {email}.", fg=typer.colors.YELLOW)
 
 
 async def playlist_delete_logic(

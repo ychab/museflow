@@ -245,7 +245,7 @@ class TestTasteBuildCommand:
         )
         assert result.exit_code == 0
         # --verbose: the table per step and model
-        assert result.output.index("Taste profile built") < result.output.index("LLM usage")
+        assert result.output.index(f"Taste profile '{taste_profile.name}'") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
     def test__paused__usage_printed(
@@ -278,6 +278,27 @@ class TestTasteBuildCommand:
         output = clean_typer_text(result.stderr)
         assert "Error: Boom" in output
 
+    def test__interrupted__resume_hinted__usage_printed(
+        self,
+        mock_taste_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        async def build(**kwargs: Any) -> TasteProfile:
+            spend(kwargs["meter"])
+            raise KeyboardInterrupt
+
+        mock_taste_build_logic.side_effect = build
+
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        # 128 + SIGINT, as a shell reports a command stopped by Ctrl+C
+        assert result.exit_code == 130
+        assert "Build interrupted: the periods done are saved. Run with --resume to continue." in clean_typer_text(
+            result.stderr
+        )
+        # The calls made before the interruption were paid
+        assert "$0.0123" in result.output
+
     @pytest.mark.parametrize(
         "taste_profile",
         [
@@ -301,9 +322,12 @@ class TestTasteBuildCommand:
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Taste profile built:" in output
-        assert "Model (reflect): google/gemini-2.5-pro" in output
+        assert f"✓ Taste profile '{taste_profile.name}'" in output
         assert "Dark Metal Wanderer" in output
+        era = taste_profile.profile["taste_timeline"][0]
+        assert f"{era['time_range']} {era['era_label']}" in output
+        assert "• You explore melancholy soundscapes" in output
+        assert "reflect google/gemini-2.5-pro" in output
 
     @pytest.mark.parametrize(
         "taste_profile",
@@ -311,6 +335,7 @@ class TestTasteBuildCommand:
             {
                 "personality_archetype": None,
                 "life_phase_insights": [],
+                "taste_timeline": [],
             }
         ],
         indirect=True,
@@ -328,8 +353,8 @@ class TestTasteBuildCommand:
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Taste profile built:" in output
-        assert "Archetype:" not in output
+        assert f"tracks · 0 eras · logic {taste_profile.logic_version}" in output
+        assert "•" not in output
 
 
 @pytest.mark.usefixtures(

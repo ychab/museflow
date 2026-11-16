@@ -29,7 +29,7 @@ def blacklist_remove_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Removed {len(item_ids)} blacklist entry(ies).", fg=typer.colors.GREEN)
+    typer.secho(f"Removed {len(item_ids)} blacklist entry(ies).", fg=typer.colors.YELLOW)
 
 
 async def blacklist_remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:

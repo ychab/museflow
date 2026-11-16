@@ -47,12 +47,16 @@ museflow taste build --name my-profile --track-limit 1500
 museflow taste build --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** While it runs, a progress bar on stderr counts the listening periods (starting at the checkpoint with
-`--resume`), then a live line follows the reflection; each ends with a `✓` line giving its duration and cost. Then
-`Taste profile built: N tracks processed`, the profile name, the logic version, the model of each step (segment,
-merge, reflect), the number of eras, the personality archetype and the life-phase insights. Last, one line gives the
-LLM calls, their cost and the elapsed time; with `--verbose`, an `LLM usage` table details the calls, tokens, cost and
-time per step and model. It is printed after a pause too, since those calls were paid.
+**Output.** While it runs, a progress bar on stderr counts the listening periods, then a live line follows the
+reflection; each ends with a `✓` line giving its duration and cost. With `--resume`, a `↻ Resumed at 2/4 period(s),
+from the checkpoint` line says where the build picks up. Then a panel shows the profile: its name, the personality
+archetype, the tracks, eras and logic version, the eras with their time range, and the life-phase insights; a line
+below gives the model of each step (segment, merge, reflect). Last, one line gives the LLM calls, their cost and the
+elapsed time; with `--verbose`, an `LLM usage` table details the calls, tokens, cost and time per step and model. It is
+printed after a pause too, since those calls were paid.
+
+**Interrupting it.** Ctrl+C stops the build with exit code 130: the periods done are saved, and `--resume` continues
+after them.
 
 ## `taste list`
 

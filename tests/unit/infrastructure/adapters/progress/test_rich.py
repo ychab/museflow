@@ -18,6 +18,7 @@ from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import PlaylistCreated
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.domain.value_objects.taste import TrackPicked
@@ -117,6 +118,12 @@ class TestRichProgressAdapter:
         assert reflect_line.startswith("✓ Profile reflected  ")
         assert "track(s)" not in reflect_line
 
+    async def test__resumed__line_from_the_checkpoint(self, adapter: RichProgressAdapter, output: io.StringIO) -> None:
+        await adapter.publish(StepStarted(step=ProgressStep.TASTE_PERIODS, total=4))
+        await adapter.publish(StepResumed(step=ProgressStep.TASTE_PERIODS, done=2, total=4))
+
+        assert output.getvalue().strip() == "↻ Resumed             at 2/4 period(s), from the checkpoint"
+
     @pytest.fixture
     def mock_progress_cls(self) -> Iterator[mock.Mock]:
         with mock.patch("museflow.infrastructure.adapters.progress.rich.Progress", autospec=True) as patched:
@@ -130,6 +137,7 @@ class TestRichProgressAdapter:
         with RichProgressAdapter(console=console) as adapter:
             progress.start.assert_called_once_with()
             await adapter.publish(StepStarted(step=ProgressStep.HISTORY_SAVE, total=4))
+            await adapter.publish(StepResumed(step=ProgressStep.HISTORY_SAVE, done=1, total=4))
             await adapter.publish(StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=2, total=4))
             # A step started while another runs replaces it
             await adapter.publish(StepStarted(step=ProgressStep.TASTE_REFLECT))
@@ -139,9 +147,12 @@ class TestRichProgressAdapter:
             mock.call("Saving tracks and plays…", total=4),
             mock.call("Reflecting on the profile…", total=None),
         ]
-        progress.update.assert_called_once_with(TaskID(1), completed=2, total=4)
+        assert progress.update.call_args_list == [
+            mock.call(TaskID(1), completed=1, total=4),
+            mock.call(TaskID(1), completed=2, total=4),
+        ]
         assert progress.remove_task.call_args_list == [mock.call(TaskID(1)), mock.call(TaskID(2))]
-        console.print.assert_called_once()  # the reflection's finished line
+        assert console.print.call_count == 2  # the resumed line, then the reflection's finished line
         progress.stop.assert_called_once_with()
 
     async def test__animated__stopped_on_error(self, mock_progress_cls: mock.Mock) -> None:
