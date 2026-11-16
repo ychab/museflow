@@ -30,7 +30,7 @@ class TestBlacklistRemoveParserCommand:
     def test__invalid_item_id(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(app, ["blacklist", "remove", "--email", "test@example.com", "not-a-uuid"])
         assert result.exit_code != 0
-        assert "not-a-uuid" in clean_typer_text(result.output)
+        assert "Invalid value for 'item_ids': Input should be a valid UUID" in clean_typer_text(result.output)
 
 
 class TestBlacklistRemoveCommand:

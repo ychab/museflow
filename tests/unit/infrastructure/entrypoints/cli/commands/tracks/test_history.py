@@ -100,10 +100,14 @@ class TestTracksHistoryParserCommand:
     @pytest.mark.parametrize(
         ("batch_size", "expected_msg"),
         [
-            pytest.param(0, "Invalid value for '--batch-size': 0 is not in the range", id="zero"),
-            pytest.param(-15, "Invalid value for '--batch-size': -15 is not in the range", id="min_exceed"),
-            pytest.param(1000, "Invalid value for '--batch-size': 1000 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--batch-size': 'foo' is not a valid int range", id="string"),
+            pytest.param(0, "Invalid value for '--batch-size': Input should be greater than or equal to 1", id="zero"),
+            pytest.param(
+                -15, "Invalid value for '--batch-size': Input should be greater than or equal to 1", id="min_exceed"
+            ),
+            pytest.param(
+                1000, "Invalid value for '--batch-size': Input should be less than or equal to 500", id="max_exceed"
+            ),
+            pytest.param("foo", "Invalid value for '--batch-size': Input should be a valid integer", id="string"),
         ],
     )
     def test__batch_size__invalid(

@@ -68,13 +68,25 @@ class TestPlaylistExploreParserCommand:
 
         assert mock_playlist_explore_logic.call_args.kwargs["config"].prompt is None
 
-    @pytest.mark.parametrize("limit", [0, 31])
-    def test__limit__invalid(self, runner: CliRunner, limit: int, clean_typer_text: TextCleaner) -> None:
+    @pytest.mark.parametrize(
+        ("limit", "expected_msg"),
+        [
+            pytest.param(0, "Input should be greater than or equal to 1", id="zero"),
+            pytest.param(31, "Input should be less than or equal to 30", id="max_exceed"),
+        ],
+    )
+    def test__limit__invalid(
+        self,
+        runner: CliRunner,
+        limit: int,
+        expected_msg: str,
+        clean_typer_text: TextCleaner,
+    ) -> None:
         result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com", "--limit", str(limit)])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
-        assert f"Invalid value for '--limit': {limit} is not in the range" in output
+        assert f"Invalid value for '--limit': {expected_msg}" in output
 
 
 class TestPlaylistExploreCommand:

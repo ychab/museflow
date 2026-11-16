@@ -120,9 +120,11 @@ class TestProviderConnectParserCommand:
     @pytest.mark.parametrize(
         ("timeout", "expected_msg"),
         [
-            pytest.param(0.0, "Invalid value for '--timeout': 0.0 is not in the range", id="zero"),
-            pytest.param(-15.5, "Invalid value for '--timeout': -15.5 is not in the range", id="negative"),
-            pytest.param("foo", "Invalid value for '--timeout': 'foo' is not a valid float", id="string"),
+            pytest.param(0.0, "Invalid value for '--timeout': Input should be greater than or equal to 10", id="zero"),
+            pytest.param(
+                -15.5, "Invalid value for '--timeout': Input should be greater than or equal to 10", id="negative"
+            ),
+            pytest.param("foo", "Invalid value for '--timeout': Input should be a valid number", id="string"),
         ],
     )
     def test__timeout__invalid(
@@ -144,9 +146,15 @@ class TestProviderConnectParserCommand:
     @pytest.mark.parametrize(
         ("poll_interval", "expected_msg"),
         [
-            pytest.param(0.0, "Invalid value for '--poll-interval': 0.0 is not in the range", id="zero"),
-            pytest.param(-15.5, "Invalid value for '--poll-interval': -15.5 is not in the range", id="negative"),
-            pytest.param("foo", "Invalid value for '--poll-interval': 'foo' is not a valid float", id="string"),
+            pytest.param(
+                0.0, "Invalid value for '--poll-interval': Input should be greater than or equal to 0.5", id="zero"
+            ),
+            pytest.param(
+                -15.5,
+                "Invalid value for '--poll-interval': Input should be greater than or equal to 0.5",
+                id="negative",
+            ),
+            pytest.param("foo", "Invalid value for '--poll-interval': Input should be a valid number", id="string"),
         ],
     )
     def test__poll_interval__invalid(

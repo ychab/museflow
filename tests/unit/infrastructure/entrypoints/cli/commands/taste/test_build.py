@@ -120,9 +120,9 @@ class TestTasteBuildParserCommand:
     @pytest.mark.parametrize(
         ("batch_size", "expected_msg"),
         [
-            pytest.param(0, "0 is not in the range", id="zero"),
-            pytest.param(1001, "1001 is not in the range", id="max_exceed"),
-            pytest.param("foo", "'foo' is not a valid int range", id="string"),
+            pytest.param(0, "Input should be greater than or equal to 1", id="zero"),
+            pytest.param(1001, "Input should be less than or equal to 1000", id="max_exceed"),
+            pytest.param("foo", "Input should be a valid integer", id="string"),
         ],
     )
     def test__batch_size__invalid(
@@ -144,9 +144,9 @@ class TestTasteBuildParserCommand:
     @pytest.mark.parametrize(
         ("track_limit", "expected_msg"),
         [
-            pytest.param(0, "0 is not in the range", id="zero"),
-            pytest.param(50000, "50000 is not in the range", id="max_exceed"),
-            pytest.param("foo", "'foo' is not a valid int range", id="string"),
+            pytest.param(0, "Input should be greater than or equal to 1", id="zero"),
+            pytest.param(50000, "Input should be less than or equal to 20000", id="max_exceed"),
+            pytest.param("foo", "Input should be a valid integer", id="string"),
         ],
     )
     def test__track_limit__invalid(
