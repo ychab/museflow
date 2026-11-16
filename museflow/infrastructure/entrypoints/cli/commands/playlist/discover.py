@@ -21,7 +21,7 @@ from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
-from museflow.infrastructure.config.loggers import console_stderr
+from museflow.infrastructure.config.loggers.config import console_stderr
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
