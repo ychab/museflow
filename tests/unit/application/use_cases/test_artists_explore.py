@@ -17,6 +17,7 @@ from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.domain.value_objects.progress import CandidatesFound
 from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import StepStarted
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import TrackPicked
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
@@ -130,15 +131,16 @@ class TestExploreArtistsUseCase:
         # creates no playlist.
         events = [call.args[0] for call in mock_progress.publish.await_args_list]
         track_1, track_2 = (pick.track for event in events if isinstance(event, PicksMade) for pick in event.picks)
+        artist_1, artist_2 = (track.artists[0] for track in (track_1, track_2))
         assert events == [
             StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1, max_attempts=3),
-            CandidatesFound(attempt=1, artists=1, artists_kept=1, tracks=1),
+            CandidatesFound(attempt=1, searches=[ArtistSearch(artist=artist_1, found=1, matched=1, tracks=[track_1])]),
             StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1),
-            PicksMade(attempt=1, picks=[TrackPicked(track=track_1, score=0.9)], kept=1, target=10),
+            PicksMade(attempt=1, picks=[TrackPicked(track=track_1, score=0.9)], tracks=[track_1], target=10),
             StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=2, max_attempts=3),
-            CandidatesFound(attempt=2, artists=1, artists_kept=1, tracks=1),
+            CandidatesFound(attempt=2, searches=[ArtistSearch(artist=artist_2, found=1, matched=1, tracks=[track_2])]),
             StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=2),
-            PicksMade(attempt=2, picks=[TrackPicked(track=track_2, score=0.9)], kept=2, target=10),
+            PicksMade(attempt=2, picks=[TrackPicked(track=track_2, score=0.9)], tracks=[track_1, track_2], target=10),
         ]
         assert mock_advisor.pick_exploration_tracks.await_count == 2
         assert len({track.artists[0] for track in result.tracks}) == 2

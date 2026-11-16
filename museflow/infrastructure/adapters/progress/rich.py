@@ -6,7 +6,9 @@ from typing import Final
 from typing import Self
 
 from rich.console import Console
+from rich.console import Group
 from rich.console import RenderableType
+from rich.padding import Padding
 from rich.progress import BarColumn
 from rich.progress import MofNCompleteColumn
 from rich.progress import Progress
@@ -39,7 +41,8 @@ class RichProgressAdapter(ProgressPort):
 
     The live line shows a spinner and the step's label, plus a bar, a count and the time left for a step that goes
     through a known number of units. Used as a context manager, which starts and stops the live line. Without
-    `animated` (logs printed by another handler would break the live line), only the finished steps print.
+    `animated` (logs printed by another handler would break the live line), only the finished steps print. With
+    `verbose`, the line of a discovery step is followed by its details: the artists, their searches, the picks.
     """
 
     _RUNNING_LABELS: Final[dict[ProgressStep, str]] = {
@@ -62,10 +65,17 @@ class RichProgressAdapter(ProgressPort):
         ProgressStep.HISTORY_SAVE: ("Tracks saved", "track(s)"),
     }
 
-    def __init__(self, console: Console, meter: LLMUsageMeter | None = None, animated: bool = True) -> None:
+    def __init__(
+        self,
+        console: Console,
+        meter: LLMUsageMeter | None = None,
+        animated: bool = True,
+        verbose: bool = False,
+    ) -> None:
         self._console = console
         self._meter = meter
         self._animated = animated
+        self._verbose = verbose
         self._progress: Progress | None = None
         self._task: TaskID | None = None
         self._attempt: int | None = None
@@ -112,12 +122,17 @@ class RichProgressAdapter(ProgressPort):
             self._print_done(label, f"{self._total:,} {unit}" if self._total is not None else "")
         elif isinstance(event, StrategyChosen):
             self._print_done("Artists suggested", f"{len(event.strategy.artists)} · {event.strategy.strategy_label}")
+            self._print_details(self._strategy_rows(event))
         elif isinstance(event, CandidatesFound):
+            tracks = sum(len(search.tracks) for search in event.searches)
+            artists_kept = sum(1 for search in event.searches if search.tracks)
             self._print_done(
-                "Catalogue searched", f"{event.tracks} unknown track(s) · {event.artists_kept}/{event.artists} artists"
+                "Catalogue searched", f"{tracks} unknown track(s) · {artists_kept}/{len(event.searches)} artists"
             )
+            self._print_details(self._search_rows(event))
         elif isinstance(event, PicksMade):
-            self._print_done("Tracks picked", f"{len(event.picks)} → {event.kept}/{event.target} kept")
+            self._print_done("Tracks picked", f"{len(event.picks)} → {len(event.tracks)}/{event.target} kept")
+            self._print_details(self._pick_rows(event))
         else:
             self._print_done("Playlist created", f"{len(event.playlist.tracks)} track(s)")
 
@@ -154,6 +169,48 @@ class RichProgressAdapter(ProgressPort):
 
         # Printed above the live line, which the console keeps at the bottom
         self._console.print(self._line(Text(" ✓", style="green"), label, detail, timing))
+
+    def _print_details(self, rows: list[Text]) -> None:
+        if not self._verbose or not rows:
+            return
+        # Under the label of the step's line
+        self._console.print(Padding(Group(*rows), (0, 0, 0, 3), expand=False))
+
+    @staticmethod
+    def _strategy_rows(event: StrategyChosen) -> list[Text]:
+        width = max((len(artist.name) for artist in event.strategy.artists), default=0)
+        return [
+            Text.assemble(
+                f"{artist.name:<{width}}  {artist.score:.2f}  ",
+                ("requested  ", "cyan") if artist.requested else "",
+                (artist.sound, "dim"),
+            )
+            for artist in event.strategy.artists
+        ]
+
+    @staticmethod
+    def _search_rows(event: CandidatesFound) -> list[Text]:
+        width = max((len(search.artist) for search in event.searches), default=0)
+        rows: list[Text] = []
+        for search in event.searches:
+            name = f"{search.artist:<{width}}  "
+            if search.rejected:
+                rows.append(Text.assemble(name, ("search rejected", "yellow")))
+            else:
+                counts = f"{search.found} found · {search.matched} by the artist · {len(search.tracks)} unknown"
+                rows.append(Text.assemble(name, (counts, "" if search.tracks else "dim")))
+        return rows
+
+    @staticmethod
+    def _pick_rows(event: PicksMade) -> list[Text]:
+        fingerprints_kept = {track.fingerprint for track in event.tracks}
+        return [
+            Text.assemble(
+                f"{pick.score:.2f}  {pick.track}",
+                ("" if pick.track.fingerprint in fingerprints_kept else ("  cut", "dim")),
+            )
+            for pick in event.picks
+        ]
 
     @staticmethod
     def _line(mark: Text, label: str, detail: str, timing: str) -> Table:

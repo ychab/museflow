@@ -22,4 +22,8 @@ EMAIL_OPTION: Final[str] = typer.Option(
     callback=resolve_email,
 )
 
-VERBOSE_OPTION: Final[bool] = typer.Option(False, "--verbose", help="Show the LLM usage per step and model.")
+VERBOSE_OPTION: Final[bool] = typer.Option(
+    False,
+    "--verbose",
+    help="Show the details of the run: the LLM usage per step and model, and the steps of each attempt if any.",
+)

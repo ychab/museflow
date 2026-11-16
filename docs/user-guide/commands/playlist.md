@@ -32,7 +32,7 @@ museflow playlist discover [PROMPT] [--email <email>] [OPTIONS]
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.5-flash`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
 | `--title` | advisor's suggestion | Playlist name, used as is. Without it, the playlist is named `[MF] - <name suggested by the advisor> - <timestamp>`. |
 | `--dry-run` | off | Discover tracks without creating a playlist. Still searches the provider catalogue, so a connected provider is required. |
-| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
+| `--verbose` | off | Show the details of each round (artists suggested, their searches, the picks) and the LLM usage per step and model instead of a one-line total. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
 The tuning lives in settings: the advisor is asked for `--limit` × `DISCOVERY_ADVISOR_LIMIT_RATIO` (1.5) artists,
@@ -82,6 +82,24 @@ commands to view and rate it; a warning follows when fewer tracks than `--limit`
 LLM calls, their cost and the elapsed time, even when no new track was found; with `--verbose`, an `LLM usage` table
 details the calls, tokens, cost and time of each advisor step (`advisor_artists`, `advisor_picks`).
 
+With `--verbose`, each step line is followed by its details: the artists suggested (score, `requested` for an artist
+the prompt names, the sound wanted), what the catalogue search of each artist gave (tracks found, those crediting the
+artist, those you don't know; `search rejected` when the provider refused the query), and the tracks picked, `cut`
+when the per-artist cap or the limit leaves one out:
+
+```text
+Attempt 1/3
+ ✓ Artists suggested   2 · Late-night jazz rap                      4.1s · $0.0123
+   Nova Lane       0.92  warm Rhodes, slow tempo
+   The Quiet Owls  0.85  requested  dusty loops
+ ✓ Catalogue searched  9 unknown track(s) · 1/2 artists             2.8s
+   Nova Lane       50 found · 38 by the artist · 9 unknown
+   The Quiet Owls  20 found · 20 by the artist · 0 unknown
+ ✓ Tracks picked       2 → 1/10 kept                                5.6s · $0.0201
+   0.95  Nova Lane - Midnight Tram
+   0.71  Nova Lane - Paper Moon  cut
+```
+
 ## `playlist explore`
 
 Plays the tracks you missed from the artists you already love: `history` replays what you know, `discover` brings new
@@ -101,7 +119,7 @@ museflow playlist explore [PROMPT] [--email <email>] [OPTIONS]
 | `--model` | `OPENROUTER_ADVISOR__MODEL` | OpenRouter model id for this run, checked as for `discover`. |
 | `--title` | `[MF] - Explore - <timestamp>` | Playlist name, used as is. |
 | `--dry-run` | off | Explore tracks without creating a playlist. Still searches the provider catalogue. |
-| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
+| `--verbose` | off | Show the details of each round (the searches of the favourites, the picks) and the LLM usage per step and model instead of a one-line total. |
 | `--limit` | `10` | Target number of tracks in the generated playlist (1 to 30). |
 
 The best `EXPLORE_ARTISTS_LIMIT` (20) favourites not blacklisted are shuffled, so that two runs start with other
@@ -128,8 +146,9 @@ museflow playlist explore --limit 20 --title "Missed favourites"
 ```
 
 **Output.** As for `discover`, without the artists step nor the reasoning: one line per finished step and round, the
-table of explored tracks, the playlist name unless `--dry-run` is set, and the LLM cost line (the `LLM usage` table of
-step `advisor_exploration_picks` with `--verbose`).
+table of explored tracks, the playlist name unless `--dry-run` is set, and the LLM cost line. With `--verbose`, the
+searches of the round's favourites and the picks are detailed as for `discover`, and the `LLM usage` table shows the
+step `advisor_exploration_picks`.
 The playlist is saved with the `explore` type, and its LLM usage under the `explore` operation.
 
 ## `playlist history`

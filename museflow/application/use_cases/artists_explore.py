@@ -117,12 +117,10 @@ class ExploreArtistsUseCase:
                 logger.debug(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
                 break
 
-            for artist in artists_now:
-                logger.debug(f"Favourite artist {artist!r}")
             await self._progress.publish(
                 StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=attempt, max_attempts=config.max_attempts)
             )
-            candidates = await self._discovery.get_unknown_artist_tracks(
+            searches = await self._discovery.get_unknown_artist_tracks(
                 user=user,
                 artists=artists_now,
                 # Their best-known tracks are the user's already: the catalogue search reaches the others.
@@ -133,14 +131,8 @@ class ExploreArtistsUseCase:
                 catalogue_tracks_pages=config.catalogue_tracks_pages,
                 concurrency=config.artist_tracks_concurrency,
             )
-            await self._progress.publish(
-                CandidatesFound(
-                    attempt=attempt,
-                    artists=len(artists_now),
-                    artists_kept=len(candidates),
-                    tracks=sum(len(tracks) for tracks in candidates.values()),
-                )
-            )
+            await self._progress.publish(CandidatesFound(attempt=attempt, searches=searches))
+            candidates = {search.artist: search.tracks for search in searches if search.tracks}
 
             tracks_picked_now: list[TrackPicked] = []
             if candidates:
@@ -152,8 +144,6 @@ class ExploreArtistsUseCase:
                     max_tracks_per_artist=config.max_tracks_per_artist,
                     prompt=config.prompt,
                 )
-                for track_picked in tracks_picked_now:
-                    logger.debug(f"Picked ({track_picked.score:.2f}): {str(track_picked.track)!r}")
 
             attempts_run = attempt
             tracks_picked.extend(tracks_picked_now)
@@ -164,7 +154,7 @@ class ExploreArtistsUseCase:
             )
             if candidates:
                 await self._progress.publish(
-                    PicksMade(attempt=attempt, picks=tracks_picked_now, kept=len(tracks), target=config.playlist_limit)
+                    PicksMade(attempt=attempt, picks=tracks_picked_now, tracks=tracks, target=config.playlist_limit)
                 )
             logger.debug(
                 f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "

@@ -183,18 +183,15 @@ class DiscoverTasteUseCase:
 
             artists_asked.extend(artist.name for artist in strategy.artists)
             artists_requested.update(artist.name for artist in strategy.artists if artist.requested)
-            for artist in strategy.artists:
-                requested = " [requested]" if artist.requested else ""
-                logger.debug(f"Artist suggested {artist.name!r}{requested} ({artist.score:.2f}): {artist.sound}")
             logger.debug(
                 f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
                 extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
             )
-            # After its details: a log line shows above the display's line of the step
+            # After its log line, which shows above the display's line of the step
             await self._progress.publish(StrategyChosen(attempt=attempt, strategy=strategy))
 
             await self._progress.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=attempt))
-            candidates = await self._discovery.get_unknown_artist_tracks(
+            searches = await self._discovery.get_unknown_artist_tracks(
                 user=user,
                 artists=[artist.name for artist in strategy.artists],
                 # Their own tracks are what the request asks for: the catalogue search reaches past the best-known.
@@ -205,14 +202,8 @@ class DiscoverTasteUseCase:
                 catalogue_tracks_pages=config.requested_artist_tracks_pages,
                 concurrency=config.artist_tracks_concurrency,
             )
-            await self._progress.publish(
-                CandidatesFound(
-                    attempt=attempt,
-                    artists=len(strategy.artists),
-                    artists_kept=len(candidates),
-                    tracks=sum(len(tracks) for tracks in candidates.values()),
-                )
-            )
+            await self._progress.publish(CandidatesFound(attempt=attempt, searches=searches))
+            candidates = {search.artist: search.tracks for search in searches if search.tracks}
 
             tracks_picked_now: list[TrackPicked] = []
             if candidates:
@@ -225,8 +216,6 @@ class DiscoverTasteUseCase:
                     prompt=config.prompt,
                     focus=config.focus,
                 )
-                for track_picked in tracks_picked_now:
-                    logger.debug(f"Picked ({track_picked.score:.2f}): {str(track_picked.track)!r}")
 
             attempts_run = attempt
             tracks_picked.extend(tracks_picked_now)
@@ -239,7 +228,7 @@ class DiscoverTasteUseCase:
             )
             if candidates:
                 await self._progress.publish(
-                    PicksMade(attempt=attempt, picks=tracks_picked_now, kept=len(tracks), target=config.playlist_limit)
+                    PicksMade(attempt=attempt, picks=tracks_picked_now, tracks=tracks, target=config.playlist_limit)
                 )
             logger.debug(
                 f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "

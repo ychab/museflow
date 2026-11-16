@@ -15,11 +15,13 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.value_objects.discovery import ArtistSuggestedFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
@@ -210,16 +212,21 @@ class TestPlaylistDiscoverCommand:
         mock_playlist_discover_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
-        strategy = DiscoveryArtistStrategyFactory.build()
+        artist = ArtistSuggestedFactory.build(name="Nova Lane", sound="warm Rhodes")
+        strategy = DiscoveryArtistStrategyFactory.build(artists=[artist])
 
         async def discover(**kwargs: Any) -> DiscoverTasteResult:
             spend(kwargs["meter"])
+            await kwargs["progress"].publish(StrategyChosen(attempt=1, strategy=strategy))
             return DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
 
         mock_playlist_discover_logic.side_effect = discover
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--dry-run", "--verbose"])
         assert result.exit_code == 0
+        # The details of each step, then the table per step and model
+        assert "Nova Lane" in result.stderr
+        assert "warm Rhodes" in result.stderr
         assert "LLM usage" in result.output
         assert "$0.0123" in result.output
 
