@@ -12,7 +12,7 @@ one option each, and one handler per kind of reader.
 | **stderr** | The logs, the progress display, the warnings and errors | Diagnostics never end up in a redirected result |
 
 The logging handlers and the progress display share one Rich console on stderr (`console_stderr` in
-`infrastructure/config/loggers.py`): a log line prints above the live progress line instead of breaking it.
+`infrastructure/config/loggers/config.py`): a log line prints above the live progress line instead of breaking it.
 
 ## Handlers
 

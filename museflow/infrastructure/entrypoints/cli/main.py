@@ -3,7 +3,7 @@ from typing import cast
 import typer
 
 from museflow import __version__
-from museflow.infrastructure.config.loggers import configure_loggers
+from museflow.infrastructure.config.loggers.config import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands import blacklist
 from museflow.infrastructure.entrypoints.cli.commands import enrich

@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow import __version__
-from museflow.infrastructure.config.loggers import configure_loggers
+from museflow.infrastructure.config.loggers.config import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse

@@ -9,7 +9,7 @@ from rich.logging import RichHandler
 from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
+from museflow.infrastructure.config.loggers.config import LOGGER_MUSEFLOW
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
