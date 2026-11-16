@@ -16,7 +16,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
-from museflow.infrastructure.config.loggers.config import console_stderr
+from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter

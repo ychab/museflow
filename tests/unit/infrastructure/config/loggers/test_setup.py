@@ -5,10 +5,10 @@ from collections.abc import Iterable
 import pytest
 from rich.logging import RichHandler
 
-from museflow.infrastructure.config.loggers.config import LOGGER_MUSEFLOW
-from museflow.infrastructure.config.loggers.config import configure_loggers
-from museflow.infrastructure.config.loggers.config import console_stderr
 from museflow.infrastructure.config.loggers.formatters import JsonFormatter
+from museflow.infrastructure.config.loggers.setup import LOGGER_MUSEFLOW
+from museflow.infrastructure.config.loggers.setup import configure_loggers
+from museflow.infrastructure.config.loggers.setup import console_stderr
 
 
 class TestConfigureLoggers:
