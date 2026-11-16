@@ -4,16 +4,21 @@ from dataclasses import dataclass
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import LLMUsageService
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import EnricherRateLimitExceededError
 from museflow.domain.exceptions import EnricherUnavailableError
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import TrackEnrichmentError
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackEnrichment
 
 logger = logging.getLogger(__name__)
@@ -31,9 +36,11 @@ class EnrichTracksUseCase:
         self,
         uow: UnitOfWorkPort,
         track_enricher: TrackEnricherPort,
+        progress: ProgressPort,
     ) -> None:
         self._uow = uow
         self._track_enricher = track_enricher
+        self._progress = progress
         self._llm_usage = LLMUsageService(uow=uow)
 
     async def enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
@@ -79,7 +86,9 @@ class EnrichTracksUseCase:
         error_count = 0
         consecutive_failures = 0
         last_failure = ""
+        tracks_done = 0  # sent to the enricher, failed batches included
 
+        await self._progress.publish(StepStarted(step=ProgressStep.ENRICH_TRACKS, total=len(tracks)))
         for i, batch in enumerate(batches, start=1):
             try:
                 enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)
@@ -106,6 +115,11 @@ class EnrichTracksUseCase:
                         extra={"batch": i, "total": total_batches},
                     )
                     last_failure = "no enrichment returned"
+
+            tracks_done += len(batch)
+            await self._progress.publish(
+                StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=tracks_done, total=len(tracks))
+            )
 
             if not enriched_tracks:
                 error_count += 1
@@ -134,6 +148,7 @@ class EnrichTracksUseCase:
                     extra={"batch": i, "total": total_batches, "skipped": skipped},
                 )
 
+        await self._progress.publish(StepDone(step=ProgressStep.ENRICH_TRACKS))
         return EnrichTracksReport(
             enriched_count=enriched_count,
             error_count=error_count,

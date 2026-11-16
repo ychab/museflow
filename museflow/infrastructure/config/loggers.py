@@ -10,8 +10,8 @@ from museflow.infrastructure.types import LogLevel
 
 LOGGER_MUSEFLOW: Final[str] = "museflow"
 
-# Logs go to stderr, so that stdout only carries a command's results. The spinners share this console: a log line
-# then prints above them.
+# Logs go to stderr, so that stdout only carries a command's results. The progress display shares this console: a log
+# line then prints above it.
 console_stderr: Final[Console] = Console(stderr=True)
 
 default_conf: Final[dict[str, Any]] = {

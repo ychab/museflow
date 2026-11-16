@@ -8,6 +8,7 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.entrypoints.cli.commands.tracks.history import tracks_history_logic
 
 
@@ -29,6 +30,7 @@ class TestTracksHistoryLogic:
         user: User,
         mock_use_case: mock.AsyncMock,
         tmp_path: Path,
+        progress: RichProgressAdapter,
     ) -> None:
         mock_use_case.import_history.return_value = ImportStreamingHistoryReport(
             items_read=1000,
@@ -41,6 +43,7 @@ class TestTracksHistoryLogic:
         )
 
         report = await tracks_history_logic(
+            progress=progress,
             email=user.email,
             config=ImportStreamingHistoryConfigInput(directory=tmp_path),
             provider=MusicProvider.SPOTIFY,

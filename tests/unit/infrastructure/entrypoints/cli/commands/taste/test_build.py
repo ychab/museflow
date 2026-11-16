@@ -240,8 +240,11 @@ class TestTasteBuildCommand:
 
         mock_taste_build_logic.side_effect = build
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(
+            app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile", "--verbose"]
+        )
         assert result.exit_code == 0
+        # --verbose: the table per step and model
         assert result.output.index("Taste profile built") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
@@ -258,7 +261,7 @@ class TestTasteBuildCommand:
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
-        assert result.output.index("Build paused") < result.output.index("LLM usage")
+        assert result.output.index("Build paused") < result.output.index("LLM call(s)")
         assert "$0.0123" in result.output
 
     def test__generic_exception(
@@ -353,10 +356,12 @@ class TestTasteBuildLogic:
         self,
         mock_get_profiler: mock.MagicMock,
         mock_use_case: mock.Mock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         meter = LLMUsageMeter()
 
         await taste_build_logic(
+            progress=mock_progress,
             email="test@example.com",
             name="my-profile",
             track_limit=3000,
@@ -377,11 +382,12 @@ class TestTasteBuildLogic:
         )
         mock_use_case.build_profile.assert_awaited_once()
 
-    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
+    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFoundError):
             await taste_build_logic(
+                progress=mock_progress,
                 email="test@example.com",
                 name="my-profile",
                 track_limit=3000,

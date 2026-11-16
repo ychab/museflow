@@ -12,7 +12,11 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackPlay
 
 from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
@@ -42,10 +46,12 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         mock_uow: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
             uow=mock_uow,
             streaming_history=mock_streaming_history,
+            progress=mock_progress,
         )
 
     async def test__tracks_built_from_file_metadata(
@@ -165,6 +171,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_track_play_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
         track_ids: dict[str, uuid.UUID],
     ) -> None:
         (tmp_path / "Streaming_History_Audio_1.json").write_text("[]")
@@ -234,3 +241,13 @@ class TestImportStreamingHistorySpotifyUseCase:
         }
         # The plays of a track in both files are all saved, on the same track
         assert plays_by_provider_id == {"track_1": [1, 3], "track_2": [4, 5], "track_3": [2], "track_4": [1]}
+        # The files, then the tracks found in them
+        assert [call.args[0] for call in mock_progress.publish.await_args_list] == [
+            StepStarted(step=ProgressStep.HISTORY_READ, total=2),
+            StepAdvanced(step=ProgressStep.HISTORY_READ, done=1, total=2),
+            StepAdvanced(step=ProgressStep.HISTORY_READ, done=2, total=2),
+            StepDone(step=ProgressStep.HISTORY_READ),
+            StepStarted(step=ProgressStep.HISTORY_SAVE, total=4),
+            StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=4, total=4),
+            StepDone(step=ProgressStep.HISTORY_SAVE),
+        ]

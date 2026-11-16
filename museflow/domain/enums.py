@@ -72,6 +72,11 @@ class ProgressStep(StrEnum):
     DISCOVERY_SEARCH = "discovery_search"  # the catalogue is searched for their tracks the user does not know
     DISCOVERY_PICKS = "discovery_picks"  # the advisor picks among those tracks
     PLAYLIST_CREATE = "playlist_create"  # the playlist is created on the provider, then saved
+    ENRICH_TRACKS = "enrich_tracks"  # the tracks are sent to the enricher, batch by batch
+    TASTE_PERIODS = "taste_periods"  # one LLM segment per listening period, merged into the profile so far
+    TASTE_REFLECT = "taste_reflect"  # the final psychographic reflection on the merged profile
+    HISTORY_READ = "history_read"  # the streaming history files are parsed
+    HISTORY_SAVE = "history_save"  # the tracks and their plays are saved, chunk by chunk
 
 
 class ReasoningEffort(StrEnum):

@@ -1,22 +1,30 @@
 import io
+from collections.abc import Iterator
 from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 
 import pytest
 from rich.console import Console
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import TaskID
+from rich.text import Text
 
 from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import ReasoningEffort
 from museflow.domain.value_objects.progress import CandidatesFound
 from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import PlaylistCreated
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.domain.value_objects.taste import TrackPicked
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
+from museflow.infrastructure.adapters.progress.rich import _WithTotalOnly
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
@@ -96,29 +104,68 @@ class TestRichProgressAdapter:
 
         assert "$" not in output.getvalue()
 
-    async def test__animated__status_follows_the_step(self) -> None:
+    async def test__batched_steps__total_in_the_line(self, adapter: RichProgressAdapter, output: io.StringIO) -> None:
+        await adapter.publish(StepStarted(step=ProgressStep.ENRICH_TRACKS, total=10124))
+        await adapter.publish(StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=200, total=10124))
+        await adapter.publish(StepDone(step=ProgressStep.ENRICH_TRACKS))
+        await adapter.publish(StepStarted(step=ProgressStep.TASTE_REFLECT))
+        await adapter.publish(StepDone(step=ProgressStep.TASTE_REFLECT))
+
+        enrich_line, reflect_line = (line.strip() for line in output.getvalue().splitlines())
+        assert enrich_line.startswith("✓ Tracks enriched     10,124 track(s)")
+        # A single call has no total to show
+        assert reflect_line.startswith("✓ Profile reflected  ")
+        assert "track(s)" not in reflect_line
+
+    @pytest.fixture
+    def mock_progress_cls(self) -> Iterator[mock.Mock]:
+        with mock.patch("museflow.infrastructure.adapters.progress.rich.Progress", autospec=True) as patched:
+            yield patched
+
+    async def test__animated__live_line_follows_the_steps(self, mock_progress_cls: mock.Mock) -> None:
         console = mock.Mock(spec=Console)
-        status = console.status.return_value
+        progress = mock_progress_cls.return_value
+        progress.add_task.side_effect = [TaskID(1), TaskID(2)]
 
         with RichProgressAdapter(console=console) as adapter:
-            status.start.assert_called_once_with()
-            await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1))
-            status.update.assert_called_once_with("Picking tracks…")
+            progress.start.assert_called_once_with()
+            await adapter.publish(StepStarted(step=ProgressStep.HISTORY_SAVE, total=4))
+            await adapter.publish(StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=2, total=4))
+            # A step started while another runs replaces it
+            await adapter.publish(StepStarted(step=ProgressStep.TASTE_REFLECT))
+            await adapter.publish(StepDone(step=ProgressStep.TASTE_REFLECT))
 
-        status.stop.assert_called_once_with()
+        assert progress.add_task.call_args_list == [
+            mock.call("Saving tracks and plays…", total=4),
+            mock.call("Reflecting on the profile…", total=None),
+        ]
+        progress.update.assert_called_once_with(TaskID(1), completed=2, total=4)
+        assert progress.remove_task.call_args_list == [mock.call(TaskID(1)), mock.call(TaskID(2))]
+        console.print.assert_called_once()  # the reflection's finished line
+        progress.stop.assert_called_once_with()
 
-    async def test__animated__status_stopped_on_error(self) -> None:
-        console = mock.Mock(spec=Console)
-
-        with pytest.raises(RuntimeError), RichProgressAdapter(console=console):
+    async def test__animated__stopped_on_error(self, mock_progress_cls: mock.Mock) -> None:
+        with pytest.raises(RuntimeError), RichProgressAdapter(console=mock.Mock(spec=Console)):
             raise RuntimeError("Boom")
 
-        console.status.return_value.stop.assert_called_once_with()
+        mock_progress_cls.return_value.stop.assert_called_once_with()
 
-    def test__not_animated__no_status(self) -> None:
-        console = mock.Mock(spec=Console)
+    async def test__not_animated__no_live_line(self, mock_progress_cls: mock.Mock, output: io.StringIO) -> None:
+        with RichProgressAdapter(console=Console(file=output), animated=False) as adapter:
+            await adapter.publish(StepStarted(step=ProgressStep.HISTORY_SAVE, total=4))
+            await adapter.publish(StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=2, total=4))
 
-        with RichProgressAdapter(console=console, animated=False):
-            pass
+        mock_progress_cls.assert_not_called()
+        assert output.getvalue() == ""
 
-        console.status.assert_not_called()
+
+class TestWithTotalOnly:
+    @pytest.mark.parametrize(("total", "renders"), [(None, False), (4, True)])
+    def test__render(self, total: int | None, renders: bool) -> None:
+        progress = Progress()
+        task_id = progress.add_task("Working", total=total)
+
+        rendered = _WithTotalOnly(MofNCompleteColumn()).render(progress.tasks[task_id])
+
+        assert isinstance(rendered, Text)
+        assert bool(rendered.plain) is renders

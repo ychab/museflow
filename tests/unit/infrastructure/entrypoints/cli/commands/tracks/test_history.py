@@ -241,11 +241,12 @@ class TestTracksHistoryLogic:
             patched.return_value.import_history = mock.AsyncMock(return_value=ImportStreamingHistoryReport())
             yield patched
 
-    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
+    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFoundError):
             await tracks_history_logic(
+                progress=mock_progress,
                 email="test@example.com",
                 config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
                 provider=MusicProvider.SPOTIFY,

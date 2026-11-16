@@ -1,3 +1,4 @@
+import io
 from datetime import UTC
 from datetime import datetime
 
@@ -15,6 +16,7 @@ from museflow.domain.enums import LLMOperation
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.track import TrackPlayModelFactory
@@ -36,10 +38,12 @@ class TestBuildTasteProfileUseCase:
         self,
         uow: UnitOfWorkPort,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
+        progress: RichProgressAdapter,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=openrouter_profiler,
             uow=uow,
+            progress=progress,
         )
 
     async def test__nominal(
@@ -48,6 +52,7 @@ class TestBuildTasteProfileUseCase:
         use_case: BuildTasteProfileUseCase,
         config: BuildTasteProfileConfigInput,
         async_session_db: AsyncSession,
+        progress_output: io.StringIO,
     ) -> None:
         # 6 plays in 2 periods of 3: the replayed track seeds both periods, the never-played one none.
         replayed, early, late, _ = [await TrackModelFactory.create_async(user_id=user.id) for _ in range(4)]
@@ -63,6 +68,9 @@ class TestBuildTasteProfileUseCase:
         profile = await use_case.build_profile(user=user, config=config)
 
         assert profile.tracks_count == 4  # 2 seeds a period, the replayed track in both
+        output = progress_output.getvalue()
+        assert "✓ Periods profiled    2 period(s)" in output
+        assert "✓ Profile reflected" in output
         assert profile.user_id == user.id
         assert profile.logic_version == "v2.2"
         assert profile.profiler_metadata["gateway"] == "openrouter"

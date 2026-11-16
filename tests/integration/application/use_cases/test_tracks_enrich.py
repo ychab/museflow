@@ -1,3 +1,5 @@
+import io
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,28 +14,41 @@ from museflow.domain.enums import GenreTag
 from museflow.domain.enums import LLMOperation
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
 from tests.integration.factories.models.track import TrackModelFactory
 
 
 @pytest.mark.wiremock("openrouter")
 class TestEnrichTracksUseCase:
+    @pytest.fixture
+    def use_case(
+        self,
+        uow: UnitOfWorkPort,
+        openrouter_enricher: OpenRouterTrackEnricherAdapter,
+        progress: RichProgressAdapter,
+    ) -> EnrichTracksUseCase:
+        return EnrichTracksUseCase(uow=uow, track_enricher=openrouter_enricher, progress=progress)
+
     async def test__nominal(
         self,
+        use_case: EnrichTracksUseCase,
         async_session_db: AsyncSession,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
+        progress_output: io.StringIO,
     ) -> None:
         track_db = await TrackModelFactory.create_async(user_id=user.id)
 
-        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+        result = await use_case.enrich(
             user,
             EnrichTracksConfigInput(batch_size=10),
         )
 
         assert result.enriched_count == 1
         assert result.error_count == 0
+        assert "✓ Tracks enriched     1 track(s)" in progress_output.getvalue()
 
         async with uow:
             tracks = await uow.tracks.get_list(user_id=user.id)
@@ -50,6 +65,7 @@ class TestEnrichTracksUseCase:
 
     async def test__fingerprints__only_those_tracks(
         self,
+        use_case: EnrichTracksUseCase,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
@@ -57,7 +73,7 @@ class TestEnrichTracksUseCase:
         sample_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
         other_db = await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
 
-        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+        result = await use_case.enrich(
             user,
             EnrichTracksConfigInput(fingerprints=[sample_db.fingerprint, "unknown"]),
         )
@@ -70,6 +86,7 @@ class TestEnrichTracksUseCase:
 
     async def test__unenriched_only__skips_already_enriched(
         self,
+        use_case: EnrichTracksUseCase,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
@@ -77,7 +94,7 @@ class TestEnrichTracksUseCase:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"], locales=["en"])
         await TrackModelFactory.create_async(user_id=user.id, genres=[], moods=[])
 
-        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+        result = await use_case.enrich(
             user,
             EnrichTracksConfigInput(),
         )
@@ -86,13 +103,14 @@ class TestEnrichTracksUseCase:
 
     async def test__locales_only__preserves_existing_genres_and_updates_locales(
         self,
+        use_case: EnrichTracksUseCase,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id, genres=["hip-hop"], moods=["energetic"])
 
-        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+        result = await use_case.enrich(
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.LOCALE})),
         )
@@ -105,13 +123,14 @@ class TestEnrichTracksUseCase:
 
     async def test__genre_only__updates_genres_and_leaves_locales_null(
         self,
+        use_case: EnrichTracksUseCase,
         uow: UnitOfWorkPort,
         user: User,
         openrouter_enricher: OpenRouterTrackEnricherAdapter,
     ) -> None:
         await TrackModelFactory.create_async(user_id=user.id)
 
-        result = await EnrichTracksUseCase(uow, openrouter_enricher).enrich(
+        result = await use_case.enrich(
             user,
             EnrichTracksConfigInput(batch_size=10, fields=frozenset({EnrichField.GENRE})),
         )
