@@ -1,4 +1,4 @@
 from typing import Literal
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-LogHandler = Literal["console", "rich", "null"]
+LogHandler = Literal["console", "rich", "json", "null"]

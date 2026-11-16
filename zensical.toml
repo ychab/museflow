@@ -47,6 +47,7 @@ nav = [
     { "Unit of work" = "technical/unit-of-work.md" },
     { "Data model" = "technical/data-model.md" },
     { "LLM pipeline" = "technical/llm-pipeline.md" },
+    { "Logging & output" = "technical/logging.md" },
     { "Privacy & data" = "technical/privacy-and-data.md" },
     { "Quality & testing" = "technical/quality.md" },
     { "AI-assisted development" = "technical/ai-assisted-development.md" },

@@ -184,9 +184,10 @@ every annotation of the class that uses it (`list[Track]`) then names the method
 ## Logging and errors
 - `logger = logging.getLogger(__name__)`. Levels: ERROR unrecoverable, WARNING handled but unexpected, INFO milestones
   only, DEBUG flow.
-- f-strings are fine for messages. Add `extra={}` when the data is worth querying in an aggregator (IDs, counts).
-  The message stands alone all the same: the terminal handlers never print `extra`, so a warning needs its context
-  (status code, step, track) in the text.
+- f-strings are fine for messages. Add `extra={}` when the data is worth querying in an aggregator (IDs, counts):
+  only the `json` handler ships it. The message stands alone all the same: the terminal handlers (`console`, `rich`)
+  never print `extra`, so a warning needs its context (status code, step, track) in the text. Streams, handlers and
+  `--verbose` vs DEBUG: `docs/technical/logging.md`.
   In `except` blocks: `logger.exception("Static message", extra={...})`, the traceback carries the detail.
 - Never log secrets (tokens, passwords): log IDs.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.
