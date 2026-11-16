@@ -12,7 +12,7 @@ from museflow.domain.enums import RankingSortBy
 from museflow.domain.value_objects.stats import RankableStats
 from museflow.domain.value_objects.stats import Ranking
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.config.loggers.config import LOGGER_MUSEFLOW
+from museflow.infrastructure.config.loggers.setup import LOGGER_MUSEFLOW
 from museflow.infrastructure.utils.formatting import format_duration
 
 console = Console()
