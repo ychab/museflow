@@ -1,5 +1,9 @@
+import json
+import logging
 import logging.config
 from copy import deepcopy
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 from typing import Final
 
@@ -14,6 +18,36 @@ LOGGER_MUSEFLOW: Final[str] = "museflow"
 # line then prints above it.
 console_stderr: Final[Console] = Console(stderr=True)
 
+
+class JsonFormatter(logging.Formatter):
+    """Formats a record as one JSON object per line, for a log aggregator: the only output that carries `extra`.
+
+    The `extra` data stays nested under its own key, so that it never clashes with a field of the line.
+    """
+
+    # The attributes every record has: any other one was given through `extra`. Uvicorn passes its message with ANSI
+    # colours as `color_message`: noise in a JSON line.
+    _RECORD_ATTRIBUTES: Final[frozenset[str]] = frozenset(
+        [*logging.makeLogRecord({}).__dict__, "message", "asctime", "color_message"]
+    )
+
+    def format(self, record: logging.LogRecord) -> str:
+        line: dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
+            "level": record.levelname,
+            "logger": record.name,
+            "function": record.funcName,
+            "line": record.lineno,
+            "message": record.getMessage(),
+        }
+        if extra := {key: value for key, value in record.__dict__.items() if key not in self._RECORD_ATTRIBUTES}:
+            line["extra"] = extra
+        if record.exc_info:
+            line["exception"] = self.formatException(record.exc_info)
+        # str() for what JSON cannot hold (a UUID, a Decimal): a log line never fails on its data
+        return json.dumps(line, ensure_ascii=False, default=str)
+
+
 default_conf: Final[dict[str, Any]] = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -21,6 +55,9 @@ default_conf: Final[dict[str, Any]] = {
         "default": {
             "format": "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "json": {
+            "()": JsonFormatter,
         },
         "rich": {
             # RichHandler ignores the 'format' string usually, but 'datefmt' works
@@ -46,6 +83,12 @@ default_conf: Final[dict[str, Any]] = {
             "show_level": True,
             "show_path": False,
             "show_time": True,
+        },
+        "json": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "json",
+            "stream": "ext://sys.stderr",
         },
         "null": {
             "class": "logging.NullHandler",
@@ -123,3 +166,5 @@ def configure_loggers(
     conf["loggers"]["uvicorn.access"]["level"] = third_party_level
 
     logging.config.dictConfig(conf)
+    # stderr then carries JSON lines only: the progress display sharing the console stays silent
+    console_stderr.quiet = "json" in handlers
