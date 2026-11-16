@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import AsyncExitStack
+from typing import Final
 
 from pydantic import EmailStr
 
@@ -159,6 +160,9 @@ async def taste_build_logic(
         return await use_case.build_profile(user=user, config=config)
 
 
+_STEPS_ORDER: Final[tuple[str, ...]] = ("segment", "merge", "reflect")
+
+
 def _print_profile(profile: TasteProfile) -> None:
     """Prints the built profile: its archetype, eras and insights in a panel, then the model of each step."""
     data = profile.profile
@@ -185,5 +189,7 @@ def _print_profile(profile: TasteProfile) -> None:
             border_style="green",
         )
     )
-    models = " · ".join(f"{step} {meta['model']}" for step, meta in profile.profiler_metadata["steps"].items())
+    # In the pipeline's order: JSONB, where the profile is saved, reorders the keys
+    steps = profile.profiler_metadata["steps"]
+    models = " · ".join(f"{step} {steps[step]['model']}" for step in _STEPS_ORDER if step in steps)
     console.print(Text(f"Models: {models}", style="dim"))

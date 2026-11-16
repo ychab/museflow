@@ -316,7 +316,12 @@ class TestTasteBuildCommand:
         taste_profile: TasteProfile,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_build_logic.return_value = taste_profile
+        # As JSONB, where the profile is saved, orders the keys
+        steps = taste_profile.profiler_metadata["steps"]
+        mock_taste_build_logic.return_value = dataclasses.replace(
+            taste_profile,
+            profiler_metadata={"steps": {step: steps[step] for step in ("merge", "reflect", "segment")}},
+        )
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
@@ -327,7 +332,9 @@ class TestTasteBuildCommand:
         era = taste_profile.profile["taste_timeline"][0]
         assert f"{era['time_range']} {era['era_label']}" in output
         assert "• You explore melancholy soundscapes" in output
-        assert "reflect google/gemini-2.5-pro" in output
+        # In the pipeline's order
+        models = " · ".join(f"{step} {steps[step]['model']}" for step in ("segment", "merge", "reflect"))
+        assert f"Models: {models}" in output
 
     @pytest.mark.parametrize(
         "taste_profile",

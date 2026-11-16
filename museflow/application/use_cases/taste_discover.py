@@ -185,7 +185,7 @@ class DiscoverTasteUseCase:
             artists_requested.update(artist.name for artist in strategy.artists if artist.requested)
             for artist in strategy.artists:
                 requested = " [requested]" if artist.requested else ""
-                logger.debug(f"Artist suggested '{artist.name}'{requested} ({artist.score:.2f}): {artist.sound}")
+                logger.debug(f"Artist suggested {artist.name!r}{requested} ({artist.score:.2f}): {artist.sound}")
             logger.debug(
                 f"Discovery strategy: '{strategy.strategy_label}' ({len(strategy.artists)} artists)",
                 extra={"strategy_label": strategy.strategy_label, "artists": len(strategy.artists)},
@@ -226,7 +226,7 @@ class DiscoverTasteUseCase:
                     focus=config.focus,
                 )
                 for track_picked in tracks_picked_now:
-                    logger.debug(f"Picked ({track_picked.score:.2f}): '{track_picked.track}'")
+                    logger.debug(f"Picked ({track_picked.score:.2f}): {str(track_picked.track)!r}")
 
             attempts_run = attempt
             tracks_picked.extend(tracks_picked_now)

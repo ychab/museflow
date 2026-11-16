@@ -44,7 +44,11 @@ def playlist_delete_command(
             )
             suffix = f" ({scope})" if scope else ""
             typer.confirm(
-                f"About to delete ALL playlists{suffix} of {email}. This cannot be undone. Continue?", abort=True
+                typer.style(
+                    f"About to delete ALL playlists{suffix} of {email}. This cannot be undone. Continue?",
+                    fg=typer.colors.YELLOW,
+                ),
+                abort=True,
             )
     elif playlist_id is None:
         raise typer.BadParameter("Provide a playlist ID, or use --purge to delete multiple playlists.")
@@ -74,7 +78,7 @@ def playlist_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Deleted {count} playlist(s) of {email}.", fg=typer.colors.YELLOW)
+    typer.secho(f"Deleted {count} playlist(s) of {email}.", fg=typer.colors.GREEN)
 
 
 async def playlist_delete_logic(

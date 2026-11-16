@@ -50,7 +50,7 @@ class Track(BaseEntity):
         return next((link.provider_id for link in self.provider_links if link.provider == provider), None)
 
     def __str__(self) -> str:
-        return f"{', '.join(self.artists)} - {self.name}".replace("'", "\\'")
+        return f"{', '.join(self.artists)} - {self.name}"
 
     def __post_init__(self) -> None:
         if not self.name:

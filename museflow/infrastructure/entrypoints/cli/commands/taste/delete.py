@@ -20,8 +20,11 @@ def taste_delete_command(
 ) -> None:
     if not yes:
         typer.confirm(
-            f"About to delete the taste profile '{name}' of {email}. Rebuilding it takes a full LLM build: "
-            "export it first with `taste export`. Continue?",
+            typer.style(
+                f"About to delete the taste profile '{name}' of {email}. Rebuilding it takes a full LLM build: "
+                "export it first with `taste export`. Continue?",
+                fg=typer.colors.YELLOW,
+            ),
             abort=True,
         )
 
@@ -35,7 +38,7 @@ def taste_delete_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.YELLOW)
+    typer.secho(f"Taste profile '{name}' of {email} deleted.", fg=typer.colors.GREEN)
 
 
 async def taste_delete_logic(email: EmailStr, name: str) -> None:

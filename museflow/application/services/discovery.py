@@ -82,7 +82,7 @@ class DiscoveryService:
                 tracks_matched = [track for track in tracks_matched if not is_live_or_medley(track)]
             kept = keep_new_tracks(tracks=tracks_matched, blacklist=blacklist, fingerprints_seen=fingerprints_seen)
             fingerprints_seen.update(track.fingerprint for track in kept)
-            logger.debug(f"Artist '{artist}': {len(tracks)} found, {len(tracks_matched)} matched")
+            logger.debug(f"Artist {artist!r}: {len(tracks)} found, {len(tracks_matched)} matched")
             if kept:
                 candidates[artist] = kept
 
@@ -153,7 +153,7 @@ class DiscoveryService:
                 return await self._provider_library.search_artist_tracks(artist=artist, max_pages=max_pages)
             except ProviderSearchQueryInvalidError:
                 # One malformed name must not end the run: the other artists, and the advisor call paid, are kept.
-                logger.warning(f"Artist skipped, its search query was rejected: '{artist}'")
+                logger.warning(f"Artist skipped, its search query was rejected: {artist!r}")
                 return None
 
     async def _drop_known_tracks(self, user: User, tracks: list[Track]) -> list[Track]:
@@ -169,7 +169,7 @@ class DiscoveryService:
             tracks_unknown: list[Track] = []
             for track in tracks:
                 if known_identifiers.is_known(track):
-                    logger.debug(f"Excluded '{track}'")
+                    logger.debug(f"Excluded {str(track)!r}")
                     continue
                 tracks_unknown.append(track)
 

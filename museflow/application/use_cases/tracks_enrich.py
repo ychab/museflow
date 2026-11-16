@@ -173,12 +173,16 @@ class EnrichTracksUseCase:
                 if enrichment.genres:
                     enriched = dataclasses.replace(enriched, genres=enrichment.genres)
                 else:
-                    logger.warning(f"Enrichment returned no genres for '{track}'", extra={"track_id": str(track.id)})
+                    logger.warning(
+                        f"Enrichment returned no genres for {str(track)!r}", extra={"track_id": str(track.id)}
+                    )
             if EnrichField.MOOD in fields:
                 if enrichment.moods:
                     enriched = dataclasses.replace(enriched, moods=enrichment.moods)
                 else:
-                    logger.warning(f"Enrichment returned no moods for '{track}'", extra={"track_id": str(track.id)})
+                    logger.warning(
+                        f"Enrichment returned no moods for {str(track)!r}", extra={"track_id": str(track.id)}
+                    )
             # An empty locales list is an answer (no sung language); None means no usable answer.
             if EnrichField.LOCALE in fields and enrichment.locales is not None:
                 enriched = dataclasses.replace(enriched, locales=enrichment.locales)
