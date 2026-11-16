@@ -24,6 +24,7 @@ from museflow.domain.value_objects.progress import CandidatesFound
 from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 
@@ -193,15 +194,22 @@ class TestDiscoverTasteUseCase:
             StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=1, max_attempts=3),
             StrategyChosen(attempt=1, strategy=strategy_1),
             StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1),
-            CandidatesFound(attempt=1, artists=1, artists_kept=1, tracks=1),
+            CandidatesFound(
+                attempt=1, searches=[ArtistSearch(artist=artist_1.name, found=1, matched=1, tracks=[picked_1])]
+            ),
             StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1),
-            PicksMade(attempt=1, picks=[TrackPicked(track=picked_1, score=0.9)], kept=1, target=2),
+            PicksMade(attempt=1, picks=[TrackPicked(track=picked_1, score=0.9)], tracks=[picked_1], target=2),
             StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=2, max_attempts=3),
             StrategyChosen(attempt=2, strategy=strategy_2),
             StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=2),
-            CandidatesFound(attempt=2, artists=1, artists_kept=1, tracks=1),
+            # The track picked earlier is not offered again
+            CandidatesFound(
+                attempt=2, searches=[ArtistSearch(artist=artist_2.name, found=2, matched=2, tracks=[picked_2])]
+            ),
             StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=2),
-            PicksMade(attempt=2, picks=[TrackPicked(track=picked_2, score=0.9)], kept=2, target=2),
+            PicksMade(
+                attempt=2, picks=[TrackPicked(track=picked_2, score=0.9)], tracks=[picked_1, picked_2], target=2
+            ),
         ]
         first_call, second_call = mock_advisor.get_discovery_artists.call_args_list
         assert first_call.kwargs["excluded_artists"] is None
@@ -358,7 +366,7 @@ class TestDiscoverTasteUseCase:
 
         assert result.tracks == [tracks_1[0], track_2]
         picks = [call.args[0] for call in mock_progress.publish.await_args_list if isinstance(call.args[0], PicksMade)]
-        assert [(len(event.picks), event.kept) for event in picks] == [(3, 1), (1, 2)]
+        assert [(len(event.picks), len(event.tracks)) for event in picks] == [(3, 1), (1, 2)]
         assert "playlist_limit not reached (2/3) after 2 attempt(s)" in caplog.text
 
     async def test__remote_calls__run_outside_any_block(

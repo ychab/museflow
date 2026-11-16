@@ -12,6 +12,8 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.domain.value_objects.progress import CandidatesFound
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.infrastructure.entrypoints.cli.commands.playlist.explore import playlist_explore_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
@@ -137,6 +139,8 @@ class TestPlaylistExploreCommand:
 
         async def explore(**kwargs: Any) -> ExploreArtistsResult:
             spend(kwargs["meter"])
+            searches = [ArtistSearch(artist="Nova Lane", rejected=True)]
+            await kwargs["progress"].publish(CandidatesFound(attempt=1, searches=searches))
             return ExploreArtistsResult(
                 playlist=playlist,
                 tracks=[TrackFactory.build(name="Neon Harbor"), TrackFactory.build(album_name=None)],
@@ -152,7 +156,8 @@ class TestPlaylistExploreCommand:
         assert "✓ Playlist Friday night · 2/10 tracks" in output
         assert f"View it: museflow playlist view {playlist.id}" in output
         assert "Only 2/10 tracks found: rate more tracks, so that more favourite artists are known." in output
-        # --verbose: the table per step and model
+        # --verbose: the details of each step, then the table per step and model
+        assert "Nova Lane search rejected" in clean_typer_text(result.stderr)
         assert output.index("Rate tracks: museflow rate playlist") < output.index("LLM usage")
 
     def test__output__dry_run(

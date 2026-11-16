@@ -77,7 +77,9 @@ def playlist_discover_command(
     """Discover new tracks guided by your AI taste profile."""
     meter = LLMUsageMeter()
     try:
-        with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
+        with RichProgressAdapter(
+            console=console_stderr, meter=meter, animated=has_rich_log_handler(), verbose=verbose
+        ) as progress:
             result = asyncio.run(
                 playlist_discover_logic(
                     email=email,

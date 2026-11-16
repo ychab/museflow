@@ -18,6 +18,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.utils.text import get_fingerprint_title
 from museflow.domain.value_objects.blacklist import UserBlacklist
+from museflow.domain.value_objects.taste import ArtistSearch
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +40,13 @@ class DiscoveryService:
         artist_tracks_pages: int,
         catalogue_tracks_pages: int,
         concurrency: int,
-    ) -> dict[str, list[Track]]:
-        """Returns the catalogue tracks of each artist the user does not know, per artist name, for the advisor.
+    ) -> list[ArtistSearch]:
+        """Returns the search of each artist, in the artists' order, with their catalogue tracks the user does not know.
 
         The `artists_deep` get the catalogue search, `catalogue_tracks_pages` per query; the others the plain search,
         `artist_tracks_pages` deep. A track is kept only when it credits the artist, and is neither blacklisted nor in
-        `fingerprints_kept` (kept by an earlier round); an artist left with no track is left out. The `artists_deep`
-        are the ones whose original tracks are wanted: their live recordings and medleys are left out too.
+        `fingerprints_kept` (kept by an earlier round). The `artists_deep` are the ones whose original tracks are
+        wanted: their live recordings and medleys are left out too.
         """
         # Searched concurrently, a few at a time not to hit the rate limit; gather keeps the artists' order, so the
         # first artist still keeps a track two of them share.
@@ -68,41 +69,42 @@ class DiscoveryService:
             for search in searches:
                 search.cancel()
 
-        candidates: dict[str, list[Track]] = {}
+        artist_searches: list[ArtistSearch] = []
         fingerprints_seen = set(fingerprints_kept)
-        found = matched = 0
         for artist, tracks in zip(artists, results, strict=True):
             if tracks is None:
+                artist_searches.append(ArtistSearch(artist=artist, rejected=True))
                 continue
 
             tracks_matched = filter_by_artist(artist=artist, tracks=tracks)
-            found += len(tracks)
-            matched += len(tracks_matched)
+            tracks_wanted = tracks_matched
             if artist in artists_deep:
-                tracks_matched = [track for track in tracks_matched if not is_live_or_medley(track)]
-            kept = keep_new_tracks(tracks=tracks_matched, blacklist=blacklist, fingerprints_seen=fingerprints_seen)
+                tracks_wanted = [track for track in tracks_matched if not is_live_or_medley(track)]
+            kept = keep_new_tracks(tracks=tracks_wanted, blacklist=blacklist, fingerprints_seen=fingerprints_seen)
             fingerprints_seen.update(track.fingerprint for track in kept)
-            logger.debug(f"Artist {artist!r}: {len(tracks)} found, {len(tracks_matched)} matched")
-            if kept:
-                candidates[artist] = kept
+            artist_searches.append(
+                ArtistSearch(artist=artist, found=len(tracks), matched=len(tracks_matched), tracks=kept)
+            )
 
         # Known tracks dropped locally: the advisor never sees them, so it cannot pick them.
         tracks_unknown = await self._drop_known_tracks(
             user=user,
-            tracks=[track for tracks in candidates.values() for track in tracks],
+            tracks=[track for search in artist_searches for track in search.tracks],
         )
         fingerprints_unknown = {track.fingerprint for track in tracks_unknown}
-        candidates = {
-            artist: unknown
-            for artist, tracks in candidates.items()
-            if (unknown := [track for track in tracks if track.fingerprint in fingerprints_unknown])
-        }
+        artist_searches = [
+            replace(search, tracks=[track for track in search.tracks if track.fingerprint in fingerprints_unknown])
+            for search in artist_searches
+        ]
+        found = sum(search.found for search in artist_searches)
+        matched = sum(search.matched for search in artist_searches)
+        artists_left = sum(1 for search in artist_searches if search.tracks)
         logger.debug(
             f"Artist tracks: {found} found, {matched} by the artist, {len(tracks_unknown)} unknown "
-            f"({len(candidates)}/{len(artists)} artists left)",
-            extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": len(candidates)},
+            f"({artists_left}/{len(artists)} artists left)",
+            extra={"found": found, "matched": matched, "unknown": len(tracks_unknown), "artists": artists_left},
         )
-        return candidates
+        return artist_searches
 
     async def create_playlist(
         self,

@@ -21,6 +21,7 @@ from museflow.domain.value_objects.progress import StepDone
 from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import TrackPicked
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -60,10 +61,13 @@ class TestRichProgressAdapter:
             await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=1, max_attempts=3))
             await adapter.publish(StrategyChosen(attempt=1, strategy=strategy))
             await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1))
-            await adapter.publish(CandidatesFound(attempt=1, artists=6, artists_kept=5, tracks=104))
+            searches = [ArtistSearch(artist=f"Band {i}", tracks=TrackFactory.batch(2)) for i in range(5)]
+            searches.append(ArtistSearch(artist="Band 5", rejected=True))
+            await adapter.publish(CandidatesFound(attempt=1, searches=searches))
             await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1))
             picks = [TrackPicked(track=track, score=0.9) for track in TrackFactory.batch(8)]
-            await adapter.publish(PicksMade(attempt=1, picks=picks, kept=7, target=10))
+            tracks = [pick.track for pick in picks[:7]]
+            await adapter.publish(PicksMade(attempt=1, picks=picks, tracks=tracks, target=10))
             await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=2))
             await adapter.publish(StepStarted(step=ProgressStep.PLAYLIST_CREATE))
             await adapter.publish(PlaylistCreated(playlist=playlist))
@@ -71,7 +75,7 @@ class TestRichProgressAdapter:
         lines = [line.strip() for line in output.getvalue().splitlines()]
         assert lines[0] == "Attempt 1/3"
         assert lines[1].startswith("✓ Artists suggested   6 · Late-night soul")
-        assert lines[2].startswith("✓ Catalogue searched  104 unknown track(s) · 5/6 artists")
+        assert lines[2].startswith("✓ Catalogue searched  10 unknown track(s) · 5/6 artists")
         assert lines[3].startswith("✓ Tracks picked       8 → 7/10 kept")
         # The next attempt gets its header, without a total when the event carries none
         assert lines[4] == "Attempt 2"
@@ -85,17 +89,66 @@ class TestRichProgressAdapter:
         meter: LLMUsageMeter,
     ) -> None:
         await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1))
-        await adapter.publish(CandidatesFound(attempt=1, artists=1, artists_kept=1, tracks=1))
+        await adapter.publish(CandidatesFound(attempt=1, searches=[]))
         await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1))
         meter.record(
             "advisor_picks", "openai/gpt-5-mini", ReasoningEffort.LOW, ChatUsage(cost=Decimal("0.0211")), timedelta(0)
         )
-        await adapter.publish(PicksMade(attempt=1, picks=[], kept=0, target=1))
+        await adapter.publish(PicksMade(attempt=1, picks=[], tracks=[], target=1))
 
         search_line, picks_line = output.getvalue().splitlines()[1:]
         assert search_line.rstrip().endswith("s")
         assert "$" not in search_line
         assert picks_line.rstrip().endswith("s · $0.0211")
+
+    async def test__verbose__details_under_the_lines(self, output: io.StringIO) -> None:
+        adapter = RichProgressAdapter(console=Console(file=output, width=120), animated=False, verbose=True)
+        # Brackets in a name stay as written: no Rich markup
+        strategy = DiscoveryArtistStrategyFactory.build(
+            strategy_label="Late-night soul",
+            artists=[
+                ArtistSuggestedFactory.build(name="Nova Lane", score=0.92, sound="warm Rhodes", requested=False),
+                ArtistSuggestedFactory.build(name="The [Owls]", score=0.85, sound="dusty loops", requested=True),
+            ],
+        )
+        track_kept = TrackFactory.build(name="Midnight Tram", artists=["Nova Lane"])
+        track_cut = TrackFactory.build(name="Paper Moon", artists=["Nova Lane"])
+
+        await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_ARTISTS, attempt=1))
+        await adapter.publish(StrategyChosen(attempt=1, strategy=strategy))
+        await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1))
+        searches = [
+            ArtistSearch(artist="Nova Lane", found=50, matched=38, tracks=[track_kept, track_cut]),
+            ArtistSearch(artist="The [Owls]", found=20, matched=20),
+            ArtistSearch(artist="Bad/Name", rejected=True),
+        ]
+        await adapter.publish(CandidatesFound(attempt=1, searches=searches))
+        await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1))
+        picks = [TrackPicked(track=track_kept, score=0.95), TrackPicked(track=track_cut, score=0.71)]
+        await adapter.publish(PicksMade(attempt=1, picks=picks, tracks=[track_kept], target=10))
+
+        lines = [line.rstrip() for line in output.getvalue().splitlines()]
+        assert lines[2:4] == [
+            "   Nova Lane   0.92  warm Rhodes",
+            "   The [Owls]  0.85  requested  dusty loops",
+        ]
+        assert lines[5:8] == [
+            "   Nova Lane   50 found · 38 by the artist · 2 unknown",
+            "   The [Owls]  20 found · 20 by the artist · 0 unknown",
+            "   Bad/Name    search rejected",
+        ]
+        assert lines[9:] == [
+            "   0.95  Nova Lane - Midnight Tram",
+            "   0.71  Nova Lane - Paper Moon  cut",
+        ]
+
+    async def test__verbose__nothing_to_detail(self, output: io.StringIO) -> None:
+        adapter = RichProgressAdapter(console=Console(file=output, width=120), animated=False, verbose=True)
+
+        await adapter.publish(StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1))
+        await adapter.publish(CandidatesFound(attempt=1, searches=[]))
+
+        assert len(output.getvalue().splitlines()) == 2
 
     async def test__no_meter__no_cost(self, output: io.StringIO) -> None:
         adapter = RichProgressAdapter(console=Console(file=output, width=120), animated=False)

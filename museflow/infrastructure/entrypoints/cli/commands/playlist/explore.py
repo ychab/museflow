@@ -64,7 +64,9 @@ def playlist_explore_command(
     """Play the tracks you don't know from your favourite artists, drawn from your ratings and plays."""
     meter = LLMUsageMeter()
     try:
-        with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
+        with RichProgressAdapter(
+            console=console_stderr, meter=meter, animated=has_rich_log_handler(), verbose=verbose
+        ) as progress:
             result = asyncio.run(
                 playlist_explore_logic(
                     email=email,

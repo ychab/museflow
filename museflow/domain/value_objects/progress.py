@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 from museflow.domain.entities.playlist import Playlist
+from museflow.domain.entities.track import Track
 from museflow.domain.enums import ProgressStep
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 
@@ -48,16 +50,14 @@ class StrategyChosen:
 @dataclass(frozen=True, kw_only=True)
 class CandidatesFound:
     attempt: int
-    artists: int  # searched
-    artists_kept: int  # with at least one track the user does not know
-    tracks: int  # the user does not know, offered to the advisor
+    searches: list[ArtistSearch]  # one per artist searched, in the order searched
 
 
 @dataclass(frozen=True, kw_only=True)
 class PicksMade:
     attempt: int
     picks: list[TrackPicked]
-    kept: int  # tracks the playlist holds now, after the per-artist cap
+    tracks: list[Track]  # the playlist holds now, after the per-artist cap and the limit
     target: int
 
 

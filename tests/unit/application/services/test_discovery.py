@@ -11,6 +11,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.exceptions import ProviderSearchQueryInvalidError
 from museflow.domain.value_objects.blacklist import UserBlacklist
+from museflow.domain.value_objects.taste import ArtistSearch
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
 from tests.unit.factories.entities.blacklist import BlacklistedTrackFactory
@@ -61,7 +62,7 @@ class TestGetUnknownArtistTracks:
             is_known=mock.Mock(side_effect=lambda track: track in (known, only_known))
         )
 
-        candidates = await service.get_unknown_artist_tracks(
+        searches = await service.get_unknown_artist_tracks(
             user=user,
             artists=[first, second, third],
             artists_deep=set(),
@@ -72,8 +73,12 @@ class TestGetUnknownArtistTracks:
             concurrency=4,
         )
 
-        # The second and third artists are left without any track: not offered at all.
-        assert candidates == {first: [kept, shared]}
+        # Each artist searched has its outcome, even when left without any track.
+        assert searches == [
+            ArtistSearch(artist=first, found=7, matched=6, tracks=[kept, shared]),
+            ArtistSearch(artist=second, found=2, matched=2, tracks=[]),
+            ArtistSearch(artist=third, found=1, matched=0, tracks=[]),
+        ]
         mock_provider_library.search_artist_tracks.assert_any_await(artist=first, max_pages=2)
 
     async def test__artists_deep__catalogue_searched(
@@ -92,7 +97,7 @@ class TestGetUnknownArtistTracks:
         mock_provider_library.search_artist_catalogue.return_value = [track_deep, live_deep, medley_deep]
         mock_provider_library.search_artist_tracks.return_value = [track_plain]
 
-        candidates = await service.get_unknown_artist_tracks(
+        searches = await service.get_unknown_artist_tracks(
             user=user,
             artists=[deep, plain],
             artists_deep={deep},
@@ -103,7 +108,11 @@ class TestGetUnknownArtistTracks:
             concurrency=4,
         )
 
-        assert candidates == {deep: [track_deep], plain: [track_plain]}
+        # The live recording and the medley credit the artist: matched, though not offered
+        assert searches == [
+            ArtistSearch(artist=deep, found=3, matched=3, tracks=[track_deep]),
+            ArtistSearch(artist=plain, found=1, matched=1, tracks=[track_plain]),
+        ]
         mock_provider_library.search_artist_catalogue.assert_awaited_once_with(artist=deep, max_pages=10)
         mock_provider_library.search_artist_tracks.assert_awaited_once_with(artist=plain, max_pages=2)
 
@@ -120,7 +129,7 @@ class TestGetUnknownArtistTracks:
         mock_provider_library.search_artist_tracks.side_effect = [ProviderSearchQueryInvalidError(), [track]]
 
         with caplog.at_level(logging.WARNING):
-            candidates = await service.get_unknown_artist_tracks(
+            searches = await service.get_unknown_artist_tracks(
                 user=user,
                 artists=[malformed, valid],
                 artists_deep=set(),
@@ -131,7 +140,10 @@ class TestGetUnknownArtistTracks:
                 concurrency=4,
             )
 
-        assert candidates == {valid: [track]}
+        assert searches == [
+            ArtistSearch(artist=malformed, rejected=True),
+            ArtistSearch(artist=valid, found=1, matched=1, tracks=[track]),
+        ]
         # repr: the control character shows escaped
         assert f"Artist skipped, its search query was rejected: {malformed!r}" in caplog.text
 
@@ -164,7 +176,7 @@ class TestGetUnknownArtistTracks:
 
         mock_provider_library.search_artist_tracks.side_effect = _search
 
-        candidates = await service.get_unknown_artist_tracks(
+        searches = await service.get_unknown_artist_tracks(
             user=user,
             artists=artists,
             artists_deep=set(),
@@ -176,9 +188,9 @@ class TestGetUnknownArtistTracks:
         )
 
         assert running_max == 2
-        assert list(candidates) == artists
-        assert candidates[artists[0]] == tracks[artists[0]]
-        assert candidates[artists[1]] == tracks[artists[1]][:1]
+        assert [search.artist for search in searches] == artists
+        assert searches[0].tracks == tracks[artists[0]]
+        assert searches[1].tracks == tracks[artists[1]][:1]
 
     async def test__search_fails__other_searches_cancelled(
         self,
