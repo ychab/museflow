@@ -7,6 +7,7 @@ from typing import cast
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import LLMUsageService
 from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
@@ -15,10 +16,14 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +33,11 @@ class BuildTasteProfileUseCase:
         self,
         uow: UnitOfWorkPort,
         profiler: TasteProfilerPort,
+        progress: ProgressPort,
     ) -> None:
         self._uow = uow
         self._profiler = profiler
+        self._progress = progress
         self._llm_usage = LLMUsageService(uow=uow)
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
@@ -77,9 +84,15 @@ class BuildTasteProfileUseCase:
                 checkpoint = await uow.taste_profiles.get_checkpoint(user.id, config.name)
             if checkpoint is not None:
                 current_profile, start_batch_index = checkpoint
-                logger.info(f"Resuming taste profile from period {start_batch_index + 1} / {len(periods)}")
+                logger.debug(f"Resuming taste profile from period {start_batch_index + 1} / {len(periods)}")
             else:
                 logger.warning("No checkpoint found for this profile, starting from scratch")
+
+        await self._progress.publish(StepStarted(step=ProgressStep.TASTE_PERIODS, total=len(periods)))
+        if start_batch_index:
+            await self._progress.publish(
+                StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=start_batch_index, total=len(periods))
+            )
 
         # Index of the step in progress; len(periods) denotes the final reflection step.
         step = start_batch_index + 1
@@ -89,7 +102,7 @@ class BuildTasteProfileUseCase:
                     continue
 
                 step = i
-                logger.info(
+                logger.debug(
                     f"Processing taste profile period {i} / {len(periods)} "
                     f"({period.start.date()} to {period.end.date()}, {len(period.tracks)} tracks)"
                 )
@@ -114,15 +127,20 @@ class BuildTasteProfileUseCase:
                         profile_data=current_profile,
                         batch_index=i,
                     )
+                await self._progress.publish(StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=i, total=len(periods)))
 
                 if config.throttling_sleep_seconds > 0 and i < len(periods):
                     logger.debug(f"Throttling: sleeping {config.throttling_sleep_seconds}s before next batch")
                     await asyncio.sleep(config.throttling_sleep_seconds)
 
+            await self._progress.publish(StepDone(step=ProgressStep.TASTE_PERIODS))
+
             # The merged profile is already checkpointed: a reflection failure is resumable too.
             step = len(periods)
-            logger.info("Processing psychographic reflection")
+            logger.debug("Processing psychographic reflection")
+            await self._progress.publish(StepStarted(step=ProgressStep.TASTE_REFLECT))
             current_profile = await self._profiler.reflect_on_profile(cast(TasteProfileData, current_profile))
+            await self._progress.publish(StepDone(step=ProgressStep.TASTE_REFLECT))
         except (TasteProfilerRateLimitExceededError, TasteProfileBuildError) as e:
             # The caller reports the pause from the exception: a warning here would print it twice
             logger.debug(

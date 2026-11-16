@@ -115,8 +115,9 @@ class TestEnrichTracksCommand:
 
         mock_enrich_tracks_logic.side_effect = enrich
 
-        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
+        result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com", "--verbose"])
         assert result.exit_code == 0
+        # --verbose: the table per step and model
         assert result.output.index("Enriched 5 track(s)") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
@@ -129,7 +130,7 @@ class TestEnrichTracksCommand:
 
         result = runner.invoke(app, ["enrich", "tracks", "--email", "test@example.com"])
         assert result.exit_code == 1
-        assert result.output.index("Enrichment stopped") < result.output.index("LLM usage")
+        assert result.output.index("Enrichment stopped") < result.output.index("LLM call(s) · $0.0123")
         assert "$0.0123" in result.output
 
     def test__no_tracks(self, runner: CliRunner, mock_enrich_tracks_logic: mock.AsyncMock) -> None:
@@ -216,20 +217,23 @@ class TestEnrichTracksLogic:
         with mock.patch(f"{TARGET_PATH}.get_enricher") as patched:
             yield patched
 
-    async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
+    async def test__user_not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
         with pytest.raises(UserNotFoundError):
-            await enrich_tracks_logic(email="unknown@example.com")
+            await enrich_tracks_logic(progress=mock_progress, email="unknown@example.com")
 
     async def test__model_and_meter__forwarded_to_enricher(
         self,
         mock_track_repository: mock.AsyncMock,
         mock_get_enricher: mock.MagicMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
         meter = LLMUsageMeter()
 
-        await enrich_tracks_logic(email="test@example.com", model="openai/gpt-5-mini", meter=meter)
+        await enrich_tracks_logic(
+            progress=mock_progress, email="test@example.com", model="openai/gpt-5-mini", meter=meter
+        )
 
         mock_get_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
 
@@ -237,10 +241,12 @@ class TestEnrichTracksLogic:
         self,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
         await enrich_tracks_logic(
+            progress=mock_progress,
             email="test@example.com",
             force=True,
             batch_size=10,
@@ -258,10 +264,12 @@ class TestEnrichTracksLogic:
         self,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
         await enrich_tracks_logic(
+            progress=mock_progress,
             email="test@example.com",
             data=[{"fingerprint": "abc", "genres": ["folk"]}, {"fingerprint": "def"}, {"fingerprint": "abc"}],
         )
@@ -277,10 +285,12 @@ class TestEnrichTracksLogic:
         self,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
         await enrich_tracks_logic(
+            progress=mock_progress,
             email="test@example.com",
             only_locale=True,
         )
@@ -296,10 +306,11 @@ class TestEnrichTracksLogic:
         self,
         mock_user_repository: mock.AsyncMock,
         mock_track_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
 
-        await enrich_tracks_logic(email="test@example.com")
+        await enrich_tracks_logic(progress=mock_progress, email="test@example.com")
 
         mock_track_repository.get_list.assert_awaited_once_with(
             user_id=mock_user_repository.get_by_email.return_value.id,

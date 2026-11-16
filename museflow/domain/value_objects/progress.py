@@ -13,6 +13,21 @@ class StepStarted:
     step: ProgressStep
     attempt: int | None = None  # in a flow that runs its steps over several attempts
     max_attempts: int | None = None
+    total: int | None = None  # the units the step goes through (tracks, periods, files); none for a single call
+
+
+@dataclass(frozen=True, kw_only=True)
+class StepAdvanced:
+    step: ProgressStep
+    done: int  # units gone through so far
+    total: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class StepDone:
+    """Ends a step that has no outcome of its own to publish."""
+
+    step: ProgressStep
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -43,4 +58,6 @@ class PlaylistCreated:
 
 
 # Here rather than in domain/types.py, which the entities these events carry import: a cycle.
-type ProgressEvent = StepStarted | StrategyChosen | CandidatesFound | PicksMade | PlaylistCreated
+type ProgressEvent = (
+    StepStarted | StepAdvanced | StepDone | StrategyChosen | CandidatesFound | PicksMade | PlaylistCreated
+)

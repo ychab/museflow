@@ -1,27 +1,24 @@
 import logging
 from collections.abc import Iterable
-from contextlib import nullcontext
 from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from rich.logging import RichHandler
-from rich.status import Status
 
 from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.config.loggers import LOGGER_MUSEFLOW
-from museflow.infrastructure.config.loggers import console_stderr
+from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
-from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
 
 
-class TestSpinner:
+class TestHasRichLogHandler:
     @pytest.fixture
     def rich_log_handler(self) -> Iterable[None]:
         logger = logging.getLogger(LOGGER_MUSEFLOW)
@@ -32,13 +29,10 @@ class TestSpinner:
 
     @pytest.mark.usefixtures("rich_log_handler")
     def test__rich_log_handler(self) -> None:
-        status = spinner("Working")
-        assert isinstance(status, Status)
-        # On the log handler's console: stdout only carries the results
-        assert status.console is console_stderr
+        assert has_rich_log_handler() is True
 
     def test__other_log_handler(self) -> None:
-        assert isinstance(spinner("Working"), nullcontext)
+        assert has_rich_log_handler() is False
 
 
 class TestPrintLLMUsage:

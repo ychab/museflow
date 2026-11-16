@@ -14,10 +14,14 @@ from museflow.application.use_cases.taste_profile_build import BuildTasteProfile
 from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
@@ -98,10 +102,12 @@ class TestBuildTasteProfileUseCase:
         self,
         mock_uow: mock.AsyncMock,
         openrouter_profiler: OpenRouterTasteProfileAdapter,
+        mock_progress: mock.AsyncMock,
     ) -> BuildTasteProfileUseCase:
         return BuildTasteProfileUseCase(
             profiler=openrouter_profiler,
             uow=mock_uow,
+            progress=mock_progress,
         )
 
     @pytest.fixture
@@ -382,6 +388,7 @@ class TestBuildTasteProfileUseCase:
         profile_data: TasteProfileData,
         completion: dict[str, Any],
         httpx_mock: HTTPXMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
@@ -399,6 +406,16 @@ class TestBuildTasteProfileUseCase:
 
         mock_taste_profile_repository.get_checkpoint.assert_called_once_with(user.id, config.name)
         assert mock_taste_profile_repository.upsert_checkpoint.call_count == 2
+        # The progress starts at the checkpoint
+        assert [call.args[0] for call in mock_progress.publish.await_args_list] == [
+            StepStarted(step=ProgressStep.TASTE_PERIODS, total=3),
+            StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=1, total=3),
+            StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=2, total=3),
+            StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=3, total=3),
+            StepDone(step=ProgressStep.TASTE_PERIODS),
+            StepStarted(step=ProgressStep.TASTE_REFLECT),
+            StepDone(step=ProgressStep.TASTE_REFLECT),
+        ]
 
     @pytest.mark.parametrize("periods", [3], indirect=True)
     async def test__resume__no_checkpoint(
@@ -466,13 +483,16 @@ class TestBuildTasteProfileUseCase:
         mock_uow: mock.AsyncMock,
         mock_taste_profile_repository: mock.AsyncMock,
         mock_llm_usage_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         usage = LLMUsageFactory.build()
         profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
         profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
 
         with pytest.raises(TasteProfileBuildPausedError):
-            await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler).build_profile(user=user, config=config)
+            await BuildTasteProfileUseCase(uow=mock_uow, profiler=profiler, progress=mock_progress).build_profile(
+                user=user, config=config
+            )
 
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=config.name)
         (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]

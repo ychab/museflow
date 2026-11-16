@@ -22,6 +22,7 @@ museflow taste build [--email <email>] --name <name> [OPTIONS]
 | `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-3.1-flash-lite`). |
 | `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
 | `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |
+| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
 
 **Prerequisites**
 
@@ -46,10 +47,12 @@ museflow taste build --name my-profile --track-limit 1500
 museflow taste build --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
-step (segment, merge, reflect), the number of eras, the personality archetype and the life-phase insights. Last, an
-`LLM usage` table gives the calls, tokens, cost and time per step and model, then the total, followed by the elapsed
-time of the command (`Elapsed: 4m09s`). It is printed after a pause too, since those calls were paid.
+**Output.** While it runs, a progress bar on stderr counts the listening periods (starting at the checkpoint with
+`--resume`), then a live line follows the reflection; each ends with a `✓` line giving its duration and cost. Then
+`Taste profile built: N tracks processed`, the profile name, the logic version, the model of each step (segment,
+merge, reflect), the number of eras, the personality archetype and the life-phase insights. Last, one line gives the
+LLM calls, their cost and the elapsed time; with `--verbose`, an `LLM usage` table details the calls, tokens, cost and
+time per step and model. It is printed after a pause too, since those calls were paid.
 
 ## `taste list`
 

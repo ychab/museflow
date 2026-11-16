@@ -5,6 +5,7 @@ import pytest
 
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.domain.entities.user import User
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_tracks_logic
 
 
@@ -20,8 +21,8 @@ class TestEnrichTracksLogic:
             patched.return_value.enrich.return_value = EnrichTracksReport(enriched_count=1, error_count=0)
             yield patched.return_value
 
-    async def test__nominal(self, user: User, mock_use_case: mock.Mock) -> None:
-        result = await enrich_tracks_logic(email=user.email, model="google/gemini-3.5-flash")
+    async def test__nominal(self, user: User, mock_use_case: mock.Mock, progress: RichProgressAdapter) -> None:
+        result = await enrich_tracks_logic(progress=progress, email=user.email, model="google/gemini-3.5-flash")
 
         assert result.enriched_count == 1
         called_user = mock_use_case.enrich.call_args.kwargs["user"]

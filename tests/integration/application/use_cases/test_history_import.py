@@ -1,3 +1,4 @@
+import io
 import json
 from datetime import UTC
 from datetime import datetime
@@ -18,6 +19,7 @@ from museflow.application.use_cases.history_import import ImportStreamingHistory
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 
 from tests import ASSETS_DIR
@@ -49,16 +51,19 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         uow: UnitOfWorkPort,
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
+        progress: RichProgressAdapter,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
             uow=uow,
             streaming_history=spotify_streaming_history,
+            progress=progress,
         )
 
     async def test__nominal(
         self,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
+        progress_output: io.StringIO,
     ) -> None:
         """
         Streaming_History_Audio_2017-2018_1.json : read=3, skip_dur=1, skip_uri=0 → 2 ids
@@ -87,6 +92,9 @@ class TestImportStreamingHistorySpotifyUseCase:
             tracks_created=4,
             tracks_purged=0,
         )
+        output = progress_output.getvalue()
+        assert "✓ Files read          2 file(s)" in output
+        assert "✓ Tracks saved        4 track(s)" in output
 
     async def test__purge(
         self,
@@ -202,6 +210,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         use_case: ImportStreamingHistoryUseCase,
         tmp_path: Path,
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
+        progress: RichProgressAdapter,
     ) -> None:
         """Two Spotify IDs for the same song collapse into one DB row with merged play count."""
         history_file = tmp_path / "Streaming_History_Audio_dup.json"
@@ -231,6 +240,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         dup_use_case = ImportStreamingHistoryUseCase(
             uow=use_case._uow,
             streaming_history=spotify_streaming_history,
+            progress=progress,
         )
 
         report = await dup_use_case.import_history(

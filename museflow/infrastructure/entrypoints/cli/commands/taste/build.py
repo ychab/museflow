@@ -6,6 +6,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
 from museflow.domain.const import TASTE_BATCH_SIZE_MIN
@@ -14,13 +15,16 @@ from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
+from museflow.infrastructure.config.loggers import console_stderr
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -65,10 +69,11 @@ def taste_build_command(
         "--reflect-model",
         help="OpenRouter model id overriding the configured reflect step model.",
     ),
+    verbose: bool = VERBOSE_OPTION,
 ) -> None:
     meter = LLMUsageMeter()
     try:
-        with spinner("Building taste profile…"):
+        with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
             profile = asyncio.run(
                 taste_build_logic(
                     email=email,
@@ -81,6 +86,7 @@ def taste_build_command(
                     merge_model=merge_model,
                     reflect_model=reflect_model,
                     meter=meter,
+                    progress=progress,
                 )
             )
     except UserNotFoundError as e:
@@ -110,7 +116,7 @@ def taste_build_command(
         for insight in profile.profile["life_phase_insights"]:
             typer.echo(f"  - {insight}")
     finally:
-        print_llm_usage(meter, verbose=True)
+        print_llm_usage(meter, verbose=verbose)
 
 
 async def taste_build_logic(
@@ -120,6 +126,7 @@ async def taste_build_logic(
     batch_size: int | None,
     resume: bool,
     rated_only: bool,
+    progress: ProgressPort,
     segment_model: str | None = None,
     merge_model: str | None = None,
     reflect_model: str | None = None,
@@ -136,7 +143,7 @@ async def taste_build_logic(
         if user is None:
             raise UserNotFoundError()
 
-        use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter)
+        use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter, progress=progress)
         config = BuildTasteProfileConfigInput(
             name=name,
             resume=resume,

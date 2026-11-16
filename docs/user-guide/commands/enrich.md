@@ -21,6 +21,7 @@ museflow enrich tracks [--email <email>] [OPTIONS]
 | `--force` | off | Re-enrich tracks that already have the requested fields. |
 | `--batch-size` | `200` | Number of tracks per LLM request. |
 | `--model` | `OPENROUTER_ENRICHER__MODEL` | OpenRouter model id for this run (e.g. `google/gemini-3.1-flash-lite`). It must support structured outputs: the command checks the model against the OpenRouter catalog before any call, and stops with a suggestion on a typo. |
+| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
 | `--limit` | none | Maximum number of tracks to process. |
 
 Without any `--only-*` flag, all three fields are enriched. The flags can be combined. By default only tracks
@@ -46,11 +47,12 @@ museflow enrich tracks --limit 20 --model openai/gpt-5-mini
 museflow enrich tracks --input sample.yaml --force --model openai/gpt-5-mini
 ```
 
-**Output.** `Enriched N track(s).`, plus a warning when some batches failed (details are in the logs, and a
-re-run processes the missing tracks), or `No tracks to enrich.`. With `--input`, a warning counts the fingerprints
-that match none of the user's tracks. When every batch failed, it prints
-`No track enriched: N batch(es) failed` and exits with code 1. Last, an `LLM usage` table gives the calls, tokens,
-cost and time of the run, then the total and the elapsed time of the command, whatever the outcome.
+**Output.** While it runs, a progress bar on stderr counts the tracks gone through, with the time left; a failed or
+partial batch prints its warning above it, and a `✓ Tracks enriched` line ends it. Then `Enriched N track(s).`, plus a
+warning when some batches failed (a re-run processes the missing tracks), or `No tracks to enrich.`. With `--input`, a
+warning counts the fingerprints that match none of the user's tracks. When every batch failed, it prints
+`No track enriched: N batch(es) failed` and exits with code 1. Last, one line gives the LLM calls, their cost and the
+elapsed time, whatever the outcome; with `--verbose`, an `LLM usage` table details the calls, tokens, cost and time.
 
 **When it stops early.** The command stops instead of running on, so it does not keep paying for calls that cannot
 succeed:
