@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import timedelta
 from pathlib import Path
 
 from pydantic import EmailStr
@@ -8,17 +9,21 @@ import typer
 from rich.table import Table
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
+from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.utils.display import spinner
+from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
+from museflow.infrastructure.utils.formatting import format_duration
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")
@@ -56,8 +61,10 @@ def tracks_history_command(
     )
 
     try:
-        with spinner("Importing listening history…"):
-            report = asyncio.run(tracks_history_logic(email=email, config=config, provider=provider))
+        with RichProgressAdapter(console=console_stderr, animated=has_rich_log_handler()) as progress:
+            report = asyncio.run(
+                tracks_history_logic(email=email, config=config, provider=provider, progress=progress)
+            )
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except StreamingHistoryError as e:
@@ -67,10 +74,9 @@ def tracks_history_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    end_time = time.perf_counter()
-    duration = end_time - start_time
+    duration = timedelta(seconds=time.perf_counter() - start_time)
 
-    typer.secho(f"\nImport successful in {duration:.2f}s!\n", fg=typer.colors.GREEN)
+    typer.secho(f"\nImport successful in {format_duration(duration)}!\n", fg=typer.colors.GREEN)
 
     table = Table(title="Import Streaming History Results")
     table.add_column("Label", style="cyan")
@@ -93,6 +99,7 @@ async def tracks_history_logic(
     email: EmailStr,
     config: ImportStreamingHistoryConfigInput,
     provider: MusicProvider,
+    progress: ProgressPort,
 ) -> ImportStreamingHistoryReport:
     uow = get_unit_of_work()
 
@@ -102,5 +109,7 @@ async def tracks_history_logic(
     if not user:
         raise UserNotFoundError()
 
-    use_case = ImportStreamingHistoryUseCase(uow=uow, streaming_history=get_streaming_history_adapter(provider))
+    use_case = ImportStreamingHistoryUseCase(
+        uow=uow, streaming_history=get_streaming_history_adapter(provider), progress=progress
+    )
     return await use_case.import_history(user=user, config=config)

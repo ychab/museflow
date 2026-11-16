@@ -240,9 +240,12 @@ class TestTasteBuildCommand:
 
         mock_taste_build_logic.side_effect = build
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(
+            app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile", "--verbose"]
+        )
         assert result.exit_code == 0
-        assert result.output.index("Taste profile built") < result.output.index("LLM usage")
+        # --verbose: the table per step and model
+        assert result.output.index(f"Taste profile '{taste_profile.name}'") < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
     def test__paused__usage_printed(
@@ -258,7 +261,7 @@ class TestTasteBuildCommand:
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 1
-        assert result.output.index("Build paused") < result.output.index("LLM usage")
+        assert result.output.index("Build paused") < result.output.index("LLM call(s)")
         assert "$0.0123" in result.output
 
     def test__generic_exception(
@@ -274,6 +277,27 @@ class TestTasteBuildCommand:
 
         output = clean_typer_text(result.stderr)
         assert "Error: Boom" in output
+
+    def test__interrupted__resume_hinted__usage_printed(
+        self,
+        mock_taste_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        async def build(**kwargs: Any) -> TasteProfile:
+            spend(kwargs["meter"])
+            raise KeyboardInterrupt
+
+        mock_taste_build_logic.side_effect = build
+
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        # 128 + SIGINT, as a shell reports a command stopped by Ctrl+C
+        assert result.exit_code == 130
+        assert "Build interrupted: the periods done are saved. Run with --resume to continue." in clean_typer_text(
+            result.stderr
+        )
+        # The calls made before the interruption were paid
+        assert "$0.0123" in result.output
 
     @pytest.mark.parametrize(
         "taste_profile",
@@ -292,15 +316,25 @@ class TestTasteBuildCommand:
         taste_profile: TasteProfile,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_taste_build_logic.return_value = taste_profile
+        # As JSONB, where the profile is saved, orders the keys
+        steps = taste_profile.profiler_metadata["steps"]
+        mock_taste_build_logic.return_value = dataclasses.replace(
+            taste_profile,
+            profiler_metadata={"steps": {step: steps[step] for step in ("merge", "reflect", "segment")}},
+        )
 
         result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Taste profile built:" in output
-        assert "Model (reflect): google/gemini-2.5-pro" in output
+        assert f"✓ Taste profile '{taste_profile.name}'" in output
         assert "Dark Metal Wanderer" in output
+        era = taste_profile.profile["taste_timeline"][0]
+        assert f"{era['time_range']} {era['era_label']}" in output
+        assert "• You explore melancholy soundscapes" in output
+        # In the pipeline's order
+        models = " · ".join(f"{step} {steps[step]['model']}" for step in ("segment", "merge", "reflect"))
+        assert f"Models: {models}" in output
 
     @pytest.mark.parametrize(
         "taste_profile",
@@ -308,6 +342,7 @@ class TestTasteBuildCommand:
             {
                 "personality_archetype": None,
                 "life_phase_insights": [],
+                "taste_timeline": [],
             }
         ],
         indirect=True,
@@ -325,8 +360,8 @@ class TestTasteBuildCommand:
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert "Taste profile built:" in output
-        assert "Archetype:" not in output
+        assert f"tracks · 0 eras · logic {taste_profile.logic_version}" in output
+        assert "•" not in output
 
 
 @pytest.mark.usefixtures(
@@ -353,10 +388,12 @@ class TestTasteBuildLogic:
         self,
         mock_get_profiler: mock.MagicMock,
         mock_use_case: mock.Mock,
+        mock_progress: mock.AsyncMock,
     ) -> None:
         meter = LLMUsageMeter()
 
         await taste_build_logic(
+            progress=mock_progress,
             email="test@example.com",
             name="my-profile",
             track_limit=3000,
@@ -377,11 +414,12 @@ class TestTasteBuildLogic:
         )
         mock_use_case.build_profile.assert_awaited_once()
 
-    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock) -> None:
+    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFoundError):
             await taste_build_logic(
+                progress=mock_progress,
                 email="test@example.com",
                 name="my-profile",
                 track_limit=3000,

@@ -44,7 +44,11 @@ def playlist_delete_command(
             )
             suffix = f" ({scope})" if scope else ""
             typer.confirm(
-                f"About to delete ALL playlists{suffix} of {email}. This cannot be undone. Continue?", abort=True
+                typer.style(
+                    f"About to delete ALL playlists{suffix} of {email}. This cannot be undone. Continue?",
+                    fg=typer.colors.YELLOW,
+                ),
+                abort=True,
             )
     elif playlist_id is None:
         raise typer.BadParameter("Provide a playlist ID, or use --purge to delete multiple playlists.")

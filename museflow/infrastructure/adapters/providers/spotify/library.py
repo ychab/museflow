@@ -96,10 +96,9 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         artist: str,
         max_pages: int,
         page_size: int = 10,
-        log_enabled: bool = True,
     ) -> list[Track]:
         query = SpotifySearchArtistQuery(artist=artist)
-        tracks = await self._search_tracks(query, max_pages=max_pages, page_size=page_size, log_enabled=log_enabled)
+        tracks = await self._search_tracks(query, max_pages=max_pages, page_size=page_size)
         logger.debug(f"Search query {query.get_query()!r} returned {len(tracks)} track(s)")
         return tracks
 
@@ -196,7 +195,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         params: dict[str, Any] | None = None,
         offset: int = 0,
         page_size: int = 50,
-        log_enabled: bool = True,
         log_prefix: str = "",
         response_key: str | None = None,
         ignored_status_codes: frozenset[int] | None = None,
@@ -212,9 +210,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         """
         items: list[Track] = []
         pages_count = 0
-
-        if log_enabled:
-            logger.info(f"{log_prefix} Start fetching endpoint: {endpoint}")
 
         while True:
             if pages_count >= max_pages:
@@ -248,9 +243,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             items += page_processor(page, offset)
             pages_count += 1
 
-            if log_enabled:
-                logger.info(f"{log_prefix} ... processed {offset + page_size}/{page.total} ...")
-
             if not page.items:
                 break
 
@@ -279,7 +271,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
         query: SpotifySearchArtistQuery,
         max_pages: int,
         page_size: int = 10,
-        log_enabled: bool = False,
     ) -> list[Track]:
         try:
             return await self._fetch_pages(
@@ -288,7 +279,6 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 page_processor=self._extract_search_tracks,
                 page_size=page_size,
                 max_pages=max_pages,
-                log_enabled=log_enabled,
                 log_prefix=f"[Search {query.get_query()!r}]",
                 params={
                     "q": query.get_query(),

@@ -16,7 +16,9 @@ def blacklist_purge_command(
     email: str = EMAIL_OPTION,
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
-    if not yes and not typer.confirm(f"Delete the entire blacklist of {email}? This cannot be undone."):
+    if not yes and not typer.confirm(
+        typer.style(f"Delete the entire blacklist of {email}? This cannot be undone.", fg=typer.colors.YELLOW)
+    ):
         raise typer.Abort()
 
     try:

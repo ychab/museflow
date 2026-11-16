@@ -4,6 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.domain.entities.user import User
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.entrypoints.cli.commands.taste.build import taste_build_logic
 
 from tests.unit.factories.entities.taste import TasteProfileFactory
@@ -27,11 +28,13 @@ class TestTasteBuildLogic:
         self,
         user: User,
         mock_use_case: mock.Mock,
+        progress: RichProgressAdapter,
     ) -> None:
         expected_profile = TasteProfileFactory.build(user_id=user.id)
         mock_use_case.build_profile.return_value = expected_profile
 
         profile = await taste_build_logic(
+            progress=progress,
             email=user.email,
             name="my-profile",
             resume=False,

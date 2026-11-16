@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
-from museflow.infrastructure.entrypoints.cli.utils.display import format_duration
+from museflow.infrastructure.utils.formatting import format_duration
 
 console = Console()
 

@@ -93,7 +93,9 @@ async def tracks_delete_logic(
 
     # The confirmation waits for the user: keep it out of any block.
     if not yes:
-        typer.confirm(f"About to delete {count} track(s) of {email}. Continue?", abort=True)
+        typer.confirm(
+            typer.style(f"About to delete {count} track(s) of {email}. Continue?", fg=typer.colors.YELLOW), abort=True
+        )
 
     if purge and source is None:
         deleted = await use_case.purge()

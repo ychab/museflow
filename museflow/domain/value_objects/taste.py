@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 
 from museflow.domain.entities.track import Track
@@ -20,6 +21,17 @@ class DiscoveryArtistStrategy:
     strategy_label: str
     artists: list[ArtistSuggested]
     suggested_playlist_name: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class ArtistSearch:
+    """What the catalogue search of one artist gave: its tracks the user does not know are offered to the advisor."""
+
+    artist: str
+    found: int = 0  # catalogue tracks the search returned
+    matched: int = 0  # among them, those crediting the artist
+    tracks: list[Track] = field(default_factory=list)  # among those, the tracks the user does not know
+    rejected: bool = False  # the provider refused the search query
 
 
 @dataclass(frozen=True, kw_only=True)

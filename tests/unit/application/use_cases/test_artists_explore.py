@@ -10,9 +10,14 @@ from museflow.application.use_cases.artists_explore import ExploreArtistsUseCase
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.value_objects.blacklist import UserBlacklist
+from museflow.domain.value_objects.progress import CandidatesFound
+from museflow.domain.value_objects.progress import PicksMade
+from museflow.domain.value_objects.progress import StepStarted
+from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import TrackPicked
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
@@ -31,6 +36,7 @@ class TestExploreArtistsUseCase:
         mock_track_repository: mock.AsyncMock,
         mock_provider_library: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
     ) -> ExploreArtistsUseCase:
         """No liked track, nothing known, and the advisor picks every candidate it is offered, in order."""
 
@@ -44,7 +50,9 @@ class TestExploreArtistsUseCase:
             TrackFactory.build(artists=[artist])
         ]
         mock_advisor.pick_exploration_tracks.side_effect = _pick
-        return ExploreArtistsUseCase(uow=mock_uow, provider_library=mock_provider_library, advisor=mock_advisor)
+        return ExploreArtistsUseCase(
+            uow=mock_uow, provider_library=mock_provider_library, advisor=mock_advisor, progress=mock_progress
+        )
 
     async def test__artists__drawn__catalogue_searched__capped(
         self,
@@ -105,12 +113,13 @@ class TestExploreArtistsUseCase:
         use_case: ExploreArtistsUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_advisor: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Each round takes the next favourites; once none is left, the run ends short of the limit."""
         mock_track_repository.get_artist_stats.return_value = ArtistStatsFactory.batch(2)
 
-        with caplog.at_level(logging.INFO):
+        with caplog.at_level(logging.DEBUG):
             result = await use_case.create_playlist(
                 user=user,
                 config=ExploreArtistsConfigInput(
@@ -118,7 +127,21 @@ class TestExploreArtistsUseCase:
                 ),
             )
 
-        assert [(r.attempt, r.artists, r.candidates) for r in result.reports] == [(1, 1, 1), (2, 1, 1)]
+        # Each round announced, then its outcome; no artists step (they come from the user's data), and a dry run
+        # creates no playlist.
+        events = [call.args[0] for call in mock_progress.publish.await_args_list]
+        track_1, track_2 = (pick.track for event in events if isinstance(event, PicksMade) for pick in event.picks)
+        artist_1, artist_2 = (track.artists[0] for track in (track_1, track_2))
+        assert events == [
+            StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=1, max_attempts=3),
+            CandidatesFound(attempt=1, searches=[ArtistSearch(artist=artist_1, found=1, matched=1, tracks=[track_1])]),
+            StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=1),
+            PicksMade(attempt=1, picks=[TrackPicked(track=track_1, score=0.9)], tracks=[track_1], target=10),
+            StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=2, max_attempts=3),
+            CandidatesFound(attempt=2, searches=[ArtistSearch(artist=artist_2, found=1, matched=1, tracks=[track_2])]),
+            StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=2),
+            PicksMade(attempt=2, picks=[TrackPicked(track=track_2, score=0.9)], tracks=[track_1, track_2], target=10),
+        ]
         assert mock_advisor.pick_exploration_tracks.await_count == 2
         assert len({track.artists[0] for track in result.tracks}) == 2
         assert "Attempt 3/3: no favourite artist left, stopping" in caplog.text

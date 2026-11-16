@@ -10,18 +10,22 @@ import typer
 
 from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
+from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_enricher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
-from museflow.infrastructure.entrypoints.cli.utils.display import spinner
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
@@ -47,13 +51,14 @@ def enrich_tracks_command(
         "--model",
         help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-3.1-flash-lite).",
     ),
+    verbose: bool = VERBOSE_OPTION,
     limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
 ) -> None:
     data = read_yaml(input_path) if input_path is not None else None
 
     meter = LLMUsageMeter()
     try:
-        with spinner("Enriching tracks…"):
+        with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
             result = asyncio.run(
                 enrich_tracks_logic(
                     email=email,
@@ -66,6 +71,7 @@ def enrich_tracks_command(
                     model=model,
                     limit=limit,
                     meter=meter,
+                    progress=progress,
                 )
             )
     except UserNotFoundError as e:
@@ -107,11 +113,12 @@ def enrich_tracks_command(
         if result.error_count:
             typer.secho(f"{result.error_count} batch(es) failed — check logs for details.", fg=typer.colors.YELLOW)
     finally:
-        print_llm_usage(meter)
+        print_llm_usage(meter, verbose=verbose)
 
 
 async def enrich_tracks_logic(
     email: EmailStr,
+    progress: ProgressPort,
     only_genre: bool = False,
     only_mood: bool = False,
     only_locale: bool = False,
@@ -156,5 +163,5 @@ async def enrich_tracks_logic(
         if not user:
             raise UserNotFoundError()
 
-        use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher)
+        use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher, progress=progress)
         return await use_case.enrich(user=user, config=config)

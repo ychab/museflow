@@ -18,8 +18,11 @@ def users_delete_command(
 ) -> None:
     if not yes:
         typer.confirm(
-            f"About to delete the user {email} and all of its data: tracks, playlists, taste profiles, blacklist, "
-            "provider tokens and LLM usage. This cannot be undone. Continue?",
+            typer.style(
+                f"About to delete the user {email} and all of its data: tracks, playlists, taste profiles, blacklist, "
+                "provider tokens and LLM usage. This cannot be undone. Continue?",
+                fg=typer.colors.YELLOW,
+            ),
             abort=True,
         )
 

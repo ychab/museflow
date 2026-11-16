@@ -63,6 +63,14 @@ Measured on the current `HEAD` of the branch this documentation was written on:
 
     [:octicons-arrow-right-24: LLM pipeline](llm-pipeline.md)
 
+-   **Logging & output**
+
+    ---
+
+    stdout for results, stderr for diagnostics; the console, Rich and JSON handlers; `--verbose` versus `DEBUG`.
+
+    [:octicons-arrow-right-24: Logging & output](logging.md)
+
 -   **Privacy & data**
 
     ---

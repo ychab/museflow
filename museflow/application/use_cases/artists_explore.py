@@ -8,6 +8,7 @@ from typing import Final
 
 from museflow.application.inputs.explore import ExploreArtistsConfigInput
 from museflow.application.ports.advisors.agent import AdvisorPort
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.discovery import DiscoveryService
@@ -20,9 +21,14 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
+from museflow.domain.value_objects.progress import CandidatesFound
+from museflow.domain.value_objects.progress import PicksMade
+from museflow.domain.value_objects.progress import PlaylistCreated
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.taste import TrackPicked
 
@@ -30,17 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
-class ExploreArtistsAttemptReport:
-    attempt: int = 0
-    artists: int = 0  # favourite artists searched
-    candidates: int = 0  # their catalogue tracks the user does not know, offered to the advisor
-    tracks_picked: int = 0  # among the candidates
-
-
-@dataclass(frozen=True, kw_only=True)
 class ExploreArtistsResult:
     playlist: Playlist | None
-    reports: list[ExploreArtistsAttemptReport]
     tracks: list[Track]
 
 
@@ -56,9 +53,11 @@ class ExploreArtistsUseCase:
         uow: UnitOfWorkPort,
         provider_library: ProviderLibraryPort,
         advisor: AdvisorPort,
+        progress: ProgressPort,
     ) -> None:
         self._uow = uow
         self._advisor = advisor
+        self._progress = progress
         # Application services built from the ports above, not ports: never injected
         self._discovery = DiscoveryService(uow=uow, provider_library=provider_library)
         self._llm_usage = LLMUsageService(uow=uow)
@@ -109,19 +108,19 @@ class ExploreArtistsUseCase:
         tracks_picked: list[TrackPicked] = []
         # What the playlist would hold now: the loop stops on it, so a round cut by the per-artist cap needs another.
         tracks: list[Track] = []
-        reports: list[ExploreArtistsAttemptReport] = []
+        attempts_run = 0  # the attempts that went through their picks step, for the log
 
         for attempt in range(1, config.max_attempts + 1):
             start = (attempt - 1) * config.artists_per_attempt
             artists_now = artists[start : start + config.artists_per_attempt]
             if not artists_now:
-                logger.info(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
+                logger.debug(f"Attempt {attempt}/{config.max_attempts}: no favourite artist left, stopping")
                 break
 
-            logger.info(f"### Attempt {attempt}/{config.max_attempts} ###")
-            for artist in artists_now:
-                logger.debug(f"Favourite artist '{artist}'")
-            candidates = await self._discovery.get_unknown_artist_tracks(
+            await self._progress.publish(
+                StepStarted(step=ProgressStep.DISCOVERY_SEARCH, attempt=attempt, max_attempts=config.max_attempts)
+            )
+            searches = await self._discovery.get_unknown_artist_tracks(
                 user=user,
                 artists=artists_now,
                 # Their best-known tracks are the user's already: the catalogue search reaches the others.
@@ -132,10 +131,12 @@ class ExploreArtistsUseCase:
                 catalogue_tracks_pages=config.catalogue_tracks_pages,
                 concurrency=config.artist_tracks_concurrency,
             )
+            await self._progress.publish(CandidatesFound(attempt=attempt, searches=searches))
+            candidates = {search.artist: search.tracks for search in searches if search.tracks}
 
             tracks_picked_now: list[TrackPicked] = []
             if candidates:
-                logger.debug("--- Picks ---")
+                await self._progress.publish(StepStarted(step=ProgressStep.DISCOVERY_PICKS, attempt=attempt))
                 tracks_picked_now = await self._advisor.pick_exploration_tracks(
                     candidates=candidates,
                     liked_tracks=self._group_liked_tracks(liked_tracks, artists=list(candidates)),
@@ -143,27 +144,21 @@ class ExploreArtistsUseCase:
                     max_tracks_per_artist=config.max_tracks_per_artist,
                     prompt=config.prompt,
                 )
-                for track_picked in tracks_picked_now:
-                    logger.debug(f"Picked ({track_picked.score:.2f}): '{track_picked.track}'")
 
-            reports.append(
-                ExploreArtistsAttemptReport(
-                    attempt=attempt,
-                    artists=len(artists_now),
-                    candidates=sum(len(tracks) for tracks in candidates.values()),
-                    tracks_picked=len(tracks_picked_now),
-                )
-            )
-
+            attempts_run = attempt
             tracks_picked.extend(tracks_picked_now)
             tracks = select_tracks(
                 tracks_picked=tracks_picked,
                 max_tracks_per_artist=config.max_tracks_per_artist,
                 playlist_limit=config.playlist_limit,
             )
-            logger.info(
-                f"=> Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
-                f"(total: {len(tracks_picked)}, {len(tracks)} kept)\n",
+            if candidates:
+                await self._progress.publish(
+                    PicksMade(attempt=attempt, picks=tracks_picked_now, tracks=tracks, target=config.playlist_limit)
+                )
+            logger.debug(
+                f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
+                f"(total: {len(tracks_picked)}, {len(tracks)} kept)",
                 extra={"attempt": attempt, "total": len(tracks_picked), "kept": len(tracks)},
             )
             if len(tracks) >= config.playlist_limit:
@@ -172,24 +167,27 @@ class ExploreArtistsUseCase:
         if not tracks:
             raise DiscoveryTrackNoNewError()
 
+        # The caller tells the user from the result
         if len(tracks) < config.playlist_limit:
-            logger.warning(
-                f"playlist_limit not reached ({len(tracks)}/{config.playlist_limit}) after {len(reports)} attempt(s)",
-                extra={"found": len(tracks), "target": config.playlist_limit, "attempts": len(reports)},
+            logger.info(
+                f"playlist_limit not reached ({len(tracks)}/{config.playlist_limit}) after {attempts_run} attempt(s)",
+                extra={"found": len(tracks), "target": config.playlist_limit, "attempts": attempts_run},
             )
 
         if config.dry_run:
-            logger.info("Dry-run mode: skipping playlist creation.")
-            return ExploreArtistsResult(playlist=None, reports=reports, tracks=tracks)
+            logger.debug("Dry-run mode: skipping playlist creation.")
+            return ExploreArtistsResult(playlist=None, tracks=tracks)
 
         name = config.title or f"[MF] - {self._PLAYLIST_NAME} - {datetime.now(UTC).isoformat(timespec='seconds')}"
+        await self._progress.publish(StepStarted(step=ProgressStep.PLAYLIST_CREATE))
         playlist = await self._discovery.create_playlist(
             name=name,
             type=PlaylistType.EXPLORE,
             tracks=tracks,
             prompt=config.prompt,
         )
-        return ExploreArtistsResult(playlist=playlist, reports=reports, tracks=playlist.tracks)
+        await self._progress.publish(PlaylistCreated(playlist=playlist))
+        return ExploreArtistsResult(playlist=playlist, tracks=playlist.tracks)
 
     @staticmethod
     def _draw_artists(
@@ -207,7 +205,7 @@ class ExploreArtistsUseCase:
             if normalize_text(artist) not in blacklist.artist_fingerprints
         ][: config.artists_limit]
         random.shuffle(artists)
-        logger.info(f"Favourite artists drawn: {len(artists)}", extra={"artists": len(artists)})
+        logger.debug(f"Favourite artists drawn: {len(artists)}", extra={"artists": len(artists)})
         return artists
 
     @classmethod

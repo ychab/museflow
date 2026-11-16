@@ -31,7 +31,8 @@ museflow tracks history [--email <email>] --directory <path> [OPTIONS]
 museflow tracks history --directory ~/Downloads/MySpotifyData --min-duration-played 30
 ```
 
-**Output.** A green `Import successful in <n>s!` line and an _Import Streaming History Results_ table with
+**Output.** While it runs, a progress bar on stderr counts the files read, then the tracks saved. Then a green
+`Import successful in <duration>!` line and an _Import Streaming History Results_ table with
 these rows: items read; items skipped (no timestamp, short play, no track ID); unique track IDs; tracks already
 known; total play events; play events created (each play is saved once); tracks created.
 

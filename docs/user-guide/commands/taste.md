@@ -22,6 +22,7 @@ museflow taste build [--email <email>] --name <name> [OPTIONS]
 | `--segment-model` | `OPENROUTER_PROFILER_SEGMENT__MODEL` | OpenRouter model id for the per-batch segment step (e.g. `google/gemini-3.1-flash-lite`). |
 | `--merge-model` | `OPENROUTER_PROFILER_MERGE__MODEL` | OpenRouter model id for the step merging each segment into the profile. |
 | `--reflect-model` | `OPENROUTER_PROFILER_REFLECT__MODEL` | OpenRouter model id for the final reflection step. |
+| `--verbose` | off | Show the LLM usage per step and model instead of a one-line total. |
 
 **Prerequisites**
 
@@ -46,10 +47,16 @@ museflow taste build --name my-profile --track-limit 1500
 museflow taste build --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
-**Output.** `Taste profile built: N tracks processed`, then the profile name, the logic version, the model of each
-step (segment, merge, reflect), the number of eras, the personality archetype and the life-phase insights. Last, an
-`LLM usage` table gives the calls, tokens, cost and time per step and model, then the total, followed by the elapsed
-time of the command (`Elapsed: 4m09s`). It is printed after a pause too, since those calls were paid.
+**Output.** While it runs, a progress bar on stderr counts the listening periods, then a live line follows the
+reflection; each ends with a `✓` line giving its duration and cost. With `--resume`, a `↻ Resumed at 2/4 period(s),
+from the checkpoint` line says where the build picks up. Then a panel shows the profile: its name, the personality
+archetype, the tracks, eras and logic version, the eras with their time range, and the life-phase insights; a line
+below gives the model of each step (segment, merge, reflect). Last, one line gives the LLM calls, their cost and the
+elapsed time; with `--verbose`, an `LLM usage` table details the calls, tokens, cost and time per step and model. It is
+printed after a pause too, since those calls were paid.
+
+**Interrupting it.** Ctrl+C stops the build with exit code 130: the periods done are saved, and `--resume` continues
+after them.
 
 ## `taste list`
 

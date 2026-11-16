@@ -1,3 +1,5 @@
+import io
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,7 @@ from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRout
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
 from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
+from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
@@ -29,11 +32,13 @@ class TestDiscoverTasteUseCase:
         uow: UnitOfWorkPort,
         spotify_library: ProviderLibraryPort,
         openrouter_advisor: OpenRouterAdvisorAdapter,
+        progress: RichProgressAdapter,
     ) -> DiscoverTasteUseCase:
         return DiscoverTasteUseCase(
             uow=uow,
             provider_library=spotify_library,
             advisor=openrouter_advisor,
+            progress=progress,
         )
 
     async def test__nominal(
@@ -41,6 +46,7 @@ class TestDiscoverTasteUseCase:
         async_session_db: AsyncSession,
         use_case: DiscoverTasteUseCase,
         user: User,
+        progress_output: io.StringIO,
     ) -> None:
         profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
 
@@ -65,7 +71,10 @@ class TestDiscoverTasteUseCase:
             ("Mi Pueblo Natal", 2005),
         ]
         # The search pages hold 8 tracks of the artist, versions of 2 songs.
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 2, 2)]
+        output = progress_output.getvalue()
+        assert "2 unknown track(s) · 1/1 artists" in output
+        assert "2 → 2/2 kept" in output
+        assert "Playlist created" in output
 
         tracks_db = (
             (await async_session_db.execute(select(TrackModel).where(TrackModel.user_id == user.id))).scalars().all()
@@ -129,7 +138,12 @@ class TestDiscoverTasteUseCase:
         )
         assert {(row.profile_id, row.playlist_id) for row in rows} == {(profile_db.id, None)}
 
-    async def test__known_tracks__not_offered(self, use_case: DiscoverTasteUseCase, user: User) -> None:
+    async def test__known_tracks__not_offered(
+        self,
+        use_case: DiscoverTasteUseCase,
+        user: User,
+        progress_output: io.StringIO,
+    ) -> None:
         await TasteProfileModelFactory.create_async(user_id=user.id)
         known = TrackFactory.build(name="Mi Pueblo", artists=["Grupo Niche"])
         await TrackModelFactory.create_async(user_id=user.id, fingerprint=known.fingerprint)
@@ -141,9 +155,16 @@ class TestDiscoverTasteUseCase:
 
         # The only candidate left gets the id "1": the picks "2" and "99" point at nothing.
         assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]
+        output = progress_output.getvalue()
+        assert "1 unknown track(s) · 1/1 artists" in output
+        assert "1 → 1/1 kept" in output
 
-    async def test__known_tracks__other_credits__not_offered(self, use_case: DiscoverTasteUseCase, user: User) -> None:
+    async def test__known_tracks__other_credits__not_offered(
+        self,
+        use_case: DiscoverTasteUseCase,
+        user: User,
+        progress_output: io.StringIO,
+    ) -> None:
         """A song the library credits in another order has another fingerprint: caught by its title and artists."""
         await TasteProfileModelFactory.create_async(user_id=user.id)
         known = TrackFactory.build(name="Mi Pueblo", artists=["The Fictional Orchestra", "Grupo Niche"])
@@ -155,4 +176,6 @@ class TestDiscoverTasteUseCase:
         )
 
         assert [track.name for track in result.tracks] == ["Mi Pueblo Natal"]
-        assert [(r.attempt, r.artists, r.candidates, r.tracks_picked) for r in result.reports] == [(1, 1, 1, 1)]
+        output = progress_output.getvalue()
+        assert "1 unknown track(s) · 1/1 artists" in output
+        assert "1 → 1/1 kept" in output

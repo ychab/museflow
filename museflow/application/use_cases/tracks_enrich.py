@@ -4,16 +4,21 @@ from dataclasses import dataclass
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.enrichers.track import TrackEnricherPort
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.services.llm_usage import LLMUsageService
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import LLMOperation
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import EnricherRateLimitExceededError
 from museflow.domain.exceptions import EnricherUnavailableError
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import TrackEnrichmentError
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackEnrichment
 
 logger = logging.getLogger(__name__)
@@ -31,9 +36,11 @@ class EnrichTracksUseCase:
         self,
         uow: UnitOfWorkPort,
         track_enricher: TrackEnricherPort,
+        progress: ProgressPort,
     ) -> None:
         self._uow = uow
         self._track_enricher = track_enricher
+        self._progress = progress
         self._llm_usage = LLMUsageService(uow=uow)
 
     async def enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
@@ -79,7 +86,9 @@ class EnrichTracksUseCase:
         error_count = 0
         consecutive_failures = 0
         last_failure = ""
+        tracks_done = 0  # sent to the enricher, failed batches included
 
+        await self._progress.publish(StepStarted(step=ProgressStep.ENRICH_TRACKS, total=len(tracks)))
         for i, batch in enumerate(batches, start=1):
             try:
                 enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)
@@ -107,6 +116,11 @@ class EnrichTracksUseCase:
                     )
                     last_failure = "no enrichment returned"
 
+            tracks_done += len(batch)
+            await self._progress.publish(
+                StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=tracks_done, total=len(tracks))
+            )
+
             if not enriched_tracks:
                 error_count += 1
                 consecutive_failures += 1
@@ -126,11 +140,14 @@ class EnrichTracksUseCase:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 
             enriched_count += len(enriched_tracks)
-            logger.info(
-                f"Enriched batch {i}/{total_batches} ({len(enriched_tracks)}/{len(batch)} tracks)",
-                extra={"batch": i, "total": total_batches, "count": len(enriched_tracks)},
-            )
+            # Left out by the model or with no usable answer: those tracks stay eligible for the next run
+            if skipped := len(batch) - len(enriched_tracks):
+                logger.warning(
+                    f"Enrichment batch {i}/{total_batches}: {skipped} track(s) skipped, left for the next run",
+                    extra={"batch": i, "total": total_batches, "skipped": skipped},
+                )
 
+        await self._progress.publish(StepDone(step=ProgressStep.ENRICH_TRACKS))
         return EnrichTracksReport(
             enriched_count=enriched_count,
             error_count=error_count,
@@ -156,12 +173,16 @@ class EnrichTracksUseCase:
                 if enrichment.genres:
                     enriched = dataclasses.replace(enriched, genres=enrichment.genres)
                 else:
-                    logger.warning("Enrichment returned no genres", extra={"track_id": str(track.id)})
+                    logger.warning(
+                        f"Enrichment returned no genres for {str(track)!r}", extra={"track_id": str(track.id)}
+                    )
             if EnrichField.MOOD in fields:
                 if enrichment.moods:
                     enriched = dataclasses.replace(enriched, moods=enrichment.moods)
                 else:
-                    logger.warning("Enrichment returned no moods", extra={"track_id": str(track.id)})
+                    logger.warning(
+                        f"Enrichment returned no moods for {str(track)!r}", extra={"track_id": str(track.id)}
+                    )
             # An empty locales list is an answer (no sung language); None means no usable answer.
             if EnrichField.LOCALE in fields and enrichment.locales is not None:
                 enriched = dataclasses.replace(enriched, locales=enrichment.locales)

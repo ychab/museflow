@@ -275,7 +275,8 @@ class TestTracksDeleteLogic:
 
         assert result == TracksDeleteResult(deleted_count=2)
         mock_typer_confirm.assert_called_once_with(
-            "About to delete 2 track(s) of test@example.com. Continue?", abort=True
+            typer.style("About to delete 2 track(s) of test@example.com. Continue?", fg=typer.colors.YELLOW),
+            abort=True,
         )
         mock_track_repository.delete.assert_awaited_once_with(
             user_id=user.id,

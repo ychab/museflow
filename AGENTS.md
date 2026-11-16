@@ -44,9 +44,10 @@ museflow/
 │   ├── inputs/      # command/input schemas
 │   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security)
 └── infrastructure/  # Implements ports
-    ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers
+    ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress
     ├── config/settings/
-    └── entrypoints/ # api (FastAPI), cli (Typer)
+    ├── entrypoints/ # api (FastAPI), cli (Typer)
+    └── utils/       # pure helpers shared by adapters and entrypoints (formatting)
 ```
 
 The layering is enforced by import-linter: the contracts live in `pyproject.toml` (`[tool.importlinter]`).
@@ -87,6 +88,10 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   instance serves one flow at a time.
 
 ## Infrastructure
+- **Shared code:** `adapters/common/` holds adapter code shared by several adapters of one kind (the OpenRouter client,
+  validation and self-healing of the LLM adapters in `common/llm/`). A pure helper that adapts nothing (formatting a
+  duration) goes in `infrastructure/utils/`, grouped by subject in a few modules, never one module per function: the
+  entrypoints import it there without reaching into an adapter.
 - **Models** (canonical: `database/models/track.py`):
   - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).
@@ -116,6 +121,11 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - `*_logic` returns data or raises; it never prints. All output (messages, Rich tables) belongs in the
     `@app.command` callback. Exception: interactive prompts that drive the logic mid-loop.
   - Option order: filters (`--force`, `--provider`), then processing config (`--batch-size`), then the cap (`--limit`).
+  - Output reads in blocks: a step with its details, a panel, a table, the cost line. One blank line sets a block
+    apart from the next, never inside one, never two in a row.
+  - `--verbose` shows the user the details of a run, rendered from the progress events and the results; DEBUG logs
+    are the developer's diagnostics, set by the environment. Never a DEBUG line to tell the user something, nor a
+    `--verbose` detail that only repeats a log.
 
 ## Naming
 | Name | Meaning | Type |
@@ -174,7 +184,10 @@ every annotation of the class that uses it (`list[Track]`) then names the method
 ## Logging and errors
 - `logger = logging.getLogger(__name__)`. Levels: ERROR unrecoverable, WARNING handled but unexpected, INFO milestones
   only, DEBUG flow.
-- f-strings are fine for messages. Add `extra={}` when the data is worth querying in an aggregator (IDs, counts).
+- f-strings are fine for messages. Add `extra={}` when the data is worth querying in an aggregator (IDs, counts):
+  only the `json` handler ships it. The message stands alone all the same: the terminal handlers (`console`, `rich`)
+  never print `extra`, so a warning needs its context (status code, step, track) in the text. Streams, handlers and
+  `--verbose` vs DEBUG: `docs/technical/logging.md`.
   In `except` blocks: `logger.exception("Static message", extra={...})`, the traceback carries the detail.
 - Never log secrets (tokens, passwords): log IDs.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.

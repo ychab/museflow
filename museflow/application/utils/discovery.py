@@ -20,6 +20,8 @@ _LIVE_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"([-(\[]\s*(live|en vivo|ao vivo|en directo|en concierto|en concert)\b)|\blive (at|from|in)\b"
 )
 _MEDLEY_PATTERN: Final[re.Pattern[str]] = re.compile(r"\b(medley|popurri)\b")
+# The artists whose tracks filter_by_artist rejects, named in its log at most
+_REJECTED_LOGGED_MAX: Final[int] = 10
 
 
 def rank_favourite_artists(all_stats: list[ArtistStats], confidence: int) -> list[str]:
@@ -53,9 +55,12 @@ def filter_by_artist(artist: str, tracks: list[Track], log_enabled: bool = True)
     target = normalize_text(artist)
     kept = [track for track in tracks if target in {normalize_text(a) for a in track.artists}]
 
-    rejected = {track.primary_artist for track in tracks if track not in kept}
+    rejected = sorted({track.primary_artist for track in tracks if track not in kept})
     if rejected and log_enabled:
-        logger.debug(f"Artist '{artist}': rejected tracks of {sorted(rejected)}")
+        # A short name matches hundreds of others in the catalogue: their first ones are enough to see why
+        more = len(rejected) - _REJECTED_LOGGED_MAX
+        listed = f"{rejected[:_REJECTED_LOGGED_MAX]} (+{more} more)" if more > 0 else f"{rejected}"
+        logger.debug(f"Artist {artist!r}: rejected tracks of {listed}")
     return kept
 
 
@@ -139,7 +144,7 @@ def drop_tracks_known_by_credits(tracks: list[Track], library_tracks: list[Track
     for track in tracks:
         artists = library_artists.get(get_fingerprint_title(track.fingerprint), set())
         if artists & {normalize_text(a) for a in track.artists}:
-            logger.debug(f"Excluded '{track}': known under other credits")
+            logger.debug(f"Excluded {str(track)!r}: known under other credits")
             continue
         kept.append(track)
     return kept

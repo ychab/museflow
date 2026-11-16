@@ -4,14 +4,19 @@ from datetime import datetime
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import StreamingHistoryEntryInput
+from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.utils.text import generate_fingerprint
+from museflow.domain.value_objects.progress import StepAdvanced
+from museflow.domain.value_objects.progress import StepDone
+from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackPlay
 
 logger = logging.getLogger(__name__)
@@ -43,9 +48,10 @@ class ImportStreamingHistoryUseCase:
     the repository directly from file metadata — no external API calls.
     """
 
-    def __init__(self, uow: UnitOfWorkPort, streaming_history: StreamingHistoryPort) -> None:
+    def __init__(self, uow: UnitOfWorkPort, streaming_history: StreamingHistoryPort, progress: ProgressPort) -> None:
         self._uow = uow
         self._streaming_history = streaming_history
+        self._progress = progress
 
     async def import_history(
         self,
@@ -69,7 +75,7 @@ class ImportStreamingHistoryUseCase:
             async with self._uow as uow:
                 orphan_ids = await uow.tracks.unlink_provider(user_id=user.id, provider=MusicProvider.SPOTIFY)
                 tracks_purged = await uow.tracks.delete(user_id=user.id, track_ids=orphan_ids)
-            logger.info("History tracks purged.")
+            logger.debug("History tracks purged.")
 
         # Collect all play events per track across all files, keyed by fingerprint.
         # When two provider_ids resolve to the same fingerprint, their play times are merged.
@@ -78,7 +84,8 @@ class ImportStreamingHistoryUseCase:
         track_play_times: dict[str, list[datetime]] = {}  # fingerprint → all played_at timestamps
         items_read = items_skipped_no_timestamp = items_skipped_short_play = items_skipped_no_track_id = 0
 
-        for path in json_files:
+        await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_READ, total=len(json_files)))
+        for files_done, path in enumerate(json_files, start=1):
             entries, stats = await self._streaming_history.parse_file(path=path, min_ms_played=config.min_ms_played)
 
             for entry in entries:
@@ -92,16 +99,21 @@ class ImportStreamingHistoryUseCase:
             items_skipped_no_timestamp += stats.items_skipped_no_timestamp
             items_skipped_short_play += stats.items_skipped_short_play
             items_skipped_no_track_id += stats.items_skipped_no_track_id
+            await self._progress.publish(
+                StepAdvanced(step=ProgressStep.HISTORY_READ, done=files_done, total=len(json_files))
+            )
+        await self._progress.publish(StepDone(step=ProgressStep.HISTORY_READ))
 
         unique_fingerprints = set(track_metadata.keys())
-        logger.info(f"Collected {len(unique_fingerprints)} unique fingerprints.")
+        logger.debug(f"Collected {len(unique_fingerprints)} unique fingerprints.")
 
         # Upsert every track, known or not (its metadata and provider link are refreshed), then save its plays: a play
         # already saved is skipped, so a re-import of the same files adds none.
-        logger.info(f"Upserting {len(unique_fingerprints)} tracks and their plays from file metadata.")
+        logger.debug(f"Upserting {len(unique_fingerprints)} tracks and their plays from file metadata.")
         tracks_created = plays_created = 0
         fingerprints = sorted(unique_fingerprints)
 
+        await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_SAVE, total=len(fingerprints)))
         for offset in range(0, len(fingerprints), config.batch_size):
             chunk_fps = fingerprints[offset : offset + config.batch_size]
             chunk_tracks = [
@@ -127,7 +139,11 @@ class ImportStreamingHistoryUseCase:
                     ]
                 )
             tracks_created += created
-            logger.debug(f"... upserted {min(offset + config.batch_size, len(fingerprints))} / {len(fingerprints)}...")
+            tracks_done = min(offset + config.batch_size, len(fingerprints))
+            await self._progress.publish(
+                StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=tracks_done, total=len(fingerprints))
+            )
+        await self._progress.publish(StepDone(step=ProgressStep.HISTORY_SAVE))
 
         return ImportStreamingHistoryReport(
             items_read=items_read,

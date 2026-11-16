@@ -42,13 +42,13 @@ class TestBaseCommand:
         def noop() -> None:
             pass
 
-        result = runner.invoke(app, ["--log-handlers", "console", "--log-handlers", "null", "noop"])
+        result = runner.invoke(app, ["--log-handlers", "json", "--log-handlers", "null", "noop"])
         assert result.exit_code == 0
 
         block_cli_configure_loggers.assert_called_once_with(
             level=mock.ANY,
             third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
-            handlers=["console", "null"],
+            handlers=["json", "null"],
         )
 
     def test__log_handler__invalid(

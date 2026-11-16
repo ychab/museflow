@@ -33,6 +33,15 @@ class TestFilterByArtist:
 
         assert "Artist 'Nova': rejected tracks of ['Novalee']" in caplog.text
 
+    def test__rejected__many__first_ones_logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        tracks = [TrackFactory.build(artists=[f"Nova {i:02d}"]) for i in range(12)]
+
+        with caplog.at_level(logging.DEBUG):
+            filter_by_artist(artist="Nova", tracks=tracks)
+
+        names = [f"Nova {i:02d}" for i in range(10)]
+        assert f"Artist 'Nova': rejected tracks of {names} (+2 more)" in caplog.text
+
 
 class TestDropTracksKnownByCredits:
     @pytest.mark.parametrize(

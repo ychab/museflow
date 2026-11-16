@@ -20,8 +20,11 @@ def taste_delete_command(
 ) -> None:
     if not yes:
         typer.confirm(
-            f"About to delete the taste profile '{name}' of {email}. Rebuilding it takes a full LLM build: "
-            "export it first with `taste export`. Continue?",
+            typer.style(
+                f"About to delete the taste profile '{name}' of {email}. Rebuilding it takes a full LLM build: "
+                "export it first with `taste export`. Continue?",
+                fg=typer.colors.YELLOW,
+            ),
             abort=True,
         )
 
