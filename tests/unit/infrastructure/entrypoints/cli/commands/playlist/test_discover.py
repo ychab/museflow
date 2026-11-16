@@ -114,7 +114,7 @@ class TestPlaylistDiscoverParserCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
-        assert "Invalid value for '--provider': 'foo' is not" in output
+        assert "Invalid value for '--provider': Value error, 'foo' is not one of" in output
 
     def test__focus__invalid(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(
@@ -125,15 +125,17 @@ class TestPlaylistDiscoverParserCommand:
 
         output = clean_typer_text(result.output)
         choices = ", ".join([f"'{focus}'" for focus in DiscoveryFocus])
-        assert f"Invalid value for '--focus': 'foo' is not one of {choices}" in output
+        assert f"Invalid value for '--focus': Value error, 'foo' is not one of {choices}" in output
 
     @pytest.mark.parametrize(
         ("limit", "expected_msg"),
         [
-            pytest.param(0, "Invalid value for '--limit': 0 is not in the range", id="zero"),
-            pytest.param(-5, "Invalid value for '--limit': -5 is not in the range", id="min_exceed"),
-            pytest.param(31, "Invalid value for '--limit': 31 is not in the range", id="max_exceed"),
-            pytest.param("foo", "Invalid value for '--limit': 'foo' is not a valid int range", id="string"),
+            pytest.param(0, "Invalid value for '--limit': Input should be greater than or equal to 1", id="zero"),
+            pytest.param(
+                -5, "Invalid value for '--limit': Input should be greater than or equal to 1", id="min_exceed"
+            ),
+            pytest.param(31, "Invalid value for '--limit': Input should be less than or equal to 30", id="max_exceed"),
+            pytest.param("foo", "Invalid value for '--limit': Input should be a valid integer", id="string"),
         ],
     )
     def test__limit__invalid(

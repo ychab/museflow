@@ -45,8 +45,12 @@ class TestPlaylistHistoryParserCommand:
     @pytest.mark.parametrize(
         ("score_min", "expected_msg"),
         [
-            pytest.param(-1, "Invalid value for '--score-min': -1 is not in the range", id="below_min"),
-            pytest.param(11, "Invalid value for '--score-min': 11 is not in the range", id="above_max"),
+            pytest.param(
+                -1, "Invalid value for '--score-min': Input should be greater than or equal to 0", id="below_min"
+            ),
+            pytest.param(
+                11, "Invalid value for '--score-min': Input should be less than or equal to 10", id="above_max"
+            ),
         ],
     )
     def test__score_min__out_of_range(
@@ -63,8 +67,12 @@ class TestPlaylistHistoryParserCommand:
     @pytest.mark.parametrize(
         ("score_max", "expected_msg"),
         [
-            pytest.param(-1, "Invalid value for '--score-max': -1 is not in the range", id="below_min"),
-            pytest.param(11, "Invalid value for '--score-max': 11 is not in the range", id="above_max"),
+            pytest.param(
+                -1, "Invalid value for '--score-max': Input should be greater than or equal to 0", id="below_min"
+            ),
+            pytest.param(
+                11, "Invalid value for '--score-max': Input should be less than or equal to 10", id="above_max"
+            ),
         ],
     )
     def test__score_max__out_of_range(
@@ -81,7 +89,9 @@ class TestPlaylistHistoryParserCommand:
     def test__limit__below_min(self, runner: CliRunner, clean_typer_text: TextCleaner) -> None:
         result = runner.invoke(app, ["playlist", "history", "--email", "test@example.com", "--limit", "0"])
         assert result.exit_code != 0
-        assert "Invalid value for '--limit': 0 is not in the range" in clean_typer_text(result.output)
+        assert "Invalid value for '--limit': Input should be greater than or equal to 1" in clean_typer_text(
+            result.output
+        )
 
     def test__name_suffix__passed_to_config(
         self,
