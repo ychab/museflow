@@ -17,8 +17,8 @@ from museflow.domain.value_objects.progress import PicksMade
 from museflow.domain.value_objects.progress import ProgressEvent
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.progress import StrategyChosen
-from museflow.infrastructure.adapters.common.duration import format_duration
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
+from museflow.infrastructure.utils.formatting import format_duration
 
 
 class RichProgressAdapter(ProgressPort):
