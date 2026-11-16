@@ -121,6 +121,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - `*_logic` returns data or raises; it never prints. All output (messages, Rich tables) belongs in the
     `@app.command` callback. Exception: interactive prompts that drive the logic mid-loop.
   - Option order: filters (`--force`, `--provider`), then processing config (`--batch-size`), then the cap (`--limit`).
+  - Output reads in blocks: a step with its details, a panel, a table, the cost line. One blank line sets a block
+    apart from the next, never inside one, never two in a row.
   - `--verbose` shows the user the details of a run, rendered from the progress events and the results; DEBUG logs
     are the developer's diagnostics, set by the environment. Never a DEBUG line to tell the user something, nor a
     `--verbose` detail that only repeats a log.

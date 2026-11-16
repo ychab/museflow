@@ -139,6 +139,7 @@ def playlist_discover_command(
                 border_style="blue",
             )
         )
+        console.print()
         print_playlist_outcome(
             tracks=result.tracks,
             playlist=result.playlist,

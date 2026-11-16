@@ -80,6 +80,7 @@ class RichProgressAdapter(ProgressPort):
         self._task: TaskID | None = None
         self._attempt: int | None = None
         self._printed = False
+        self._blank_last = False  # the last line printed is blank: another one would add nothing
         # The step running: when it started, what had been spent by then, and the units it goes through
         self._started_at = time.monotonic()
         self._cost_before = Decimal(0)
@@ -111,7 +112,7 @@ class RichProgressAdapter(ProgressPort):
             self._progress = None
         # Sets the steps apart from what the command prints next: the results, an error
         if self._printed:
-            self._print()
+            self._print_blank()
 
     async def publish(self, event: ProgressEvent) -> None:
         if isinstance(event, StepStarted):
@@ -144,7 +145,7 @@ class RichProgressAdapter(ProgressPort):
         if event.attempt is not None and event.attempt != self._attempt:
             # A blank line between two attempts: their steps and the logs printed meanwhile form one block
             if self._attempt is not None:
-                self._print()
+                self._print_blank()
             self._attempt = event.attempt
             of = f"/{event.max_attempts}" if event.max_attempts is not None else ""
             self._print(Text(f"Attempt {event.attempt}{of}", style="bold"))
@@ -180,8 +181,9 @@ class RichProgressAdapter(ProgressPort):
     def _print_details(self, rows: list[Text]) -> None:
         if not self._verbose or not rows:
             return
-        # Under the label of the step's line
+        # Under the label of the step's line, then a blank line: a step and its details form one block
         self._print(Padding(Group(*rows), (0, 0, 0, 3), expand=False))
+        self._print_blank()
 
     @staticmethod
     def _strategy_rows(event: StrategyChosen) -> list[Text]:
@@ -229,9 +231,15 @@ class RichProgressAdapter(ProgressPort):
         line.add_row(mark, label, detail, timing)
         return line
 
-    def _print(self, renderable: RenderableType = "") -> None:
+    def _print(self, renderable: RenderableType) -> None:
         self._console.print(renderable)
         self._printed = True
+        self._blank_last = False
+
+    def _print_blank(self) -> None:
+        if not self._blank_last:
+            self._console.print()
+            self._blank_last = True
 
     def _remove_task(self) -> None:
         if self._progress is not None and self._task is not None:
