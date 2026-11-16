@@ -77,10 +77,11 @@ class TestRichProgressAdapter:
         assert lines[1].startswith("✓ Artists suggested   6 · Late-night soul")
         assert lines[2].startswith("✓ Catalogue searched  10 unknown track(s) · 5/6 artists")
         assert lines[3].startswith("✓ Tracks picked       8 → 7/10 kept")
-        # The next attempt gets its header, without a total when the event carries none
-        assert lines[4] == "Attempt 2"
-        assert lines[5].startswith("✓ Playlist created    2 track(s)")
-        assert len(lines) == 6
+        # The next attempt gets its header after a blank line, without a total when the event carries none
+        assert lines[4:6] == ["", "Attempt 2"]
+        assert lines[6].startswith("✓ Playlist created    2 track(s)")
+        # A blank line sets the steps apart from what the command prints next
+        assert lines[7:] == [""]
 
     async def test__cost__shown_when_the_step_spent(
         self,
@@ -150,6 +151,12 @@ class TestRichProgressAdapter:
 
         assert len(output.getvalue().splitlines()) == 2
 
+    async def test__nothing_printed__no_blank_line(self, adapter: RichProgressAdapter, output: io.StringIO) -> None:
+        with adapter:
+            await adapter.publish(StepStarted(step=ProgressStep.PLAYLIST_CREATE))
+
+        assert output.getvalue() == ""
+
     async def test__no_meter__no_cost(self, output: io.StringIO) -> None:
         adapter = RichProgressAdapter(console=Console(file=output, width=120), animated=False)
 
@@ -205,7 +212,8 @@ class TestRichProgressAdapter:
             mock.call(TaskID(1), completed=2, total=4),
         ]
         assert progress.remove_task.call_args_list == [mock.call(TaskID(1)), mock.call(TaskID(2))]
-        assert console.print.call_count == 2  # the resumed line, then the reflection's finished line
+        # The resumed line, the reflection's finished line, then the blank line closing the steps
+        assert console.print.call_count == 3
         progress.stop.assert_called_once_with()
 
     async def test__animated__stopped_on_error(self, mock_progress_cls: mock.Mock) -> None:

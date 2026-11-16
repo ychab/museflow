@@ -79,6 +79,7 @@ class RichProgressAdapter(ProgressPort):
         self._progress: Progress | None = None
         self._task: TaskID | None = None
         self._attempt: int | None = None
+        self._printed = False
         # The step running: when it started, what had been spent by then, and the units it goes through
         self._started_at = time.monotonic()
         self._cost_before = Decimal(0)
@@ -108,6 +109,9 @@ class RichProgressAdapter(ProgressPort):
         if self._progress is not None:
             self._progress.stop()
             self._progress = None
+        # Sets the steps apart from what the command prints next: the results, an error
+        if self._printed:
+            self._print()
 
     async def publish(self, event: ProgressEvent) -> None:
         if isinstance(event, StepStarted):
@@ -138,9 +142,12 @@ class RichProgressAdapter(ProgressPort):
 
     def _start(self, event: StepStarted) -> None:
         if event.attempt is not None and event.attempt != self._attempt:
+            # A blank line between two attempts: their steps and the logs printed meanwhile form one block
+            if self._attempt is not None:
+                self._print()
             self._attempt = event.attempt
             of = f"/{event.max_attempts}" if event.max_attempts is not None else ""
-            self._console.print(Text(f"Attempt {event.attempt}{of}", style="bold"))
+            self._print(Text(f"Attempt {event.attempt}{of}", style="bold"))
         if self._progress is not None:
             self._remove_task()
             self._task = self._progress.add_task(self._RUNNING_LABELS[event.step], total=event.total)
@@ -152,7 +159,7 @@ class RichProgressAdapter(ProgressPort):
         if self._progress is not None and self._task is not None:
             self._progress.update(self._task, completed=event.done, total=event.total)
         _, unit = self._DONE_LABELS[event.step]
-        self._console.print(
+        self._print(
             self._line(
                 Text(" ↻", style="cyan"),
                 "Resumed",
@@ -168,13 +175,13 @@ class RichProgressAdapter(ProgressPort):
             timing += f" · ${cost:.4f}"
 
         # Printed above the live line, which the console keeps at the bottom
-        self._console.print(self._line(Text(" ✓", style="green"), label, detail, timing))
+        self._print(self._line(Text(" ✓", style="green"), label, detail, timing))
 
     def _print_details(self, rows: list[Text]) -> None:
         if not self._verbose or not rows:
             return
         # Under the label of the step's line
-        self._console.print(Padding(Group(*rows), (0, 0, 0, 3), expand=False))
+        self._print(Padding(Group(*rows), (0, 0, 0, 3), expand=False))
 
     @staticmethod
     def _strategy_rows(event: StrategyChosen) -> list[Text]:
@@ -221,6 +228,10 @@ class RichProgressAdapter(ProgressPort):
         line.add_column(justify="right", style="dim")
         line.add_row(mark, label, detail, timing)
         return line
+
+    def _print(self, renderable: RenderableType = "") -> None:
+        self._console.print(renderable)
+        self._printed = True
 
     def _remove_task(self) -> None:
         if self._progress is not None and self._task is not None:
