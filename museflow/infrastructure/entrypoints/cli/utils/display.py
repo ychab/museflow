@@ -104,6 +104,8 @@ def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
     usages = meter.usages
     if not usages:
         return
+    # Its own block, after the results or the error
+    console.print()
     if not verbose:
         calls = sum(usage.calls for usage in usages)
         console.print(f"{calls} LLM call(s) · ${meter.total_cost:.4f} · {format_duration(meter.elapsed)}")

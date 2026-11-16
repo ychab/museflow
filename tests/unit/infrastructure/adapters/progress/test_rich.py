@@ -129,18 +129,22 @@ class TestRichProgressAdapter:
         await adapter.publish(PicksMade(attempt=1, picks=picks, tracks=[track_kept], target=10))
 
         lines = [line.rstrip() for line in output.getvalue().splitlines()]
-        assert lines[2:4] == [
+        # A step and its details form one block, followed by a single blank line
+        assert lines[2:5] == [
             "   Nova Lane   0.92  warm Rhodes",
             "   The [Owls]  0.85  requested  dusty loops",
+            "",
         ]
-        assert lines[5:8] == [
+        assert lines[6:10] == [
             "   Nova Lane   50 found · 38 by the artist · 2 unknown",
             "   The [Owls]  20 found · 20 by the artist · 0 unknown",
             "   Bad/Name    search rejected",
+            "",
         ]
-        assert lines[9:] == [
+        assert lines[11:] == [
             "   0.95  Nova Lane - Midnight Tram",
             "   0.71  Nova Lane - Paper Moon  cut",
+            "",
         ]
 
     async def test__verbose__nothing_to_detail(self, output: io.StringIO) -> None:

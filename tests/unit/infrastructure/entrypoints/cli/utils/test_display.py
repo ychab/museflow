@@ -93,8 +93,9 @@ class TestPrintLLMUsage:
 
         print_llm_usage(meter, verbose=False)
 
+        # Its own block: a blank line before
         output = capsys.readouterr().out
-        assert output.startswith("2 LLM call(s) · $0.1334 · ")
+        assert output.startswith("\n2 LLM call(s) · $0.1334 · ")
         assert "Total" not in output
 
 
