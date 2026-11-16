@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import pytest
 
-from museflow.infrastructure.adapters.common.duration import format_duration
+from museflow.infrastructure.utils.formatting import format_duration
 
 
 class TestFormatDuration:
