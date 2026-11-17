@@ -31,19 +31,19 @@ class EnrichmentEntryInput(BaseModel):
 
     @field_validator("locales", mode="before")
     @classmethod
-    def _filter_locales(cls, v: object) -> list[str] | None:
-        return validate_locales(v)
+    def _filter_locales(cls, value: object) -> list[str] | None:
+        return validate_locales(value)
 
     @field_validator("genres", mode="before")
     @classmethod
-    def _filter_genres(cls, v: object) -> list[str]:
-        if not isinstance(v, list):
+    def _filter_genres(cls, value: object) -> list[str]:
+        if not isinstance(value, list):
             return []
-        return [g for g in v if isinstance(g, str) and g in GenreTag._value2member_map_]
+        return [g for g in value if isinstance(g, str) and g in GenreTag._value2member_map_]
 
     @field_validator("moods", mode="before")
     @classmethod
-    def _filter_moods(cls, v: object) -> list[str]:
-        if not isinstance(v, list):
+    def _filter_moods(cls, value: object) -> list[str]:
+        if not isinstance(value, list):
             return []
-        return [m for m in v if isinstance(m, str) and m in MoodTag._value2member_map_]
+        return [m for m in value if isinstance(m, str) and m in MoodTag._value2member_map_]

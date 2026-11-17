@@ -59,6 +59,11 @@ class TrackOrderBy(StrEnum):
         return self in (TrackOrderBy.PLAYED_AT_LAST, TrackOrderBy.PLAYED_AT_FIRST, TrackOrderBy.SCORE)
 
 
+class TasteProfileStatus(StrEnum):
+    BUILDING = "building"
+    FINISHED = "finished"
+
+
 class LLMOperation(StrEnum):
     TASTE_BUILD = "taste_build"  # `taste build`: segment, merge and reflect steps
     DISCOVER = "discover"  # `playlist discover`: advisor calls

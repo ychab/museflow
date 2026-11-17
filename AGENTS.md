@@ -32,6 +32,7 @@ museflow/
 ├── domain/          # Pure Python — NO framework imports ever
 │   ├── entities/    # frozen dataclasses
 │   ├── value_objects/
+│   ├── mappers/     # pure functions between two domain shapes (entity ↔ value object)
 │   ├── utils/       # pure functions (text normalization, fingerprinting, locale validation)
 │   ├── exceptions.py
 │   ├── enums.py     # all StrEnum / IntFlag definitions
@@ -42,6 +43,7 @@ museflow/
 │   ├── services/    # application services, shared by use cases (e.g., record_llm_usage)
 │   ├── utils/       # pure helpers shared by use cases
 │   ├── inputs/      # command/input schemas
+│   ├── mappers/     # pure functions from a domain shape to an input schema
 │   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security)
 └── infrastructure/  # Implements ports
     ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress
@@ -105,7 +107,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
     run with `session.execute(insert/update/delete)` hit the database at once and need no flush.
   - `.returning()` instead of an extra SELECT; key returned rows by a column (e.g. fingerprint), never by position.
   - Upserts with `pg_insert(...).on_conflict_do_update(...)`.
-  - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.- **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
+  - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
+- **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `asyncio.run()` on a co-located `<command>_logic` function

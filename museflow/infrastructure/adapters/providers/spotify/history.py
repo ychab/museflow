@@ -43,8 +43,8 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
         items_skipped_no_track_id = 0
 
         try:
-            with open(path, "rb") as f:
-                for item in ijson.items(f, "item"):
+            with open(path, "rb") as file:
+                for item in ijson.items(file, "item"):
                     items_read += 1
 
                     ts_raw = item.get("ts")

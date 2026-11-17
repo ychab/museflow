@@ -69,10 +69,10 @@ class TasteEra(BaseModel):
 
     @field_validator("dominant_moods", mode="before")
     @classmethod
-    def _filter_moods(cls, v: object) -> list[str]:
-        if not isinstance(v, list):
+    def _filter_moods(cls, value: object) -> list[str]:
+        if not isinstance(value, list):
             return []
-        return [m for m in v if isinstance(m, str) and m in MoodTag._value2member_map_]
+        return [m for m in value if isinstance(m, str) and m in MoodTag._value2member_map_]
 
 
 class TasteProfileResponse(BaseModel):
@@ -89,12 +89,12 @@ class TasteProfileResponse(BaseModel):
 
     @field_validator("core_identity", "current_vibe", mode="before")
     @classmethod
-    def _from_weighted_tiers(cls, v: object) -> dict[str, float]:
-        if not isinstance(v, dict) or not all(isinstance(items, list) for items in v.values()):
-            raise ValueError(f"expected an object of {{key, value}} lists per tier, got {type(v).__name__}")
+    def _from_weighted_tiers(cls, value: object) -> dict[str, float]:
+        if not isinstance(value, dict) or not all(isinstance(items, list) for items in value.values()):
+            raise ValueError(f"expected an object of {{key, value}} lists per tier, got {type(value).__name__}")
         weights = {
             item["key"]: round(item["value"], TASTE_WEIGHT_DECIMALS)
-            for items in v.values()
+            for items in value.values()
             for item in items
             if item["key"] in _VALID_IDENTITY_KEYS
         }
@@ -102,8 +102,8 @@ class TasteProfileResponse(BaseModel):
 
     @field_validator("behavioral_traits", mode="before")
     @classmethod
-    def _null_traits(cls, v: object) -> object:
-        return {} if v is None else v  # null until the reflection step
+    def _null_traits(cls, value: object) -> object:
+        return {} if value is None else value  # null until the reflection step
 
 
 class TimelineMergeResponse(BaseModel):

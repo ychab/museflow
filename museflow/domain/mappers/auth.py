@@ -5,7 +5,7 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
-def auth_token_from_token_payload(
+def to_auth_token(
     auth_token_id: int,
     user_id: uuid.UUID,
     provider: MusicProvider,
@@ -22,7 +22,7 @@ def auth_token_from_token_payload(
     )
 
 
-def auth_token_to_token_payload(auth_token: OAuthProviderUserToken) -> OAuthProviderTokenPayload:
+def to_token_payload(auth_token: OAuthProviderUserToken) -> OAuthProviderTokenPayload:
     return OAuthProviderTokenPayload(
         token_type=auth_token.token_type,
         access_token=auth_token.token_access,

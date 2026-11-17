@@ -177,7 +177,7 @@ its own block, right away, whatever the use case is doing:
 ```python
 # Update in DB, committed right away: the new token must survive a later failure of the command
 async with self.uow as uow:
-    await uow.auth_tokens.update(user_id=self.user.id, provider=MusicProvider.SPOTIFY, auth_token_data=...)
+    await uow.auth_tokens.update(user_id=self.user.id, provider=MusicProvider.SPOTIFY, auth_token_in=...)
 ```
 
 **A plain read is a block too** (most CLI commands and endpoints). For the roughly nine flows out of ten that need no

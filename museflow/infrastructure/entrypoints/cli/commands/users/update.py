@@ -24,12 +24,12 @@ def users_update_command(
     # Set only explicit values to update.
     attributes = {k: v for k, v in {"email": email, "password": password}.items() if v is not None}
     try:
-        user_data = UserUpdateInput(**attributes)
+        user_in = UserUpdateInput(**attributes)
     except ValidationError as e:
         raise typer.BadParameter(str(e)) from e
 
     try:
-        asyncio.run(users_update_logic(user_id, user_data=user_data))
+        asyncio.run(users_update_logic(user_id, user_in=user_in))
     except UserNotFoundError as e:
         typer.secho(f"User not found with ID {user_id}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
@@ -42,7 +42,7 @@ def users_update_command(
 
 async def users_update_logic(
     user_id: uuid.UUID,
-    user_data: UserUpdateInput,
+    user_in: UserUpdateInput,
 ) -> None:
     password_hasher = get_password_hasher()
     uow = get_unit_of_work()
@@ -55,7 +55,7 @@ async def users_update_logic(
 
     await update_user(
         user=user,
-        user_data=user_data,
+        user_in=user_in,
         uow=uow,
         password_hasher=password_hasher,
     )

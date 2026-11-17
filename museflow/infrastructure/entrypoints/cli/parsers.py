@@ -1,10 +1,12 @@
 from datetime import date
 from typing import Annotated
+from typing import Final
 from typing import get_args
 
 from pydantic import EmailStr
 from pydantic import TypeAdapter
 from pydantic import ValidationError
+from pydantic.fields import FieldInfo
 
 import typer
 
@@ -13,10 +15,10 @@ from museflow.domain.types import LocaleCode
 from museflow.domain.utils.text import validate_locale
 from museflow.infrastructure.types import LogHandler
 
-password_field_info = UserCreateInput.model_fields["password"]
+password_field_info: Final[FieldInfo] = UserCreateInput.model_fields["password"]
 
-EmailAdapter = TypeAdapter(EmailStr)
-PasswordAdapter: TypeAdapter[str] = TypeAdapter(Annotated[str, password_field_info])
+EmailAdapter: Final[TypeAdapter[str]] = TypeAdapter(EmailStr)
+PasswordAdapter: Final[TypeAdapter[str]] = TypeAdapter(Annotated[str, password_field_info])
 
 
 def parse_password(value: str) -> str:

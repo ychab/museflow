@@ -26,7 +26,7 @@ class TestUpdateUserUseCase:
 
         await update_user(
             user=user,
-            user_data=user_update_data,
+            user_in=user_update_data,
             uow=uow,
             password_hasher=password_hasher,
         )
@@ -49,7 +49,7 @@ class TestUpdateUserUseCase:
 
         await update_user(
             user=user,
-            user_data=user_update_data,
+            user_in=user_update_data,
             uow=uow,
             password_hasher=password_hasher,
         )
@@ -72,7 +72,7 @@ class TestUpdateUserUseCase:
         with pytest.raises(UserEmailAlreadyExistsError):
             await update_user(
                 user=user,
-                user_data=user_update_data,
+                user_in=user_update_data,
                 uow=uow,
                 password_hasher=password_hasher,
             )
@@ -89,7 +89,7 @@ class TestUpdateUserUseCase:
 
         user_updated = await update_user(
             user=user,
-            user_data=user_update_data,
+            user_in=user_update_data,
             uow=uow,
             password_hasher=password_hasher,
         )

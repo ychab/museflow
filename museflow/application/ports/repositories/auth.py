@@ -100,14 +100,14 @@ class OAuthProviderTokenRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenCreateInput,
+        auth_token_in: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
         """Creates and stores a new auth token for a user and provider.
 
         Args:
             user_id: The user's ID.
             provider: The music provider.
-            auth_token_data: A schema object with the new token data.
+            auth_token_in: A schema object with the new token data.
 
         Returns:
             The newly created `OAuthProviderUserToken` entity.
@@ -119,7 +119,7 @@ class OAuthProviderTokenRepository(ABC):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenUpdateInput,
+        auth_token_in: OAuthProviderUserTokenUpdateInput,
     ) -> OAuthProviderUserToken:
         """Updates an existing auth token for a user and provider.
 
@@ -128,7 +128,7 @@ class OAuthProviderTokenRepository(ABC):
         Args:
             user_id: The user's ID.
             provider: The music provider.
-            auth_token_data: A schema object with the updated token data.
+            auth_token_in: A schema object with the updated token data.
 
         Returns:
             The updated `OAuthProviderUserToken` entity.

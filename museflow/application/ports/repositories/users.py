@@ -41,11 +41,11 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def create(self, user_data: UserCreateInput, hashed_password: str) -> User:
+    async def create(self, user_in: UserCreateInput, hashed_password: str) -> User:
         """Creates a new user in the database.
 
         Args:
-            user_data: A schema object containing the user's details (e.g., email).
+            user_in: A schema object containing the user's details (e.g., email).
             hashed_password: The user's password, already hashed.
 
         Returns:
@@ -54,12 +54,12 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def update(self, user_id: uuid.UUID, user_data: UserUpdateInput, hashed_password: str | None = None) -> User:
+    async def update(self, user_id: uuid.UUID, user_in: UserUpdateInput, hashed_password: str | None = None) -> User:
         """Updates an existing user's information.
 
         Args:
             user_id: The ID of the user to update.
-            user_data: A schema object with the fields to be updated.
+            user_in: A schema object with the fields to be updated.
             hashed_password: An optional new hashed password if the password is being changed.
 
         Returns:

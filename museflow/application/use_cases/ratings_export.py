@@ -7,7 +7,7 @@ from museflow.domain.entities.track import Track
 
 
 @dataclass(frozen=True, kw_only=True)
-class RatingsExport:
+class ExportRatingsResult:
     rated: list[Track]
     skipped: list[Track]
 
@@ -15,9 +15,9 @@ class RatingsExport:
 async def export_ratings(
     user_id: uuid.UUID,
     uow: UnitOfWorkPort,
-) -> RatingsExport:
+) -> ExportRatingsResult:
     async with uow:
         rated = await uow.tracks.get_list(user_id=user_id, min_score=DISCOVERY_TRACK_SCORE_MIN)
         skipped = await uow.tracks.get_list(user_id=user_id, score_skipped_only=True)
 
-    return RatingsExport(rated=rated, skipped=skipped)
+    return ExportRatingsResult(rated=rated, skipped=skipped)

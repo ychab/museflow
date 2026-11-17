@@ -197,33 +197,6 @@ class OpenRouterClient(HttpClientMixin):
 
         logger.debug(f"OpenRouter models checked for steps: {', '.join(steps)}")
 
-    async def _check_zdr_endpoints(self, steps: Mapping[str, LLMSettings]) -> None:
-        response_data = await self.make_api_call(method="GET", endpoint="/endpoints/zdr")
-        zdr_parameters: dict[str, set[str]] = defaultdict(set)
-        for endpoint in ZdrEndpointsResponse.model_validate(response_data).data:
-            zdr_parameters[endpoint.model_id].update(endpoint.supported_parameters)
-
-        for step, llm in steps.items():
-            for model_id in [llm.MODEL, *llm.FALLBACK_MODELS]:
-                listed_id = model_id if model_id in zdr_parameters else model_id.partition(":")[0]
-                if listed_id not in zdr_parameters:
-                    raise LLMModelError(
-                        f"OpenRouter model '{model_id}' for the {step} step has no Zero Data Retention endpoint. "
-                        f"Pick another model (GET {str(self._base_url).rstrip('/')}/endpoints/zdr lists them) "
-                        "or set OPENROUTER_ZDR=false.",
-                        step=step,
-                        model=model_id,
-                    )
-
-                missing = [param for param in _required_parameters(llm) if param not in zdr_parameters[listed_id]]
-                if missing:
-                    raise LLMModelError(
-                        f"OpenRouter model '{model_id}' for the {step} step does not support on its Zero Data "
-                        f"Retention endpoints: {', '.join(missing)}.",
-                        step=step,
-                        model=model_id,
-                    )
-
     @self_heal()
     async def complete[T: BaseModel](
         self,
@@ -300,6 +273,33 @@ class OpenRouterClient(HttpClientMixin):
         self._meter.record(adapter, model, llm.REASONING_EFFORT, usage, duration)
 
         return parse_completion(envelope, response_model, adapter)
+
+    async def _check_zdr_endpoints(self, steps: Mapping[str, LLMSettings]) -> None:
+        response_data = await self.make_api_call(method="GET", endpoint="/endpoints/zdr")
+        zdr_parameters: dict[str, set[str]] = defaultdict(set)
+        for endpoint in ZdrEndpointsResponse.model_validate(response_data).data:
+            zdr_parameters[endpoint.model_id].update(endpoint.supported_parameters)
+
+        for step, llm in steps.items():
+            for model_id in [llm.MODEL, *llm.FALLBACK_MODELS]:
+                listed_id = model_id if model_id in zdr_parameters else model_id.partition(":")[0]
+                if listed_id not in zdr_parameters:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step has no Zero Data Retention endpoint. "
+                        f"Pick another model (GET {str(self._base_url).rstrip('/')}/endpoints/zdr lists them) "
+                        "or set OPENROUTER_ZDR=false.",
+                        step=step,
+                        model=model_id,
+                    )
+
+                missing = [param for param in _required_parameters(llm) if param not in zdr_parameters[listed_id]]
+                if missing:
+                    raise LLMModelError(
+                        f"OpenRouter model '{model_id}' for the {step} step does not support on its Zero Data "
+                        f"Retention endpoints: {', '.join(missing)}.",
+                        step=step,
+                        model=model_id,
+                    )
 
 
 def _required_parameters(llm: LLMSettings) -> list[str]:

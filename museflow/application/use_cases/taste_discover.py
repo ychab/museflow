@@ -14,13 +14,13 @@ from museflow.application.services.llm_usage import LLMUsageService
 from museflow.application.utils.discovery import select_tracks
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import TasteProfileNotFoundError
