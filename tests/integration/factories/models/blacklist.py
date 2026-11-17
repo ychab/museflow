@@ -2,8 +2,8 @@ from typing import Any
 
 from polyfactory import Use
 
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrack as BlacklistedTrackModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtistModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrackModel
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory

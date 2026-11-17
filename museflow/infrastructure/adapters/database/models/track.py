@@ -31,7 +31,7 @@ class ProviderLinkDict(TypedDict):
     provider_id: str
 
 
-class TrackPlay(NumericIdMixin, Base, kw_only=True):
+class TrackPlayModel(NumericIdMixin, Base, kw_only=True):
     """One listen of a track: the only source of a track's play data."""
 
     __tablename__ = "museflow_track_play"
@@ -47,14 +47,14 @@ class TrackPlay(NumericIdMixin, Base, kw_only=True):
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     @classmethod
-    def from_entity(cls, entity: TrackPlayEntity) -> TrackPlay:
+    def from_entity(cls, entity: TrackPlayEntity) -> TrackPlayModel:
         return cls(track_id=entity.track_id, played_at=entity.played_at)
 
     def to_entity(self) -> TrackPlayEntity:
         return TrackPlayEntity(track_id=self.track_id, played_at=self.played_at)
 
 
-class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class TrackModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_track"
 
     __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_museflow_track_user_fingerprint"),)
@@ -84,7 +84,7 @@ class Track(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     locales: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=None)
 
     @classmethod
-    def from_entity(cls, entity: TrackEntity) -> Track:
+    def from_entity(cls, entity: TrackEntity) -> TrackModel:
         return cls(
             id=entity.id,
             user_id=entity.user_id,

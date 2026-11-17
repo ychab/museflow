@@ -6,7 +6,7 @@ import pytest
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 from museflow.infrastructure.entrypoints.cli.commands.users.update import users_update_logic
 
 

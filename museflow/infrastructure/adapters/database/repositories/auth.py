@@ -17,8 +17,8 @@ from museflow.application.ports.repositories.auth import OAuthProviderTokenRepos
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 
 
 class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):

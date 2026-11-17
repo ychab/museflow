@@ -23,7 +23,7 @@ from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 

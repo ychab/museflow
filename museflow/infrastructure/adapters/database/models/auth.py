@@ -17,7 +17,7 @@ from museflow.infrastructure.adapters.database.models.base import DatetimeTrackM
 from museflow.infrastructure.adapters.database.models.base import NumericIdMixin
 
 
-class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class AuthProviderStateModel(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     """SQLAlchemy model for storing OAuth provider state.
 
     This model is used to persist the state token generated during the OAuth flow,
@@ -47,7 +47,7 @@ class AuthProviderState(NumericIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         )
 
 
-class AuthProviderToken(NumericIdMixin, Base, kw_only=True):
+class AuthProviderTokenModel(NumericIdMixin, Base, kw_only=True):
     """SQLAlchemy model for storing OAuth provider user tokens.
 
     This model persists the access and refresh tokens for a user, allowing the

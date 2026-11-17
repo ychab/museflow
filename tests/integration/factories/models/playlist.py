@@ -4,8 +4,8 @@ from typing import Any
 from polyfactory.decorators import post_generated
 
 from museflow.domain.enums import PlaylistType
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
-from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrackModel
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory

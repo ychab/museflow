@@ -11,8 +11,8 @@ import pytest
 
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
-from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
+from museflow.infrastructure.adapters.database.models.track import TrackModel
 from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 

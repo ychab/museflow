@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.blacklist_add import AddToBlacklistUseCase
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrack as BlacklistedTrackModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtistModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrackModel
 
 
 class TestAddToBlacklistUseCase:

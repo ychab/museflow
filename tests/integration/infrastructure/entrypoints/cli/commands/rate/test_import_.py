@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSource
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 from museflow.infrastructure.entrypoints.cli.commands.rate.export import rate_export_logic
 from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import rate_import_logic

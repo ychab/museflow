@@ -8,10 +8,10 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_delete import delete_user
 from museflow.domain.entities.user import User
 from museflow.domain.enums import PlaylistType
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 from museflow.infrastructure.adapters.database.models.base import Base
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
-from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrackModel
 
 from tests.integration.factories.models.auth import AuthProviderStateModelFactory
 from tests.integration.factories.models.auth import AuthProviderTokenFactory

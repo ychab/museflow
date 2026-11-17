@@ -7,7 +7,7 @@ from museflow.application.use_cases.enrichment_import import import_enrichment
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory
 

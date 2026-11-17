@@ -5,21 +5,21 @@ from typing import Any
 
 from polyfactory import Use
 
-from museflow.infrastructure.adapters.database.models import AuthProviderState
-from museflow.infrastructure.adapters.database.models import AuthProviderToken
+from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 
 
-class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderState]):
-    __model__ = AuthProviderState
+class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderStateModel]):
+    __model__ = AuthProviderStateModel
 
     # Never empty: String(n) gives polyfactory no min length, and the OAuth callback rejects an empty state.
     state = Use(BaseModelFactory.__faker__.sha256)
 
     @classmethod
-    async def create_async(cls, **kwargs: Any) -> AuthProviderState:
+    async def create_async(cls, **kwargs: Any) -> AuthProviderStateModel:
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
@@ -27,8 +27,8 @@ class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderState]):
         return await super().create_async(**kwargs)
 
 
-class AuthProviderTokenFactory(BaseModelFactory[AuthProviderToken]):
-    __model__ = AuthProviderToken
+class AuthProviderTokenFactory(BaseModelFactory[AuthProviderTokenModel]):
+    __model__ = AuthProviderTokenModel
 
     token_type = "bearer"
     # Never empty: String(n) gives polyfactory no min length, and an empty token makes an illegal Authorization header.
@@ -37,7 +37,7 @@ class AuthProviderTokenFactory(BaseModelFactory[AuthProviderToken]):
     token_expires_at = Use(lambda: datetime.now(UTC) + timedelta(days=5))
 
     @classmethod
-    async def create_async(cls, **kwargs: Any) -> AuthProviderToken:
+    async def create_async(cls, **kwargs: Any) -> AuthProviderTokenModel:
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id

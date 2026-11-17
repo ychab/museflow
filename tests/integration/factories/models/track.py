@@ -13,20 +13,20 @@ from polyfactory import Use
 
 from museflow.domain.entities.track import Track as TrackEntity
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.adapters.database.models import Track
-from museflow.infrastructure.adapters.database.models import TrackPlay
+from museflow.infrastructure.adapters.database.models import TrackModel
+from museflow.infrastructure.adapters.database.models import TrackPlayModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 
 
-class TrackPlayModelFactory(BaseModelFactory[TrackPlay]):
-    __model__ = TrackPlay
+class TrackPlayModelFactory(BaseModelFactory[TrackPlayModel]):
+    __model__ = TrackPlayModel
 
 
-class TrackModelFactory(BaseModelFactory[Track]):
-    __model__ = Track
+class TrackModelFactory(BaseModelFactory[TrackModel]):
+    __model__ = TrackModel
 
     name = Use(BaseModelFactory.__faker__.name)
     # Never empty: the Track entity recomputes an empty fingerprint in __post_init__, breaking lookups by fingerprint.
@@ -54,7 +54,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
         played_at_first: datetime | None = None,
         played_at_last: datetime | None = None,
         **kwargs: Any,
-    ) -> Track:
+    ) -> TrackModel:
         """Creates the track, then the plays that give it the play data asked for: the track has no such columns.
 
         One play falls on each date given, the others a second apart after the first date (before the last one when
@@ -87,15 +87,15 @@ class TrackModelFactory(BaseModelFactory[Track]):
         played_count, first, last = (
             await session.execute(
                 select(plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
-                .select_from(Track)
+                .select_from(TrackModel)
                 .join(plays, true())
-                .where(Track.id == track.id)
+                .where(TrackModel.id == track.id)
             )
         ).one()
         return track.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
 
     @classmethod
-    async def create_batch_async(cls, size: int, **kwargs: Any) -> list[Track]:
+    async def create_batch_async(cls, size: int, **kwargs: Any) -> list[TrackModel]:
         if "user_id" not in kwargs:
             user = await UserModelFactory.create_async()
             kwargs["user_id"] = user.id
@@ -103,7 +103,7 @@ class TrackModelFactory(BaseModelFactory[Track]):
         return [await cls.create_async(**kwargs) for _ in range(size)]
 
     @classmethod
-    async def get_or_create(cls, user_id: uuid.UUID, fingerprint: str, **kwargs: Any) -> tuple[Track, bool]:
+    async def get_or_create(cls, user_id: uuid.UUID, fingerprint: str, **kwargs: Any) -> tuple[TrackModel, bool]:
         if not user_id or not fingerprint:
             raise ValueError("You must provide 'user_id' and 'fingerprint' for uniqueness.")
 

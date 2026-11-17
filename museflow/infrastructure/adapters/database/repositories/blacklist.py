@@ -11,8 +11,8 @@ from museflow.domain.entities.blacklist import BlacklistedTrack
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrack as BlacklistedTrackModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtistModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrackModel
 
 
 class BlacklistSQLRepository(BlacklistRepository):

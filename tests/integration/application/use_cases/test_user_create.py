@@ -7,7 +7,7 @@ from museflow.application.inputs.user import UserCreateInput
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_create import create_user
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 
 from tests.unit.factories.inputs.user import UserCreateInputFactory
 

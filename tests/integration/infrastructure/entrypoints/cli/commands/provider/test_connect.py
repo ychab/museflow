@@ -12,8 +12,8 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.adapters.database.models import AuthProviderState as AuthProviderStateModel
-from museflow.infrastructure.adapters.database.models import AuthProviderToken as AuthProviderTokenModel
+from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
+from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_start_logic
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_wait_logic
 
