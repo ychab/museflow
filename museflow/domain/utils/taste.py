@@ -1,14 +1,11 @@
 import re
-from typing import TYPE_CHECKING
 from typing import Final
 
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
 from museflow.domain.const import TASTE_WEIGHT_DECIMALS
-
-if TYPE_CHECKING:  # pragma: no cover
-    from museflow.domain.entities.taste import TasteEra
-    from museflow.domain.entities.taste import TasteProfileData
-    from museflow.domain.entities.taste import TechnicalFingerprint
+from museflow.domain.value_objects.taste import TasteEra
+from museflow.domain.value_objects.taste import TasteProfileData
+from museflow.domain.value_objects.taste import TechnicalFingerprint
 
 _DATE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -77,8 +74,8 @@ def era_sort_key(era: TasteEra) -> str:
         return "9999-99-99"
     if "Undated" in time_range or "unknown" in time_range:
         return "0000-00-00"
-    match = re.search(r"(\d{4}-\d{2}-\d{2})", time_range)
-    return match.group(1) if match else "0000-00-00"
+    match = _DATE_PATTERN.search(time_range)
+    return match.group(0) if match else "0000-00-00"
 
 
 def timeline_summary(profile: TasteProfileData) -> str:

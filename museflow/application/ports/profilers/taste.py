@@ -2,9 +2,9 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.value_objects.llm import LLMUsage
 from museflow.domain.value_objects.taste import ListeningPeriod
+from museflow.domain.value_objects.taste import TasteProfileData
 
 
 class TasteProfilerPort(ABC):

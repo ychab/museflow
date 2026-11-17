@@ -72,7 +72,7 @@ class TasteEra(BaseModel):
     def _filter_moods(cls, value: object) -> list[str]:
         if not isinstance(value, list):
             return []
-        return [m for m in value if isinstance(m, str) and m in MoodTag._value2member_map_]
+        return [m for m in value if isinstance(m, str) and m in MoodTag]
 
 
 class TasteProfileResponse(BaseModel):

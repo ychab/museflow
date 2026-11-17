@@ -5,40 +5,10 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Any
 from typing import Self
-from typing import TypedDict
 
 from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.utils.taste import era_sort_key
-
-
-class TechnicalFingerprint(TypedDict):
-    energy: float
-    acousticness: float
-    rhythmic_complexity: float
-    atmospheric: float
-    instrumentalness: float
-
-
-class TasteEra(TypedDict):
-    era_label: str  # AI-generated name, e.g. "The Post-Rock Exploration"
-    time_range: str  # e.g. "2021-2023"
-    technical_fingerprint: TechnicalFingerprint
-    dominant_moods: list[str]
-
-
-class TasteProfileData(TypedDict):
-    taste_timeline: list[TasteEra]  # chronological map of taste eras
-    core_identity: dict[str, float]  # stable DNA, e.g. {"progressive metal": 0.8}
-    current_vibe: dict[str, float]  # active trajectory (last ~400 tracks)
-
-    # Populated by final psychographic reflection only
-    personality_archetype: str | None
-    life_phase_insights: list[str]
-
-    # Populated by final psychographic reflection only
-    musical_identity_summary: str | None  # 2-3 sentence narrative of the listener's evolution
-    behavioral_traits: dict[str, float]  # e.g. {"openness": 0.9, "rhythmic_dependency": 0.7}
-    discovery_style: str | None  # e.g. "The Digger" or "The Loyalist"
+from museflow.domain.value_objects.taste import TasteProfileData
 
 
 @dataclass(frozen=True, kw_only=True)
