@@ -13,6 +13,7 @@ from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.database.models import Track as TrackModel
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_logic
+from museflow.infrastructure.entrypoints.cli.commands.rate.history import rate_history_reset_logic
 
 from tests.integration.factories.models.track import TrackModelFactory
 
@@ -34,7 +35,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False)
+        await rate_history_logic(email=user.email, limit=10)
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
@@ -56,7 +57,7 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "7"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False, artist="Radiohead")
+        await rate_history_logic(email=user.email, limit=10, artist="Radiohead")
 
         stmt_target = select(TrackModel).where(TrackModel.id == target_db.id)
         stmt_other = select(TrackModel).where(TrackModel.id == other_db.id)
@@ -78,10 +79,27 @@ class TestRateHistoryLogic:
         mock_typer_prompt.return_value = "8"
         mock_typer_confirm.return_value = False
 
-        await rate_history_logic(email=user.email, limit=10, reset=False, provider=MusicProvider.SPOTIFY)
+        await rate_history_logic(email=user.email, limit=10, provider=MusicProvider.SPOTIFY)
 
         mock_play_track.assert_awaited_once_with(track_db.provider_links[0]["provider_id"])
 
         stmt = select(TrackModel).where(TrackModel.id == track_db.id)
         updated = (await async_session_db.execute(stmt)).scalar_one()
         assert updated.score == 8
+
+
+class TestRateHistoryResetLogic:
+    async def test__nominal(self, async_session_db: AsyncSession, user: User) -> None:
+        history_dbs = [
+            await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=score)
+            for score in (4, 9)
+        ]
+        library_db = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.DISCOVERY, score=7)
+
+        count = await rate_history_reset_logic(email=user.email)
+
+        assert count == 2
+        stmt = select(TrackModel.id, TrackModel.score).where(TrackModel.user_id == user.id)
+        scores = {track_id: score for track_id, score in (await async_session_db.execute(stmt)).all()}
+        assert all(scores[track_db.id] is None for track_db in history_dbs)
+        assert scores[library_db.id] == 7
