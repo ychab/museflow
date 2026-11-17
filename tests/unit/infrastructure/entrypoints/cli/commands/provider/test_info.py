@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from typing import Final
 from unittest import mock
 
 import pytest
@@ -6,6 +7,7 @@ from typer.testing import CliRunner
 
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.infrastructure.entrypoints.cli.commands.provider.info import provider_info_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
@@ -159,3 +161,20 @@ class TestProviderInfoCommand:
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
         assert output == ""
+
+
+@pytest.mark.usefixtures("mock_get_unit_of_work")
+class TestProviderInfoLogic:
+    TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.provider.info"
+
+    async def test__user__not_found(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_auth_token_repository: mock.AsyncMock,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = None
+
+        with pytest.raises(UserNotFoundError):
+            await provider_info_logic(email="ghost@example.com", provider=MusicProvider.SPOTIFY)
+
+        mock_auth_token_repository.get.assert_not_awaited()
