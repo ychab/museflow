@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
-from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
 from museflow.domain.exceptions import UserNotFoundError

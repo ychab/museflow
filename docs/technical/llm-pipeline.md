@@ -249,7 +249,7 @@ each use case saves them in a `finally:` block, through the application service 
 (`application/services/llm_usage.py`), in a transaction of its own:
 
 - `BuildTasteProfileUseCase` links the rows to the profile, once a checkpoint or the finished profile exists;
-- `DiscoverTasteUseCase` links them to the profile it used, and to the playlist it created (none on a dry run or a
+- `CreateDiscoveryPlaylistUseCase` links them to the profile it used, and to the playlist it created (none on a dry run or a
   failure);
 - `EnrichTracksUseCase` links them to nothing.
 

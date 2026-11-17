@@ -7,7 +7,7 @@ from pydantic import EmailStr
 import typer
 from rich.pretty import Pretty
 
-from museflow.application.use_cases.provider_token_view import get_provider_token
+from museflow.application.use_cases.provider_token_get import get_provider_token
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider

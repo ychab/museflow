@@ -5,7 +5,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.tracks_delete import DeleteTracksUseCase
+from museflow.application.use_cases.track_delete import DeleteTracksUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SourceFilter

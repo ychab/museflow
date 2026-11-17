@@ -6,7 +6,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.ratings_export import export_ratings
+from museflow.application.use_cases.track_ratings_export import export_ratings
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFoundError

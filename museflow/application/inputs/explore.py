@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, kw_only=True)
-class ExploreArtistsConfigInput:
+class CreateExplorationPlaylistConfigInput:
     """Configuration for exploring the catalogue of the artists the user already knows.
 
     Attributes:

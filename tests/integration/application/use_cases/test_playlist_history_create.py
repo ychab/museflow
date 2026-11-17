@@ -1,0 +1,325 @@
+from datetime import UTC
+from datetime import date
+from datetime import datetime
+
+import pytest
+
+from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
+from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.repositories.playlist import PlaylistRepository
+from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.use_cases.playlist_history_create import create_history_playlist
+from museflow.domain.entities.user import User
+from museflow.domain.enums import GenreTag
+from museflow.domain.enums import MoodTag
+from museflow.domain.enums import PlaylistHistoryOrderBy
+from museflow.domain.enums import TrackSource
+
+from tests.integration.factories.models.track import TrackModelFactory
+
+
+@pytest.mark.wiremock("spotify")
+class TestCreateHistoryPlaylistUseCase:
+    async def test__nominal__ordered_by_played_count(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=1)
+        high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
+        mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [high.id, mid.id, low.id]
+
+    async def test__dry_run__no_playlist_persisted(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        playlist_repository: PlaylistRepository,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
+        low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=1)
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(limit=20, dry_run=True),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is None
+        assert [t.id for t in result.tracks] == [high.id, low.id]
+        assert await playlist_repository.get_list(user.id) == []
+
+    async def test__filters_by_score_and_artist(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            score=8,
+            artists=["Matching Artist"],
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            score=2,
+            artists=["Matching Artist"],
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            score=9,
+            artists=["Other Artist"],
+        )
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(score_min=5, artist_name="Matching Artist", limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
+
+    async def test__dedup_excludes_tracks_from_previous_history_playlist(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=10)
+        second = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, played_count=5)
+
+        first_result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(limit=1),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+        assert first_result.playlist is not None
+        assert len(first_result.playlist.tracks) == 1
+
+        second_result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert second_result.playlist is not None
+        assert [t.id for t in second_result.playlist.tracks] == [second.id]
+
+    async def test__sort_by_score__ordered_correctly(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        low = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=3)
+        high = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=9)
+        mid = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=6)
+        unscored = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, score=None)
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(sort_by=PlaylistHistoryOrderBy.SCORE, limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [high.id, mid.id, low.id, unscored.id]
+
+    async def test__filters_by_played_first_range(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        inside = await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=datetime(2025, 6, 15, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=datetime(2024, 3, 1, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_first=None,
+        )
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(
+                played_first_min=date(2025, 1, 1),
+                played_first_max=date(2025, 12, 31),
+                limit=20,
+            ),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [inside.id]
+
+    async def test__filters_by_played_last_range(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        inside = await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=datetime(2026, 7, 20, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=datetime(2025, 11, 5, tzinfo=UTC),
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id,
+            source=TrackSource.HISTORY,
+            played_at_last=None,
+        )
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(
+                played_last_min=date(2026, 6, 21),
+                played_last_max=date(2026, 9, 22),
+                limit=20,
+            ),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [inside.id]
+
+    async def test__filters_by_genre(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.HIP_HOP.value]
+        )
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value])
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(genres=[GenreTag.HIP_HOP], limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
+
+    async def test__filters_by_mood(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.CHILL.value]
+        )
+        await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, moods=[MoodTag.ENERGETIC.value]
+        )
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(moods=[MoodTag.CHILL], limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
+
+    async def test__filters_by_locale(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        matching = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(locales=["fr"], limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert [t.id for t in result.playlist.tracks] == [matching.id]
+
+    async def test__filters_by_multiple_locales__or_logic(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        fr = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["fr"])
+        en = await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["en"])
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, locales=["de"])
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(locales=["fr", "en"], limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert {t.id for t in result.playlist.tracks} == {fr.id, en.id}
+
+    async def test__filters_by_multiple_genres__or_logic(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        spotify_library: ProviderLibraryPort,
+    ) -> None:
+        hip_hop = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.HIP_HOP.value]
+        )
+        rock = await TrackModelFactory.create_async(
+            user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.ROCK.value]
+        )
+        await TrackModelFactory.create_async(user_id=user.id, source=TrackSource.HISTORY, genres=[GenreTag.JAZZ.value])
+
+        result = await create_history_playlist(
+            user=user,
+            config=CreateHistoryPlaylistConfigInput(genres=[GenreTag.HIP_HOP, GenreTag.ROCK], limit=20),
+            uow=uow,
+            provider_library=spotify_library,
+        )
+
+        assert result.playlist is not None
+        assert {t.id for t in result.playlist.tracks} == {hip_hop.id, rock.id}

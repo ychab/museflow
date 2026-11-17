@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from museflow.application.use_cases.playlist_view import get_playlist
+from museflow.application.use_cases.playlist_get import get_playlist
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import PlaylistNotFoundError

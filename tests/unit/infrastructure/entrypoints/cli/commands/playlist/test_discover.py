@@ -6,8 +6,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.inputs.discovery import DiscoverTasteConfigInput
-from museflow.application.use_cases.taste_discover import DiscoverTasteResult
+from museflow.application.inputs.discovery import CreateDiscoveryPlaylistConfigInput
+from museflow.application.use_cases.playlist_discovery_create import CreateDiscoveryPlaylistResult
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
@@ -36,7 +36,7 @@ class TestPlaylistDiscoverParserCommand:
         target_path = f"{TARGET_PATH}.playlist_discover_logic"
         strategy = DiscoveryArtistStrategyFactory.build()
         with mock.patch(target_path, autospec=True) as patched:
-            patched.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+            patched.return_value = CreateDiscoveryPlaylistResult(playlist=None, strategy=strategy, tracks=[])
             yield patched
 
     def test__nominal(self, mock_playlist_discover_logic: mock.AsyncMock, runner: CliRunner) -> None:
@@ -197,9 +197,9 @@ class TestPlaylistDiscoverCommand:
     ) -> None:
         strategy = DiscoveryArtistStrategyFactory.build()
 
-        async def discover(**kwargs: Any) -> DiscoverTasteResult:
+        async def discover(**kwargs: Any) -> CreateDiscoveryPlaylistResult:
             spend(kwargs["meter"])
-            return DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+            return CreateDiscoveryPlaylistResult(playlist=None, strategy=strategy, tracks=[])
 
         mock_playlist_discover_logic.side_effect = discover
 
@@ -217,10 +217,10 @@ class TestPlaylistDiscoverCommand:
         artist = ArtistSuggestedFactory.build(name="Nova Lane", sound="warm Rhodes")
         strategy = DiscoveryArtistStrategyFactory.build(artists=[artist])
 
-        async def discover(**kwargs: Any) -> DiscoverTasteResult:
+        async def discover(**kwargs: Any) -> CreateDiscoveryPlaylistResult:
             spend(kwargs["meter"])
             await kwargs["progress"].publish(StrategyChosen(attempt=1, strategy=strategy))
-            return DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+            return CreateDiscoveryPlaylistResult(playlist=None, strategy=strategy, tracks=[])
 
         mock_playlist_discover_logic.side_effect = discover
 
@@ -237,7 +237,7 @@ class TestPlaylistDiscoverCommand:
         mock_playlist_discover_logic: mock.AsyncMock,
         runner: CliRunner,
     ) -> None:
-        async def discover(**kwargs: Any) -> DiscoverTasteResult:
+        async def discover(**kwargs: Any) -> CreateDiscoveryPlaylistResult:
             spend(kwargs["meter"])
             raise DiscoveryTrackNoNewError()
 
@@ -315,7 +315,7 @@ class TestPlaylistDiscoverCommand:
 
         track_with_album = TrackFactory.build()
         track_without_album = TrackFactory.build(album_name=None)
-        mock_playlist_discover_logic.return_value = DiscoverTasteResult(
+        mock_playlist_discover_logic.return_value = CreateDiscoveryPlaylistResult(
             playlist=playlist,
             strategy=strategy,
             tracks=[track_with_album, track_without_album],
@@ -339,7 +339,9 @@ class TestPlaylistDiscoverCommand:
         clean_typer_text: TextCleaner,
     ) -> None:
         strategy = DiscoveryArtistStrategyFactory.build()
-        mock_playlist_discover_logic.return_value = DiscoverTasteResult(playlist=None, strategy=strategy, tracks=[])
+        mock_playlist_discover_logic.return_value = CreateDiscoveryPlaylistResult(
+            playlist=None, strategy=strategy, tracks=[]
+        )
 
         result = runner.invoke(app, ["playlist", "discover", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
@@ -380,6 +382,6 @@ class TestPlaylistDiscoverLogic:
             await playlist_discover_logic(
                 "test@example.com",
                 provider=MusicProvider.SPOTIFY,
-                config=DiscoverTasteConfigInput(),
+                config=CreateDiscoveryPlaylistConfigInput(),
                 progress=mock_progress,
             )

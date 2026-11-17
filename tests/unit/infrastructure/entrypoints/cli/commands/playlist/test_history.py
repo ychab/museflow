@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
-from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
+from museflow.application.use_cases.playlist_history_create import CreateHistoryPlaylistResult
 from museflow.domain.entities.user import User
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag

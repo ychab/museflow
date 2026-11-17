@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
-from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter

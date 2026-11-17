@@ -4,7 +4,7 @@ from museflow.domain.enums import DiscoveryFocus
 
 
 @dataclass(frozen=True, kw_only=True)
-class DiscoverTasteConfigInput:
+class CreateDiscoveryPlaylistConfigInput:
     """Configuration for the AI taste-driven discovery process.
 
     Attributes:

@@ -11,8 +11,8 @@ import typer
 from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.progress import ProgressPort
-from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
-from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
+from museflow.application.use_cases.track_enrich import EnrichTracksReport
+from museflow.application.use_cases.track_enrich import EnrichTracksUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedError

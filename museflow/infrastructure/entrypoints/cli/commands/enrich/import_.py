@@ -8,8 +8,8 @@ from pydantic import TypeAdapter
 import typer
 
 from museflow.application.inputs.enrich import EnrichmentEntryInput
-from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
-from museflow.application.use_cases.enrichment_import import import_enrichment
+from museflow.application.use_cases.track_enrichment_import import ImportEnrichmentResult
+from museflow.application.use_cases.track_enrichment_import import import_enrichment
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app

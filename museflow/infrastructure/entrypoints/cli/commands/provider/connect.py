@@ -8,9 +8,9 @@ from pydantic import EmailStr
 import typer
 from rich import get_console
 
-from museflow.application.use_cases.provider_oauth_redirect import build_oauth_redirect_url
+from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
 from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
-from museflow.application.use_cases.provider_token_view import get_provider_token
+from museflow.application.use_cases.provider_token_get import get_provider_token
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider

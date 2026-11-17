@@ -71,14 +71,14 @@ sequenceDiagram
     autonumber
     participant CLI as CLI playlist_discover_logic
     participant DI as cli/dependencies.py
-    participant UC as DiscoverTasteUseCase
+    participant UC as CreateDiscoveryPlaylistUseCase
     participant UoW as Unit of work (short SQL blocks)
     participant Adv as AdvisorPort (OpenRouter adapter)
     participant Lib as ProviderLibraryPort (Spotify adapter)
 
     CLI->>DI: unit of work, OAuth client, advisor
     CLI->>UoW: block: user by email, auth token
-    CLI->>UC: create_suggestions_playlist(user, config)
+    CLI->>UC: create_playlist(user, config)
     UC->>UoW: block: taste profile (named or latest), blacklist, liked and disliked tracks
     loop up to max_attempts, stop once playlist_limit reached
         UC->>Adv: get_discovery_artists(profile, prompt, focus, artists already asked, liked and disliked tracks)
@@ -92,7 +92,7 @@ sequenceDiagram
     UC->>UC: sort by fit score, cap per credited artist, trim
     UC->>Lib: create_playlist
     UC->>UoW: one block: upsert tracks as DISCOVERY source, save playlist and its tracks
-    UC-->>CLI: DiscoverTasteResult
+    UC-->>CLI: CreateDiscoveryPlaylistResult
     CLI->>CLI: render panel and tables
 ```
 
@@ -115,7 +115,7 @@ The rules are written down in [`AGENTS.md`](https://github.com/ychab/museflow/bl
 | No database limits in the domain (no `varchar(255)` checks) | A storage concern must not leak into business rules |
 | Ports are ABCs that accept input schemas and return entities | Use cases stay framework-free and are tested with `AsyncMock` instead of fakes |
 | SQLAlchemy models are `MappedAsDataclass` with symmetric `from_entity` / `to_entity` | One place maps each direction, repositories never build models field by field. Every model implements `to_entity`; `from_entity` exists on the two models whose repositories write whole entities (`Track`, `Playlist`), although the contract asks for both everywhere |
-| Use cases are plain async functions; a class only when injected state is needed (for example `DiscoverTasteUseCase`) | Function by default, class when the constructor genuinely carries dependencies |
+| Use cases are plain async functions; a class only when injected state is needed (for example `CreateDiscoveryPlaylistUseCase`) | Function by default, class when the constructor genuinely carries dependencies |
 | Parameters grouped by role: inputs, then the unit of work, then other ports; DI parameters contiguous | Callers use keywords, so order is documentation; a consistent order makes a signature scannable |
 | CLI commands are thin sync wrappers around an `asyncio.run()` of a `<command>_logic` coroutine; the logic returns data and never prints | Output stays in the callback, so logic is unit-testable without capturing stdout, and the same logic can be reused |
 | `HttpClientMixin` first, port second in the base class list (`class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort)`) | The mixin supplies concrete methods (`close`, the async context manager) that the port declares abstract. With the port first, Python's MRO would find the abstract version first and the class could not be instantiated. |

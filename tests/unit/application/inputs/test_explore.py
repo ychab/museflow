@@ -2,10 +2,10 @@ from typing import Any
 
 import pytest
 
-from museflow.application.inputs.explore import ExploreArtistsConfigInput
+from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
 
 
-class TestExploreArtistsConfigInput:
+class TestCreateExplorationPlaylistConfigInput:
     @pytest.mark.parametrize(
         "field",
         ["max_attempts", "artist_tracks_concurrency", "artists_limit", "artists_per_attempt"],
@@ -15,4 +15,4 @@ class TestExploreArtistsConfigInput:
         kwargs: dict[str, Any] = {field: value}
 
         with pytest.raises(ValueError, match=f"{field} must be at least 1"):
-            ExploreArtistsConfigInput(**kwargs)
+            CreateExplorationPlaylistConfigInput(**kwargs)

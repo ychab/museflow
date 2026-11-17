@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
+from museflow.application.use_cases.track_enrichment_import import ImportEnrichmentResult
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app

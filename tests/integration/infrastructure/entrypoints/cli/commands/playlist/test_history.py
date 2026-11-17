@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
-from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
+from museflow.application.use_cases.playlist_history_create import CreateHistoryPlaylistResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider

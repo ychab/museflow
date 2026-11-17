@@ -8,8 +8,8 @@ from pydantic import TypeAdapter
 import typer
 
 from museflow.application.inputs.rate import RatingEntryInput
-from museflow.application.use_cases.ratings_import import ImportRatingsResult
-from museflow.application.use_cases.ratings_import import import_ratings
+from museflow.application.use_cases.track_ratings_import import ImportRatingsResult
+from museflow.application.use_cases.track_ratings_import import import_ratings
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app

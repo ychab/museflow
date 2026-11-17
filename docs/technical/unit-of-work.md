@@ -146,7 +146,7 @@ for i, batch in enumerate(batches, start=1):
         await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 ```
 
-**Writes that form one fact share one block** (`DiscoverTasteUseCase`). The remote playlist is created first, outside
+**Writes that form one fact share one block** (`CreateDiscoveryPlaylistUseCase`). The remote playlist is created first, outside
 any block. Then the discovery tracks and the local playlist are saved together, or not at all:
 
 ```python
@@ -240,7 +240,7 @@ exception.
 It is often dismissed as such. In MuseFlow it turned out to be the opposite:
 
 - **Less code at the call sites.** Use cases take one `uow` parameter instead of up to five repositories
-  (`DiscoverTasteUseCase` went from nine constructor parameters to five). The CLI and API dependencies lost one
+  (`CreateDiscoveryPlaylistUseCase` went from nine constructor parameters to five). The CLI and API dependencies lost one
   factory per repository.
 - **Fewer test mocks.** Unit tests get one `mock_uow` fixture whose attributes are the repository mocks, instead of
   wiring each repository into each use case.

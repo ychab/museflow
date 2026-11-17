@@ -6,8 +6,8 @@ from pydantic import TypeAdapter
 
 import typer
 
+from museflow.application.use_cases.taste_profile_get import get_taste_profile
 from museflow.application.use_cases.taste_profile_list import get_taste_profiles
-from museflow.application.use_cases.taste_profile_view import get_taste_profile
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundError
