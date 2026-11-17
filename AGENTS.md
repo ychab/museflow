@@ -97,8 +97,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - **Models** (canonical: `database/models/track.py`):
   - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).
-  - Always both `from_entity(cls, entity)` and `to_entity(self)`, symmetric. Repositories build rows with
-    `from_entity`, never field by field.
+  - `from_entity(cls, entity)` and `to_entity(self)`, each only when the application calls it: no dead code to keep
+    the pair. Repositories build rows with `from_entity` when the port takes an entity, never field by field; a port
+    that takes an input schema (`users.create`) builds the row from it, with no `from_entity`.
   - `JSONB` and `ARRAY(String)` from `sqlalchemy.dialects.postgresql`; `@declared_attr` for dynamic `__table_args__`.
 - **Repositories** (canonical: `database/repositories/users.py`):
   - Take an `AsyncSession`; SQLAlchemy 2.0 `select/update/delete`; `.scalar_one_or_none()` / `.scalar_one()`.
@@ -122,7 +123,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
     unique. The decorator always names the command (`@app.command("history")`): without it, Typer would derive
     `playlist-history-command` from the function name.
   - `*_logic` returns data or raises; it never prints. All output (messages, Rich tables) belongs in the
-    `@app.command` callback. Exception: interactive prompts that drive the logic mid-loop.
+    `@app.command` callback. Exception: an interactive prompt that drives the logic mid-loop, with what it shows the
+    user to answer (the track before its rating, the tracks listed before a delete confirmation).
   - Option order: filters (`--force`, `--provider`), then processing config (`--batch-size`), then the cap (`--limit`).
   - Output reads in blocks: a step with its details, a panel, a table, the cost line. One blank line sets a block
     apart from the next, never inside one, never two in a row.
@@ -160,7 +162,8 @@ Never name a method after a builtin type (`list`, `dict`, `set`, `type`): in its
 every annotation of the class that uses it (`list[Track]`) then names the method.
 
 ## Types & style
-- Strict type hints everywhere, tests included. `str | None`; IDs are `uuid.UUID`. No `Any` unless justified.
+- Strict type hints everywhere, tests included. `str | None`; IDs are `uuid.UUID`, except the technical
+  records of the OAuth flow (state, provider token), which keep an `int`. No `Any` unless justified.
 - A signature fits on one line, or has one parameter per line with a trailing comma; never all parameters together on
   one indented line.
 - Parameters grouped by role: inputs first, then the unit of work, then other ports. DI parameters stay contiguous;
@@ -177,6 +180,10 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   what it builds from (`SpotifySearchArtistQuery.by_release_years`), not a module function next to it; what only
   shapes the build (the current year) is a parameter, not a field. A mapper between two shapes (DTO or input to
   entity) stays a standalone function, as does a builder from an input the class's layer must not know.
+- A standalone mapper is named `to_<target>`: its module names the source (`spotify/mappers.py`:
+  `to_domain_track`). When two sources of one module give the same target, it adds `_from_<source>`
+  (`to_domain_track_from_episode`). A bare `from_<source>` is a classmethod, whose class names the target
+  (`TrackModel.from_entity`).
 - Every constant is `Final[T]`: in a class body too, where `Final` alone already makes it a class variable. A constant
   only one class uses lives in that class (`_`-prefixed when private); module level is for one several members of the
   module share, one imported elsewhere, or one only a Pydantic model uses (in a model body, `Final` turns into a field

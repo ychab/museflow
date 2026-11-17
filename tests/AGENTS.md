@@ -25,7 +25,8 @@ Tests are the **contract with our users**: clean, clear and easy to maintain, no
   `assert item.active, f"Item {i} (id={item.id}) failed"`.
 
 ## File mirror
-One test file per source file, never consolidated:
+A test file mirrors its source file, never consolidated. A source file needs none when the rest of the suite already
+covers it (ports, inputs, models, exceptions):
 ```
 museflow/application/use_cases/user_create.py
 → tests/unit/application/use_cases/test_user_create.py
@@ -53,7 +54,8 @@ museflow/application/use_cases/user_create.py
 - **Never `with mock.patch(...)` inside a test**: always a `pytest.fixture`.
 - `mock.AsyncMock` for async ports, `mock.Mock` for sync ones.
 - A fixture is named after what it does to the patched callable: `mock_<name>` replaces it, `spy_<name>` wraps it
-  (`wraps=`) so the real code still runs and the call is recorded.
+  (`wraps=`) so the real code still runs and the call is recorded. A fixture defined in a test class may name its
+  role instead (`mock_use_case`): the class already says which one.
 - Mocks and spies belong in unit tests. An integration test asserts the observable outcome (result, rows, requests
   received by WireMock); when a value only shows as an argument passed, test its source where it is produced (e.g. the
   repository) and the forwarding in a unit test. Exceptions, mocked in integration too:
@@ -66,7 +68,8 @@ museflow/application/use_cases/user_create.py
 
 ## CLI commands
 Each command has 3 unit classes (`TestXParserCommand`, `TestXCommand`, `TestXLogic`) and 1 integration `TestXLogic`
-(happy path only). Canonical: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`.
+(happy path only). Canonical: `tests/unit/infrastructure/entrypoints/cli/commands/users/test_update.py`. A logic
+with no branch of its own gets no unit `TestXLogic`: the integration one covers it.
 - `X` is `<Group><Command>`, like the production names: `TestPlaylistHistoryLogic` tests `playlist_history_logic`
   (`museflow playlist history`), patched by the fixture `mock_playlist_history_logic`.
 - `TestXParserCommand`: Typer parsing only; `TestXCommand`: the callback (output, try/except), with `*_logic` mocked;

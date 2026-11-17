@@ -45,9 +45,9 @@ Run `make help` for the full list.
 - [ ] `make lint-check` passes: Ruff, mypy and deptry are clean.
 - [ ] `make test` passes with **100% branch coverage**; every new branch is covered, error paths by unit tests with `AsyncMock`, flows by integration tests.
 - [ ] New code follows the layering rule: nothing in `domain/` imports a framework; use cases receive ports, never build repositories or clients.
-- [ ] One test file per source file, in the mirrored path under `tests/unit` and `tests/integration`; test code is fully typed and uses factories, not helper functions.
-- [ ] Schema changes include an Alembic migration (`make db-revision`); the migration is reviewed for nullable defaults and `downgrade()`.
-- [ ] Logs carry no secrets; user-facing output stays in the CLI callback, not in the `*_logic` function.
+- [ ] A test file mirrors its source file under `tests/unit` and `tests/integration`, never consolidated; test code is fully typed and uses factories, not helper functions.
+- [ ] Schema changes follow [`migrations/AGENTS.md`](https://github.com/ychab/museflow/blob/main/migrations/AGENTS.md) while in development: `initial.py` is regenerated, never a new revision, and the PR names the data a reset loses.
+- [ ] Logs carry no secrets; user-facing output stays in the CLI callback, not in the `*_logic` function, except what an interactive prompt shows.
 - [ ] An architecture review has been run (`/arch-review`), and a security review (`/security-review`) when auth, endpoints or external adapters changed.
 - [ ] User-visible behaviour changes update the [user guide](../user-guide/index.md); structural changes update these technical pages.
 
