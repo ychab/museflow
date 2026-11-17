@@ -14,6 +14,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
 from museflow.domain.value_objects.progress import StepStarted
@@ -105,6 +106,25 @@ class TestImportStreamingHistorySpotifyUseCase:
         mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
         mock_track_repository.delete.assert_awaited_once_with(user_id=user.id, track_ids=orphan_ids)
         assert report.tracks_purged == 5
+
+    async def test__purge__invalid_file__nothing_deleted(
+        self,
+        user: User,
+        history_dir: Path,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_track_repository: mock.AsyncMock,
+        mock_streaming_history: mock.AsyncMock,
+    ) -> None:
+        mock_streaming_history.parse_file.side_effect = StreamingHistoryInvalidFormatError("Failed to parse")
+
+        with pytest.raises(StreamingHistoryInvalidFormatError):
+            await use_case.import_history(
+                user=user,
+                config=ImportStreamingHistoryConfigInput(directory=history_dir, purge=True),
+            )
+
+        mock_track_repository.unlink_provider.assert_not_awaited()
+        mock_track_repository.delete.assert_not_awaited()
 
     async def test__no_tracks_parsed__nothing_saved(
         self,

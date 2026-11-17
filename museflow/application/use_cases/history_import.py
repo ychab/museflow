@@ -69,14 +69,6 @@ class ImportStreamingHistoryUseCase:
                 f"No {self._streaming_history.file_glob} files found in: {config.directory}"
             )
 
-        # Purge if requested
-        tracks_purged = 0
-        if config.purge:
-            async with self._uow as uow:
-                orphan_ids = await uow.tracks.unlink_provider(user_id=user.id, provider=MusicProvider.SPOTIFY)
-                tracks_purged = await uow.tracks.delete(user_id=user.id, track_ids=orphan_ids)
-            logger.debug("History tracks purged.")
-
         # Collect all play events per track across all files, keyed by fingerprint.
         # When two provider_ids resolve to the same fingerprint, their play times are merged.
         # The first entry seen for a given fingerprint is kept as representative metadata.
@@ -106,6 +98,14 @@ class ImportStreamingHistoryUseCase:
 
         unique_fingerprints = set(track_metadata.keys())
         logger.debug(f"Collected {len(unique_fingerprints)} unique fingerprints.")
+
+        # Purge only once every file is parsed: a malformed file then aborts the import before anything is deleted.
+        tracks_purged = 0
+        if config.purge:
+            async with self._uow as uow:
+                orphan_ids = await uow.tracks.unlink_provider(user_id=user.id, provider=MusicProvider.SPOTIFY)
+                tracks_purged = await uow.tracks.delete(user_id=user.id, track_ids=orphan_ids)
+            logger.debug("History tracks purged.")
 
         # Upsert every track, known or not (its metadata and provider link are refreshed), then save its plays: a play
         # already saved is skipped, so a re-import of the same files adds none.
