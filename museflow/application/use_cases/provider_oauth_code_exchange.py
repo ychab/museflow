@@ -7,21 +7,20 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
 
 
-async def handle_oauth_callback(
+async def exchange_oauth_code(
     code: str,
     user: User,
     provider: MusicProvider,
     uow: UnitOfWorkPort,
     provider_oauth: ProviderOAuthPort,
 ) -> None:
-    """Handles the OAuth callback from a music provider.
+    """Exchanges the authorization code for a token and saves it, created or updated, for the user.
 
-    This function exchanges the authorization code for an access token, then
-    creates or updates the user's authentication token in the repository.
+    The second step of the OAuth flow: the provider sends the code to the callback once the user has granted access.
 
     Args:
         code: The authorization code received from the OAuth provider.
-        user: The user entity for whom the callback is being processed.
+        user: The user who started the flow.
         provider: The music provider (e.g., Spotify).
         uow: The unit of work giving access to the OAuth token repository.
         provider_oauth: The OAuth adapter for the provider.
