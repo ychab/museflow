@@ -4,12 +4,18 @@ from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import pytest
+
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import UserAlreadyExistsError
+from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.infrastructure.adapters.database.models import User as UserModel
+
+from tests.integration.factories.models.user import UserModelFactory
 
 
 class TestUserSQLRepository:
@@ -43,6 +49,17 @@ class TestUserSQLRepository:
         assert user.is_active is True
         assert user.created_at.tzinfo == UTC
         assert user.updated_at.tzinfo == UTC
+
+    async def test__create__email_already_exists(
+        self,
+        user: User,
+        user_create_in: UserCreateInput,
+        user_repository: UserRepository,
+    ) -> None:
+        user_create_in = user_create_in.model_copy(update={"email": user.email})
+
+        with pytest.raises(UserAlreadyExistsError):
+            await user_repository.create(user_create_in, hashed_password="hashed")
 
     async def test__update__all(
         self,
@@ -82,6 +99,12 @@ class TestUserSQLRepository:
         assert user_updated.email == user_update_in.email
         assert password_hasher.verify("testtest", user_updated.hashed_password)
         assert user_updated.updated_at >= user.updated_at
+
+    async def test__update__email_already_exists(self, user: User, user_repository: UserRepository) -> None:
+        other_db = await UserModelFactory.create_async()
+
+        with pytest.raises(UserEmailAlreadyExistsError):
+            await user_repository.update(user.id, UserUpdateInput(email=other_db.email))
 
     async def test__delete__nominal(
         self,
