@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy import true
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql.selectable import LateralFromClause
 
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
@@ -29,18 +31,22 @@ class TrackPlaySQLRepository(TrackPlayRepository):
         self.session = session
 
     @staticmethod
-    def plays_summary() -> LateralFromClause:
+    def plays_summary(track: type[TrackModel] | AliasedClass[TrackModel]) -> LateralFromClause:
         """The play data of each track a query loads: `played_count`, `played_at_first` and `played_at_last`.
 
         Shared with the repositories that load tracks (tracks, playlists): a track has no play column, so each of
         their queries joins this subquery with `.join(plays, true())` and passes its three columns to
         `Track.to_entity`, which requires them.
 
-        PostgreSQL runs this LATERAL subquery once per track row, with that row's `museflow_track.id` in scope: one
-        pass over the track's plays in the `(track_id, played_at)` index gives the three values, without reading the
-        table (index-only scan). Unlike a join on plays grouped by track, it only computes the tracks the query loads,
-        whatever the number of plays of the other users. An aggregate without GROUP BY always returns one row, so a
-        track without plays keeps its row, with a count of 0 and no dates.
+        PostgreSQL runs this LATERAL subquery once per row of the outer query, with that row's `track.id` in scope:
+        one pass over the track's plays in the `(track_id, played_at)` index gives the three values, without reading
+        the table (index-only scan). Unlike a join on plays grouped by track, it only computes the tracks the query
+        loads, whatever the number of plays of the other users. An aggregate without GROUP BY always returns one row,
+        so a track without plays keeps its row, with a count of 0 and no dates.
+
+        Args:
+            track: The track the outer query selects, `TrackModel` or its alias: the subquery correlates to it. Any
+                other track would join every row to every track's plays.
         """
         return (
             select(
@@ -49,7 +55,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 func.min(TrackPlayModel.played_at).label("played_at_first"),
                 func.max(TrackPlayModel.played_at).label("played_at_last"),
             )
-            .where(TrackPlayModel.track_id == TrackModel.id)
+            .where(TrackPlayModel.track_id == track.id)
             .lateral("plays")
         )
 
@@ -126,7 +132,8 @@ class TrackPlaySQLRepository(TrackPlayRepository):
         ).cte("ranked")
 
         # 4. The top tracks of each period, with their period, and their play data over the whole history.
-        summary = self.plays_summary()
+        track = aliased(TrackModel, name="track")
+        summary = self.plays_summary(track)
         stmt = (
             select(
                 ranked.c.period,
@@ -134,13 +141,13 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 bounds.c.start,
                 bounds.c.end,
                 bounds.c.plays.label("period_plays"),
-                TrackModel,
+                track,
                 summary.c.played_count,
                 summary.c.played_at_first,
                 summary.c.played_at_last,
             )
             .join(bounds, bounds.c.period == ranked.c.period)
-            .join(TrackModel, TrackModel.id == ranked.c.track_id)
+            .join(track, track.id == ranked.c.track_id)
             .join(summary, true())
             .where(ranked.c.rank <= tracks_per_period)
             .order_by(ranked.c.period, ranked.c.rank)
@@ -152,10 +159,10 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 row.period,
                 ListeningPeriod(start=row.start, end=row.end, plays=row.period_plays, tracks=[]),
             )
-            track = row._mapping[TrackModel].to_entity(
+            track_entity = row.track.to_entity(
                 played_count=row.played_count,
                 played_at_first=row.played_at_first,
                 played_at_last=row.played_at_last,
             )
-            listening_period.tracks.append(PeriodTrack(track=track, plays=row.plays))
+            listening_period.tracks.append(PeriodTrack(track=track_entity, plays=row.plays))
         return list(listening_periods.values())

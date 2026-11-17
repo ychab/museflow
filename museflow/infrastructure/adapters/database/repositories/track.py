@@ -83,7 +83,7 @@ class TrackSQLRepository(TrackRepository):
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Track]:
-        plays = TrackPlaySQLRepository.plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary(TrackModel)
         stmt = (
             select(TrackModel, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
             .join(plays, true())
@@ -199,7 +199,7 @@ class TrackSQLRepository(TrackRepository):
         score_min: int | None = None,
         score_max: int | None = None,
     ) -> list[ArtistStats]:
-        plays = TrackPlaySQLRepository.plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary(TrackModel)
         artist = TrackModel.artists[0].as_string()
 
         stmt = (
@@ -235,7 +235,7 @@ class TrackSQLRepository(TrackRepository):
         if tier is not None and field != EnrichField.GENRE:
             raise ValueError(f"A genre tier only applies to genres, not to {field}")
 
-        plays = TrackPlaySQLRepository.plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary(TrackModel)
         column = getattr(TrackModel, self._ENRICH_FIELD_TO_COLUMN[field])
         if tier is not None:
             # PostgreSQL arrays start at 1; past the end, the element is NULL
