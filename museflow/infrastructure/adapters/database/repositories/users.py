@@ -6,12 +6,15 @@ from pydantic import EmailStr
 from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.ports.repositories.users import UserRepository
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import UserAlreadyExistsError
+from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.infrastructure.adapters.database.models import User as UserModel
 
 
@@ -39,8 +42,14 @@ class UserSQLRepository(UserRepository):
 
         user_db = UserModel(**user_dict)
 
-        self.session.add(user_db)
-        await self.session.flush()
+        # The email is the only unique column: the constraint settles a race the use case's check can't see. The
+        # savepoint keeps the session usable after the conflict.
+        try:
+            async with self.session.begin_nested():
+                self.session.add(user_db)
+        except IntegrityError as e:
+            raise UserAlreadyExistsError("Email already registered") from e
+
         await self.session.refresh(user_db)
 
         return user_db.to_entity()
@@ -52,7 +61,12 @@ class UserSQLRepository(UserRepository):
             update_data["hashed_password"] = hashed_password
 
         stmt = update(UserModel).where(UserModel.id == user_id).values(**update_data).returning(UserModel)
-        result = await self.session.execute(stmt)
+        try:
+            async with self.session.begin_nested():
+                result = await self.session.execute(stmt)
+        except IntegrityError as e:
+            raise UserEmailAlreadyExistsError() from e
+
         user_db = result.scalar_one()
 
         return user_db.to_entity()

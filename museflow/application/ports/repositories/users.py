@@ -50,6 +50,9 @@ class UserRepository(ABC):
 
         Returns:
             The newly created `User` entity.
+
+        Raises:
+            UserAlreadyExistsError: If the email is already registered.
         """
         ...
 
@@ -64,6 +67,9 @@ class UserRepository(ABC):
 
         Returns:
             The updated `User` entity.
+
+        Raises:
+            UserEmailAlreadyExistsError: If the new email is already registered by another user.
         """
         ...
 
