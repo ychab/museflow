@@ -92,13 +92,13 @@ class TrackSQLRepository(TrackRepository):
 
         # Filtering
         if provider is not None:
-            stmt = stmt.where(self._provider_condition(provider))
+            stmt = stmt.where(self._filter_by_provider(provider))
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
         if max_score is not None:
             stmt = stmt.where(TrackModel.score <= max_score)
         if source is not None:
-            stmt = stmt.where(self._source_condition(source))
+            stmt = stmt.where(self._filter_by_source(source))
         if unrated_only:
             stmt = stmt.where(TrackModel.score.is_(None))
         if exclude_skipped:
@@ -209,7 +209,7 @@ class TrackSQLRepository(TrackRepository):
             .group_by(artist)
         )
         if source is not None:
-            stmt = stmt.where(self._source_condition(source))
+            stmt = stmt.where(self._filter_by_source(source))
 
         rows = (await self.session.execute(stmt)).all()
         return [
@@ -254,7 +254,7 @@ class TrackSQLRepository(TrackRepository):
             .group_by(tags.c.tag)
         )
         if source is not None:
-            stmt = stmt.where(self._source_condition(source))
+            stmt = stmt.where(self._filter_by_source(source))
 
         rows = (await self.session.execute(stmt)).all()
         return [
@@ -284,7 +284,7 @@ class TrackSQLRepository(TrackRepository):
             func.count().filter(self._missing_condition(field)).label("unenriched_count"),
         ).where(TrackModel.user_id == user_id)
         if source is not None:
-            stmt = stmt.where(self._source_condition(source))
+            stmt = stmt.where(self._filter_by_source(source))
 
         row = (await self.session.execute(stmt)).one()
         return LibraryStats(
@@ -401,7 +401,7 @@ class TrackSQLRepository(TrackRepository):
             update(TrackModel)
             .where(
                 TrackModel.user_id == user_id,
-                self._provider_condition(provider),
+                self._filter_by_provider(provider),
             )
             .values(
                 provider_links=text(
@@ -433,14 +433,14 @@ class TrackSQLRepository(TrackRepository):
         return int(result.rowcount)  # type: ignore[attr-defined]
 
     @staticmethod
-    def _provider_condition(provider: MusicProvider) -> TextClause:
+    def _filter_by_provider(provider: MusicProvider) -> TextClause:
         return text(
             "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
             "WHERE elem->>'provider' = :provider)"
         ).bindparams(provider=provider.value)
 
     @staticmethod
-    def _source_condition(source: TrackSource) -> ColumnElement[bool]:
+    def _filter_by_source(source: TrackSource) -> ColumnElement[bool]:
         return TrackModel.source.op("&")(int(source)) != 0
 
     @classmethod
