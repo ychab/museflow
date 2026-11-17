@@ -1,5 +1,6 @@
 import asyncio
-import logging
+import uuid
+from dataclasses import replace
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -7,6 +8,7 @@ from unittest import mock
 
 import pytest
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -14,7 +16,6 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import RateLimitRetry
-from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyTokenExpiredError
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
@@ -53,6 +54,27 @@ class TestSpotifyOAuthSessionClient:
             token_expires_at=frozen_time - timedelta(seconds=session_client.token_buffer_seconds + 20),
         )
 
+    @pytest.fixture
+    def mock_auth_token_update(
+        self,
+        mock_auth_token_repository: mock.AsyncMock,
+        auth_token: OAuthProviderUserToken,
+    ) -> mock.AsyncMock:
+        """Returns the refreshed token, as the database does when no other session replaced it."""
+
+        async def update(
+            *,
+            user_id: uuid.UUID,
+            provider: MusicProvider,
+            auth_token_in: OAuthProviderUserTokenUpdateInput,
+            expected_token_access: str,
+        ) -> OAuthProviderUserToken:
+            return replace(auth_token, **auth_token_in.model_dump(exclude_none=True))
+
+        mock_update: mock.AsyncMock = mock_auth_token_repository.update
+        mock_update.side_effect = update
+        return mock_update
+
     async def test__execute__retry_fails_again(
         self,
         session_client: SpotifyOAuthSessionClient,
@@ -86,7 +108,7 @@ class TestSpotifyOAuthSessionClient:
         self,
         session_client: SpotifyOAuthSessionClient,
         mock_provider_oauth: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
+        mock_auth_token_update: mock.AsyncMock,
         auth_token_expired: OAuthProviderUserToken,
         token_payload: OAuthProviderTokenPayload,
     ) -> None:
@@ -104,7 +126,7 @@ class TestSpotifyOAuthSessionClient:
                 tg.create_task(session_client.execute("GET", "/test"))
 
         mock_provider_oauth.refresh_access_token.assert_called_once()
-        mock_auth_token_repository.update.assert_called_once()
+        mock_auth_token_update.assert_called_once()
 
         assert mock_provider_oauth.make_api_call.call_count == 10
         for i, call in enumerate(mock_provider_oauth.make_api_call.call_args_list):
@@ -115,7 +137,7 @@ class TestSpotifyOAuthSessionClient:
         frozen_time: datetime,
         session_client: SpotifyOAuthSessionClient,
         mock_provider_oauth: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
+        mock_auth_token_update: mock.AsyncMock,
         auth_token: OAuthProviderUserToken,
     ) -> None:
         """
@@ -183,25 +205,20 @@ class TestSpotifyOAuthSessionClient:
 
         assert mock_provider_oauth.make_api_call.call_count == 2
 
-    async def test__refresh_token_safely__invalid_grant__discards_token(
+    async def test__refresh_token_safely__token_deleted_meanwhile(
         self,
         session_client: SpotifyOAuthSessionClient,
         mock_provider_oauth: mock.AsyncMock,
         mock_auth_token_repository: mock.AsyncMock,
-        user: User,
         auth_token_expired: OAuthProviderUserToken,
-        caplog: pytest.LogCaptureFixture,
+        token_payload: OAuthProviderTokenPayload,
     ) -> None:
         session_client.auth_token = auth_token_expired
-        mock_provider_oauth.refresh_access_token.side_effect = SpotifyRefreshTokenInvalidError()
+        mock_provider_oauth.refresh_access_token.return_value = token_payload
+        mock_auth_token_repository.update.return_value = None
+        mock_auth_token_repository.get.return_value = None
 
-        with caplog.at_level(logging.WARNING), pytest.raises(ProviderAuthTokenNotFoundError):
+        with pytest.raises(ProviderAuthTokenNotFoundError):
             await session_client._refresh_token_safely()
 
-        mock_auth_token_repository.delete.assert_called_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
-        mock_auth_token_repository.update.assert_not_called()
-
-        assert len(caplog.records) == 1
-        assert caplog.records[0].levelno == logging.WARNING
-        assert caplog.records[0].__dict__["user_id"] == str(user.id)
-        assert caplog.records[0].__dict__["provider"] == MusicProvider.SPOTIFY
+        assert session_client.auth_token == auth_token_expired

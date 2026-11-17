@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import Any
+from typing import Final
 
 from museflow.application.mappers.auth import to_auth_token_update_input
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -9,7 +10,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceededError
-from museflow.domain.mappers.auth import to_auth_token
 from museflow.domain.mappers.auth import to_token_payload
 from museflow.infrastructure.adapters.http import RateLimitRetry
 from museflow.infrastructure.adapters.providers.spotify.exceptions import SpotifyRefreshTokenInvalidError
@@ -26,9 +26,13 @@ class SpotifyOAuthSessionClient:
     This client handles the complexities of the user's session lifecycle, including:
     - Proactive token refresh: Refreshes the token if it's close to expiring.
     - Reactive token refresh: Refreshes the token upon receiving a 401 Unauthorized error.
-    - Thread-safe updates: Uses a lock to prevent race conditions when multiple
-      coroutines try to refresh the token simultaneously.
+    - Concurrent refreshes: a lock keeps this session's coroutines to one refresh, and a compare-and-swap in the
+      database keeps a token refreshed or reconnected by another session meanwhile.
     """
+
+    _RECONNECT_MESSAGE: Final[str] = (
+        "Spotify refresh token is no longer valid — run 'museflow provider connect --provider spotify' first."
+    )
 
     def __init__(
         self,
@@ -116,10 +120,9 @@ class SpotifyOAuthSessionClient:
         return response
 
     async def _refresh_token_safely(self, stale_access_token: str | None = None) -> None:
-        """Refreshes the access token in a thread-safe manner.
+        """Refreshes the access token, once for all the coroutines of this session.
 
-        Uses a lock to ensure that only one coroutine attempts to refresh the
-        token at a time, preventing race conditions.
+        When another session replaced the stored token meanwhile, its token is taken over instead.
 
         Args:
             stale_access_token: The access token that was found to be expired.
@@ -127,9 +130,9 @@ class SpotifyOAuthSessionClient:
                                 been refreshed by another coroutine.
 
         Raises:
-            ProviderAuthTokenNotFoundError: If Spotify rejects the refresh token
-                (`invalid_grant`). The stored token is discarded so the user must
-                reconnect via the OAuth sign-in flow.
+            ProviderAuthTokenNotFoundError: If Spotify rejects the refresh token (`invalid_grant`) and no other
+                session replaced it: the stored token is discarded so the user must reconnect via the OAuth sign-in
+                flow. Also when the token was deleted by another session meanwhile.
         """
         # Fast check (outside lock)
         if self._should_skip_refresh(stale_access_token):
@@ -140,34 +143,46 @@ class SpotifyOAuthSessionClient:
             if self._should_skip_refresh(stale_access_token):
                 return
 
+            # The lock only guards this session's coroutines: another session of the user (a concurrent request,
+            # a reconnect) may replace the stored token at any time, so each write below holds only if the token is
+            # still the one this session read (compare-and-swap); otherwise the newer token wins.
+            stale_token = self.auth_token
             try:
-                token_payload = await self.oauth_client.refresh_access_token(self.auth_token.token_refresh)
+                token_payload = await self.oauth_client.refresh_access_token(stale_token.token_refresh)
             except SpotifyRefreshTokenInvalidError as e:
-                logger.warning(
-                    "Spotify refresh token invalid — user must reconnect",
-                    extra={"user_id": str(self.user.id), "provider": MusicProvider.SPOTIFY},
-                )
                 async with self.uow as uow:
-                    await uow.auth_tokens.delete(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
-                raise ProviderAuthTokenNotFoundError(
-                    "Spotify refresh token is no longer valid — run 'museflow provider connect --provider spotify' first."
-                ) from e
+                    discarded = await uow.auth_tokens.delete(
+                        user_id=self.user.id,
+                        provider=MusicProvider.SPOTIFY,
+                        expected_token_refresh=stale_token.token_refresh,
+                    )
+                    auth_token = (
+                        None
+                        if discarded
+                        else await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
+                    )
+                if auth_token is None:
+                    logger.warning(
+                        "Spotify refresh token invalid — user must reconnect",
+                        extra={"user_id": str(self.user.id), "provider": MusicProvider.SPOTIFY},
+                    )
+                    raise ProviderAuthTokenNotFoundError(self._RECONNECT_MESSAGE) from e
+                self.auth_token = auth_token
+                return
 
-            # Update in DB, committed right away: the new token must survive a later failure of the command
+            # Committed right away: the new token must survive a later failure of the command
             async with self.uow as uow:
-                await uow.auth_tokens.update(
+                auth_token = await uow.auth_tokens.update(
                     user_id=self.user.id,
                     provider=MusicProvider.SPOTIFY,
                     auth_token_in=to_auth_token_update_input(token_payload),
+                    expected_token_access=stale_token.token_access,
                 )
-
-            # Update also in memory
-            self.auth_token = to_auth_token(
-                auth_token_id=self.auth_token.id,
-                user_id=self.user.id,
-                provider=self.auth_token.provider,
-                token_payload=token_payload,
-            )
+                if auth_token is None:
+                    auth_token = await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
+            if auth_token is None:
+                raise ProviderAuthTokenNotFoundError(self._RECONNECT_MESSAGE)
+            self.auth_token = auth_token
 
     def _should_skip_refresh(self, stale_access_token: str | None) -> bool:
         if stale_access_token is None:

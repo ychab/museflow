@@ -96,21 +96,23 @@ class OAuthProviderTokenRepository(ABC):
         ...
 
     @abstractmethod
-    async def create(
+    async def upsert(
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
         auth_token_in: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
-        """Creates and stores a new auth token for a user and provider.
+        """Creates the auth token of a user and provider, or replaces the one already there.
+
+        One statement: two OAuth callbacks of the same user at once can't both create it.
 
         Args:
             user_id: The user's ID.
             provider: The music provider.
-            auth_token_in: A schema object with the new token data.
+            auth_token_in: A schema object with the token data.
 
         Returns:
-            The newly created `OAuthProviderUserToken` entity.
+            The created or replaced `OAuthProviderUserToken` entity.
         """
         ...
 
@@ -120,29 +122,38 @@ class OAuthProviderTokenRepository(ABC):
         user_id: uuid.UUID,
         provider: MusicProvider,
         auth_token_in: OAuthProviderUserTokenUpdateInput,
-    ) -> OAuthProviderUserToken:
-        """Updates an existing auth token for a user and provider.
+        expected_token_access: str,
+    ) -> OAuthProviderUserToken | None:
+        """Updates the auth token of a user and provider, only if it still holds the expected access token.
 
-        This is typically used when refreshing an access token.
+        A compare-and-swap for the token refresh: every refresh or reconnect issues a new access token, so a stored
+        token whose access token changed was replaced by another session meanwhile, and its newer value is kept.
 
         Args:
             user_id: The user's ID.
             provider: The music provider.
             auth_token_in: A schema object with the updated token data.
+            expected_token_access: The access token the update replaces.
 
         Returns:
-            The updated `OAuthProviderUserToken` entity.
+            The updated `OAuthProviderUserToken` entity, or None if the stored token no longer holds
+            `expected_token_access` or is gone.
         """
         ...
 
     @abstractmethod
-    async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:
-        """Deletes a user's auth token for a provider.
+    async def delete(self, user_id: uuid.UUID, provider: MusicProvider, expected_token_refresh: str) -> bool:
+        """Deletes the auth token of a user and provider, only if it still holds the expected refresh token.
 
-        This is used when a user revokes access to the application.
+        Used when the provider rejects the refresh token: a token another session refreshed or reconnected
+        meanwhile holds another refresh token, and is kept.
 
         Args:
             user_id: The user's ID.
             provider: The music provider.
+            expected_token_refresh: The refresh token the provider rejected.
+
+        Returns:
+            True if the token was deleted, False if the stored token changed meanwhile or is gone.
         """
         ...
