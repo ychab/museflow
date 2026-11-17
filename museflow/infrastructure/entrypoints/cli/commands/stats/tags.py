@@ -6,6 +6,7 @@ import typer
 
 from museflow.application.use_cases.stats_tags import TopTagsResult
 from museflow.application.use_cases.stats_tags import get_top_tags
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import EnrichField
@@ -97,11 +98,7 @@ async def stats_tags_logic(
 ) -> TopTagsResult:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await get_top_tags(
         user_id=user.id,

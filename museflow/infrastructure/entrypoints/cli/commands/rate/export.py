@@ -7,6 +7,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.ratings_export import export_ratings
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
@@ -40,11 +41,7 @@ def rate_export_command(
 
 async def rate_export_logic(email: EmailStr) -> list[dict[str, Any]]:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     ratings = await export_ratings(user_id=user.id, uow=uow)
 

@@ -6,6 +6,7 @@ import typer
 from rich.table import Table
 
 from museflow.application.use_cases.stats_candidates import get_artist_candidates
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.stats import ArtistCandidate
@@ -69,11 +70,7 @@ async def stats_candidates_logic(
 ) -> list[ArtistCandidate]:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await get_artist_candidates(
         user_id=user.id,

@@ -10,6 +10,7 @@ import typer
 from museflow.application.inputs.llm import LLMUsageEntryInput
 from museflow.application.use_cases.llm_usage_import import ImportLLMUsageResult
 from museflow.application.use_cases.llm_usage_import import import_llm_usage
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -45,10 +46,6 @@ async def llm_import_logic(email: EmailStr, data: Any) -> ImportLLMUsageResult:
     entries = TypeAdapter(list[LLMUsageEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await import_llm_usage(user_id=user.id, entries=entries, uow=uow)

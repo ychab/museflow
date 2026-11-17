@@ -6,6 +6,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.tracks_delete import DeleteTracksUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
@@ -74,11 +75,7 @@ async def tracks_delete_logic(
 ) -> TracksDeleteResult:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     use_case = DeleteTracksUseCase(user_id=user.id, provider=provider, uow=uow)
     tracks = await use_case.find(artist=artist, name=name, source=source)

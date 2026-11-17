@@ -7,6 +7,7 @@ import typer
 
 from museflow.application.inputs.blacklist import BlacklistImportInput
 from museflow.application.use_cases.blacklist_list import get_blacklist
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -37,11 +38,7 @@ def blacklist_export_command(
 
 async def blacklist_export_logic(email: EmailStr) -> BlacklistImportInput:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     # Exporting reads the blacklist exactly as listing it does.
     blacklist = await get_blacklist(user_id=user.id, uow=uow)

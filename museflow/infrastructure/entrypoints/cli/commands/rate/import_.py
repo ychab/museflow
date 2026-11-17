@@ -10,6 +10,7 @@ import typer
 from museflow.application.inputs.rate import RatingEntryInput
 from museflow.application.use_cases.ratings_import import ImportRatingsResult
 from museflow.application.use_cases.ratings_import import import_ratings
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -44,10 +45,6 @@ async def rate_import_logic(email: EmailStr, data: list[Any]) -> ImportRatingsRe
     entries = TypeAdapter(list[RatingEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await import_ratings(user_id=user.id, entries=entries, uow=uow)

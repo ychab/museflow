@@ -13,6 +13,7 @@ from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
 from museflow.application.use_cases.tracks_enrich import EnrichTracksUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import UserNotFoundError
@@ -157,11 +158,7 @@ async def enrich_tracks_logic(
         enricher = await stack.enter_async_context(get_enricher(model=model, meter=meter))
 
         uow = get_unit_of_work()
-        async with uow:
-            user = await uow.users.get_by_email(email)
-
-        if not user:
-            raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
 
         use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher, progress=progress)
         return await use_case.enrich(user=user, config=config)

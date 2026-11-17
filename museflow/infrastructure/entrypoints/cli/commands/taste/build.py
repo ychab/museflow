@@ -12,6 +12,7 @@ from rich.text import Text
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
 from museflow.domain.const import TASTE_BATCH_SIZE_MIN
 from museflow.domain.entities.taste import TasteProfile
@@ -142,10 +143,7 @@ async def taste_build_logic(
         )
 
         uow = get_unit_of_work()
-        async with uow:
-            user = await uow.users.get_by_email(email)
-        if user is None:
-            raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
 
         use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter, progress=progress)
         config = BuildTasteProfileConfigInput(

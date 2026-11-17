@@ -8,6 +8,7 @@ import typer
 from rich.pretty import Pretty
 
 from museflow.application.use_cases.provider_token_view import get_provider_token
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFoundError
@@ -44,11 +45,7 @@ def provider_info_command(
 async def provider_info_logic(email: EmailStr, provider: MusicProvider) -> OAuthProviderUserToken | None:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError(f"User with email '{email}' not found.")
+    user = await get_user(email=email, uow=uow)
 
     return await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 

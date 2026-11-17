@@ -8,6 +8,7 @@ import typer
 
 from museflow.application.use_cases.taste_profile_list import get_taste_profiles
 from museflow.application.use_cases.taste_profile_view import get_taste_profile
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
@@ -41,11 +42,7 @@ def taste_export_command(
 
 async def taste_export_logic(email: EmailStr, name: str | None = None) -> list[TasteProfile]:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     if name is None:
         return await get_taste_profiles(user_id=user.id, uow=uow)
