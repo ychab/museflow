@@ -118,7 +118,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         )
         if response.is_error:
             logger.error(
-                "Spotify Token Exchange Failed",
+                f"Spotify token exchange failed: HTTP {response.status_code}",
                 extra={
                     "status_code": response.status_code,
                     "redirect_uri": str(self.redirect_uri),
@@ -150,7 +150,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                 raise SpotifyRefreshTokenInvalidError()
 
             logger.error(
-                "Spotify Token Refresh Failed",
+                f"Spotify token refresh failed: HTTP {response.status_code}",
                 extra={"status_code": response.status_code},
             )
 

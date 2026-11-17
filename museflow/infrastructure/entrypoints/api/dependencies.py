@@ -31,6 +31,8 @@ from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
+logger = logging.getLogger(__name__)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{app_settings.API_V1_PREFIX}/users/login")
 
 
@@ -81,8 +83,6 @@ async def get_current_user(
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> User:
-    logger = logging.getLogger(f"{__name__}.get_current_user")
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

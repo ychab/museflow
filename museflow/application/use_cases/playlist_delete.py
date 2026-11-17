@@ -65,8 +65,9 @@ class DeletePlaylistUseCase:
                 await provider_library.delete_playlist(playlist.provider_id)
             except Exception:
                 logger.warning(
-                    f"Failed to delete remote playlist '{playlist.name}'",
-                    extra={"playlist_id": str(playlist.id)},
+                    f"Failed to delete remote {playlist.provider} playlist '{playlist.name}', kept locally",
+                    extra={"playlist_id": str(playlist.id), "provider": playlist.provider},
+                    exc_info=True,
                 )
                 continue
 

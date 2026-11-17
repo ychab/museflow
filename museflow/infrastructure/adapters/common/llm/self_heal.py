@@ -62,7 +62,9 @@ def self_heal[T, S, **P](
                     }
                     adapter = e.adapter
                     if attempt >= max_attempts:
-                        logger.error(f"LLM {e.adapter} self-healing exhausted ({attempt}/{max_attempts})", extra=extra)
+                        logger.exception(
+                            f"LLM {e.adapter} self-healing exhausted ({attempt}/{max_attempts})", extra=extra
+                        )
                         raise
 
                     logger.debug(f"LLM {e.adapter} reply invalid, retrying ({attempt}/{max_attempts})", extra=extra)

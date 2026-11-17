@@ -59,13 +59,13 @@ async def callback(
     # see the known gaps in docs/technical/privacy-and-data.md.
     if error:
         logger.warning(
-            "OAuth callback error received",
+            f"OAuth callback error received from {provider}: {error}",
             extra={"user_id": str(current_user.id), "provider": provider, "error": error},
         )
         raise HTTPException(status_code=400, detail="OAuth authorisation failed")
     if not code:
         logger.warning(
-            "OAuth callback received without code",
+            f"OAuth callback received from {provider} without code",
             extra={"user_id": str(current_user.id), "provider": provider},
         )
         raise HTTPException(status_code=400, detail="No authorization code received")
