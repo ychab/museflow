@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC
 from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -149,18 +150,17 @@ class TestOAuthProviderTokenSQLRepository:
     async def test__get__none(self, auth_token_repository: OAuthProviderTokenRepository) -> None:
         assert await auth_token_repository.get(uuid.uuid4(), provider=MusicProvider.SPOTIFY) is None
 
-    async def test__create__nominal(
+    async def test__upsert__create(
         self,
         user: User,
         auth_token_create: OAuthProviderUserTokenCreateInput,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
-        auth_token_db = await auth_token_repository.create(
+        auth_token_db = await auth_token_repository.upsert(
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
             auth_token_in=auth_token_create,
         )
-        assert auth_token_db is not None
 
         assert auth_token_db.id
         assert auth_token_db.user_id == user.id
@@ -169,6 +169,31 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_access == auth_token_create.token_access
         assert auth_token_db.token_refresh == auth_token_create.token_refresh
         assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
+
+    async def test__upsert__replace(
+        self,
+        async_session_db: AsyncSession,
+        auth_token: OAuthProviderUserToken,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        auth_token_db = await auth_token_repository.upsert(
+            user_id=auth_token.user_id,
+            provider=auth_token.provider,
+            auth_token_in=auth_token_create,
+        )
+
+        assert auth_token_db.id == auth_token.id
+        assert auth_token_db.token_type == auth_token_create.token_type
+        assert auth_token_db.token_access == auth_token_create.token_access
+        assert auth_token_db.token_refresh == auth_token_create.token_refresh
+        assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
+
+        stmt = select(func.count()).where(
+            AuthProviderTokenModel.user_id == auth_token.user_id,
+            AuthProviderTokenModel.provider == auth_token.provider,
+        )
+        assert await async_session_db.scalar(stmt) == 1
 
     async def test__update__partial(
         self,
@@ -183,8 +208,10 @@ class TestOAuthProviderTokenSQLRepository:
             user_id=auth_token.user_id,
             provider=MusicProvider.SPOTIFY,
             auth_token_in=auth_token_in,
+            expected_token_access=auth_token.token_access,
         )
 
+        assert auth_token_db is not None
         assert auth_token_db.user_id == auth_token.user_id
         assert auth_token_db.provider == MusicProvider.SPOTIFY
         assert auth_token_db.token_type == auth_token.token_type
@@ -202,8 +229,10 @@ class TestOAuthProviderTokenSQLRepository:
             user_id=auth_token.user_id,
             provider=MusicProvider.SPOTIFY,
             auth_token_in=auth_token_update,
+            expected_token_access=auth_token.token_access,
         )
 
+        assert auth_token_db is not None
         assert auth_token_db.user_id == auth_token.user_id
         assert auth_token_db.provider == MusicProvider.SPOTIFY
         assert auth_token_db.token_type == auth_token_update.token_type
@@ -211,14 +240,49 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_refresh == auth_token_update.token_refresh
         assert auth_token_db.token_expires_at == auth_token_update.token_expires_at
 
+    async def test__update__token_access_changed(
+        self,
+        auth_token: OAuthProviderUserToken,
+        auth_token_update: OAuthProviderUserTokenUpdateInput,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        auth_token_db = await auth_token_repository.update(
+            user_id=auth_token.user_id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_update,
+            expected_token_access="replaced-by-another-session",
+        )
+
+        assert auth_token_db is None
+        assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider) == auth_token
+
     async def test__delete__nominal(
         self,
         async_session_db: AsyncSession,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
-        await auth_token_repository.delete(user_id=auth_token.user_id, provider=auth_token.provider)
+        deleted = await auth_token_repository.delete(
+            user_id=auth_token.user_id,
+            provider=auth_token.provider,
+            expected_token_refresh=auth_token.token_refresh,
+        )
 
+        assert deleted is True
         stmt = select(AuthProviderTokenModel).where(AuthProviderTokenModel.id == auth_token.id)
         result = await async_session_db.execute(stmt)
         assert result.scalar_one_or_none() is None
+
+    async def test__delete__token_refresh_changed(
+        self,
+        auth_token: OAuthProviderUserToken,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        deleted = await auth_token_repository.delete(
+            user_id=auth_token.user_id,
+            provider=auth_token.provider,
+            expected_token_refresh="replaced-by-another-session",
+        )
+
+        assert deleted is False
+        assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider) == auth_token

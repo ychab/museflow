@@ -93,38 +93,18 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         auth_token_db = result.scalar_one_or_none()
         return auth_token_db.to_entity() if auth_token_db else None
 
-    async def create(
+    async def upsert(
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
         auth_token_in: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
-        auth_token_dict: dict[str, Any] = auth_token_in.model_dump()
-        auth_token_dict["user_id"] = user_id
-        auth_token_dict["provider"] = provider
-
-        auth_token_db = AuthProviderTokenModel(**auth_token_dict)
-        self.session.add(auth_token_db)
-        await self.session.flush()
-
-        await self.session.refresh(auth_token_db)
-        return auth_token_db.to_entity()
-
-    async def update(
-        self,
-        user_id: uuid.UUID,
-        provider: MusicProvider,
-        auth_token_in: OAuthProviderUserTokenUpdateInput,
-    ) -> OAuthProviderUserToken:
-        update_data: dict[str, Any] = auth_token_in.model_dump(exclude_none=True)
+        token_data: dict[str, Any] = auth_token_in.model_dump()
 
         stmt = (
-            update(AuthProviderTokenModel)
-            .where(
-                AuthProviderTokenModel.user_id == user_id,
-                AuthProviderTokenModel.provider == provider,
-            )
-            .values(**update_data)
+            pg_insert(AuthProviderTokenModel)
+            .values(user_id=user_id, provider=provider, **token_data)
+            .on_conflict_do_update(index_elements=["user_id", "provider"], set_=token_data)
             .returning(AuthProviderTokenModel)
         )
         result = await self.session.execute(stmt)
@@ -132,10 +112,42 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
 
         return auth_token_db.to_entity()
 
-    async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:
-        stmt = delete(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == user_id,
-            AuthProviderTokenModel.provider == provider,
-        )
+    async def update(
+        self,
+        user_id: uuid.UUID,
+        provider: MusicProvider,
+        auth_token_in: OAuthProviderUserTokenUpdateInput,
+        expected_token_access: str,
+    ) -> OAuthProviderUserToken | None:
+        update_data: dict[str, Any] = auth_token_in.model_dump(exclude_none=True)
 
-        await self.session.execute(stmt)
+        # The condition and the write are one statement: PostgreSQL locks the row, then checks the condition again on
+        # its latest committed version, so a concurrent update of the same token can't slip in between.
+        stmt = (
+            update(AuthProviderTokenModel)
+            .where(
+                AuthProviderTokenModel.user_id == user_id,
+                AuthProviderTokenModel.provider == provider,
+                AuthProviderTokenModel.token_access == expected_token_access,
+            )
+            .values(**update_data)
+            .returning(AuthProviderTokenModel)
+        )
+        result = await self.session.execute(stmt)
+        auth_token_db = result.scalar_one_or_none()
+
+        return auth_token_db.to_entity() if auth_token_db else None
+
+    async def delete(self, user_id: uuid.UUID, provider: MusicProvider, expected_token_refresh: str) -> bool:
+        stmt = (
+            delete(AuthProviderTokenModel)
+            .where(
+                AuthProviderTokenModel.user_id == user_id,
+                AuthProviderTokenModel.provider == provider,
+                AuthProviderTokenModel.token_refresh == expected_token_refresh,
+            )
+            .returning(AuthProviderTokenModel.id)
+        )
+        result = await self.session.execute(stmt)
+        deleted = result.scalar_one_or_none() is not None
+        return deleted

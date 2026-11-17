@@ -1,3 +1,5 @@
+import logging
+from dataclasses import replace
 from datetime import datetime
 from datetime import timedelta
 
@@ -6,16 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
 from tests.integration.utils.wiremock import WireMockContext
-from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
 
 @pytest.mark.wiremock("spotify")
@@ -28,9 +32,12 @@ class TestSpotifyOAuthSessionClient:
     def auth_token_expired(
         self,
         frozen_time: datetime,
+        auth_token: OAuthProviderUserToken,
         spotify_session_client: SpotifyOAuthSessionClient,
     ) -> OAuthProviderUserToken:
-        return OAuthProviderUserTokenFactory.build(
+        """The stored token as the session holds it, past its expiry."""
+        return replace(
+            auth_token,
             token_expires_at=frozen_time - timedelta(seconds=spotify_session_client.token_buffer_seconds + 20),
         )
 
@@ -147,3 +154,107 @@ class TestSpotifyOAuthSessionClient:
         assert auth_token_db.token_access == token_payload.access_token
         assert auth_token_db.token_refresh == token_payload.refresh_token
         assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+
+    async def test__execute__refresh__token_replaced_meanwhile(
+        self,
+        spotify_oauth: SpotifyOAuthAdapter,
+        spotify_session_client: SpotifyOAuthSessionClient,
+        auth_token_repository: OAuthProviderTokenRepository,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        token_payload: OAuthProviderTokenPayload,
+        auth_token_expired: OAuthProviderUserToken,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="POST",
+            url_path=spotify_oauth.token_endpoint.path or "",
+            status=200,
+            json_body={
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
+                "expires_in": 3600,
+            },
+        )
+        spotify_wiremock.create_mapping(method="GET", url_path="/test", status=200, json_body={})
+        spotify_session_client.auth_token = auth_token_expired
+        # Another session reconnects the user while this one holds the expired token.
+        auth_token_reconnected = await auth_token_repository.upsert(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_create,
+        )
+
+        await spotify_session_client.execute("GET", "/test")
+
+        # The newer token wins over this session's refresh, in the database and in memory.
+        auth_token_stored = await auth_token_repository.get(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+        )
+        assert auth_token_stored == auth_token_reconnected
+        assert spotify_session_client.auth_token == auth_token_reconnected
+
+    async def test__execute__refresh__invalid_grant__token_replaced_meanwhile(
+        self,
+        spotify_oauth: SpotifyOAuthAdapter,
+        spotify_session_client: SpotifyOAuthSessionClient,
+        auth_token_repository: OAuthProviderTokenRepository,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        auth_token_expired: OAuthProviderUserToken,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="POST",
+            url_path=spotify_oauth.token_endpoint.path or "",
+            status=400,
+            json_body={"error": "invalid_grant"},
+        )
+        spotify_wiremock.create_mapping(method="GET", url_path="/test", status=200, json_body={})
+        spotify_session_client.auth_token = auth_token_expired
+        # Another session rotated the refresh token: Spotify now rejects the one this session holds.
+        auth_token_rotated = await auth_token_repository.upsert(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_create,
+        )
+
+        await spotify_session_client.execute("GET", "/test")
+
+        # The rotated token is kept, not discarded with the rejected one.
+        auth_token_stored = await auth_token_repository.get(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+        )
+        assert auth_token_stored == auth_token_rotated
+        assert spotify_session_client.auth_token == auth_token_rotated
+
+    async def test__execute__refresh__invalid_grant(
+        self,
+        user: User,
+        spotify_oauth: SpotifyOAuthAdapter,
+        spotify_session_client: SpotifyOAuthSessionClient,
+        auth_token_repository: OAuthProviderTokenRepository,
+        auth_token_expired: OAuthProviderUserToken,
+        spotify_wiremock: WireMockContext,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="POST",
+            url_path=spotify_oauth.token_endpoint.path or "",
+            status=400,
+            json_body={"error": "invalid_grant"},
+        )
+        spotify_session_client.auth_token = auth_token_expired
+
+        with caplog.at_level(logging.WARNING), pytest.raises(ProviderAuthTokenNotFoundError):
+            await spotify_session_client.execute("GET", "/test")
+
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.WARNING
+        assert caplog.records[0].__dict__["user_id"] == str(user.id)
+        assert caplog.records[0].__dict__["provider"] == MusicProvider.SPOTIFY
+
+        assert (
+            await auth_token_repository.get(user_id=auth_token_expired.user_id, provider=MusicProvider.SPOTIFY) is None
+        )

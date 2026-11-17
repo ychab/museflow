@@ -73,7 +73,7 @@ class TestSpotifyLibraryLive:
     ) -> SpotifyOAuthSessionClient:
         token_payload = await spotify_oauth_live.refresh_access_token(spotify_refresh_token)
 
-        auth_token = await auth_token_repository.create(
+        auth_token = await auth_token_repository.upsert(
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
             auth_token_in=to_auth_token_create_input(token_payload),

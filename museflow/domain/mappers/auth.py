@@ -1,25 +1,5 @@
-import uuid
-
 from museflow.domain.entities.auth import OAuthProviderUserToken
-from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
-
-
-def to_auth_token(
-    auth_token_id: int,
-    user_id: uuid.UUID,
-    provider: MusicProvider,
-    token_payload: OAuthProviderTokenPayload,
-) -> OAuthProviderUserToken:
-    return OAuthProviderUserToken(
-        id=auth_token_id,
-        user_id=user_id,
-        provider=provider,
-        token_type=token_payload.token_type,
-        token_access=token_payload.access_token,
-        token_refresh=token_payload.refresh_token,
-        token_expires_at=token_payload.expires_at,
-    )
 
 
 def to_token_payload(auth_token: OAuthProviderUserToken) -> OAuthProviderTokenPayload:

@@ -158,26 +158,24 @@ async with self._uow as uow:
 ```
 
 **Remote first, then one block** (`exchange_oauth_code`). The code is exchanged with Spotify before any query, then the
-token is read and created or updated in one block:
+token is saved in one block, by an upsert: a read then a create would let two callbacks at once both create it.
 
 ```python
 token_payload = await provider_oauth.exchange_code_for_token(code)
 
 async with uow:
-    auth_token = await uow.auth_tokens.get(user_id=user.id, provider=provider)
-    if auth_token is not None:
-        await uow.auth_tokens.update(...)
-    else:
-        await uow.auth_tokens.create(...)
+    await uow.auth_tokens.upsert(user_id=user.id, provider=provider, auth_token_in=...)
 ```
 
 **An independent component gets its own instance** (the Spotify session client). A refreshed token is committed in
 its own block, right away, whatever the use case is doing:
 
 ```python
-# Update in DB, committed right away: the new token must survive a later failure of the command
+# Committed right away: the new token must survive a later failure of the command
 async with self.uow as uow:
-    await uow.auth_tokens.update(user_id=self.user.id, provider=MusicProvider.SPOTIFY, auth_token_in=...)
+    auth_token = await uow.auth_tokens.update(..., expected_token_access=stale_token.token_access)
+    if auth_token is None:  # another session replaced the token meanwhile: its value wins
+        auth_token = await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
 ```
 
 **A plain read is a block too** (most CLI commands and endpoints). For the roughly nine flows out of ten that need no
