@@ -12,6 +12,7 @@ from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.taste_discover import DiscoverTasteResult
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
@@ -179,10 +180,7 @@ async def playlist_discover_logic(
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
 
-        async with uow:
-            user = await uow.users.get_by_email(email)
-            if not user:
-                raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
 
         provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
 

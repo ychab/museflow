@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from museflow.application.use_cases.llm_usage_summary import summarize_llm_usage
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.exceptions import UserNotFoundError
@@ -111,10 +112,7 @@ async def llm_usage_logic(
 
     user_id = None
     if email is not None:
-        async with uow:
-            user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
         user_id = user.id
 
     return await summarize_llm_usage(

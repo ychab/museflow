@@ -6,6 +6,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import BlacklistItemNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
@@ -35,11 +36,7 @@ def blacklist_remove_command(
 async def blacklist_remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     use_case = RemoveFromBlacklistUseCase(uow=uow)
     await use_case.remove(user_id=user.id, item_ids=item_ids)

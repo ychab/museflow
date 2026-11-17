@@ -6,6 +6,7 @@ import typer
 from rich.table import Table
 
 from museflow.application.use_cases.taste_profile_list import get_taste_profiles
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
@@ -54,10 +55,6 @@ def taste_list_command(
 async def taste_list_logic(email: EmailStr) -> list[TasteProfile]:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await get_taste_profiles(user_id=user.id, uow=uow)

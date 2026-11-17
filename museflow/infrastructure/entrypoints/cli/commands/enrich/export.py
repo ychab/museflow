@@ -7,6 +7,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.enrichment_export import export_enrichment
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -37,11 +38,7 @@ def enrich_export_command(
 
 async def enrich_export_logic(email: EmailStr) -> list[dict[str, Any]]:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     tracks = await export_enrichment(user_id=user.id, uow=uow)
 

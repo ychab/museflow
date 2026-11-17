@@ -9,6 +9,7 @@ import typer
 
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.track_rate import RateTrackUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -92,10 +93,7 @@ async def rate_playlist_logic(
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
 
-        async with uow:
-            user = await uow.users.get_by_email(email)
-            if not user:
-                raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:

@@ -8,6 +8,7 @@ from pydantic import TypeAdapter
 import typer
 
 from museflow.application.use_cases.taste_profile_import import import_taste_profiles
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
@@ -37,11 +38,7 @@ def taste_import_command(
 
 async def taste_import_logic(email: EmailStr, data: list[dict[str, Any]] | dict[str, Any]) -> list[TasteProfile]:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     # A file exported before the multi-profile export holds a single profile, not a list.
     entries = data if isinstance(data, list) else [data]

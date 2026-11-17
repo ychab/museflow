@@ -12,6 +12,7 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryError
 from museflow.domain.exceptions import UserNotFoundError
@@ -103,11 +104,7 @@ async def tracks_history_logic(
 ) -> ImportStreamingHistoryReport:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     use_case = ImportStreamingHistoryUseCase(
         uow=uow, streaming_history=get_streaming_history_adapter(provider), progress=progress

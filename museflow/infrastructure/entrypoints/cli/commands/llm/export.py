@@ -7,6 +7,7 @@ import typer
 
 from museflow.application.inputs.llm import LLMUsageEntryInput
 from museflow.application.use_cases.llm_usage_export import export_llm_usage
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -34,10 +35,6 @@ def llm_export_command(
 
 async def llm_export_logic(email: EmailStr) -> list[LLMUsageEntryInput]:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await export_llm_usage(user_id=user.id, uow=uow)

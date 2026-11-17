@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from museflow.application.use_cases.playlist_view import get_playlist
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
@@ -62,10 +63,6 @@ def playlist_view_command(
 async def playlist_view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await get_playlist(user=user, playlist_id=playlist_id, uow=uow)

@@ -5,6 +5,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.user_delete import delete_user
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -40,10 +41,6 @@ def users_delete_command(
 async def users_delete_logic(email: EmailStr) -> None:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     await delete_user(user_id=user.id, uow=uow)

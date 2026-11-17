@@ -10,6 +10,7 @@ import typer
 from museflow.application.inputs.enrich import EnrichmentEntryInput
 from museflow.application.use_cases.enrichment_import import ImportEnrichmentResult
 from museflow.application.use_cases.enrichment_import import import_enrichment
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -43,10 +44,6 @@ async def enrich_import_logic(email: EmailStr, data: list[Any]) -> ImportEnrichm
     entries = TypeAdapter(list[EnrichmentEntryInput]).validate_python(data)
 
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await import_enrichment(user_id=user.id, entries=entries, uow=uow)

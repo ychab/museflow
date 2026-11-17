@@ -11,6 +11,7 @@ from rich import get_console
 from museflow.application.use_cases.provider_oauth_redirect import build_oauth_redirect_url
 from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
 from museflow.application.use_cases.provider_token_view import get_provider_token
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFoundError
@@ -70,10 +71,7 @@ def provider_connect_command(
 
 async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-    if not user:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     previous_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 

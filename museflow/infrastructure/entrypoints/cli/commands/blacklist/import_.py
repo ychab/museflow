@@ -9,6 +9,7 @@ import typer
 from museflow.application.inputs.blacklist import BlacklistImportInput
 from museflow.application.use_cases.blacklist_import import ImportBlacklistResult
 from museflow.application.use_cases.blacklist_import import import_blacklist
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
@@ -42,10 +43,6 @@ async def blacklist_import_logic(email: EmailStr, data: Any) -> ImportBlacklistR
     blacklist_in = BlacklistImportInput.model_validate(data)
 
     uow = get_unit_of_work()
-    async with uow:
-        user = await uow.users.get_by_email(email)
-
-    if user is None:
-        raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     return await import_blacklist(user_id=user.id, blacklist_in=blacklist_in, uow=uow)

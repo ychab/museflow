@@ -7,6 +7,7 @@ from pydantic import EmailStr
 import typer
 
 from museflow.application.use_cases.playlist_delete import DeletePlaylistUseCase
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import PlaylistNotFoundError
@@ -91,10 +92,7 @@ async def playlist_delete_logic(
 ) -> int:
     uow = get_unit_of_work()
 
-    async with uow:
-        user = await uow.users.get_by_email(email)
-        if not user:
-            raise UserNotFoundError()
+    user = await get_user(email=email, uow=uow)
 
     use_case = DeletePlaylistUseCase(user_id=user.id, uow=uow)
 

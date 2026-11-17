@@ -12,6 +12,7 @@ from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInpu
 from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
 from museflow.application.use_cases.playlist_history import create_history_playlist
+from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import GenreTag
@@ -210,10 +211,7 @@ async def playlist_history_logic(
     async with AsyncExitStack() as stack:
         uow = get_unit_of_work()
 
-        async with uow:
-            user = await uow.users.get_by_email(email)
-            if not user:
-                raise UserNotFoundError()
+        user = await get_user(email=email, uow=uow)
 
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
