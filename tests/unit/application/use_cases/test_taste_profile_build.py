@@ -11,7 +11,6 @@ from pytest_httpx import HTTPXMock
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
-from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
@@ -24,6 +23,7 @@ from museflow.domain.value_objects.progress import StepDone
 from museflow.domain.value_objects.progress import StepResumed
 from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import ListeningPeriod
+from museflow.domain.value_objects.taste import TasteProfileData
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights
 
@@ -255,8 +255,8 @@ class TestBuildTasteProfileUseCase:
 
         # 3 segments + 2 merges + 1 reflection
         assert blocks_open == [False] * 6
-        # The played tracks counted, the periods read, one checkpoint per period, the final upsert, then the LLM usage
-        assert mock_uow.__aenter__.await_count == 7
+        # The played tracks counted and the periods read, one checkpoint per period, the final upsert, then the LLM usage
+        assert mock_uow.__aenter__.await_count == 6
 
     @pytest.mark.parametrize("periods", [1], indirect=True)
     async def test__nominal__single_batch(

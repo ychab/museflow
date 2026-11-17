@@ -1,7 +1,4 @@
-from typing import Literal
-
-ProviderPageErrorCodes = Literal["unsupported_local_files"]
-
+from museflow.domain.types import ProviderPageErrorCodes
 
 # --- User exceptions ---
 

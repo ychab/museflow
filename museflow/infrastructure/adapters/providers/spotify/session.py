@@ -37,7 +37,7 @@ class SpotifyOAuthSessionClient:
         uow: UnitOfWorkPort,
         oauth_client: SpotifyOAuthAdapter,
         token_buffer_seconds: int = spotify_settings.TOKEN_BUFFER_SECONDS,
-    ):
+    ) -> None:
         self.user = user
         self.auth_token = auth_token
         self.uow = uow

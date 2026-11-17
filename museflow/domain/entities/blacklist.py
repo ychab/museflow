@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import UTC
 from datetime import datetime
 
 from museflow.domain.utils.text import generate_fingerprint
@@ -15,7 +16,7 @@ class BlacklistedArtist:
     artist_name: str
     fingerprint: str = ""
 
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         if not self.artist_name:
@@ -33,7 +34,7 @@ class BlacklistedTrack:
     artist_name: str
     fingerprint: str = ""
 
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         if not self.name:

@@ -12,14 +12,14 @@ from museflow.domain.const import GENRE_MACRO_TAGS
 from museflow.domain.const import GENRE_MESO_TAGS
 from museflow.domain.const import GENRE_MICRO_TAGS
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
-from museflow.domain.entities.taste import TasteEra
-from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.enums import MoodTag
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
 from museflow.domain.utils.taste import merge_taste_profiles
 from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.domain.value_objects.taste import PeriodTrack
+from museflow.domain.value_objects.taste import TasteEra
+from museflow.domain.value_objects.taste import TasteProfileData
 from museflow.infrastructure.adapters.common.llm.adapter import OpenRouterAdapterMixin
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.exceptions import LLMRateLimitError

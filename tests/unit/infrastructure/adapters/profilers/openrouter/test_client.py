@@ -7,9 +7,9 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.domain.const import TASTE_TIMELINE_MAX_ERAS
-from museflow.domain.entities.taste import TasteProfileData
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
+from museflow.domain.value_objects.taste import TasteProfileData
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import _format_tracks
 from museflow.infrastructure.adapters.profilers.openrouter.schemas import split_weights

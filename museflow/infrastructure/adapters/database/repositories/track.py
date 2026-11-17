@@ -7,6 +7,7 @@ from typing import Final
 from sqlalchemy import BigInteger
 from sqlalchemy import Boolean
 from sqlalchemy import ColumnElement
+from sqlalchemy import TextClause
 from sqlalchemy import Uuid
 from sqlalchemy import and_
 from sqlalchemy import any_
@@ -91,12 +92,7 @@ class TrackSQLRepository(TrackRepository):
 
         # Filtering
         if provider is not None:
-            stmt = stmt.where(
-                text(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
-                    "WHERE elem->>'provider' = :provider)"
-                ).bindparams(provider=provider.value)
-            )
+            stmt = stmt.where(self._provider_condition(provider))
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
         if max_score is not None:
@@ -405,10 +401,7 @@ class TrackSQLRepository(TrackRepository):
             update(TrackModel)
             .where(
                 TrackModel.user_id == user_id,
-                text(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
-                    "WHERE elem->>'provider' = :provider)"
-                ).bindparams(provider=provider.value),
+                self._provider_condition(provider),
             )
             .values(
                 provider_links=text(
@@ -431,13 +424,20 @@ class TrackSQLRepository(TrackRepository):
         )
 
         result = await self.session.execute(stmt)
-        return int(result.rowcount)  # type: ignore
+        return int(result.rowcount)  # type: ignore[attr-defined]
 
     async def purge(self, user_id: uuid.UUID) -> int:
         stmt = delete(TrackModel).where(TrackModel.user_id == user_id)
 
         result = await self.session.execute(stmt)
-        return int(result.rowcount)  # type: ignore
+        return int(result.rowcount)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def _provider_condition(provider: MusicProvider) -> TextClause:
+        return text(
+            "EXISTS (SELECT 1 FROM jsonb_array_elements(museflow_track.provider_links) AS elem "
+            "WHERE elem->>'provider' = :provider)"
+        ).bindparams(provider=provider.value)
 
     @staticmethod
     def _source_condition(source: TrackSource) -> ColumnElement[bool]:

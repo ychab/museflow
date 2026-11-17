@@ -61,7 +61,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         if not rows:
             return None
 
-        playlist_db: PlaylistDB = rows[0][0]
+        playlist_db: PlaylistDB = rows[0]._mapping[PlaylistDB]
         tracks = [
             track_db.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
             for _, track_db, played_count, first, last in rows

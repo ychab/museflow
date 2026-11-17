@@ -4,11 +4,11 @@ from polyfactory import Use
 from polyfactory.factories import DataclassFactory
 from polyfactory.factories import TypedDictFactory
 
-from museflow.domain.entities.taste import TasteEra
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.taste import TechnicalFingerprint
 from museflow.domain.enums import TasteProfileStatus
+from museflow.domain.value_objects.taste import TasteEra
+from museflow.domain.value_objects.taste import TasteProfileData
+from museflow.domain.value_objects.taste import TechnicalFingerprint
 
 
 class TechnicalFingerprintFactory(TypedDictFactory[TechnicalFingerprint]):

@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import Any
 
 from museflow.domain.entities.taste import TasteProfile
-from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.value_objects.taste import TasteProfileData
 
 
 class TasteProfileRepository(ABC):

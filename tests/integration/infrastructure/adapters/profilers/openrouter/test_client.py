@@ -1,6 +1,6 @@
 import pytest
 
-from museflow.domain.entities.taste import TasteProfileData
+from museflow.domain.value_objects.taste import TasteProfileData
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 
 from tests.integration.factories.models.taste import TasteProfileDataFactory

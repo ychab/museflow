@@ -6,6 +6,7 @@ from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
+from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -105,23 +106,29 @@ async def get_profiler(
 
 
 @asynccontextmanager
-async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyOAuthAdapter]:
+async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
     match provider:
         case MusicProvider.SPOTIFY:
-            async with SpotifyOAuthAdapter(
-                client_id=spotify_settings.CLIENT_ID,
-                client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
-                redirect_uri=spotify_settings.REDIRECT_URI,
-                base_url=spotify_settings.BASE_URL,
-                auth_endpoint=spotify_settings.AUTH_ENDPOINT,
-                token_endpoint=spotify_settings.TOKEN_ENDPOINT,
-                timeout=spotify_settings.HTTP_TIMEOUT,
-                token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
-                max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
-            ) as client:
+            async with get_spotify_oauth() as client:
                 yield client
         case _:
             raise ValueError(f"Unknown provider: {provider}")
+
+
+@asynccontextmanager
+async def get_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
+    async with SpotifyOAuthAdapter(
+        client_id=spotify_settings.CLIENT_ID,
+        client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
+        redirect_uri=spotify_settings.REDIRECT_URI,
+        base_url=spotify_settings.BASE_URL,
+        auth_endpoint=spotify_settings.AUTH_ENDPOINT,
+        token_endpoint=spotify_settings.TOKEN_ENDPOINT,
+        timeout=spotify_settings.HTTP_TIMEOUT,
+        token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
+        max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
+    ) as client:
+        yield client
 
 
 # --- Adapter manager ---
@@ -130,14 +137,6 @@ async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[SpotifyO
 def get_spotify_library_factory(spotify_client: SpotifyOAuthAdapter) -> SpotifyLibraryFactory:
     # Its own unit of work: a token refresh happens in the middle of a remote call of the use case.
     return SpotifyLibraryFactory(uow=get_unit_of_work(), oauth_client=spotify_client)
-
-
-def get_provider_library_factory(provider: MusicProvider, oauth_client: SpotifyOAuthAdapter) -> SpotifyLibraryFactory:
-    match provider:
-        case MusicProvider.SPOTIFY:
-            return get_spotify_library_factory(spotify_client=oauth_client)
-        case _:
-            raise ValueError(f"Unknown provider: {provider}")
 
 
 @asynccontextmanager
@@ -158,9 +157,12 @@ async def get_provider_library(
             f"No {provider} auth token found — run 'museflow provider connect --provider {provider}' first."
         )
 
-    async with get_provider_oauth(provider) as oauth_client:
-        provider_library_factory = get_provider_library_factory(provider=provider, oauth_client=oauth_client)
-        yield provider_library_factory.create(user=user, auth_token=auth_token)
+    match provider:
+        case MusicProvider.SPOTIFY:
+            async with get_spotify_oauth() as oauth_client:
+                yield get_spotify_library_factory(spotify_client=oauth_client).create(user=user, auth_token=auth_token)
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 
 
 def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPort:
