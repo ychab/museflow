@@ -188,7 +188,9 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   only the `json` handler ships it. The message stands alone all the same: the terminal handlers (`console`, `rich`)
   never print `extra`, so a warning needs its context (status code, step, track) in the text. Streams, handlers and
   `--verbose` vs DEBUG: `docs/technical/logging.md`.
-  In `except` blocks: `logger.exception("Static message", extra={...})`, the traceback carries the detail.
+  In `except` blocks, the traceback carries an unexpected error: `logger.exception(...)`, or
+  `logger.warning(..., exc_info=True)` when the run goes on; the message gives the context. An expected error that
+  its message explains (a rate limit, a rejected query) logs no traceback.
 - Never log secrets (tokens, passwords): log IDs.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.
 - An exception ends in `Error`, as in the standard library (`ValueError`): `UserNotFoundError`, even when the caller

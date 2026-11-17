@@ -56,7 +56,9 @@ plain lines on stderr, which an aggregator ingests as raw text.
 - **`extra` for the data worth querying** (IDs, counts, costs): only the `json` handler ships it, to be filtered or
   summed in an aggregator.
 - **Never a secret**: log IDs, never tokens or passwords.
-- In an `except` block, `logger.exception("Static message", extra={...})`: the traceback carries the detail.
+- In an `except` block, the traceback carries an unexpected error: `logger.exception(...)`, or
+  `logger.warning(..., exc_info=True)` when the run goes on; the message gives the context. An expected error that
+  its message explains (a rate limit, a rejected query) logs no traceback.
 
 ## `--verbose` is not `DEBUG`
 
