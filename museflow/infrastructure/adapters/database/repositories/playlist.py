@@ -5,6 +5,7 @@ from sqlalchemy import delete
 from sqlalchemy import select
 from sqlalchemy import true
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.domain.entities.playlist import Playlist
@@ -47,13 +48,15 @@ class PlaylistSQLRepository(PlaylistRepository):
         return [row.to_entity() for row in result.scalars()]
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
-        plays = TrackPlaySQLRepository.plays_summary()
+        playlist = aliased(PlaylistModel, name="playlist")
+        track = aliased(TrackModel, name="track")
+        plays = TrackPlaySQLRepository.plays_summary(track)
         stmt = (
-            select(PlaylistModel, TrackModel, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
-            .outerjoin(PlaylistTrackModel, PlaylistTrackModel.playlist_id == PlaylistModel.id)
-            .outerjoin(TrackModel, TrackModel.id == PlaylistTrackModel.track_id)
+            select(playlist, track, plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
+            .outerjoin(PlaylistTrackModel, PlaylistTrackModel.playlist_id == playlist.id)
+            .outerjoin(track, track.id == PlaylistTrackModel.track_id)
             .join(plays, true())
-            .where(PlaylistModel.id == playlist_id, PlaylistModel.user_id == user_id)
+            .where(playlist.id == playlist_id, playlist.user_id == user_id)
             .order_by(PlaylistTrackModel.position)
         )
 
@@ -61,11 +64,15 @@ class PlaylistSQLRepository(PlaylistRepository):
         if not rows:
             return None
 
-        playlist_db: PlaylistModel = rows[0]._mapping[PlaylistModel]
+        playlist_db: PlaylistModel = rows[0].playlist
         tracks = [
-            track_db.to_entity(played_count=played_count, played_at_first=first, played_at_last=last)
-            for _, track_db, played_count, first, last in rows
-            if track_db is not None
+            row.track.to_entity(
+                played_count=row.played_count,
+                played_at_first=row.played_at_first,
+                played_at_last=row.played_at_last,
+            )
+            for row in rows
+            if row.track is not None
         ]
         return replace(playlist_db.to_entity(), tracks=tracks)
 

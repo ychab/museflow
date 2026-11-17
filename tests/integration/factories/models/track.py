@@ -83,7 +83,7 @@ class TrackModelFactory(BaseModelFactory[TrackModel]):
         """Creates the track and its plays, as `create_async`, and returns it as the repositories load it."""
         track = await cls.create_async(**kwargs)
         session = cast(AsyncSession, cls.__async_session__)
-        plays = TrackPlaySQLRepository.plays_summary()
+        plays = TrackPlaySQLRepository.plays_summary(TrackModel)
         played_count, first, last = (
             await session.execute(
                 select(plays.c.played_count, plays.c.played_at_first, plays.c.played_at_last)
