@@ -42,6 +42,47 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         super().__init__(client=client)
         self._llm = llm
 
+    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
+        tracks_json = json.dumps(
+            [
+                {"index": i, "title": track.name, "primary_artist": track.primary_artist}
+                for i, track in enumerate(tracks)
+            ],
+            ensure_ascii=False,
+        )
+        try:
+            content = await self._client.complete(
+                [
+                    ChatMessage(role="system", content=self._build_system_prompt(fields)),
+                    ChatMessage(role="user", content=tracks_json),
+                ],
+                response_model=EnrichmentResponse,
+                schema=build_enrichment_schema(fields),
+                llm=self._llm,
+                adapter="enricher",
+            )
+        except LLMRateLimitError as e:
+            raise EnricherRateLimitExceededError(str(e)) from e
+        except LLMRequestError as e:
+            if e.moderated or e.status_code in self._BATCH_STATUS_CODES:
+                raise TrackEnrichmentError(str(e)) from e
+            raise EnricherUnavailableError(str(e)) from e
+        except httpx.RequestError as e:
+            raise EnricherUnavailableError(f"OpenRouter unreachable after retries: {e!r}") from e
+        except LLMResponseError as e:
+            raise TrackEnrichmentError(f"Invalid enrichment response: {e}") from e
+
+        return [
+            TrackEnrichment(
+                track_id=tracks[item.track_index].id,
+                genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
+                moods=[MoodTag(m) for m in item.moods if m in MoodTag._value2member_map_],
+                locales=item.locales,
+            )
+            for item in content.enriched_tracks
+            if 0 <= item.track_index < len(tracks)
+        ]
+
     @staticmethod
     def _build_system_prompt(fields: frozenset[EnrichField]) -> str:
         parts = [
@@ -93,44 +134,3 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
         )
 
         return "\n".join(parts)
-
-    async def enrich_tracks(self, tracks: list[Track], fields: frozenset[EnrichField]) -> list[TrackEnrichment]:
-        tracks_json = json.dumps(
-            [
-                {"index": i, "title": track.name, "primary_artist": track.primary_artist}
-                for i, track in enumerate(tracks)
-            ],
-            ensure_ascii=False,
-        )
-        try:
-            content = await self._client.complete(
-                [
-                    ChatMessage(role="system", content=self._build_system_prompt(fields)),
-                    ChatMessage(role="user", content=tracks_json),
-                ],
-                response_model=EnrichmentResponse,
-                schema=build_enrichment_schema(fields),
-                llm=self._llm,
-                adapter="enricher",
-            )
-        except LLMRateLimitError as e:
-            raise EnricherRateLimitExceededError(str(e)) from e
-        except LLMRequestError as e:
-            if e.moderated or e.status_code in self._BATCH_STATUS_CODES:
-                raise TrackEnrichmentError(str(e)) from e
-            raise EnricherUnavailableError(str(e)) from e
-        except httpx.RequestError as e:
-            raise EnricherUnavailableError(f"OpenRouter unreachable after retries: {e!r}") from e
-        except LLMResponseError as e:
-            raise TrackEnrichmentError(f"Invalid enrichment response: {e}") from e
-
-        return [
-            TrackEnrichment(
-                track_id=tracks[item.track_index].id,
-                genres=[GenreTag(g) for g in item.genres if g in GenreTag._value2member_map_],
-                moods=[MoodTag(m) for m in item.moods if m in MoodTag._value2member_map_],
-                locales=item.locales,
-            )
-            for item in content.enriched_tracks
-            if 0 <= item.track_index < len(tracks)
-        ]

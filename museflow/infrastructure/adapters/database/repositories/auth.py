@@ -97,9 +97,9 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenCreateInput,
+        auth_token_in: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
-        auth_token_dict: dict[str, Any] = auth_token_data.model_dump()
+        auth_token_dict: dict[str, Any] = auth_token_in.model_dump()
         auth_token_dict["user_id"] = user_id
         auth_token_dict["provider"] = provider
 
@@ -114,9 +114,9 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         self,
         user_id: uuid.UUID,
         provider: MusicProvider,
-        auth_token_data: OAuthProviderUserTokenUpdateInput,
+        auth_token_in: OAuthProviderUserTokenUpdateInput,
     ) -> OAuthProviderUserToken:
-        update_data: dict[str, Any] = auth_token_data.model_dump(exclude_none=True)
+        update_data: dict[str, Any] = auth_token_in.model_dump(exclude_none=True)
 
         stmt = (
             update(AuthProviderTokenModel)
@@ -130,7 +130,6 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         result = await self.session.execute(stmt)
         auth_token_db = result.scalar_one()
 
-        await self.session.refresh(auth_token_db)
         return auth_token_db.to_entity()
 
     async def delete(self, user_id: uuid.UUID, provider: MusicProvider) -> None:

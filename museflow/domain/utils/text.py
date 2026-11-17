@@ -6,23 +6,23 @@ from unidecode import unidecode
 from museflow.domain.types import LocaleCode
 
 
-def validate_locale(v: object) -> LocaleCode | None:
-    if not isinstance(v, str):
+def validate_locale(value: object) -> LocaleCode | None:
+    if not isinstance(value, str):
         return None
-    v = v.strip().lower()
-    return v if len(v) == 2 and v.isalpha() else None
+    value = value.strip().lower()
+    return value if len(value) == 2 and value.isalpha() else None
 
 
-def validate_locales(v: object) -> list[LocaleCode] | None:
+def validate_locales(value: object) -> list[LocaleCode] | None:
     """Keep the valid codes of a list, deduplicated in order.
 
     An empty list is a valid answer (no sung language). A non-list, or a non-empty list without any valid code, is not
     an answer and returns None.
     """
-    if not isinstance(v, list):
+    if not isinstance(value, list):
         return None
-    codes = list(dict.fromkeys(code for item in v if (code := validate_locale(item)) is not None))
-    return codes if codes or not v else None
+    codes = list(dict.fromkeys(code for item in value if (code := validate_locale(item)) is not None))
+    return codes if codes or not value else None
 
 
 def unidecode_lower_text(text: str) -> str:

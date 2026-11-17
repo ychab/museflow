@@ -1,5 +1,5 @@
-from museflow.application.mappers.auth import auth_token_create_from_token_payload
-from museflow.application.mappers.auth import auth_token_update_from_token_payload
+from museflow.application.mappers.auth import to_auth_token_create_input
+from museflow.application.mappers.auth import to_auth_token_update_input
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
@@ -41,11 +41,11 @@ async def handle_oauth_callback(
             await uow.auth_tokens.update(
                 user_id=user.id,
                 provider=provider,
-                auth_token_data=auth_token_update_from_token_payload(token_payload),
+                auth_token_in=to_auth_token_update_input(token_payload),
             )
         else:
             await uow.auth_tokens.create(
                 user_id=user.id,
                 provider=provider,
-                auth_token_data=auth_token_create_from_token_payload(token_payload),
+                auth_token_in=to_auth_token_create_input(token_payload),
             )

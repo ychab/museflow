@@ -21,7 +21,7 @@ class TestUsersUpdateLogic:
         email = "new@museflow.com"
         password = "new-password"
 
-        await users_update_logic(user.id, user_data=UserUpdateInput(email=email, password=password))
+        await users_update_logic(user.id, user_in=UserUpdateInput(email=email, password=password))
 
         stmt = select(UserModel).where(UserModel.id == user.id)
         result = await async_session_db.execute(stmt)

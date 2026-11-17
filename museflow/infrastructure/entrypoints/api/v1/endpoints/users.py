@@ -31,14 +31,14 @@ router = APIRouter()
 
 @router.post("/register", name="user_register", status_code=status.HTTP_201_CREATED)
 async def register(
-    user_data: UserCreateInput,
+    user_in: UserCreateInput,
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
     try:
         user = await create_user(
-            user_data=user_data,
+            user_in=user_in,
             uow=uow,
             password_hasher=password_hasher,
         )
@@ -87,7 +87,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)) 
 
 @router.patch("/me", name="user_me")
 async def update_current_user(
-    user_data: UserUpdateInput,
+    user_in: UserUpdateInput,
     current_user: User = Depends(get_current_user),
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
@@ -95,7 +95,7 @@ async def update_current_user(
     try:
         updated_user = await update_user(
             user=current_user,
-            user_data=user_data,
+            user_in=user_in,
             uow=uow,
             password_hasher=password_hasher,
         )

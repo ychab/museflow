@@ -3,17 +3,12 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import replace
 from datetime import datetime
-from enum import StrEnum
 from typing import Any
 from typing import Self
 from typing import TypedDict
 
+from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.utils.taste import era_sort_key
-
-
-class TasteProfileStatus(StrEnum):
-    BUILDING = "building"
-    FINISHED = "finished"
 
 
 class TechnicalFingerprint(TypedDict):

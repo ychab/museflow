@@ -3,7 +3,7 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 
 
-def auth_token_create_from_token_payload(
+def to_auth_token_create_input(
     token_payload: OAuthProviderTokenPayload,
 ) -> OAuthProviderUserTokenCreateInput:
     return OAuthProviderUserTokenCreateInput(
@@ -14,7 +14,7 @@ def auth_token_create_from_token_payload(
     )
 
 
-def auth_token_update_from_token_payload(
+def to_auth_token_update_input(
     token_payload: OAuthProviderTokenPayload,
 ) -> OAuthProviderUserTokenUpdateInput:
     return OAuthProviderUserTokenUpdateInput(

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 import pytest
 
 from museflow import __project_name__
-from museflow.application.mappers.auth import auth_token_create_from_token_payload
+from museflow.application.mappers.auth import to_auth_token_create_input
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.domain.entities.track import Track
@@ -76,7 +76,7 @@ class TestSpotifyLibraryLive:
         auth_token = await auth_token_repository.create(
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            auth_token_data=auth_token_create_from_token_payload(token_payload),
+            auth_token_in=to_auth_token_create_input(token_payload),
         )
 
         return SpotifyOAuthSessionClient(

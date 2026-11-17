@@ -42,8 +42,8 @@ class EnrichedTrack(BaseModel):
 
     @field_validator("locales", mode="before")
     @classmethod
-    def _filter_locales(cls, v: object) -> list[str] | None:
-        return validate_locales(v)
+    def _filter_locales(cls, value: object) -> list[str] | None:
+        return validate_locales(value)
 
     @property
     def genres(self) -> list[str]:

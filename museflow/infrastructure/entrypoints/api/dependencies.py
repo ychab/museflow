@@ -1,6 +1,7 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from typing import Final
 
 from fastapi import Depends
 from fastapi import HTTPException
@@ -33,7 +34,7 @@ from museflow.infrastructure.config.settings.spotify import spotify_settings
 
 logger = logging.getLogger(__name__)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{app_settings.API_V1_PREFIX}/users/login")
+oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{app_settings.API_V1_PREFIX}/users/login")
 
 
 def get_password_hasher() -> PasswordHasherPort:

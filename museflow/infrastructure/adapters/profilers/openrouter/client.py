@@ -76,35 +76,6 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
             },
         }
 
-    async def _complete[T: BaseModel](
-        self,
-        prompt: str,
-        response_model: type[T],
-        schema: JsonSchemaProperty,
-        llm: LLMSettings,
-        step: str,
-    ) -> T:
-        try:
-            content = await self._client.complete(
-                [ChatMessage(role="user", content=prompt)],
-                response_model=response_model,
-                schema=schema,
-                llm=llm,
-                adapter=f"profiler {step}",
-            )
-        except LLMRateLimitError as e:
-            raise TasteProfilerRateLimitExceededError(str(e)) from e
-        except LLMRequestError as e:
-            raise TasteProfileBuildError(str(e)) from e
-        except LLMResponseError as e:
-            raise TasteProfileBuildError(f"Invalid taste profile response: {e}") from e
-
-        return content
-
-    async def _complete_profile(self, prompt: str, llm: LLMSettings, step: str) -> TasteProfileData:
-        content = await self._complete(prompt, TasteProfileResponse, TASTE_PROFILE_SCHEMA, llm, step)
-        return cast(TasteProfileData, content.model_dump())
-
     async def build_profile_segment(self, period: ListeningPeriod) -> TasteProfileData:
         date_range = f"{period.start.date()} to {period.end.date()}"
         prompt = (
@@ -213,6 +184,35 @@ class OpenRouterTasteProfileAdapter(OpenRouterAdapterMixin, TasteProfilerPort):
         )
 
         return await self._complete_profile(prompt, self._reflect_llm, "reflect")
+
+    async def _complete[T: BaseModel](
+        self,
+        prompt: str,
+        response_model: type[T],
+        schema: JsonSchemaProperty,
+        llm: LLMSettings,
+        step: str,
+    ) -> T:
+        try:
+            content = await self._client.complete(
+                [ChatMessage(role="user", content=prompt)],
+                response_model=response_model,
+                schema=schema,
+                llm=llm,
+                adapter=f"profiler {step}",
+            )
+        except LLMRateLimitError as e:
+            raise TasteProfilerRateLimitExceededError(str(e)) from e
+        except LLMRequestError as e:
+            raise TasteProfileBuildError(str(e)) from e
+        except LLMResponseError as e:
+            raise TasteProfileBuildError(f"Invalid taste profile response: {e}") from e
+
+        return content
+
+    async def _complete_profile(self, prompt: str, llm: LLMSettings, step: str) -> TasteProfileData:
+        content = await self._complete(prompt, TasteProfileResponse, TASTE_PROFILE_SCHEMA, llm, step)
+        return cast(TasteProfileData, content.model_dump())
 
 
 def _format_tracks(tracks: list[PeriodTrack]) -> str:

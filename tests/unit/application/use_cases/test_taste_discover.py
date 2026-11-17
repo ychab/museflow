@@ -9,12 +9,12 @@ import pytest
 
 from museflow.application.inputs.discovery import DiscoverTasteConfigInput
 from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
-from museflow.domain.entities.taste import TasteProfileStatus
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import SortOrder
+from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import TasteProfileNotFoundError

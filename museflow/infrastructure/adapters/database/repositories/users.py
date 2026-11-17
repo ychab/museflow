@@ -33,8 +33,8 @@ class UserSQLRepository(UserRepository):
 
         return user_db.to_entity() if user_db else None
 
-    async def create(self, user_data: UserCreateInput, hashed_password: str) -> User:
-        user_dict: dict[str, Any] = user_data.model_dump(exclude={"password"})
+    async def create(self, user_in: UserCreateInput, hashed_password: str) -> User:
+        user_dict: dict[str, Any] = user_in.model_dump(exclude={"password"})
         user_dict["hashed_password"] = hashed_password
 
         user_db = UserModel(**user_dict)
@@ -45,8 +45,8 @@ class UserSQLRepository(UserRepository):
 
         return user_db.to_entity()
 
-    async def update(self, user_id: uuid.UUID, user_data: UserUpdateInput, hashed_password: str | None = None) -> User:
-        update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True, exclude={"password"})
+    async def update(self, user_id: uuid.UUID, user_in: UserUpdateInput, hashed_password: str | None = None) -> User:
+        update_data: dict[str, Any] = user_in.model_dump(exclude_unset=True, exclude={"password"})
 
         if hashed_password:
             update_data["hashed_password"] = hashed_password
@@ -54,8 +54,6 @@ class UserSQLRepository(UserRepository):
         stmt = update(UserModel).where(UserModel.id == user_id).values(**update_data).returning(UserModel)
         result = await self.session.execute(stmt)
         user_db = result.scalar_one()
-
-        await self.session.refresh(user_db)
 
         return user_db.to_entity()
 

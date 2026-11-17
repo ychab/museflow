@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.taste import TasteProfileStatus
+from museflow.domain.enums import TasteProfileStatus
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 

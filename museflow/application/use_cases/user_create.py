@@ -6,7 +6,7 @@ from museflow.domain.exceptions import UserAlreadyExistsError
 
 
 async def create_user(
-    user_data: UserCreateInput,
+    user_in: UserCreateInput,
     uow: UnitOfWorkPort,
     password_hasher: PasswordHasherPort,
 ) -> User:
@@ -16,7 +16,7 @@ async def create_user(
     existing users with the same email, hashing the password, and persisting the user.
 
     Args:
-        user_data: The data for the new user.
+        user_in: The data for the new user.
         uow: The unit of work giving access to the user repository.
         password_hasher: The password hasher.
 
@@ -27,13 +27,13 @@ async def create_user(
         UserAlreadyExistsError: If a user with the same email already exists.
     """
     async with uow:
-        existing_user = await uow.users.get_by_email(user_data.email)
+        existing_user = await uow.users.get_by_email(user_in.email)
 
     if existing_user:
         raise UserAlreadyExistsError("Email already registered")
 
     # Hashing is slow on purpose: keep it out of the block.
-    hashed_password = password_hasher.hash(user_data.password)
+    hashed_password = password_hasher.hash(user_in.password)
 
     async with uow:
-        return await uow.users.create(user_data, hashed_password=hashed_password)
+        return await uow.users.create(user_in, hashed_password=hashed_password)

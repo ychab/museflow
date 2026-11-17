@@ -13,7 +13,7 @@ from sqlalchemy.orm import mapped_column
 
 from museflow.domain.entities.taste import TasteProfile as TasteProfileEntity
 from museflow.domain.entities.taste import TasteProfileData
-from museflow.domain.entities.taste import TasteProfileStatus
+from museflow.domain.enums import TasteProfileStatus
 from museflow.infrastructure.adapters.database.models.base import Base
 from museflow.infrastructure.adapters.database.models.base import DatetimeTrackMixin
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin

@@ -158,7 +158,7 @@ class TestOAuthProviderTokenSQLRepository:
         auth_token_db = await auth_token_repository.create(
             user_id=user.id,
             provider=MusicProvider.SPOTIFY,
-            auth_token_data=auth_token_create,
+            auth_token_in=auth_token_create,
         )
         assert auth_token_db is not None
 
@@ -175,22 +175,22 @@ class TestOAuthProviderTokenSQLRepository:
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
-        auth_token_data = OAuthProviderUserTokenUpdateInput(
+        auth_token_in = OAuthProviderUserTokenUpdateInput(
             token_refresh="dummy-token-state",
             token_expires_at=datetime.now(UTC),
         )
         auth_token_db = await auth_token_repository.update(
             user_id=auth_token.user_id,
             provider=MusicProvider.SPOTIFY,
-            auth_token_data=auth_token_data,
+            auth_token_in=auth_token_in,
         )
 
         assert auth_token_db.user_id == auth_token.user_id
         assert auth_token_db.provider == MusicProvider.SPOTIFY
         assert auth_token_db.token_type == auth_token.token_type
         assert auth_token_db.token_access == auth_token.token_access
-        assert auth_token_db.token_refresh == auth_token_data.token_refresh
-        assert auth_token_db.token_expires_at == auth_token_data.token_expires_at
+        assert auth_token_db.token_refresh == auth_token_in.token_refresh
+        assert auth_token_db.token_expires_at == auth_token_in.token_expires_at
 
     async def test__update__all(
         self,
@@ -201,7 +201,7 @@ class TestOAuthProviderTokenSQLRepository:
         auth_token_db = await auth_token_repository.update(
             user_id=auth_token.user_id,
             provider=MusicProvider.SPOTIFY,
-            auth_token_data=auth_token_update,
+            auth_token_in=auth_token_update,
         )
 
         assert auth_token_db.user_id == auth_token.user_id

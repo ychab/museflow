@@ -87,11 +87,6 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
     def token_endpoint(self) -> HttpUrl:
         return self._token_endpoint
 
-    def _get_basic_auth_header(self) -> str:
-        credentials = f"{self.client_id}:{self.client_secret}"
-        encoded = base64.b64encode(credentials.encode()).decode()
-        return f"Basic {encoded}"
-
     def get_authorization_url(self, state: str) -> str:
         params = {
             "client_id": self.client_id,
@@ -235,3 +230,8 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
             return {}
 
         return cast(dict[str, Any], response.json())
+
+    def _get_basic_auth_header(self) -> str:
+        credentials = f"{self.client_id}:{self.client_secret}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+        return f"Basic {encoded}"

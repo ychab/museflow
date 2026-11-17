@@ -43,7 +43,7 @@ async def users_create_logic(email: EmailStr, password: str) -> User:
     password_hasher = get_password_hasher()
 
     return await create_user(
-        user_data=UserCreateInput(email=email, password=password),
+        user_in=UserCreateInput(email=email, password=password),
         uow=get_unit_of_work(),
         password_hasher=password_hasher,
     )
