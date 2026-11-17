@@ -45,16 +45,24 @@ def rate_history_command(
     if play_provider is not None and not play:
         raise typer.BadParameter("--play-provider requires --play")
 
+    if reset:
+        typer.confirm("This will clear all history track scores. Continue?", abort=True)
+
     try:
-        result = asyncio.run(
-            rate_history_logic(
-                email=email,
-                limit=limit,
-                reset=reset,
-                provider=(play_provider or MusicProvider.SPOTIFY) if play else None,
-                artist=artist,
+        # One runner for both steps: the reset count prints before the rating loop starts.
+        with asyncio.Runner() as runner:
+            if reset:
+                count = runner.run(rate_history_reset_logic(email=email))
+                typer.secho(f"Reset {count} score(s).", fg=typer.colors.YELLOW)
+
+            result = runner.run(
+                rate_history_logic(
+                    email=email,
+                    limit=limit,
+                    provider=(play_provider or MusicProvider.SPOTIFY) if play else None,
+                    artist=artist,
+                )
             )
-        )
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except ProviderAuthTokenNotFoundError as e:
@@ -79,10 +87,21 @@ def rate_history_command(
     )
 
 
+async def rate_history_reset_logic(email: EmailStr) -> int:
+    uow = get_unit_of_work()
+
+    async with uow:
+        user = await uow.users.get_by_email(email)
+        if not user:
+            raise UserNotFoundError()
+
+    use_case = RateTrackUseCase(user_id=user.id, provider=None, uow=uow)
+    return await use_case.reset_scores(source=TrackSource.HISTORY)
+
+
 async def rate_history_logic(
     email: EmailStr,
     limit: int,
-    reset: bool,
     provider: MusicProvider | None = None,
     artist: str | None = None,
 ) -> RateHistoryResult:
@@ -98,11 +117,6 @@ async def rate_history_logic(
         if provider is not None:
             provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
-
-        if reset:
-            typer.confirm("This will clear all history track scores. Continue?", abort=True)
-            count = await use_case.reset_scores(source=TrackSource.HISTORY)
-            typer.secho(f"Reset {count} score(s).", fg=typer.colors.YELLOW)
 
         tracks = await use_case.find_history(limit=limit, artist=artist)
         if not tracks:

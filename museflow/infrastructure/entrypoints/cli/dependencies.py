@@ -9,6 +9,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
+from museflow.application.use_cases.provider_token_view import get_provider_token
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -150,8 +151,7 @@ async def get_provider_library(
     Raises:
         ProviderAuthTokenNotFoundError: If the user never connected the provider.
     """
-    async with uow:
-        auth_token = await uow.auth_tokens.get(user_id=user.id, provider=provider)
+    auth_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 
     if auth_token is None:
         raise ProviderAuthTokenNotFoundError(
