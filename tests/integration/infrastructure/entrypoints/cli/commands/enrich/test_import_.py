@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 from museflow.infrastructure.entrypoints.cli.commands.enrich.import_ import enrich_import_logic
 
 from tests.integration.factories.models.track import TrackModelFactory

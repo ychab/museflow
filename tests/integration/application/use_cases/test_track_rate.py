@@ -5,7 +5,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.track_rate import RateTrackUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import TrackSource
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.track import TrackModelFactory

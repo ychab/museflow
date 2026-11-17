@@ -9,8 +9,8 @@ from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import PlaylistType
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
-from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrack as PlaylistTrackModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistTrackModel
 
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory

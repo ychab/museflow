@@ -18,7 +18,7 @@ from museflow.domain.value_objects.llm import LLMUsageGroup
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.domain.value_objects.llm import LLMUsageTotals
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
 from tests.integration.factories.models.llm import LLMUsageModelFactory

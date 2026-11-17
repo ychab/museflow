@@ -1,13 +1,13 @@
 from polyfactory import Use
 from polyfactory.decorators import post_generated
 
-from museflow.infrastructure.adapters.database.models import User
+from museflow.infrastructure.adapters.database.models import UserModel
 
 from tests.integration.factories.models.base import BaseModelFactory
 
 
-class UserModelFactory(BaseModelFactory[User]):
-    __model__ = User
+class UserModelFactory(BaseModelFactory[UserModel]):
+    __model__ = UserModel
 
     email = Use(BaseModelFactory.__faker__.email)
 

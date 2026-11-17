@@ -15,8 +15,8 @@ from museflow.application.ports.repositories.track_play import TrackPlayReposito
 from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.domain.value_objects.taste import PeriodTrack
 from museflow.domain.value_objects.track import TrackPlay
-from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
-from museflow.infrastructure.adapters.database.models.track import TrackPlay as TrackPlayModel
+from museflow.infrastructure.adapters.database.models.track import TrackModel
+from museflow.infrastructure.adapters.database.models.track import TrackPlayModel
 
 
 class TrackPlaySQLRepository(TrackPlayRepository):
@@ -152,7 +152,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 row.period,
                 ListeningPeriod(start=row.start, end=row.end, plays=row.period_plays, tracks=[]),
             )
-            track = row.Track.to_entity(
+            track = row._mapping[TrackModel].to_entity(
                 played_count=row.played_count,
                 played_at_first=row.played_at_first,
                 played_at_last=row.played_at_last,

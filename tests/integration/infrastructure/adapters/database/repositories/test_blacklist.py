@@ -8,8 +8,8 @@ from museflow.application.ports.repositories.blacklist import BlacklistRepositor
 from museflow.domain.entities.user import User
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.utils.text import normalize_text
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtist as BlacklistedArtistModel
-from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrack as BlacklistedTrackModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedArtistModel
+from museflow.infrastructure.adapters.database.models.blacklist import BlacklistedTrackModel
 
 from tests.integration.factories.models.blacklist import BlacklistedArtistModelFactory
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory

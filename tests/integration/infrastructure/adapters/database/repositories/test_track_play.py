@@ -5,7 +5,7 @@ import pytest
 
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.track import TrackPlayModelFactory

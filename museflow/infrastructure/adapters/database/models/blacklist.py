@@ -13,7 +13,7 @@ from museflow.infrastructure.adapters.database.models.base import DatetimeTrackM
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 
 
-class BlacklistedArtist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class BlacklistedArtistModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_blacklisted_artist"
     __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_museflow_blacklisted_artist_user_fp"),)
 
@@ -35,7 +35,7 @@ class BlacklistedArtist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         )
 
 
-class BlacklistedTrack(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class BlacklistedTrackModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_blacklisted_track"
     __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_museflow_blacklisted_track_user_fp"),)
 

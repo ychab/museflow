@@ -1,6 +1,6 @@
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
-from museflow.infrastructure.adapters.database.models import TrackPlay as TrackPlayModel
+from museflow.infrastructure.adapters.database.models import TrackModel
+from museflow.infrastructure.adapters.database.models import TrackPlayModel
 
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.unit.factories.entities.track import TrackFactory

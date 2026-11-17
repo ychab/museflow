@@ -43,7 +43,7 @@ from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.stats import LibraryStats
 from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
-from museflow.infrastructure.adapters.database.models import Track as TrackModel
+from museflow.infrastructure.adapters.database.models import TrackModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 
 

@@ -15,8 +15,8 @@ from museflow.domain.enums import PlaylistType
 from museflow.domain.enums import TrackSource
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
-from museflow.infrastructure.adapters.database.models.playlist import Playlist as PlaylistModel
-from museflow.infrastructure.adapters.database.models.track import Track as TrackModel
+from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
+from museflow.infrastructure.adapters.database.models.track import TrackModel
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
 from tests.integration.factories.models.taste import TasteProfileModelFactory

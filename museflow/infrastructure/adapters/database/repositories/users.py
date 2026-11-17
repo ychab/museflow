@@ -15,7 +15,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.domain.exceptions import UserEmailAlreadyExistsError
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 
 
 class UserSQLRepository(UserRepository):

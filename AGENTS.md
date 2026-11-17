@@ -97,6 +97,7 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - **Models** (canonical: `database/models/track.py`):
   - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).
+  - The class is `<Entity>Model` (`TrackModel`), imported under that name, never an alias.
   - `from_entity(cls, entity)` and `to_entity(self)`, each only when the application calls it: no dead code to keep
     the pair. Repositories build rows with `from_entity` when the port takes an entity, never field by field; a port
     that takes an input schema (`users.create`) builds the row from it, with no `from_entity`.

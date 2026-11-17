@@ -9,7 +9,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.user_update import update_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserEmailAlreadyExistsError
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 
 from tests.integration.factories.models.user import UserModelFactory
 

@@ -12,7 +12,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.models import User as UserModel
+from museflow.infrastructure.adapters.database.models import UserModel
 from museflow.infrastructure.entrypoints.api.main import app
 
 from tests.integration.factories.models.user import UserModelFactory

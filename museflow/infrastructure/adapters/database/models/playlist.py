@@ -17,7 +17,7 @@ from museflow.infrastructure.adapters.database.models.base import DatetimeTrackM
 from museflow.infrastructure.adapters.database.models.base import UUIDIdMixin
 
 
-class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
+class PlaylistModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __tablename__ = "museflow_playlist"
 
     # Identity / FK
@@ -49,7 +49,7 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     focus: Mapped[DiscoveryFocus | None] = mapped_column(Enum(DiscoveryFocus), nullable=True, default=None)
 
     @classmethod
-    def from_entity(cls, entity: PlaylistEntity) -> Playlist:
+    def from_entity(cls, entity: PlaylistEntity) -> PlaylistModel:
         return cls(
             id=entity.id,
             user_id=entity.user_id,
@@ -82,7 +82,7 @@ class Playlist(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         )
 
 
-class PlaylistTrack(UUIDIdMixin, Base, kw_only=True):
+class PlaylistTrackModel(UUIDIdMixin, Base, kw_only=True):
     """Join table linking playlists to tracks in museflow_track."""
 
     __tablename__ = "museflow_playlist_track"
