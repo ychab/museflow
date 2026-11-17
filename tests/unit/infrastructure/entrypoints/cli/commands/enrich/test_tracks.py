@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
+from museflow.application.use_cases.track_enrich import EnrichTracksReport
 from museflow.domain.enums import EnrichField
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import UserNotFoundError

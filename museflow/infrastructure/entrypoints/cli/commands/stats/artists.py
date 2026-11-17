@@ -4,7 +4,7 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.use_cases.stats_artists import get_top_artists
+from museflow.application.use_cases.stats_top_artists_get import get_top_artists
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN

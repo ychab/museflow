@@ -6,10 +6,10 @@ from pydantic import EmailStr
 
 import typer
 
-from museflow.application.inputs.explore import ExploreArtistsConfigInput
+from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
 from museflow.application.ports.progress import ProgressPort
-from museflow.application.use_cases.artists_explore import ExploreArtistsResult
-from museflow.application.use_cases.artists_explore import ExploreArtistsUseCase
+from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistResult
+from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
@@ -55,7 +55,7 @@ def playlist_explore_command(
     ),
     verbose: bool = VERBOSE_OPTION,
     limit: int = typer.Option(
-        ExploreArtistsConfigInput.playlist_limit,
+        CreateExplorationPlaylistConfigInput.playlist_limit,
         "--limit",
         help="Target number of tracks in the generated playlist",
         min=1,
@@ -73,7 +73,7 @@ def playlist_explore_command(
                     email=email,
                     provider=provider,
                     model=model,
-                    config=ExploreArtistsConfigInput(
+                    config=CreateExplorationPlaylistConfigInput(
                         prompt=prompt,
                         title=title,
                         artists_limit=app_settings.EXPLORE_ARTISTS_LIMIT,
@@ -124,11 +124,11 @@ def playlist_explore_command(
 async def playlist_explore_logic(
     email: EmailStr,
     provider: MusicProvider,
-    config: ExploreArtistsConfigInput,
+    config: CreateExplorationPlaylistConfigInput,
     progress: ProgressPort,
     model: str | None = None,
     meter: LLMUsageMeter | None = None,
-) -> ExploreArtistsResult:
+) -> CreateExplorationPlaylistResult:
     """Explores the catalogue of the user's favourite artists and creates a playlist of the tracks they don't know.
 
     Raises:
@@ -143,7 +143,7 @@ async def playlist_explore_logic(
         provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
         advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
 
-        use_case = ExploreArtistsUseCase(
+        use_case = CreateExplorationPlaylistUseCase(
             uow=uow, provider_library=provider_library, advisor=advisor, progress=progress
         )
         return await use_case.create_playlist(user=user, config=config)

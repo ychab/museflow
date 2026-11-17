@@ -8,7 +8,7 @@ from pydantic import ValidationError
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.ratings_import import ImportRatingsResult
+from museflow.application.use_cases.track_ratings_import import ImportRatingsResult
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate.import_ import rate_import_logic
 from museflow.infrastructure.entrypoints.cli.main import app

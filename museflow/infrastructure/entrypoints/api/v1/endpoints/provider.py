@@ -9,8 +9,8 @@ from fastapi.responses import RedirectResponse
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.provider_oauth_callback import handle_oauth_callback
-from museflow.application.use_cases.provider_oauth_redirect import build_oauth_redirect_url
+from museflow.application.use_cases.provider_oauth_callback_handle import handle_oauth_callback
+from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError

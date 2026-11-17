@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.use_cases.tracks_enrich import EnrichTracksReport
+from museflow.application.use_cases.track_enrich import EnrichTracksReport
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.entrypoints.cli.commands.enrich.tracks import enrich_tracks_logic

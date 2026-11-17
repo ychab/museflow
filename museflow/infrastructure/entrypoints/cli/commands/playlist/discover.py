@@ -8,10 +8,10 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from museflow.application.inputs.discovery import DiscoverTasteConfigInput
+from museflow.application.inputs.discovery import CreateDiscoveryPlaylistConfigInput
 from museflow.application.ports.progress import ProgressPort
-from museflow.application.use_cases.taste_discover import DiscoverTasteResult
-from museflow.application.use_cases.taste_discover import DiscoverTasteUseCase
+from museflow.application.use_cases.playlist_discovery_create import CreateDiscoveryPlaylistResult
+from museflow.application.use_cases.playlist_discovery_create import CreateDiscoveryPlaylistUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
@@ -68,7 +68,7 @@ def playlist_discover_command(
     ),
     verbose: bool = VERBOSE_OPTION,
     limit: int = typer.Option(
-        DiscoverTasteConfigInput.playlist_limit,
+        CreateDiscoveryPlaylistConfigInput.playlist_limit,
         "--limit",
         help="Target number of tracks in the generated playlist",
         min=1,
@@ -86,7 +86,7 @@ def playlist_discover_command(
                     email=email,
                     provider=provider,
                     model=model,
-                    config=DiscoverTasteConfigInput(
+                    config=CreateDiscoveryPlaylistConfigInput(
                         prompt=prompt,
                         focus=focus,
                         profile_name=name,
@@ -154,11 +154,11 @@ def playlist_discover_command(
 async def playlist_discover_logic(
     email: EmailStr,
     provider: MusicProvider,
-    config: DiscoverTasteConfigInput,
+    config: CreateDiscoveryPlaylistConfigInput,
     progress: ProgressPort,
     model: str | None = None,
     meter: LLMUsageMeter | None = None,
-) -> DiscoverTasteResult:
+) -> CreateDiscoveryPlaylistResult:
     """Discovers new music guided by the user's taste profile and creates a playlist.
 
     Args:
@@ -170,7 +170,7 @@ async def playlist_discover_logic(
         meter: Collects the tokens and cost of the advisor calls.
 
     Returns:
-        A DiscoverTasteResult with the playlist, strategy, and final tracks.
+        A CreateDiscoveryPlaylistResult with the playlist, strategy, and final tracks.
 
     Raises:
         UserNotFoundError: If the user with the given email is not found.
@@ -186,11 +186,11 @@ async def playlist_discover_logic(
 
         advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
 
-        use_case = DiscoverTasteUseCase(
+        use_case = CreateDiscoveryPlaylistUseCase(
             uow=uow,
             provider_library=provider_library,
             advisor=advisor,
             progress=progress,
         )
 
-        return await use_case.create_suggestions_playlist(user=user, config=config)
+        return await use_case.create_playlist(user=user, config=config)

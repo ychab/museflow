@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.use_cases.stats_tags import TopTagsResult
+from museflow.application.use_cases.stats_top_tags_get import TopTagsResult
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter

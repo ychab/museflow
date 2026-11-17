@@ -10,8 +10,8 @@ from rich.table import Table
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.ports.progress import ProgressPort
-from museflow.application.use_cases.history_import import ImportStreamingHistoryReport
-from museflow.application.use_cases.history_import import ImportStreamingHistoryUseCase
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import StreamingHistoryError

@@ -65,9 +65,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - **Ports** are `abc.ABC` + `@abstractmethod`. They accept input schemas and return domain entities.
 - **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named as in [Naming](#naming).
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
-  when it holds injected dependencies and is called with user-specific args (`use_cases/history_import.py`), and a
+  when it holds injected dependencies and is called with user-specific args (`use_cases/track_history_import.py`), and a
   class with one method per step when the entrypoint calls several steps of one flow, e.g. find, confirm, then delete
-  (`use_cases/tracks_delete.py`): what scopes the whole flow (user, provider) goes in `__init__`, so every step
+  (`use_cases/track_delete.py`): what scopes the whole flow (user, provider) goes in `__init__`, so every step
   shares it.
 - **Every entrypoint action goes through a use case**, even a thin one that only reads a repository
   (`use_cases/taste_profile_list.py`): the use cases list what the application does, and an API reuses them as is.
@@ -145,12 +145,15 @@ Functions and use case classes start with a verb, classes holding data are nouns
 (`enrichment`, `ratings`), the verb names the action only (`enrich`, `rate`). Use cases speak CRUD (`create`, `get`,
 `update`, `delete`) whenever it fits, a domain verb otherwise (`import`, `enrich`, `rate`): they display
 nothing and other use cases reuse them. Entrypoints use the concrete user-facing verb (`taste view` calls
-`get_taste_profile`). Modules put the object first so that `ls` groups a feature, which also keeps the module name
-apart from its function (`user_create.create_user`).
+`get_taste_profile`). Modules put the theme first so that `ls` groups a feature, which also keeps the module name
+apart from its function (`user_create.create_user`). The theme is one of a closed list of features, singular:
+`user`, `provider`, `track`, `taste`, `playlist`, `blacklist`, `stats`, `llm_usage`; a new feature adds its theme
+here. A use case covers one object (`track_history_import`, not `history_import`): another object gets its own use
+case, so its own module.
 
 | What | Pattern | Example |
 |------|---------|---------|
-| Use case module | `<object>_<action>.py`, grouped by object | `ratings_import.py` |
+| Use case module | `<theme>[_<object>]_<verb>.py`: the object when it is not the theme, the verb of the function; `list` for a collection read | `track_ratings_import.py`, `playlist_get.py`, `playlist_list.py` |
 | Use case function / class | `<verb>_<object>` / `<Verb><Object>UseCase` | `import_ratings`, `EnrichTracksUseCase` |
 | Read use case | `get_`, the plural says a collection; `count_` a number | `get_taste_profile`, `get_taste_profiles` |
 | Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise; a read names the object alone, its verb only says how the data is fetched | `ImportRatingsResult`, `TopTagsResult` |

@@ -10,8 +10,8 @@ from rich.table import Table
 
 from museflow.application.inputs.playlist import CreateHistoryPlaylistConfigInput
 from museflow.application.ports.providers.library import ProviderLibraryPort
-from museflow.application.use_cases.playlist_history import CreateHistoryPlaylistResult
-from museflow.application.use_cases.playlist_history import create_history_playlist
+from museflow.application.use_cases.playlist_history_create import CreateHistoryPlaylistResult
+from museflow.application.use_cases.playlist_history_create import create_history_playlist
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN

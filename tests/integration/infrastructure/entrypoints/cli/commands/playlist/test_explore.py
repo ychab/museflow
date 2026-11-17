@@ -3,8 +3,8 @@ from unittest import mock
 
 import pytest
 
-from museflow.application.inputs.explore import ExploreArtistsConfigInput
-from museflow.application.use_cases.artists_explore import ExploreArtistsResult
+from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
+from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistResult
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -21,7 +21,9 @@ class TestPlaylistExploreLogic:
 
     @pytest.fixture
     def mock_use_case(self) -> Iterable[mock.Mock]:
-        target_path = "museflow.infrastructure.entrypoints.cli.commands.playlist.explore.ExploreArtistsUseCase"
+        target_path = (
+            "museflow.infrastructure.entrypoints.cli.commands.playlist.explore.CreateExplorationPlaylistUseCase"
+        )
         with mock.patch(target_path, autospec=True) as patched:
             yield patched.return_value
 
@@ -32,13 +34,13 @@ class TestPlaylistExploreLogic:
         mock_use_case: mock.Mock,
         progress: RichProgressAdapter,
     ) -> None:
-        expected_result = ExploreArtistsResult(playlist=PlaylistFactory.build(user_id=user.id), tracks=[])
+        expected_result = CreateExplorationPlaylistResult(playlist=PlaylistFactory.build(user_id=user.id), tracks=[])
         mock_use_case.create_playlist.return_value = expected_result
 
         result = await playlist_explore_logic(
             email=user.email,
             provider=MusicProvider.SPOTIFY,
-            config=ExploreArtistsConfigInput(),
+            config=CreateExplorationPlaylistConfigInput(),
             progress=progress,
             # The default advisor model is missing from the WireMock catalog: the check passes only with the override
             model="google/gemini-3.5-flash",

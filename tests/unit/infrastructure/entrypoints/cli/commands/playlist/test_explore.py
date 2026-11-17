@@ -6,8 +6,8 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
-from museflow.application.inputs.explore import ExploreArtistsConfigInput
-from museflow.application.use_cases.artists_explore import ExploreArtistsResult
+from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
+from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistResult
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
@@ -30,7 +30,7 @@ class TestPlaylistExploreParserCommand:
     @pytest.fixture(autouse=True)
     def mock_playlist_explore_logic(self) -> Iterable[mock.AsyncMock]:
         with mock.patch(f"{TARGET_PATH}.playlist_explore_logic", autospec=True) as patched:
-            patched.return_value = ExploreArtistsResult(playlist=None, tracks=[])
+            patched.return_value = CreateExplorationPlaylistResult(playlist=None, tracks=[])
             yield patched
 
     def test__nominal(self, mock_playlist_explore_logic: mock.AsyncMock, runner: CliRunner) -> None:
@@ -130,7 +130,7 @@ class TestPlaylistExploreCommand:
     def test__no_new_track__usage_printed(
         self, mock_playlist_explore_logic: mock.AsyncMock, runner: CliRunner
     ) -> None:
-        async def explore(**kwargs: Any) -> ExploreArtistsResult:
+        async def explore(**kwargs: Any) -> CreateExplorationPlaylistResult:
             spend(kwargs["meter"])
             raise DiscoveryTrackNoNewError()
 
@@ -149,11 +149,11 @@ class TestPlaylistExploreCommand:
     ) -> None:
         playlist = PlaylistFactory.build(name="Friday night")
 
-        async def explore(**kwargs: Any) -> ExploreArtistsResult:
+        async def explore(**kwargs: Any) -> CreateExplorationPlaylistResult:
             spend(kwargs["meter"])
             searches = [ArtistSearch(artist="Nova Lane", rejected=True)]
             await kwargs["progress"].publish(CandidatesFound(attempt=1, searches=searches))
-            return ExploreArtistsResult(
+            return CreateExplorationPlaylistResult(
                 playlist=playlist,
                 tracks=[TrackFactory.build(name="Neon Harbor"), TrackFactory.build(album_name=None)],
             )
@@ -178,7 +178,7 @@ class TestPlaylistExploreCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_playlist_explore_logic.return_value = ExploreArtistsResult(playlist=None, tracks=[])
+        mock_playlist_explore_logic.return_value = CreateExplorationPlaylistResult(playlist=None, tracks=[])
 
         result = runner.invoke(app, ["playlist", "explore", "--email", "test@example.com", "--dry-run"])
         assert result.exit_code == 0
@@ -209,6 +209,6 @@ class TestPlaylistExploreLogic:
             await playlist_explore_logic(
                 "test@example.com",
                 provider=MusicProvider.SPOTIFY,
-                config=ExploreArtistsConfigInput(),
+                config=CreateExplorationPlaylistConfigInput(),
                 progress=mock_progress,
             )

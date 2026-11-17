@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from museflow.application.use_cases.llm_usage_summary import summarize_llm_usage
+from museflow.application.use_cases.llm_usage_summarize import summarize_llm_usage
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy

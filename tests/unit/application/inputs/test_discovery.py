@@ -1,19 +1,19 @@
 import pytest
 
-from museflow.application.inputs.discovery import DiscoverTasteConfigInput
+from museflow.application.inputs.discovery import CreateDiscoveryPlaylistConfigInput
 from museflow.domain.enums import DiscoveryFocus
 
 
-class TestDiscoverTasteConfigInput:
+class TestCreateDiscoveryPlaylistConfigInput:
     @pytest.mark.parametrize("max_attempts", [0, -1])
     def test__max_attempts__below_one(self, max_attempts: int) -> None:
         with pytest.raises(ValueError, match="max_attempts must be at least 1"):
-            DiscoverTasteConfigInput(max_attempts=max_attempts)
+            CreateDiscoveryPlaylistConfigInput(max_attempts=max_attempts)
 
     @pytest.mark.parametrize("artist_tracks_concurrency", [0, -1])
     def test__artist_tracks_concurrency__below_one(self, artist_tracks_concurrency: int) -> None:
         with pytest.raises(ValueError, match="artist_tracks_concurrency must be at least 1"):
-            DiscoverTasteConfigInput(artist_tracks_concurrency=artist_tracks_concurrency)
+            CreateDiscoveryPlaylistConfigInput(artist_tracks_concurrency=artist_tracks_concurrency)
 
     @pytest.mark.parametrize(
         ("prompt", "focus", "expected_focus"),
@@ -32,4 +32,4 @@ class TestDiscoverTasteConfigInput:
         focus: DiscoveryFocus | None,
         expected_focus: DiscoveryFocus | None,
     ) -> None:
-        assert DiscoverTasteConfigInput(prompt=prompt, focus=focus).focus == expected_focus
+        assert CreateDiscoveryPlaylistConfigInput(prompt=prompt, focus=focus).focus == expected_focus

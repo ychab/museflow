@@ -5,7 +5,7 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
-from museflow.application.use_cases.stats_tracks import get_top_tracks
+from museflow.application.use_cases.stats_top_tracks_get import get_top_tracks
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
