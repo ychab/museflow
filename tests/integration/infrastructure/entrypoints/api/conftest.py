@@ -1,5 +1,4 @@
 from collections.abc import AsyncGenerator
-from collections.abc import AsyncIterator
 from collections.abc import Iterator
 from unittest import mock
 
@@ -15,13 +14,11 @@ import pytest
 
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.domain.entities.user import User
-from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
-from museflow.infrastructure.entrypoints.api.dependencies import get_db
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
-from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.main import app
 
 
@@ -33,12 +30,11 @@ def block_api_logging_reconfiguration() -> Iterator[mock.Mock]:
 
 
 @pytest.fixture
-async def unavailable_db_session(test_db_name: str) -> AsyncGenerator[AsyncSession]:
-    """A session on a database that doesn't exist: its first query fails with PostgreSQL's real error."""
+async def unavailable_session_factory(test_db_name: str) -> AsyncGenerator[async_sessionmaker[AsyncSession]]:
+    """Sessions on a database that doesn't exist: their first query fails with PostgreSQL's real error."""
     url = make_url(str(database_settings.URI)).set(database=f"{test_db_name}_missing")
     engine = create_async_engine(url)
-    async with async_sessionmaker(engine)() as session:
-        yield session
+    yield async_sessionmaker(engine)
     await engine.dispose()
 
 
@@ -50,7 +46,6 @@ def access_token(access_token_manager: AccessTokenManagerPort, user: User) -> st
 @pytest.fixture
 async def async_client(
     mock_api_logger: None,
-    async_session_db: AsyncSession,
     uow_session_factory: async_sessionmaker[AsyncSession],
     request: pytest.FixtureRequest,
 ) -> AsyncGenerator[AsyncClient]:
@@ -75,23 +70,13 @@ async def async_client(
         etc.
     """
 
-    # Override get_db: use the unavailable database if requested, otherwise the test session
-    if "unavailable_db_session" in request.fixturenames:
-        unavailable_db_session = request.getfixturevalue("unavailable_db_session")
-
-        async def override_get_db() -> AsyncIterator[AsyncSession]:
-            yield unavailable_db_session
-
-        app.dependency_overrides[get_db] = override_get_db
+    # Units of work run on the test connection, each block in a savepoint of the test transaction, unless the test
+    # asks for the unavailable database
+    if "unavailable_session_factory" in request.fixturenames:
+        session_factory = request.getfixturevalue("unavailable_session_factory")
     else:
-
-        async def override_get_db() -> AsyncIterator[AsyncSession]:
-            yield async_session_db
-
-        app.dependency_overrides[get_db] = override_get_db
-
-    # Units of work run on the test connection, each block in a savepoint of the test transaction
-    app.dependency_overrides[get_unit_of_work] = lambda: SQLUnitOfWork(uow_session_factory)
+        session_factory = uow_session_factory
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
 
     # Override Spotify client if fixture is used
     if "spotify_oauth" in request.fixturenames:

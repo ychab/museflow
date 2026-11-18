@@ -2,6 +2,7 @@ from fastapi import status
 from httpx import AsyncClient
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from museflow.infrastructure.entrypoints.api.main import app
 
@@ -18,7 +19,11 @@ class TestHealthCheck:
             "database": "connected",
         }
 
-    async def test__unhealthy(self, unavailable_db_session: AsyncSession, async_client: AsyncClient) -> None:
+    async def test__unhealthy(
+        self,
+        unavailable_session_factory: async_sessionmaker[AsyncSession],
+        async_client: AsyncClient,
+    ) -> None:
         url = app.url_path_for("health_check")
         response = await async_client.get(url)
         assert response.status_code == status.HTTP_200_OK

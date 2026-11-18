@@ -8,7 +8,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -29,7 +29,7 @@ def taste_delete_command(
         )
 
     try:
-        run_with_database(taste_delete_logic(email=email, name=name))
+        run_logic(taste_delete_logic(email=email, name=name))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundError as e:

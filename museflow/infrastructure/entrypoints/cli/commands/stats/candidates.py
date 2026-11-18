@@ -11,7 +11,7 @@ from museflow.domain.value_objects.stats import ArtistCandidate
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -24,7 +24,7 @@ def stats_candidates_command(
     min_avg: float = typer.Option(7.0, "--min-avg", help="Minimum average score for an artist to be a candidate"),
 ) -> None:
     try:
-        rows = run_with_database(
+        rows = run_logic(
             stats_candidates_logic(
                 email=email,
                 limit=limit,

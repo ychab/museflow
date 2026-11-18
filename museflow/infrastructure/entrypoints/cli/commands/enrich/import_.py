@@ -13,7 +13,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
@@ -26,7 +26,7 @@ def enrich_import_command(
     data = read_yaml(input_path)
 
     try:
-        result = run_with_database(enrich_import_logic(email=email, data=data))
+        result = run_logic(enrich_import_logic(email=email, data=data))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

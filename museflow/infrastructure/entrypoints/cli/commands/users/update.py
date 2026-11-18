@@ -10,7 +10,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
@@ -29,7 +29,7 @@ def users_update_command(
         raise typer.BadParameter(str(e)) from e
 
     try:
-        run_with_database(users_update_logic(user_id, user_in=user_in))
+        run_logic(users_update_logic(user_id, user_in=user_in))
     except UserNotFoundError as e:
         typer.secho(f"User not found with ID {user_id}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e

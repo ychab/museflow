@@ -10,7 +10,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
@@ -21,7 +21,7 @@ def blacklist_export_command(
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:
-        blacklist_in = run_with_database(blacklist_export_logic(email=email))
+        blacklist_in = run_logic(blacklist_export_logic(email=email))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
