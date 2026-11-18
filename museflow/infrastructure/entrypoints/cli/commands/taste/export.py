@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 from pydantic import EmailStr
@@ -14,6 +13,7 @@ from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
@@ -25,7 +25,7 @@ def taste_export_command(
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:
-        taste_profiles = asyncio.run(taste_export_logic(email=email, name=name))
+        taste_profiles = run_with_database(taste_export_logic(email=email, name=name))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TasteProfileNotFoundError as e:

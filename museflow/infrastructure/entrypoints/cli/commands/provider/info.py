@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import asdict
 from dataclasses import replace
 
@@ -15,6 +14,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.commands.provider import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -28,7 +28,7 @@ def provider_info_command(
         typer.confirm("This prints the tokens in clear. Continue?", abort=True)
 
     try:
-        token = asyncio.run(provider_info_logic(email=email, provider=provider))
+        token = run_with_database(provider_info_logic(email=email, provider=provider))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

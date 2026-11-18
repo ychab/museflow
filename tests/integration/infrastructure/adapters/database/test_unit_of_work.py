@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.pool import QueuePool
 
 import pytest
@@ -13,7 +14,6 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
 from museflow.infrastructure.adapters.database.models.track import TrackModel
-from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 
 from tests.unit.factories.entities.playlist import PlaylistFactory
@@ -25,17 +25,20 @@ class TestSQLUnitOfWork:
     """Real commits (`async_session_trans`): the default test session runs each block in a savepoint."""
 
     @pytest.fixture
-    def unit_of_work(self) -> SQLUnitOfWork:
+    def unit_of_work(self, async_session_factory: async_sessionmaker[AsyncSession]) -> SQLUnitOfWork:
         return SQLUnitOfWork(async_session_factory)
 
     @pytest.fixture
     def tracks(self, user: User) -> list[Track]:
         return TrackFactory.batch(size=2, user_id=user.id)
 
-    @staticmethod
-    async def count_rows(user_id: uuid.UUID) -> tuple[int, int]:
+    @pytest.fixture(autouse=True)
+    def set_session_factory(self, async_session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self.session_factory = async_session_factory
+
+    async def count_rows(self, user_id: uuid.UUID) -> tuple[int, int]:
         # A separate session only sees committed rows.
-        async with async_session_factory() as session:
+        async with self.session_factory() as session:
             tracks_count = await session.scalar(
                 select(func.count()).select_from(TrackModel).where(TrackModel.user_id == user_id)
             )

@@ -1,4 +1,3 @@
-import asyncio
 import math
 from contextlib import AsyncExitStack
 
@@ -28,6 +27,7 @@ from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
@@ -81,7 +81,7 @@ def playlist_discover_command(
         with RichProgressAdapter(
             console=console_stderr, meter=meter, animated=has_rich_log_handler(), verbose=verbose
         ) as progress:
-            result = asyncio.run(
+            result = run_with_database(
                 playlist_discover_logic(
                     email=email,
                     provider=provider,

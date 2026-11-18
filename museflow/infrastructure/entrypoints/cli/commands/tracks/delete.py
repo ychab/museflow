@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from pydantic import EmailStr
@@ -13,6 +12,7 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -40,7 +40,7 @@ def tracks_delete_command(
         raise typer.BadParameter("--purge deletes all tracks: it can't be combined with --artist or --name.")
 
     try:
-        result = asyncio.run(
+        result = run_with_database(
             tracks_delete_logic(
                 email=email,
                 artist=artist,

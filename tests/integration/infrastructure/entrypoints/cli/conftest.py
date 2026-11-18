@@ -19,7 +19,7 @@ from museflow.infrastructure.config.settings.openrouter import openrouter_settin
 @pytest.fixture(scope="function", autouse=True)
 def patch_session_factory(uow_session_factory: async_sessionmaker[AsyncSession]) -> Iterator[None]:
     """Points the CLI units of work at the test database, each block in a savepoint of the test transaction."""
-    target_path = "museflow.infrastructure.entrypoints.cli.dependencies.async_session_factory"
+    target_path = "museflow.infrastructure.entrypoints.cli.dependencies.session_factory"
     with patch(target_path, uow_session_factory):
         yield
 

@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from pydantic import EmailStr
@@ -11,6 +10,7 @@ from museflow.domain.exceptions import BlacklistItemNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -20,7 +20,7 @@ def blacklist_remove_command(
     item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `museflow blacklist list`)"),
 ) -> None:
     try:
-        asyncio.run(blacklist_remove_logic(email=email, item_ids=item_ids))
+        run_with_database(blacklist_remove_logic(email=email, item_ids=item_ids))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except BlacklistItemNotFoundError as e:

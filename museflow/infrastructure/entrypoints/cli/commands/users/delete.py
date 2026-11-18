@@ -1,5 +1,3 @@
-import asyncio
-
 from pydantic import EmailStr
 
 import typer
@@ -9,6 +7,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 
@@ -28,7 +27,7 @@ def users_delete_command(
         )
 
     try:
-        asyncio.run(users_delete_logic(email=email))
+        run_with_database(users_delete_logic(email=email))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

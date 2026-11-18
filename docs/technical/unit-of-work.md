@@ -235,6 +235,10 @@ exception.
 
 ## Connection pool and isolation level
 
+- **One engine per entrypoint run.** No module creates an engine at import: a pooled engine is bound to the event loop
+  of its first connection and must not cross a `fork()`. Each entrypoint creates its own when it starts and disposes
+  of it when it stops: the FastAPI lifespan for the API, `run_with_database()` / `open_database_runner()` for each CLI
+  command, and each worker process later. Missing database settings fail at that start, not on import.
 - **Pool.** Each process keeps `DATABASE_POOL_SIZE` connections (5) and opens up to `DATABASE_MAX_OVERFLOW` more (10)
   at a peak. Every process counts against PostgreSQL's `max_connections` (100 by default): API workers times
   (pool size + overflow) must stay below it, with room for the CLI. Short blocks keep the need low: a connection

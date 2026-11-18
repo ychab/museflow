@@ -22,20 +22,32 @@ def create_engine(url: str, idle_in_transaction_timeout: int, pool_size: int, ma
     )
 
 
-if database_settings.URI is None:
-    raise RuntimeError("Did you forget to export DATABASE_ env vars?")
+def create_engine_from_settings() -> AsyncEngine:
+    """Builds the engine of an entrypoint: call it when the entrypoint starts, in the event loop that will use it.
 
-async_engine: AsyncEngine = create_engine(
-    str(database_settings.URI),
-    idle_in_transaction_timeout=database_settings.IDLE_IN_TRANSACTION_TIMEOUT,
-    pool_size=database_settings.POOL_SIZE,
-    max_overflow=database_settings.MAX_OVERFLOW,
-)
-async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    bind=async_engine,
-    # Prevent attributes from being expired after commit/transaction for async DB.
-    # @see https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.params.expire_on_commit
-    expire_on_commit=False,
-    autoflush=False,  # Require explicit .flush() in transaction to see changes
-    autocommit=False,  # Require explicit .commit() in transaction to see changes
-)
+    A pooled engine is bound to the loop of its first connection and must not cross a `fork()`: each process (and each
+    CLI run) creates its own, and disposes of it on shutdown.
+
+    Raises:
+        RuntimeError: If the database settings are missing.
+    """
+    if database_settings.URI is None:
+        raise RuntimeError("Did you forget to export DATABASE_ env vars?")
+
+    return create_engine(
+        str(database_settings.URI),
+        idle_in_transaction_timeout=database_settings.IDLE_IN_TRANSACTION_TIMEOUT,
+        pool_size=database_settings.POOL_SIZE,
+        max_overflow=database_settings.MAX_OVERFLOW,
+    )
+
+
+def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(
+        bind=engine,
+        # Prevent attributes from being expired after commit/transaction for async DB.
+        # @see https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.params.expire_on_commit
+        expire_on_commit=False,
+        autoflush=False,  # Require explicit .flush() in transaction to see changes
+        autocommit=False,  # Require explicit .commit() in transaction to see changes
+    )

@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 import typer
@@ -13,6 +12,7 @@ from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 console = Console()
@@ -25,7 +25,7 @@ def playlist_view_command(
 ) -> None:
     """View a playlist with its tracks and ratings."""
     try:
-        playlist = asyncio.run(playlist_view_logic(email=email, playlist_id=playlist_id))
+        playlist = run_with_database(playlist_view_logic(email=email, playlist_id=playlist_id))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except PlaylistNotFoundError as e:

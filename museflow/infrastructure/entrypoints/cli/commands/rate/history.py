@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 
@@ -20,6 +19,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import open_database_runner
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -51,7 +51,7 @@ def rate_history_command(
 
     try:
         # One runner for both steps: the reset count prints before the rating loop starts.
-        with asyncio.Runner() as runner:
+        with open_database_runner() as runner:
             if reset:
                 count = runner.run(rate_history_reset_logic(email=email))
                 typer.secho(f"Reset {count} score(s).", fg=typer.colors.YELLOW)

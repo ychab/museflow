@@ -1,5 +1,13 @@
+import asyncio
 from collections.abc import AsyncGenerator
+from collections.abc import Coroutine
+from collections.abc import Iterator
 from contextlib import asynccontextmanager
+from contextlib import contextmanager
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.enrichers.track import TrackEnricherPort
@@ -17,7 +25,8 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.database.session import create_engine_from_settings
+from museflow.infrastructure.adapters.database.session import create_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
@@ -28,6 +37,39 @@ from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
+
+# The database of the running command, open between the start and the end of `open_database_runner`.
+session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+# --- Event loop ---
+
+
+def run_with_database[T](main: Coroutine[Any, Any, T]) -> T:
+    """Runs a command's logic like `asyncio.run`, with the database open for the run."""
+    with open_database_runner() as runner:
+        result = runner.run(main)
+    return result
+
+
+@contextmanager
+def open_database_runner() -> Iterator[asyncio.Runner]:
+    """An `asyncio.Runner` with the database open, for a command that prints between two steps of its logic.
+
+    The engine is created in the runner's event loop, which its pooled connections are bound to, and disposed of in
+    that loop when the command ends: a second loop could not reuse them.
+    """
+    global session_factory
+
+    with asyncio.Runner() as runner:
+        engine = create_engine_from_settings()
+        session_factory = create_session_factory(engine)
+        try:
+            yield runner
+        finally:
+            session_factory = None
+            runner.run(engine.dispose())
+
 
 # --- Security ---
 
@@ -177,4 +219,11 @@ def get_streaming_history_adapter(provider: MusicProvider) -> StreamingHistoryPo
 
 
 def get_unit_of_work() -> UnitOfWorkPort:
-    return SQLUnitOfWork(async_session_factory)
+    """The unit of work of the running command.
+
+    Raises:
+        RuntimeError: If the command runs its logic without `run_with_database` or `open_database_runner`.
+    """
+    if session_factory is None:
+        raise RuntimeError("No database open: run the command logic through run_with_database()")
+    return SQLUnitOfWork(session_factory)

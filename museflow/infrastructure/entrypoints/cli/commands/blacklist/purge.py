@@ -1,5 +1,3 @@
-import asyncio
-
 from pydantic import EmailStr
 
 import typer
@@ -9,6 +7,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -23,7 +22,7 @@ def blacklist_purge_command(
         raise typer.Abort()
 
     try:
-        count = asyncio.run(blacklist_purge_logic(email=email))
+        count = run_with_database(blacklist_purge_logic(email=email))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
