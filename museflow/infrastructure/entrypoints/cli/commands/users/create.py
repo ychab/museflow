@@ -9,7 +9,7 @@ from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
@@ -27,7 +27,7 @@ def users_create_command(
     ),
 ) -> None:
     try:
-        run_with_database(users_create_logic(email, password))
+        run_logic(users_create_logic(email, password))
     except UserAlreadyExistsError as e:
         typer.secho(f"User with email {email} already exists.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e

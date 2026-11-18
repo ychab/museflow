@@ -9,13 +9,14 @@ from starlette.middleware.cors import CORSMiddleware
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from museflow import __version__
 from museflow.infrastructure.adapters.database.session import create_engine_from_settings
 from museflow.infrastructure.adapters.database.session import create_session_factory
 from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.api.dependencies import get_db
+from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
@@ -68,10 +69,14 @@ app.include_router(api_v1_router, prefix=app_settings.API_V1_PREFIX)
 
 
 @app.get("/health", name="health_check", tags=["health"])
-async def health_check(db: AsyncSession = Depends(get_db)) -> HealthCheckResponse:
+async def health_check(
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> HealthCheckResponse:
     """Health check endpoint to verify application and database status."""
+    # A raw session, the health check's only: everything else goes through the unit of work.
     try:
-        await db.execute(text("SELECT 1"))
+        async with session_factory() as session:
+            await session.execute(text("SELECT 1"))
     except Exception:
         logger.exception("Health Check Failed")
         return HealthCheckResponse(status="unhealthy", database="unavailable")

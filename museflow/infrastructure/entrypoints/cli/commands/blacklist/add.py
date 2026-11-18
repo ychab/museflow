@@ -9,7 +9,7 @@ from museflow.domain.entities.blacklist import BlacklistedTrack
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -19,7 +19,7 @@ def blacklist_add_artist_command(
     artist_names: list[str] = typer.Argument(..., help="Artist name(s) to blacklist"),
 ) -> None:
     try:
-        entries = run_with_database(blacklist_add_artist_logic(email=email, artist_names=artist_names))
+        entries = run_logic(blacklist_add_artist_logic(email=email, artist_names=artist_names))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
@@ -45,7 +45,7 @@ def blacklist_add_track_command(
     artist: str = typer.Option(..., "--artist", help="Artist name"),
 ) -> None:
     try:
-        entry = run_with_database(blacklist_add_track_logic(email=email, name=name, artist_name=artist))
+        entry = run_logic(blacklist_add_track_logic(email=email, name=name, artist_name=artist))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

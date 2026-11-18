@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.utils.formatting import format_duration
@@ -63,9 +63,7 @@ def tracks_history_command(
 
     try:
         with RichProgressAdapter(console=console_stderr, animated=has_rich_log_handler()) as progress:
-            report = run_with_database(
-                tracks_history_logic(email=email, config=config, provider=provider, progress=progress)
-            )
+            report = run_logic(tracks_history_logic(email=email, config=config, provider=provider, progress=progress))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except StreamingHistoryError as e:

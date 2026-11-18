@@ -14,7 +14,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_li
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
@@ -68,7 +68,7 @@ class TestRunWithDatabase:
         async def main() -> UnitOfWorkPort:
             return get_unit_of_work()
 
-        assert isinstance(run_with_database(main()), SQLUnitOfWork)
+        assert isinstance(run_logic(main()), SQLUnitOfWork)
         mock_engine.dispose.assert_awaited_once()
 
         with pytest.raises(RuntimeError, match="No database open"):
@@ -79,6 +79,6 @@ class TestRunWithDatabase:
             raise ValueError("boom")
 
         with pytest.raises(ValueError, match="boom"):
-            run_with_database(main())
+            run_logic(main())
 
         mock_engine.dispose.assert_awaited_once()

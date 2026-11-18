@@ -15,7 +15,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
+from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -57,7 +57,7 @@ def playlist_delete_command(
         raise typer.BadParameter("--type and --provider can only be used with --purge.")
 
     try:
-        count = run_with_database(
+        count = run_logic(
             playlist_delete_logic(
                 email=email,
                 playlist_id=playlist_id,

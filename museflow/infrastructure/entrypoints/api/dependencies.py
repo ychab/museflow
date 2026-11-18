@@ -56,14 +56,6 @@ def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
     return session_factory
 
 
-async def get_db(
-    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
-) -> AsyncGenerator[AsyncSession]:  # pragma: no cover
-    """Raw session for the health check only: everything else goes through the unit of work."""
-    async with session_factory() as session:
-        yield session
-
-
 def get_unit_of_work(
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> UnitOfWorkPort:

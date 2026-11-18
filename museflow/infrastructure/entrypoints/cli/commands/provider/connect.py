@@ -19,7 +19,7 @@ from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.cli.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.cli.dependencies import open_database_runner
+from museflow.infrastructure.entrypoints.cli.dependencies import init_logic_runner
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -46,7 +46,7 @@ def provider_connect_command(
     """
     try:
         # One event loop for both steps: the pooled database connections are bound to it.
-        with open_database_runner() as runner:
+        with init_logic_runner() as runner:
             start = runner.run(provider_connect_start_logic(email, provider))
 
             typer.echo(f"Opening browser for authentication: {start.authorization_url}")

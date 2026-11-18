@@ -38,22 +38,22 @@ from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
-# The database of the running command, open between the start and the end of `open_database_runner`.
+# The database of the running command, open between the start and the end of `init_logic_runner`.
 session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 # --- Event loop ---
 
 
-def run_with_database[T](main: Coroutine[Any, Any, T]) -> T:
+def run_logic[T](main: Coroutine[Any, Any, T]) -> T:
     """Runs a command's logic like `asyncio.run`, with the database open for the run."""
-    with open_database_runner() as runner:
+    with init_logic_runner() as runner:
         result = runner.run(main)
     return result
 
 
 @contextmanager
-def open_database_runner() -> Iterator[asyncio.Runner]:
+def init_logic_runner() -> Iterator[asyncio.Runner]:
     """An `asyncio.Runner` with the database open, for a command that prints between two steps of its logic.
 
     The engine is created in the runner's event loop, which its pooled connections are bound to, and disposed of in
@@ -222,8 +222,8 @@ def get_unit_of_work() -> UnitOfWorkPort:
     """The unit of work of the running command.
 
     Raises:
-        RuntimeError: If the command runs its logic without `run_with_database` or `open_database_runner`.
+        RuntimeError: If the command runs its logic without `run_logic` or `init_logic_runner`.
     """
     if session_factory is None:
-        raise RuntimeError("No database open: run the command logic through run_with_database()")
+        raise RuntimeError("No database open: run the command logic through run_logic()")
     return SQLUnitOfWork(session_factory)
