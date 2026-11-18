@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import AsyncExitStack
 from datetime import timedelta
 from typing import Final
@@ -27,6 +26,7 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_profiler
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import console
@@ -81,7 +81,7 @@ def taste_build_command(
     meter = LLMUsageMeter()
     try:
         with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
-            profile = asyncio.run(
+            profile = run_with_database(
                 taste_build_logic(
                     email=email,
                     name=name,

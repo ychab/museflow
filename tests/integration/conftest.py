@@ -56,7 +56,7 @@ from museflow.infrastructure.adapters.database.repositories.taste import TastePr
 from museflow.infrastructure.adapters.database.repositories.track import TrackSQLRepository
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository
 from museflow.infrastructure.adapters.database.repositories.users import UserSQLRepository
-from museflow.infrastructure.adapters.database.session import async_session_factory
+from museflow.infrastructure.adapters.database.session import create_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.enrichers.openrouter.client import OpenRouterTrackEnricherAdapter
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
@@ -142,8 +142,17 @@ async def async_engine(create_test_database: None, test_db_name: str) -> AsyncGe
     await async_engine.dispose()
 
 
+@pytest.fixture(scope="session")
+def async_session_factory(async_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    """The application's session factory, on the test database."""
+    return create_session_factory(async_engine)
+
+
 @pytest.fixture(scope="function")
-async def async_session_trans(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
+async def async_session_trans(
+    async_session_factory: async_sessionmaker[AsyncSession],
+    async_engine: AsyncEngine,
+) -> AsyncGenerator[AsyncSession]:
     """
     Provides an async session for tests requiring explicit transaction commits.
 
@@ -155,8 +164,6 @@ async def async_session_trans(async_engine: AsyncEngine) -> AsyncGenerator[Async
         - Commits data to the DB.
         - Cleans up via TRUNCATE after the test (slower than rollback).
     """
-    async_session_factory.configure(bind=async_engine)
-
     async with async_session_factory() as async_session_db:
         # Attach active session on DB factories first.
         BaseModelFactory.__async_session__ = async_session_db
@@ -176,6 +183,7 @@ async def async_session_trans(async_engine: AsyncEngine) -> AsyncGenerator[Async
 @pytest.fixture(scope="function", autouse=True)
 async def async_session_db(
     async_engine: AsyncEngine,
+    async_session_factory: async_sessionmaker[AsyncSession],
     request: pytest.FixtureRequest,
 ) -> AsyncGenerator[AsyncSession | None]:
     """
@@ -286,7 +294,10 @@ def llm_usage_repository(async_session_db: AsyncSession) -> LLMUsageRepository:
 
 
 @pytest.fixture
-def uow_session_factory(async_session_db: AsyncSession | None) -> async_sessionmaker[AsyncSession]:
+def uow_session_factory(
+    async_session_db: AsyncSession | None,
+    async_session_factory: async_sessionmaker[AsyncSession],
+) -> async_sessionmaker[AsyncSession]:
     """Session factory for the units of work, on the test database.
 
     With the default session, each block runs in a savepoint of the test transaction: its commit is visible to the

@@ -1,5 +1,3 @@
-import asyncio
-
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -11,6 +9,7 @@ from museflow.domain.enums import PlaylistType
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 console = Console()
@@ -23,7 +22,7 @@ def playlist_list_command(
 ) -> None:
     """List all playlists for a user."""
     try:
-        playlists = asyncio.run(playlist_list_logic(email=email, type=type))
+        playlists = run_with_database(playlist_list_logic(email=email, type=type))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

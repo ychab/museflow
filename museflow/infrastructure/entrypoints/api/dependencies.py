@@ -5,10 +5,12 @@ from typing import Final
 
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Request
 from fastapi import status
 from fastapi.security import OAuth2PasswordBearer
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import jwt
 
@@ -23,7 +25,6 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.infrastructure.adapters.database.session import async_session_factory
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
@@ -49,15 +50,25 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
     return SystemStateTokenGenerator()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession]:  # pragma: no cover
+def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
+    # Built by the lifespan, which owns the engine.
+    session_factory: async_sessionmaker[AsyncSession] = request.app.state.session_factory
+    return session_factory
+
+
+async def get_db(
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> AsyncGenerator[AsyncSession]:  # pragma: no cover
     """Raw session for the health check only: everything else goes through the unit of work."""
-    async with async_session_factory() as session:
+    async with session_factory() as session:
         yield session
 
 
-def get_unit_of_work() -> UnitOfWorkPort:
+def get_unit_of_work(
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> UnitOfWorkPort:
     # FastAPI caches it for the request, whose steps run one after another.
-    return SQLUnitOfWork(async_session_factory)
+    return SQLUnitOfWork(session_factory)
 
 
 async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:

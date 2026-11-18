@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 
@@ -49,7 +49,7 @@ def rate_playlist_command(
         raise typer.BadParameter("--play-provider requires --play")
 
     try:
-        result = asyncio.run(
+        result = run_with_database(
             rate_playlist_logic(
                 email=email,
                 playlist_id=playlist_id,

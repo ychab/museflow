@@ -1,5 +1,3 @@
-import asyncio
-
 from pydantic import EmailStr
 
 import typer
@@ -15,6 +13,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
@@ -42,7 +41,7 @@ def stats_tracks_command(
     validate_score_range(score_min, score_max)
 
     try:
-        tracks = asyncio.run(
+        tracks = run_with_database(
             stats_tracks_logic(
                 email=email,
                 limit=limit,

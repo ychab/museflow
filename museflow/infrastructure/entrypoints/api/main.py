@@ -11,6 +11,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow import __version__
+from museflow.infrastructure.adapters.database.session import create_engine_from_settings
+from museflow.infrastructure.adapters.database.session import create_session_factory
 from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_db
@@ -29,7 +31,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
         handlers=app_settings.LOG_HANDLERS_API,
     )
-    yield
+
+    # Created in the server's event loop, in the process that serves (never before a fork).
+    engine = create_engine_from_settings()
+    app.state.session_factory = create_session_factory(engine)
+    try:
+        yield
+    finally:
+        await engine.dispose()
 
 
 app = FastAPI(

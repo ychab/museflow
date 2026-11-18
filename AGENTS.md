@@ -113,10 +113,10 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
-  - Each Typer command is a thin sync wrapper calling `asyncio.run()` on a co-located `<command>_logic` function
-    (never a `_`-prefixed name). A command that must print between two steps runs them in one `asyncio.Runner`
-    (`provider/connect.py`): a second `asyncio.run()` fails, as the pooled database connections are bound to the first
-    event loop.
+  - Each Typer command is a thin sync wrapper calling `run_with_database()` (`cli/dependencies.py`) on a co-located
+    `<command>_logic` function (never a `_`-prefixed name): it runs the logic like `asyncio.run()`, with an engine
+    created for the run and disposed of at the end. A command that must print between two steps runs them in one
+    `open_database_runner()` (`provider/connect.py`): the pooled connections are bound to its event loop.
   - The callback is `<group>_<command>_command`, its logic `<group>_<command>_logic`, one
     `<group>_<command>_<step>_logic` per step when the command runs several (`provider_connect_start_logic`), with the
     CLI names (dashes become underscores). The group looks redundant inside its module, but a reader skimming a test

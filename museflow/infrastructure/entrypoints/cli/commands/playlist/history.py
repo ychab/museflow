@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import AsyncExitStack
 from datetime import date
 
@@ -26,6 +25,7 @@ from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
@@ -117,7 +117,7 @@ def playlist_history_command(
         raise typer.BadParameter("--played-last-min cannot be after --played-last-max")
 
     try:
-        result = asyncio.run(
+        result = run_with_database(
             playlist_history_logic(
                 email=email,
                 provider=provider,

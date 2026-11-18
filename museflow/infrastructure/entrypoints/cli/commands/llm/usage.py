@@ -1,4 +1,3 @@
-import asyncio
 from datetime import date
 
 from pydantic import EmailStr
@@ -15,6 +14,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.utils.formatting import format_duration
@@ -56,7 +56,7 @@ def llm_usage_command(
         raise typer.BadParameter("--until is before --since")
 
     try:
-        summary = asyncio.run(
+        summary = run_with_database(
             llm_usage_logic(email=email, group_by=group_by, operation=operation, since=since, until=until)
         )
     except UserNotFoundError as e:

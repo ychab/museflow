@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
@@ -22,7 +22,7 @@ def rate_export_command(
     output: Path = typer.Option(..., help="Path to the output YAML file"),
 ) -> None:
     try:
-        data = asyncio.run(rate_export_logic(email=email))
+        data = run_with_database(rate_export_logic(email=email))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:

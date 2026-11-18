@@ -1,5 +1,3 @@
-import asyncio
-
 from pydantic import EmailStr
 
 import typer
@@ -12,6 +10,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.blacklist import UserBlacklist
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import run_with_database
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 console = Console()
@@ -22,7 +21,7 @@ def blacklist_list_command(
     email: str = EMAIL_OPTION,
 ) -> None:
     try:
-        blacklist = asyncio.run(blacklist_list_logic(email=email))
+        blacklist = run_with_database(blacklist_list_logic(email=email))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except Exception as e:
