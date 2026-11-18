@@ -58,6 +58,11 @@ printed after a pause too, since those calls were paid.
 **Interrupting it.** Ctrl+C stops the build with exit code 130: the periods done are saved, and `--resume` continues
 after them.
 
+**One build per profile.** While a build runs, another build of the same profile name stops at once with an error,
+before any LLM call. A build killed without stopping cleanly (machine shut down, `kill -9`) holds the name until its
+lease expires, 15 minutes after its last saved period (`TASTE_PROFILE_BUILD_LEASE_MINUTES`); `--resume` works again
+then.
+
 ## `taste list`
 
 Lists all taste profiles of a user.

@@ -77,6 +77,10 @@ class TasteProfileBuildPausedError(Exception):
         super().__init__(f"Build paused at batch {batch_index}/{total_batches} — {reason} — use --resume to continue")
 
 
+class TasteProfileBuildInProgressError(Exception):
+    """Another build holds the profile: it refused this one, or took the profile over from it."""
+
+
 class TasteProfileNoSeedError(Exception): ...
 
 

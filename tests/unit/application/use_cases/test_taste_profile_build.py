@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 from collections.abc import Iterator
 from typing import Any
 from unittest import mock
@@ -15,6 +17,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
@@ -255,8 +258,9 @@ class TestBuildTasteProfileUseCase:
 
         # 3 segments + 2 merges + 1 reflection
         assert blocks_open == [False] * 6
-        # The played tracks counted and the periods read, one checkpoint per period, the final upsert, then the LLM usage
-        assert mock_uow.__aenter__.await_count == 6
+        # The lease claimed, the played tracks counted and the periods read, one checkpoint per period, the final upsert,
+        # then the LLM usage and the lease released
+        assert mock_uow.__aenter__.await_count == 8
 
     @pytest.mark.parametrize("periods", [1], indirect=True)
     async def test__nominal__single_batch(
@@ -579,3 +583,73 @@ class TestBuildTasteProfileUseCase:
         mock_reflect.assert_awaited_once_with(profile_data)
         mock_taste_profile_repository.upsert_checkpoint.assert_not_called()
         mock_taste_profile_repository.upsert.assert_called_once()
+
+    @pytest.mark.parametrize("periods", [3], indirect=True)
+    async def test__lease__taken_over__stops_before_writing(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        periods: list[ListeningPeriod],
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_taste_build_repository: mock.AsyncMock,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion)
+        mock_taste_build_repository.renew.return_value = False
+
+        with pytest.raises(TasteProfileBuildInProgressError, match="took taste profile"):
+            await use_case.build_profile(user=user, config=config)
+
+        # The first period's checkpoint is not written over the build that took the profile over.
+        mock_taste_profile_repository.upsert_checkpoint.assert_not_awaited()
+        build_id = mock_taste_build_repository.claim.await_args.kwargs["build_id"]
+        assert mock_taste_build_repository.renew.await_args.kwargs["build_id"] == build_id
+        mock_taste_build_repository.release.assert_awaited_once_with(
+            user_id=user.id, name=config.name, build_id=build_id
+        )
+
+    async def test__lease__released_on_cancel(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        mock_track_play_repository: mock.AsyncMock,
+        mock_taste_build_repository: mock.AsyncMock,
+    ) -> None:
+        # Ctrl-C cancels the task: the lease must be released, so that --resume can run at once.
+        mock_track_play_repository.count_played_tracks.side_effect = asyncio.CancelledError()
+
+        with pytest.raises(asyncio.CancelledError):
+            await use_case.build_profile(user=user, config=config)
+
+        build_id = mock_taste_build_repository.claim.await_args.kwargs["build_id"]
+        mock_taste_build_repository.release.assert_awaited_once_with(
+            user_id=user.id, name=config.name, build_id=build_id
+        )
+
+    @pytest.mark.parametrize("periods", [1], indirect=True)
+    async def test__lease__release_fails__logged(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        periods: list[ListeningPeriod],
+        mock_taste_profile_repository: mock.AsyncMock,
+        mock_taste_build_repository: mock.AsyncMock,
+        completion: dict[str, Any],
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        httpx_mock.add_response(url=URL, method="POST", json=completion, is_reusable=True)
+        mock_taste_build_repository.release.side_effect = Exception("Boom")
+
+        with caplog.at_level(logging.WARNING):
+            profile = await use_case.build_profile(user=user, config=config)
+
+        # The build's outcome is kept: the lease expires on its own.
+        assert profile == mock_taste_profile_repository.upsert.return_value
+        assert [record.getMessage() for record in caplog.records] == [
+            f"Failed to release the lease of taste profile '{config.name}', it expires on its own"
+        ]

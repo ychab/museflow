@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import timedelta
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -9,3 +10,6 @@ class BuildTasteProfileConfigInput:
     throttling_sleep_seconds: float = 0.0
     resume: bool = False
     rated_only: bool = False
+    # How long the build holds the profile without saving a checkpoint: longer than the slowest period (LLM calls,
+    # their retries and the throttling sleep), or another build may take the profile over.
+    lease_duration: timedelta = timedelta(minutes=15)
