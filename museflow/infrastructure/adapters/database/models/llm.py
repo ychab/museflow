@@ -9,6 +9,7 @@ from sqlalchemy import Integer
 from sqlalchemy import Interval
 from sqlalchemy import Numeric
 from sqlalchemy import String
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
@@ -25,7 +26,11 @@ class LLMUsageModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     """One row per (command run, step, model)."""
 
     __tablename__ = "museflow_llm_usage"
-    __table_args__ = (Index("ix_museflow_llm_usage_user_id_created_at", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_museflow_llm_usage_user_id_created_at", "user_id", "created_at"),
+        # A run saves one row per step and model: an import skips the rows already there on this key.
+        UniqueConstraint("user_id", "run_id", "step", "model", name="uq_museflow_llm_usage_user_run_step_model"),
+    )
 
     # Identity / FK
     user_id: Mapped[uuid.UUID] = mapped_column(

@@ -1,3 +1,4 @@
+import itertools
 import uuid
 from dataclasses import dataclass
 from datetime import UTC
@@ -7,6 +8,7 @@ from datetime import time
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from typing import Final
 
 from sqlalchemy import Row
 from sqlalchemy import Select
@@ -14,6 +16,7 @@ from sqlalchemy import SQLColumnExpression
 from sqlalchemy import distinct
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.llm import LLMUsageRepository
@@ -29,6 +32,9 @@ from museflow.infrastructure.adapters.database.models.taste import TasteProfileM
 
 
 class LLMUsageSQLRepository(LLMUsageRepository):
+    # 17 columns a row: 1000 rows stay far below the 32767 bind parameters of a PostgreSQL statement.
+    _CHUNK_SIZE: Final[int] = 1000
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -40,9 +46,21 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         )
         return [row.to_entity() for row in (await self.session.execute(stmt)).scalars()]
 
-    async def bulk_create(self, records: list[LLMUsageRecord]) -> None:
-        self.session.add_all([LLMUsageModel.from_entity(record) for record in records])
-        await self.session.flush()
+    async def bulk_create(self, records: list[LLMUsageRecord]) -> int:
+        # The unique key decides, in the statement itself: two imports of one file at once can't both add a row.
+        columns = LLMUsageModel.__table__.columns
+        rows = [LLMUsageModel.from_entity(record) for record in records]
+
+        created = 0
+        for chunk in itertools.batched(rows, self._CHUNK_SIZE, strict=False):
+            stmt = (
+                pg_insert(LLMUsageModel)
+                .values([{column.key: getattr(row, column.key) for column in columns} for row in chunk])
+                .on_conflict_do_nothing(index_elements=["user_id", "run_id", "step", "model"])
+                .returning(LLMUsageModel.id)
+            )
+            created += len((await self.session.execute(stmt)).all())
+        return created
 
     async def summarize(
         self,

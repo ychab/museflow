@@ -18,7 +18,13 @@ class LLMUsageRepository(ABC):
         ...
 
     @abstractmethod
-    async def bulk_create(self, records: list[LLMUsageRecord]) -> None: ...
+    async def bulk_create(self, records: list[LLMUsageRecord]) -> int:
+        """Saves the usage rows, skipping each one whose user, run, step and model already have a row.
+
+        Returns:
+            The number of rows created.
+        """
+        ...
 
     @abstractmethod
     async def summarize(
