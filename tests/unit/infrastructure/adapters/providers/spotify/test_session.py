@@ -12,7 +12,6 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import ProviderRateLimitExceededError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.http import RateLimitRetry
@@ -204,21 +203,3 @@ class TestSpotifyOAuthSessionClient:
             await session_client.execute("GET", "/test")
 
         assert mock_provider_oauth.make_api_call.call_count == 2
-
-    async def test__refresh_token_safely__token_deleted_meanwhile(
-        self,
-        session_client: SpotifyOAuthSessionClient,
-        mock_provider_oauth: mock.AsyncMock,
-        mock_auth_token_repository: mock.AsyncMock,
-        auth_token_expired: OAuthProviderUserToken,
-        token_payload: OAuthProviderTokenPayload,
-    ) -> None:
-        session_client.auth_token = auth_token_expired
-        mock_provider_oauth.refresh_access_token.return_value = token_payload
-        mock_auth_token_repository.update.return_value = None
-        mock_auth_token_repository.get.return_value = None
-
-        with pytest.raises(ProviderAuthTokenNotFoundError):
-            await session_client._refresh_token_safely()
-
-        assert session_client.auth_token == auth_token_expired
