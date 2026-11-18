@@ -9,6 +9,7 @@ from museflow.application.ports.repositories.blacklist import BlacklistRepositor
 from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.taste_build import TasteProfileBuildRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -28,6 +29,7 @@ class UnitOfWorkPort(ABC):
     tracks: TrackRepository
     track_plays: TrackPlayRepository
     taste_profiles: TasteProfileRepository
+    taste_builds: TasteProfileBuildRepository
     blacklist: BlacklistRepository
     playlists: PlaylistRepository
     llm_usage: LLMUsageRepository

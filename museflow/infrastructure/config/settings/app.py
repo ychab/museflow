@@ -46,6 +46,8 @@ class AppSettings(BaseSettings):
     HTTP_MAX_RETRIES: int = 5
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
+    # How long a build holds its profile without saving a checkpoint; longer than its slowest period.
+    TASTE_PROFILE_BUILD_LEASE_MINUTES: int = Field(default=15, ge=1)
 
     # Artists asked and tracks picked per attempt, against the playlist size: the per-artist cap and the advisor
     # returning fewer picks than asked both eat into them.

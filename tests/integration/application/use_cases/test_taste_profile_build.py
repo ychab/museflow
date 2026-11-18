@@ -1,6 +1,7 @@
 import io
 from datetime import UTC
 from datetime import datetime
+from datetime import timedelta
 
 from sqlalchemy import func
 from sqlalchemy import select
@@ -13,11 +14,14 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
+from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
+from museflow.infrastructure.adapters.database.models.taste import TasteProfileBuildModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 
+from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.track import TrackPlayModelFactory
 from tests.unit.factories.inputs.taste import BuildTasteProfileConfigInputFactory
@@ -99,6 +103,10 @@ class TestBuildTasteProfileUseCase:
             (LLMOperation.TASTE_BUILD, "profiler merge", profile.id, 1),
             (LLMOperation.TASTE_BUILD, "profiler reflect", profile.id, 1),
         }
+        # The lease is released once the build ends.
+        assert (
+            await async_session_db.execute(select(func.count()).select_from(TasteProfileBuildModel))
+        ).scalar_one() == 0
 
     async def test__upsert(
         self,
@@ -115,3 +123,48 @@ class TestBuildTasteProfileUseCase:
         stmt = select(func.count()).where(TasteProfileModel.user_id == user.id)
         count = (await async_session_db.execute(stmt)).scalar_one()
         assert count == 1
+
+    async def test__lease__held_by_another_build(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        async_session_db: AsyncSession,
+    ) -> None:
+        await TrackModelFactory.create_batch_async(size=3, user_id=user.id, played_count=1)
+        await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            name=config.name,
+            lease_until=datetime.now(UTC) + timedelta(minutes=10),
+        )
+
+        with pytest.raises(TasteProfileBuildInProgressError, match="is running"):
+            await use_case.build_profile(user=user, config=config)
+
+        # Refused before any LLM call: nothing paid, nothing written, and the other build keeps its lease.
+        for model in (LLMUsageModel, TasteProfileModel, TasteProfileBuildModel):
+            stmt = select(func.count()).select_from(model).where(model.user_id == user.id)
+            assert (await async_session_db.execute(stmt)).scalar_one() == (model is TasteProfileBuildModel), model
+
+    async def test__lease__expired__taken_over(
+        self,
+        user: User,
+        use_case: BuildTasteProfileUseCase,
+        config: BuildTasteProfileConfigInput,
+        async_session_db: AsyncSession,
+    ) -> None:
+        await TrackModelFactory.create_batch_async(size=3, user_id=user.id, played_count=1)
+        # A build killed without releasing its lease.
+        await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            name=config.name,
+            lease_until=datetime.now(UTC) - timedelta(minutes=10),
+        )
+
+        profile = await use_case.build_profile(user=user, config=config)
+
+        assert profile.name == config.name
+        stmt = (
+            select(func.count()).select_from(TasteProfileBuildModel).where(TasteProfileBuildModel.user_id == user.id)
+        )
+        assert (await async_session_db.execute(stmt)).scalar_one() == 0

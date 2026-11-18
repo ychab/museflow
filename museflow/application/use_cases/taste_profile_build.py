@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+import uuid
 from datetime import UTC
 from datetime import datetime
 from typing import cast
@@ -17,6 +18,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import TasteProfileBuildError
+from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
@@ -42,9 +44,30 @@ class BuildTasteProfileUseCase:
         self._llm_usage = LLMUsageService(uow=uow)
 
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
+        """Builds the profile, or resumes it from its last checkpoint.
+
+        Raises:
+            TasteProfileBuildInProgressError: If another build of the profile is running, before any LLM call, or if
+                another build took the profile over from this one, whose lease had expired.
+        """
+        # Before any paid call: two builds of one profile would pay twice and overwrite each other's checkpoints.
+        build_id = uuid.uuid4()
+        async with self._uow as uow:
+            claimed = await uow.taste_builds.claim(
+                user_id=user.id,
+                name=config.name,
+                build_id=build_id,
+                lease_duration=config.lease_duration,
+            )
+        if not claimed:
+            raise TasteProfileBuildInProgressError(
+                f"Another build of taste profile '{config.name}' is running: wait for it to end, or for its lease to "
+                f"expire if it was killed (at most {config.lease_duration})"
+            )
+
         # What the profiler spent is saved whatever the outcome: a paused build was billed too.
         try:
-            profile = await self._build_profile(user, config)
+            profile = await self._build_profile(user, config, build_id)
         finally:
             await self._llm_usage.record(
                 user_id=user.id,
@@ -52,9 +75,15 @@ class BuildTasteProfileUseCase:
                 usages=self._profiler.usages,
                 profile_name=config.name,
             )
+            await self._release_lease(user, config, build_id)
         return profile
 
-    async def _build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
+    async def _build_profile(
+        self,
+        user: User,
+        config: BuildTasteProfileConfigInput,
+        build_id: uuid.UUID,
+    ) -> TasteProfile:
         # Cut the listening history into periods holding the same number of plays, each seeded with the tracks most
         # played in it: a period is described by what was listened to then, a track replayed years later in each.
         min_score = 0 if config.rated_only else None
@@ -120,6 +149,7 @@ class BuildTasteProfileUseCase:
 
                 # One block per batch: a paid batch survives a later failure.
                 async with self._uow as uow:
+                    await self._renew_lease(uow, user, config, build_id)
                     await uow.taste_profiles.upsert_checkpoint(
                         user_id=user.id,
                         name=config.name,
@@ -163,4 +193,36 @@ class BuildTasteProfileUseCase:
         ).sort_timeline()
 
         async with self._uow as uow:
+            await self._renew_lease(uow, user, config, build_id)
             return await uow.taste_profiles.upsert(taste_profile)
+
+    async def _renew_lease(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        config: BuildTasteProfileConfigInput,
+        build_id: uuid.UUID,
+    ) -> None:
+        """Checks the fencing token in the block of a write, before it: a build whose lease was taken over stops."""
+        renewed = await uow.taste_builds.renew(
+            user_id=user.id,
+            name=config.name,
+            build_id=build_id,
+            lease_duration=config.lease_duration,
+        )
+        if not renewed:
+            raise TasteProfileBuildInProgressError(
+                f"Another build took taste profile '{config.name}' over, its lease having expired: this one stopped"
+            )
+
+    async def _release_lease(self, user: User, config: BuildTasteProfileConfigInput, build_id: uuid.UUID) -> None:
+        # A failure must not hide the outcome of the build: the lease then expires on its own.
+        try:
+            async with self._uow as uow:
+                await uow.taste_builds.release(user_id=user.id, name=config.name, build_id=build_id)
+        except Exception:
+            logger.warning(
+                f"Failed to release the lease of taste profile '{config.name}', it expires on its own",
+                exc_info=True,
+                extra={"user_id": str(user.id)},
+            )

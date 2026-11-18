@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 04513e2bbf30
+Revision ID: 31e5841196d1
 Revises:
-Create Date: 2026-11-18 07:58:29.951832
+Create Date: 2026-11-18 08:55:28.046089
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '04513e2bbf30'
+revision: str = '31e5841196d1'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -96,6 +96,16 @@ def upgrade() -> None:
     sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_user_name')
     )
     op.create_index(op.f('ix_museflow_taste_profile_user_id'), 'museflow_taste_profile', ['user_id'], unique=False)
+    op.create_table('museflow_taste_profile_build',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('build_id', sa.Uuid(), nullable=False),
+    sa.Column('lease_until', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_build_user_name')
+    )
     op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -196,6 +206,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_fingerprint'), table_name='museflow_track')
     op.drop_table('museflow_track')
+    op.drop_table('museflow_taste_profile_build')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')
     op.drop_table('museflow_taste_profile')
     op.drop_table('museflow_blacklisted_track')

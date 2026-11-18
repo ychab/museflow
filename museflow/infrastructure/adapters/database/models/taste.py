@@ -1,7 +1,9 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -57,3 +59,20 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
+
+
+class TasteProfileBuildModel(UUIDIdMixin, Base, kw_only=True):
+    """The lease of the build running on a profile, one per user and profile name.
+
+    Apart from the profile: a build holds the name before its first checkpoint creates the profile row. A build killed
+    without releasing its lease leaves an expired row, which the next build of the name takes over.
+    """
+
+    __tablename__ = "museflow_taste_profile_build"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_museflow_taste_profile_build_user_name"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("museflow_user.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # The fencing token: each build draws its own, and writes only while the lease still holds it.
+    build_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    lease_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

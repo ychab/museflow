@@ -17,6 +17,7 @@ from museflow.application.ports.repositories.blacklist import BlacklistRepositor
 from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
+from museflow.application.ports.repositories.taste_build import TasteProfileBuildRepository
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.application.ports.repositories.users import UserRepository
@@ -99,6 +100,11 @@ def mock_taste_profile_repository() -> mock.AsyncMock:
 
 
 @pytest.fixture
+def mock_taste_build_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=TasteProfileBuildRepository)
+
+
+@pytest.fixture
 def mock_blacklist_repository() -> mock.AsyncMock:
     return mock.AsyncMock(spec=BlacklistRepository)
 
@@ -121,6 +127,7 @@ def mock_uow(
     mock_track_repository: mock.AsyncMock,
     mock_track_play_repository: mock.AsyncMock,
     mock_taste_profile_repository: mock.AsyncMock,
+    mock_taste_build_repository: mock.AsyncMock,
     mock_blacklist_repository: mock.AsyncMock,
     mock_playlist_repository: mock.AsyncMock,
     mock_llm_usage_repository: mock.AsyncMock,
@@ -151,6 +158,7 @@ def mock_uow(
     uow.tracks = mock_track_repository
     uow.track_plays = mock_track_play_repository
     uow.taste_profiles = mock_taste_profile_repository
+    uow.taste_builds = mock_taste_build_repository
     uow.blacklist = mock_blacklist_repository
     uow.playlists = mock_playlist_repository
     uow.llm_usage = mock_llm_usage_repository

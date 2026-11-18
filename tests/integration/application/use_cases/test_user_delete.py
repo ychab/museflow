@@ -19,6 +19,7 @@ from tests.integration.factories.models.blacklist import BlacklistedArtistModelF
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory
 from tests.integration.factories.models.llm import LLMUsageModelFactory
 from tests.integration.factories.models.playlist import PlaylistModelFactory
+from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
@@ -38,6 +39,7 @@ class TestDeleteUserUseCase:
 
             track_db = await TrackModelFactory.create_async(user_id=user_id, played_count=1)
             profile_db = await TasteProfileModelFactory.create_async(user_id=user_id)
+            await TasteProfileBuildModelFactory.create_async(user_id=user_id)
             playlist_db = await PlaylistModelFactory.create_async(
                 user_id=user_id,
                 type=PlaylistType.DISCOVERY,

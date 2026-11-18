@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import AsyncExitStack
+from datetime import timedelta
 from typing import Final
 
 from pydantic import EmailStr
@@ -153,6 +154,7 @@ async def taste_build_logic(
             track_limit=track_limit,
             batch_size=batch_size,
             throttling_sleep_seconds=app_settings.TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS,
+            lease_duration=timedelta(minutes=app_settings.TASTE_PROFILE_BUILD_LEASE_MINUTES),
         )
 
         return await use_case.build_profile(user=user, config=config)

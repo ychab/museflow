@@ -212,6 +212,13 @@ Document storage fits because the profile is read and written as a whole, never 
 
 **Checkpointing** reuses the same row. While a build runs, each completed batch upserts the partial profile into `profile`, sets `status = BUILDING`, and records `checkpoint_profile` and `checkpoint_batch_index`. `--resume` reads the checkpoint and continues from the next batch. On completion the row becomes `FINISHED` and the checkpoint columns are cleared. `discover` refuses a profile that is still `BUILDING`.
 
+**One build at a time per profile** (`museflow_taste_profile_build`, `UNIQUE (user_id, name)`). Two builds of one profile would pay the LLM calls twice and overwrite each other's checkpoints. A build first claims a lease on the name, in its own table since the profile row only exists after the first checkpoint:
+
+- **The lease** (`lease_until`, on the database clock). The claim is one `INSERT … ON CONFLICT DO UPDATE … WHERE lease_until < now()`: it takes a free or expired lease, and leaves a held one untouched, so the second build stops before any LLM call. Each checkpoint extends it; the build releases it on exit, pause and Ctrl+C included. A build killed without exiting leaves an expired row, which the next build of the name takes over.
+- **The fencing token** (`build_id`, drawn by each build). Every write of the build (checkpoint, final profile) first renews the lease *where `build_id` is still its own*, in the same transaction: a build whose lease expired and was taken over, e.g. stuck on a slow LLM call, finds another `build_id` and stops without writing. The renewal locks the lease row until the write commits, so no claim slips in between.
+
+No `SELECT … FOR UPDATE` or advisory lock held for the whole build: either would keep a transaction or a connection open across the LLM calls, and a session advisory lock silently goes away with its connection (and does not survive a transaction-mode pooler such as PgBouncer).
+
 ## LLM usage
 
 `museflow_llm_usage` keeps what the LLM calls cost: one row per command run, step and model, with the reasoning effort (`ReasoningEffort`,
