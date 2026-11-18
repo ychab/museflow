@@ -40,6 +40,11 @@ class DatabaseSettings(BaseSettings):
     # Seconds a session may stay idle inside a transaction before PostgreSQL terminates it; 0 disables it.
     IDLE_IN_TRANSACTION_TIMEOUT: int = Field(default=60, ge=0)
 
+    # Connections kept open per process, and extra ones opened at a peak then closed: a process uses at most their sum,
+    # and every process (API workers, CLI commands) counts against PostgreSQL's max_connections (100 by default).
+    POOL_SIZE: int = Field(default=5, ge=1)
+    MAX_OVERFLOW: int = Field(default=10, ge=0)
+
     @model_validator(mode="after")
     def build_or_validate_uri(self) -> Self:
         if self.URI is not None:

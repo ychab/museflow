@@ -233,6 +233,21 @@ exception.
   two statements, so the limit only catches a remote call, a prompt or a long computation that has no place there.
 - **`0` disables it**, for instance to stop on a breakpoint inside a block. The test engine does not set it.
 
+## Connection pool and isolation level
+
+- **Pool.** Each process keeps `DATABASE_POOL_SIZE` connections (5) and opens up to `DATABASE_MAX_OVERFLOW` more (10)
+  at a peak. Every process counts against PostgreSQL's `max_connections` (100 by default): API workers times
+  (pool size + overflow) must stay below it, with room for the CLI. Short blocks keep the need low: a connection
+  returns to the pool as soon as its block exits.
+- **`pool_pre_ping`.** A pooled connection may have died since its last use (database restart, network cut, the
+  idle-in-transaction timeout above). A cheap ping on checkout replaces it, instead of failing the first query.
+- **`READ COMMITTED`, PostgreSQL's default, is kept.** It does not stop a read-then-write race, so no such race is
+  left to it: each write that depends on a state holds in one statement, settled by a unique constraint
+  (`ON CONFLICT`) or by a condition on the row it writes (a compare-and-swap, such as the OAuth token refresh or the
+  taste build lease). PostgreSQL checks that condition again on the latest version of the row once it holds the row
+  lock, so a concurrent write can't slip in between. `SERIALIZABLE` would catch such races too, at the cost of
+  retrying every transaction that fails to serialize (#243).
+
 ## Is it over-engineering?
 
 It is often dismissed as such. In MuseFlow it turned out to be the opposite:

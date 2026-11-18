@@ -19,7 +19,12 @@ class TestCreateEngine:
     @pytest.fixture
     async def engine(self, request: pytest.FixtureRequest, test_db_name: str) -> AsyncGenerator[AsyncEngine]:
         url = make_url(str(database_settings.URI)).set(database=test_db_name)
-        engine = create_engine(url.render_as_string(hide_password=False), idle_in_transaction_timeout=request.param)
+        engine = create_engine(
+            url.render_as_string(hide_password=False),
+            idle_in_transaction_timeout=request.param,
+            pool_size=database_settings.POOL_SIZE,
+            max_overflow=database_settings.MAX_OVERFLOW,
+        )
         yield engine
         await engine.dispose()
 
