@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: eb6dad24db18
+Revision ID: 04513e2bbf30
 Revises:
-Create Date: 2026-11-15 14:23:50.485210
+Create Date: 2026-11-18 07:58:29.951832
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'eb6dad24db18'
+revision: str = '04513e2bbf30'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -166,7 +166,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['playlist_id'], ['museflow_playlist.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['profile_id'], ['museflow_taste_profile.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'run_id', 'step', 'model', name='uq_museflow_llm_usage_user_run_step_model')
     )
     op.create_index('ix_museflow_llm_usage_user_id_created_at', 'museflow_llm_usage', ['user_id', 'created_at'], unique=False)
     op.create_table('museflow_playlist_track',

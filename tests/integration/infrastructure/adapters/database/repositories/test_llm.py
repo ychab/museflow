@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import replace
 from datetime import UTC
 from datetime import date
 from datetime import datetime
@@ -41,13 +42,45 @@ class TestLLMUsageSQLRepository:
             LLMUsageRecordFactory.build(user_id=user.id),
         ]
 
-        await llm_usage_repository.bulk_create(records)
+        created = await llm_usage_repository.bulk_create(records)
 
+        assert created == 2
         rows = (
             await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
         ).scalars()
         saved = sorted((row.to_entity() for row in rows), key=lambda record: record.id)
         assert saved == sorted(records, key=lambda record: record.id)
+
+    async def test__bulk_create__already_there__skipped(
+        self,
+        user: User,
+        llm_usage_repository: LLMUsageRepository,
+    ) -> None:
+        record = LLMUsageRecordFactory.build(user_id=user.id)
+        await llm_usage_repository.bulk_create([record])
+        # Same user, run, step and model: another row of the same usage, as a second import of one file builds it.
+        record_again = replace(record, id=uuid.uuid4(), usage=replace(record.usage, cost=record.usage.cost + 1))
+
+        created = await llm_usage_repository.bulk_create([record_again, record_again])
+
+        assert created == 0
+        assert await llm_usage_repository.get_list(user_id=user.id) == [record]
+
+    async def test__bulk_create__other_user__created(
+        self,
+        user: User,
+        llm_usage_repository: LLMUsageRepository,
+    ) -> None:
+        other_user_db = await UserModelFactory.create_async()
+        record = LLMUsageRecordFactory.build(user_id=user.id)
+        await llm_usage_repository.bulk_create([record])
+        # The key is per user: another user's import of the same run is not a duplicate.
+        record_other = replace(record, id=uuid.uuid4(), user_id=other_user_db.id)
+
+        created = await llm_usage_repository.bulk_create([record_other])
+
+        assert created == 1
+        assert await llm_usage_repository.get_list(user_id=other_user_db.id) == [record_other]
 
     async def test__get_list__nominal(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         other_user_db = await UserModelFactory.create_async()
