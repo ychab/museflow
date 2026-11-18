@@ -3,6 +3,7 @@ import logging
 from typing import Any
 from typing import Final
 
+from museflow.application.mappers.auth import to_auth_token_create_input
 from museflow.application.mappers.auth import to_auth_token_update_input
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -132,7 +133,7 @@ class SpotifyOAuthSessionClient:
         Raises:
             ProviderAuthTokenNotFoundError: If Spotify rejects the refresh token (`invalid_grant`) and no other
                 session replaced it: the stored token is discarded so the user must reconnect via the OAuth sign-in
-                flow. Also when the token was deleted by another session meanwhile.
+                flow.
         """
         # Fast check (outside lock)
         if self._should_skip_refresh(stale_access_token):
@@ -180,8 +181,14 @@ class SpotifyOAuthSessionClient:
                 )
                 if auth_token is None:
                     auth_token = await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
-            if auth_token is None:
-                raise ProviderAuthTokenNotFoundError(self._RECONNECT_MESSAGE)
+                if auth_token is None:
+                    # Deleted meanwhile, e.g. by a session whose refresh token Spotify rejected once this refresh
+                    # rotated it, before this one was saved: the token Spotify just issued is valid, so it is saved.
+                    auth_token = await uow.auth_tokens.upsert(
+                        user_id=self.user.id,
+                        provider=MusicProvider.SPOTIFY,
+                        auth_token_in=to_auth_token_create_input(token_payload),
+                    )
             self.auth_token = auth_token
 
     def _should_skip_refresh(self, stale_access_token: str | None) -> bool:

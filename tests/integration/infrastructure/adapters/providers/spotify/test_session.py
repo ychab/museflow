@@ -195,6 +195,50 @@ class TestSpotifyOAuthSessionClient:
         assert auth_token_stored == auth_token_reconnected
         assert spotify_session_client.auth_token == auth_token_reconnected
 
+    async def test__execute__refresh__token_deleted_meanwhile(
+        self,
+        frozen_time: datetime,
+        spotify_oauth: SpotifyOAuthAdapter,
+        spotify_session_client: SpotifyOAuthSessionClient,
+        auth_token_repository: OAuthProviderTokenRepository,
+        token_payload: OAuthProviderTokenPayload,
+        auth_token_expired: OAuthProviderUserToken,
+        spotify_wiremock: WireMockContext,
+    ) -> None:
+        spotify_wiremock.create_mapping(
+            method="POST",
+            url_path=spotify_oauth.token_endpoint.path or "",
+            status=200,
+            json_body={
+                "token_type": token_payload.token_type,
+                "access_token": token_payload.access_token,
+                "refresh_token": token_payload.refresh_token,
+                "expires_in": 3600,
+            },
+        )
+        spotify_wiremock.create_mapping(method="GET", url_path="/test", status=200, json_body={})
+        spotify_session_client.auth_token = auth_token_expired
+        # Another session got `invalid_grant` for the refresh token this refresh rotates, and deleted the stored token
+        # before this one was saved.
+        await auth_token_repository.delete(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+            expected_token_refresh=auth_token_expired.token_refresh,
+        )
+
+        await spotify_session_client.execute("GET", "/test")
+
+        # The token Spotify just issued is saved again, not lost.
+        auth_token_stored = await auth_token_repository.get(
+            user_id=auth_token_expired.user_id,
+            provider=MusicProvider.SPOTIFY,
+        )
+        assert auth_token_stored is not None
+        assert auth_token_stored.token_access == token_payload.access_token
+        assert auth_token_stored.token_refresh == token_payload.refresh_token
+        assert auth_token_stored.token_expires_at == frozen_time + timedelta(seconds=3600)
+        assert spotify_session_client.auth_token == auth_token_stored
+
     async def test__execute__refresh__invalid_grant__token_replaced_meanwhile(
         self,
         spotify_oauth: SpotifyOAuthAdapter,
