@@ -73,7 +73,7 @@ class ImportStreamingHistoryUseCase:
         keys = [
             key
             for key in await self._file_storage.list_keys(user_id=user.id, prefix=config.prefix)
-            if fnmatchcase(_file_name(key), pattern)
+            if fnmatchcase(self._file_name(key), pattern)
         ]
         if not keys:
             raise StreamingHistoryFilesNotFoundError(f"No {pattern} files found under: {config.prefix}")
@@ -86,6 +86,7 @@ class ImportStreamingHistoryUseCase:
         items_read = items_skipped_no_timestamp = items_skipped_short_play = items_skipped_no_track_id = 0
 
         await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_READ, total=len(keys)))
+
         for files_done, key in enumerate(keys, start=1):
             content = await self._file_storage.get(user_id=user.id, key=key)
             try:
@@ -94,7 +95,7 @@ class ImportStreamingHistoryUseCase:
                     min_ms_played=config.min_ms_played,
                 )
             except StreamingHistoryInvalidFormatError as e:
-                raise StreamingHistoryInvalidFormatError(f"{_file_name(key)}: {e}") from e
+                raise StreamingHistoryInvalidFormatError(f"{self._file_name(key)}: {e}") from e
 
             for entry in entries:
                 fp = generate_fingerprint(name=entry.name, artist_names=[entry.artist])
@@ -110,6 +111,7 @@ class ImportStreamingHistoryUseCase:
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.HISTORY_READ, done=files_done, total=len(keys))
             )
+
         await self._progress.publish(StepDone(step=ProgressStep.HISTORY_READ))
 
         unique_fingerprints = set(track_metadata.keys())
@@ -130,6 +132,7 @@ class ImportStreamingHistoryUseCase:
         fingerprints = sorted(unique_fingerprints)
 
         await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_SAVE, total=len(fingerprints)))
+
         for offset in range(0, len(fingerprints), config.batch_size):
             chunk_fps = fingerprints[offset : offset + config.batch_size]
             chunk_tracks = [
@@ -159,6 +162,7 @@ class ImportStreamingHistoryUseCase:
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.HISTORY_SAVE, done=tracks_done, total=len(fingerprints))
             )
+
         await self._progress.publish(StepDone(step=ProgressStep.HISTORY_SAVE))
 
         return ImportStreamingHistoryReport(
@@ -174,6 +178,6 @@ class ImportStreamingHistoryUseCase:
             tracks_purged=tracks_purged,
         )
 
-
-def _file_name(key: str) -> str:
-    return key.rsplit("/", 1)[-1]
+    @staticmethod
+    def _file_name(key: str) -> str:
+        return key.rsplit("/", 1)[-1]
