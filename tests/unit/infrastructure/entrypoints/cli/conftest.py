@@ -1,14 +1,8 @@
 import re
-from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Iterable
-from collections.abc import Iterator
-from contextlib import AbstractContextManager
-from contextlib import asynccontextmanager
-from contextlib import contextmanager
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any
 from unittest import mock
 
 import pytest
@@ -20,11 +14,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.domain.enums import ReasoningEffort
 from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
-
-type ContextPatcher = AbstractContextManager[mock.Mock]
-
-type DependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
-type AsyncDependencyPatcherFactory = Callable[..., AbstractContextManager[mock.Mock]]
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 type TextCleaner = Callable[[str], str]
 
@@ -90,94 +80,50 @@ def mock_typer_confirm() -> Iterable[mock.Mock]:
         yield patched
 
 
-# --- Patcher Factories ---
+# --- Wiring Mocks ---
 
 
 @pytest.fixture
-def mock_dependency_factory() -> DependencyPatcherFactory:
-    """Factory to patch standard CLI dependencies (Repositories, Services)."""
+def mock_wiring(target_path: str, mock_uow: mock.AsyncMock) -> Iterable[mock.MagicMock]:
+    """Patches the command's `get_wiring`.
 
-    @contextmanager
-    def _patcher(target_path: str, return_value: Any) -> Iterator[mock.Mock]:
-        with mock.patch(target_path, return_value=return_value) as _:
-            yield return_value
-
-    return _patcher
-
-
-@pytest.fixture
-def mock_async_context_dependency_factory() -> AsyncDependencyPatcherFactory:
-    """Factory to patch async context manager CLI dependencies (SpotifyClient)."""
-
-    @contextmanager
-    def _patcher(target_path: str, dependency_instance: Any) -> Iterator[mock.Mock]:
-        @asynccontextmanager
-        async def _mock_dependency(*_: Any, **__: Any) -> AsyncGenerator[Any]:
-            yield dependency_instance
-
-        with mock.patch(target_path, side_effect=_mock_dependency):
-            yield dependency_instance
-
-    return _patcher
-
-
-# --- Unit of work Mock ---
+    Configure the repositories through the `mock_*_repository` fixtures, the adapters through the `mock_build_*` ones.
+    A `build_*` left alone returns a `MagicMock`, an async context manager too.
+    """
+    wiring = mock.MagicMock(spec=Wiring)
+    wiring.build_unit_of_work.return_value = mock_uow
+    with mock.patch(f"{target_path}.get_wiring", return_value=wiring):
+        yield wiring
 
 
 @pytest.fixture
-def mock_get_unit_of_work(
-    target_path: str,
-    mock_dependency_factory: DependencyPatcherFactory,
-    mock_uow: mock.AsyncMock,
-) -> Iterable[mock.AsyncMock]:
-    """Patches the command's `get_unit_of_work`; configure the repositories through the `mock_*_repository` fixtures."""
-    with mock_dependency_factory(f"{target_path}.get_unit_of_work", mock_uow) as uow:
-        yield uow
-
-
-# --- Adapter Mocks ---
-
-
-@pytest.fixture
-def mock_provider_oauth(
-    target_path: str,
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
+def mock_provider_oauth(mock_wiring: mock.MagicMock) -> mock.AsyncMock:
     client = mock.AsyncMock(spec=ProviderOAuthPort)
-    with mock_async_context_dependency_factory(f"{target_path}.build_provider_oauth", client) as mock_client:
-        yield mock_client
+    mock_wiring.build_provider_oauth.return_value.__aenter__.return_value = client
+    return client
 
 
 @pytest.fixture
-def mock_build_provider_library(
-    target_path: str,
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-    mock_provider_library: mock.AsyncMock,
-) -> Iterable[mock.AsyncMock]:
-    with mock_async_context_dependency_factory(
-        f"{target_path}.build_provider_library", mock_provider_library
-    ) as library:
-        yield library
+def mock_build_provider_library(mock_wiring: mock.MagicMock, mock_provider_library: mock.AsyncMock) -> mock.MagicMock:
+    mock_wiring.build_provider_library.return_value.__aenter__.return_value = mock_provider_library
+    builder: mock.MagicMock = mock_wiring.build_provider_library
+    return builder
 
 
 @pytest.fixture
-def mock_build_profiler(
-    target_path: str,
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
+def mock_build_profiler(mock_wiring: mock.MagicMock) -> mock.MagicMock:
     profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[])
-    with mock_async_context_dependency_factory(f"{target_path}.build_profiler", profiler) as mock_profiler:
-        yield mock_profiler
+    mock_wiring.build_profiler.return_value.__aenter__.return_value = profiler
+    builder: mock.MagicMock = mock_wiring.build_profiler
+    return builder
 
 
 @pytest.fixture
-def mock_build_enricher(
-    target_path: str,
-    mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-) -> Iterable[mock.AsyncMock]:
+def mock_build_enricher(mock_wiring: mock.MagicMock) -> mock.MagicMock:
     enricher = mock.AsyncMock(spec=TrackEnricherPort, usages=[])
-    with mock_async_context_dependency_factory(f"{target_path}.build_enricher", enricher) as mock_enricher:
-        yield mock_enricher
+    mock_wiring.build_enricher.return_value.__aenter__.return_value = enricher
+    builder: mock.MagicMock = mock_wiring.build_enricher
+    return builder
 
 
 # --- Helpers ---

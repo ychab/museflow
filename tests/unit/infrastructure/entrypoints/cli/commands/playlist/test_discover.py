@@ -23,7 +23,6 @@ from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.discovery import ArtistSuggestedFactory
 from tests.unit.factories.value_objects.discovery import DiscoveryArtistStrategyFactory
-from tests.unit.infrastructure.entrypoints.cli.conftest import AsyncDependencyPatcherFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 from tests.unit.infrastructure.entrypoints.cli.conftest import spend
 
@@ -351,7 +350,7 @@ class TestPlaylistDiscoverCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work",
+    "mock_wiring",
     "mock_user_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
@@ -363,13 +362,10 @@ class TestPlaylistDiscoverLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
 
     @pytest.fixture(autouse=True)
-    def mock_advisor(
-        self,
-        mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
-    ) -> Iterable[mock.AsyncMock]:
+    def mock_advisor(self, mock_wiring: mock.MagicMock) -> mock.AsyncMock:
         client = mock.AsyncMock()
-        with mock_async_context_dependency_factory(f"{TARGET_PATH}.build_advisor", client) as mock_client:
-            yield mock_client
+        mock_wiring.build_advisor.return_value.__aenter__.return_value = client
+        return client
 
     async def test__user__not_found(
         self,

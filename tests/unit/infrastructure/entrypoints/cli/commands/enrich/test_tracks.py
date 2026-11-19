@@ -208,16 +208,9 @@ class TestEnrichTracksCommand:
         assert "Error: OpenRouter down" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures(
-    "mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_build_enricher"
-)
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository", "mock_track_repository", "mock_build_enricher")
 class TestEnrichTracksLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
-
-    @pytest.fixture
-    def mock_build_enricher(self) -> Iterable[mock.MagicMock]:
-        with mock.patch(f"{TARGET_PATH}.build_enricher") as patched:
-            yield patched
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

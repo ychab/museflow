@@ -119,7 +119,7 @@ class TestStatsTracksCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work")
+@pytest.mark.usefixtures("mock_wiring")
 class TestStatsTracksLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.tracks"
 

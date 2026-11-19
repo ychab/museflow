@@ -9,7 +9,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import BlacklistItemNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
@@ -34,7 +34,7 @@ def blacklist_remove_command(
 
 
 async def blacklist_remove_logic(email: EmailStr, item_ids: list[uuid.UUID]) -> None:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

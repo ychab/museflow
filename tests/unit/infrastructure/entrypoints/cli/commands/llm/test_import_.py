@@ -111,7 +111,7 @@ class TestLlmImportCommand:
         assert mock_llm_import_logic.call_args.kwargs["data"] == [{"step": "advisor"}]
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository")
 class TestLlmImportLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

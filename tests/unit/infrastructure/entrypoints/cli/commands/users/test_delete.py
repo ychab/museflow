@@ -84,7 +84,7 @@ class TestUsersDeleteCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work")
+@pytest.mark.usefixtures("mock_wiring")
 class TestUsersDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

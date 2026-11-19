@@ -24,14 +24,13 @@ from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import console
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
-from museflow.infrastructure.entrypoints.wiring import build_profiler
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -139,11 +138,12 @@ async def taste_build_logic(
     meter: LLMUsageMeter | None = None,
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
+        wiring = get_wiring()
         profiler_adapter = await stack.enter_async_context(
-            build_profiler(segment_model, merge_model, reflect_model, meter=meter)
+            wiring.build_profiler(segment_model, merge_model, reflect_model, meter=meter)
         )
 
-        uow = get_unit_of_work()
+        uow = wiring.build_unit_of_work()
         user = await get_user(email=email, uow=uow)
 
         use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter, progress=progress)

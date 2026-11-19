@@ -20,14 +20,13 @@ from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
-from museflow.infrastructure.entrypoints.wiring import build_enricher
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -155,9 +154,10 @@ async def enrich_tracks_logic(
     )
 
     async with AsyncExitStack() as stack:
-        enricher = await stack.enter_async_context(build_enricher(model=model, meter=meter))
+        wiring = get_wiring()
+        enricher = await stack.enter_async_context(wiring.build_enricher(model=model, meter=meter))
 
-        uow = get_unit_of_work()
+        uow = wiring.build_unit_of_work()
         user = await get_user(email=email, uow=uow)
 
         use_case = EnrichTracksUseCase(uow=uow, track_enricher=enricher, progress=progress)

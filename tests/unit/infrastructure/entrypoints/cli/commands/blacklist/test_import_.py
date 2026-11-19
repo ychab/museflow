@@ -134,7 +134,7 @@ class TestBlacklistImportCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work",
+    "mock_wiring",
     "mock_user_repository",
     "mock_blacklist_repository",
 )

@@ -11,7 +11,7 @@ from museflow.application.use_cases.user_get import get_user
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
@@ -37,7 +37,7 @@ def taste_import_command(
 
 
 async def taste_import_logic(email: EmailStr, data: list[dict[str, Any]] | dict[str, Any]) -> list[TasteProfile]:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     # A file exported before the multi-profile export holds a single profile, not a list.

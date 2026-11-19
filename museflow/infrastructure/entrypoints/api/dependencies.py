@@ -25,45 +25,46 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.wiring import build_access_token_manager
-from museflow.infrastructure.entrypoints.wiring import build_password_hasher
-from museflow.infrastructure.entrypoints.wiring import build_provider_oauth
-from museflow.infrastructure.entrypoints.wiring import build_state_token_generator
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)
 
 oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{app_settings.API_V1_PREFIX}/users/login")
 
 
-def get_password_hasher() -> PasswordHasherPort:
-    return build_password_hasher()
+def get_wiring(request: Request) -> Wiring:
+    # Opened by the lifespan, for the process.
+    wiring: Wiring = request.app.state.wiring
+    return wiring
 
 
-def get_access_token_manager() -> AccessTokenManagerPort:
-    return build_access_token_manager()
+def get_session_factory(wiring: Wiring = Depends(get_wiring)) -> async_sessionmaker[AsyncSession]:
+    return wiring.session_factory
 
 
-def get_state_token_generator() -> StateTokenGeneratorPort:
-    return build_state_token_generator()
-
-
-def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
-    # Built by the lifespan, which owns the engine.
-    session_factory: async_sessionmaker[AsyncSession] = request.app.state.session_factory
-    return session_factory
-
-
-def get_unit_of_work(
-    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
-) -> UnitOfWorkPort:
+def get_unit_of_work(wiring: Wiring = Depends(get_wiring)) -> UnitOfWorkPort:
     # FastAPI caches it for the request, whose steps run one after another.
-    return SQLUnitOfWork(session_factory)
+    return wiring.build_unit_of_work()
 
 
-async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
-    async with build_provider_oauth(provider) as provider_oauth:
+def get_password_hasher(wiring: Wiring = Depends(get_wiring)) -> PasswordHasherPort:
+    return wiring.build_password_hasher()
+
+
+def get_access_token_manager(wiring: Wiring = Depends(get_wiring)) -> AccessTokenManagerPort:
+    return wiring.build_access_token_manager()
+
+
+def get_state_token_generator(wiring: Wiring = Depends(get_wiring)) -> StateTokenGeneratorPort:
+    return wiring.build_state_token_generator()
+
+
+async def get_provider_oauth(
+    provider: MusicProvider,
+    wiring: Wiring = Depends(get_wiring),
+) -> AsyncGenerator[ProviderOAuthPort]:
+    async with wiring.build_provider_oauth(provider) as provider_oauth:
         yield provider_oauth
 
 

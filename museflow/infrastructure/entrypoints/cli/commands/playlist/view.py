@@ -11,7 +11,7 @@ from museflow.domain.entities.playlist import Playlist
 from museflow.domain.exceptions import PlaylistNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
@@ -61,7 +61,7 @@ def playlist_view_command(
 
 
 async def playlist_view_logic(email: str, playlist_id: uuid.UUID) -> Playlist:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

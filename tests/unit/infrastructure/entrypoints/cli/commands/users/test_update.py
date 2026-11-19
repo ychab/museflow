@@ -163,7 +163,7 @@ class TestUsersUpdateCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository")
 class TestUsersUpdateLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.users.update"
 

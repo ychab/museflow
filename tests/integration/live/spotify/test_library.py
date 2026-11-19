@@ -21,7 +21,7 @@ from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAut
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyPage
 from museflow.infrastructure.adapters.providers.spotify.schemas import SpotifyTrack
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
-from museflow.infrastructure.entrypoints.wiring import build_provider_oauth
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 from tests import ASSETS_DIR
 
@@ -58,8 +58,8 @@ class TestSpotifyLibraryLive:
         return str(token)
 
     @pytest.fixture
-    async def spotify_oauth_live(self) -> AsyncGenerator[ProviderOAuthPort]:
-        async with build_provider_oauth(MusicProvider.SPOTIFY) as client:
+    async def spotify_oauth_live(self, wiring: Wiring) -> AsyncGenerator[ProviderOAuthPort]:
+        async with wiring.build_provider_oauth(MusicProvider.SPOTIFY) as client:
             yield client
 
     @pytest.fixture

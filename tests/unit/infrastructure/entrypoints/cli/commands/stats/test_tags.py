@@ -113,7 +113,7 @@ class TestStatsTagsCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work")
+@pytest.mark.usefixtures("mock_wiring")
 class TestStatsTagsLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.tags"
 

@@ -7,8 +7,7 @@ from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import MoodTag
 from museflow.domain.value_objects.taste import ListeningPeriod
-from museflow.infrastructure.entrypoints.wiring import build_enricher
-from museflow.infrastructure.entrypoints.wiring import build_profiler
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 from tests.unit.factories.entities.track import TrackFactory
 from tests.unit.factories.value_objects.taste import ListeningPeriodFactory
@@ -46,8 +45,8 @@ class TestOpenRouterSchemasLive:
     """
 
     @pytest.mark.parametrize("model", [None, _SONNET, _GPT])
-    async def test__enricher(self, model: str | None, tracks: list[Track]) -> None:
-        async with build_enricher(model=model) as enricher:
+    async def test__enricher(self, wiring: Wiring, model: str | None, tracks: list[Track]) -> None:
+        async with wiring.build_enricher(model=model) as enricher:
             enrichments = await enricher.enrich_tracks(tracks[:1], fields=frozenset(EnrichField))
 
         assert len(enrichments) == 1
@@ -59,8 +58,8 @@ class TestOpenRouterSchemasLive:
     @pytest.mark.parametrize(
         "model", [None, "google/gemini-3.5-flash", "google/gemini-3.1-pro-preview", _SONNET, _GPT]
     )
-    async def test__profiler_segment(self, model: str | None, period: ListeningPeriod) -> None:
-        async with build_profiler(segment_model=model) as profiler:
+    async def test__profiler_segment(self, wiring: Wiring, model: str | None, period: ListeningPeriod) -> None:
+        async with wiring.build_profiler(segment_model=model) as profiler:
             segment = await profiler.build_profile_segment(period)
 
         assert segment["core_identity"]

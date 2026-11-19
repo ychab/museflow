@@ -70,6 +70,7 @@ from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 from tests.integration.factories.models.auth import AuthProviderStateModelFactory
 from tests.integration.factories.models.auth import AuthProviderTokenFactory
@@ -317,6 +318,12 @@ def uow_session_factory(
 @pytest.fixture
 def uow(uow_session_factory: async_sessionmaker[AsyncSession]) -> UnitOfWorkPort:
     return SQLUnitOfWork(uow_session_factory)
+
+
+@pytest.fixture
+def wiring(uow_session_factory: async_sessionmaker[AsyncSession]) -> Wiring:
+    """The wiring of the entrypoints, on the test database."""
+    return Wiring(uow_session_factory)
 
 
 # --- Entity factories ---

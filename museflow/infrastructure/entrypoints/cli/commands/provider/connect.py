@@ -16,11 +16,9 @@ from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import init_logic_runner
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.wiring import build_provider_oauth
-from museflow.infrastructure.entrypoints.wiring import build_state_token_generator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,18 +69,19 @@ def provider_connect_command(
 
 
 async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
-    uow = get_unit_of_work()
+    wiring = get_wiring()
+    uow = wiring.build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     previous_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
 
-    async with build_provider_oauth(provider) as provider_oauth:
+    async with wiring.build_provider_oauth(provider) as provider_oauth:
         authorization_url = await build_oauth_redirect_url(
             user=user,
             uow=uow,
             provider=provider,
             provider_oauth=provider_oauth,
-            state_token_generator=build_state_token_generator(),
+            state_token_generator=wiring.build_state_token_generator(),
         )
 
     return ConnectStart(
@@ -94,7 +93,7 @@ async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider)
 
 
 async def provider_connect_wait_logic(start: ConnectStart, timeout: float, poll_interval: float) -> None:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     start_time = time.time()
 
     while time.time() - start_time < timeout:
