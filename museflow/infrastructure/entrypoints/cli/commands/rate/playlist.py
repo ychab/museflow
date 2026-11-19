@@ -21,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_tra
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.wiring import create_provider_library
+from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -98,7 +98,7 @@ async def rate_playlist_logic(
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(
-                create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+                build_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
             )
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 

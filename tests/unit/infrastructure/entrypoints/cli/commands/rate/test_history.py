@@ -221,7 +221,7 @@ class TestRateHistoryResetLogic:
     "mock_user_repository",
     "mock_track_repository",
     "mock_blacklist_repository",
-    "mock_create_provider_library",
+    "mock_build_provider_library",
 )
 class TestRateHistoryLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"

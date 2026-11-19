@@ -29,7 +29,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
-from museflow.infrastructure.entrypoints.wiring import create_provider_library
+from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 console = Console()
 
@@ -216,7 +216,7 @@ async def playlist_history_logic(
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
             provider_library = await stack.enter_async_context(
-                create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+                build_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
             )
 
         return await create_history_playlist(

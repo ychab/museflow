@@ -369,14 +369,14 @@ class TestTasteBuildCommand:
     "mock_user_repository",
     "mock_track_repository",
     "mock_taste_profile_repository",
-    "mock_create_profiler",
+    "mock_build_profiler",
 )
 class TestTasteBuildLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.taste.build"
 
     @pytest.fixture
-    def mock_create_profiler(self) -> Iterable[mock.MagicMock]:
-        with mock.patch(f"{self.TARGET_PATH}.create_profiler") as patched:
+    def mock_build_profiler(self) -> Iterable[mock.MagicMock]:
+        with mock.patch(f"{self.TARGET_PATH}.build_profiler") as patched:
             yield patched
 
     @pytest.fixture
@@ -386,7 +386,7 @@ class TestTasteBuildLogic:
 
     async def test__models_and_meter__forwarded_to_profiler(
         self,
-        mock_create_profiler: mock.MagicMock,
+        mock_build_profiler: mock.MagicMock,
         mock_use_case: mock.Mock,
         mock_progress: mock.AsyncMock,
     ) -> None:
@@ -406,7 +406,7 @@ class TestTasteBuildLogic:
             meter=meter,
         )
 
-        mock_create_profiler.assert_called_once_with(
+        mock_build_profiler.assert_called_once_with(
             "google/gemini-3.1-flash-lite",
             "google/gemini-3.5-flash",
             "google/gemini-3.1-pro-preview",

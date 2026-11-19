@@ -38,15 +38,15 @@ from museflow.infrastructure.config.settings.spotify import spotify_settings
 # --- Security ---
 
 
-def create_password_hasher() -> PasswordHasherPort:
+def build_password_hasher() -> PasswordHasherPort:
     return Argon2PasswordHasher()
 
 
-def create_access_token_manager() -> AccessTokenManagerPort:
+def build_access_token_manager() -> AccessTokenManagerPort:
     return JwtAccessTokenManager()
 
 
-def create_state_token_generator() -> StateTokenGeneratorPort:
+def build_state_token_generator() -> StateTokenGeneratorPort:
     return SystemStateTokenGenerator()
 
 
@@ -54,8 +54,8 @@ def create_state_token_generator() -> StateTokenGeneratorPort:
 
 
 @asynccontextmanager
-async def create_advisor(model: str | None = None, meter: LLMUsageMeter | None = None) -> AsyncGenerator[AdvisorPort]:
-    client = _create_openrouter_client(meter)
+async def build_advisor(model: str | None = None, meter: LLMUsageMeter | None = None) -> AsyncGenerator[AdvisorPort]:
+    client = _build_openrouter_client(meter)
     llm = openrouter_settings.ADVISOR.with_model(model)
 
     async with OpenRouterAdvisorAdapter(client=client, llm=llm) as advisor:
@@ -64,11 +64,11 @@ async def create_advisor(model: str | None = None, meter: LLMUsageMeter | None =
 
 
 @asynccontextmanager
-async def create_enricher(
+async def build_enricher(
     model: str | None = None,
     meter: LLMUsageMeter | None = None,
 ) -> AsyncGenerator[TrackEnricherPort]:
-    client = _create_openrouter_client(meter)
+    client = _build_openrouter_client(meter)
     llm = openrouter_settings.ENRICHER.with_model(model)
 
     async with OpenRouterTrackEnricherAdapter(client=client, llm=llm) as enricher:
@@ -77,13 +77,13 @@ async def create_enricher(
 
 
 @asynccontextmanager
-async def create_profiler(
+async def build_profiler(
     segment_model: str | None = None,
     merge_model: str | None = None,
     reflect_model: str | None = None,
     meter: LLMUsageMeter | None = None,
 ) -> AsyncGenerator[TasteProfilerPort]:
-    client = _create_openrouter_client(meter)
+    client = _build_openrouter_client(meter)
     segment_llm = openrouter_settings.PROFILER_SEGMENT.with_model(segment_model)
     merge_llm = openrouter_settings.PROFILER_MERGE.with_model(merge_model)
     reflect_llm = openrouter_settings.PROFILER_REFLECT.with_model(reflect_model)
@@ -104,17 +104,17 @@ async def create_profiler(
 
 
 @asynccontextmanager
-async def create_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
+async def build_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
     match provider:
         case MusicProvider.SPOTIFY:
-            async with _create_spotify_oauth() as oauth_client:
+            async with _build_spotify_oauth() as oauth_client:
                 yield oauth_client
         case _:
             raise ValueError(f"Unknown provider: {provider}")
 
 
 @asynccontextmanager
-async def create_provider_library(
+async def build_provider_library(
     provider: MusicProvider,
     user: User,
     uow: UnitOfWorkPort,
@@ -139,14 +139,14 @@ async def create_provider_library(
 
     match provider:
         case MusicProvider.SPOTIFY:
-            async with _create_spotify_oauth() as oauth_client:
+            async with _build_spotify_oauth() as oauth_client:
                 library_factory = SpotifyLibraryFactory(uow=token_uow, oauth_client=oauth_client)
                 yield library_factory.create(user=user, auth_token=auth_token)
         case _:
             raise ValueError(f"Unknown provider: {provider}")
 
 
-def create_streaming_history(provider: MusicProvider) -> StreamingHistoryPort:
+def build_streaming_history(provider: MusicProvider) -> StreamingHistoryPort:
     match provider:
         case MusicProvider.SPOTIFY:
             return SpotifyStreamingHistoryAdapter()
@@ -157,7 +157,7 @@ def create_streaming_history(provider: MusicProvider) -> StreamingHistoryPort:
 # --- Private helpers ---
 
 
-def _create_openrouter_client(meter: LLMUsageMeter | None) -> OpenRouterClient:
+def _build_openrouter_client(meter: LLMUsageMeter | None) -> OpenRouterClient:
     return OpenRouterClient(
         api_key=openrouter_settings.API_KEY.get_secret_value(),
         base_url=openrouter_settings.BASE_URL,
@@ -170,7 +170,7 @@ def _create_openrouter_client(meter: LLMUsageMeter | None) -> OpenRouterClient:
 
 
 @asynccontextmanager
-async def _create_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
+async def _build_spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
     async with SpotifyOAuthAdapter(
         client_id=spotify_settings.CLIENT_ID,
         client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),

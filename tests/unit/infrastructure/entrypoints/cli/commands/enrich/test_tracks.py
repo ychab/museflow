@@ -209,14 +209,14 @@ class TestEnrichTracksCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_create_enricher"
+    "mock_get_unit_of_work", "mock_user_repository", "mock_track_repository", "mock_build_enricher"
 )
 class TestEnrichTracksLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
     @pytest.fixture
-    def mock_create_enricher(self) -> Iterable[mock.MagicMock]:
-        with mock.patch(f"{TARGET_PATH}.create_enricher") as patched:
+    def mock_build_enricher(self) -> Iterable[mock.MagicMock]:
+        with mock.patch(f"{TARGET_PATH}.build_enricher") as patched:
             yield patched
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
@@ -227,7 +227,7 @@ class TestEnrichTracksLogic:
     async def test__model_and_meter__forwarded_to_enricher(
         self,
         mock_track_repository: mock.AsyncMock,
-        mock_create_enricher: mock.MagicMock,
+        mock_build_enricher: mock.MagicMock,
         mock_progress: mock.AsyncMock,
     ) -> None:
         mock_track_repository.get_list.return_value = []
@@ -237,7 +237,7 @@ class TestEnrichTracksLogic:
             progress=mock_progress, email="test@example.com", model="openai/gpt-5-mini", meter=meter
         )
 
-        mock_create_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
+        mock_build_enricher.assert_called_once_with(model="openai/gpt-5-mini", meter=meter)
 
     async def test__passes_config_to_use_case(
         self,

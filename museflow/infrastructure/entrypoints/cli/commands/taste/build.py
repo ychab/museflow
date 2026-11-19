@@ -31,7 +31,7 @@ from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import console
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
-from museflow.infrastructure.entrypoints.wiring import create_profiler
+from museflow.infrastructure.entrypoints.wiring import build_profiler
 
 
 @app.command("build", help="Build a master taste profile from your library.")
@@ -140,7 +140,7 @@ async def taste_build_logic(
 ) -> TasteProfile:
     async with AsyncExitStack() as stack:
         profiler_adapter = await stack.enter_async_context(
-            create_profiler(segment_model, merge_model, reflect_model, meter=meter)
+            build_profiler(segment_model, merge_model, reflect_model, meter=meter)
         )
 
         uow = get_unit_of_work()

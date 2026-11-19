@@ -5,21 +5,21 @@ import pytest
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
-from museflow.infrastructure.entrypoints.wiring import create_provider_library
-from museflow.infrastructure.entrypoints.wiring import create_provider_oauth
-from museflow.infrastructure.entrypoints.wiring import create_streaming_history
+from museflow.infrastructure.entrypoints.wiring import build_provider_library
+from museflow.infrastructure.entrypoints.wiring import build_provider_oauth
+from museflow.infrastructure.entrypoints.wiring import build_streaming_history
 
 from tests.unit.factories.entities.auth import OAuthProviderUserTokenFactory
 
 
-class TestCreateProviderOAuth:
+class TestBuildProviderOAuth:
     async def test__unknown(self) -> None:
         with pytest.raises(ValueError, match="Unknown provider: FOO"):
-            async with create_provider_oauth(provider="FOO"):  # type: ignore[arg-type]
+            async with build_provider_oauth(provider="FOO"):  # type: ignore[arg-type]
                 pass
 
 
-class TestCreateProviderLibrary:
+class TestBuildProviderLibrary:
     async def test__auth_token_not_found(
         self,
         user: User,
@@ -29,7 +29,7 @@ class TestCreateProviderLibrary:
         mock_auth_token_repository.get.return_value = None
 
         with pytest.raises(ProviderAuthTokenNotFoundError, match="No spotify auth token found"):
-            async with create_provider_library(MusicProvider.SPOTIFY, user=user, uow=mock_uow, token_uow=mock_uow):
+            async with build_provider_library(MusicProvider.SPOTIFY, user=user, uow=mock_uow, token_uow=mock_uow):
                 pass
 
     async def test__unknown(
@@ -41,11 +41,11 @@ class TestCreateProviderLibrary:
         mock_auth_token_repository.get.return_value = OAuthProviderUserTokenFactory.build(user_id=user.id)
 
         with pytest.raises(ValueError, match="Unknown provider: FOO"):
-            async with create_provider_library("FOO", user=user, uow=mock_uow, token_uow=mock_uow):  # type: ignore[arg-type]
+            async with build_provider_library("FOO", user=user, uow=mock_uow, token_uow=mock_uow):  # type: ignore[arg-type]
                 pass
 
 
-class TestCreateStreamingHistory:
+class TestBuildStreamingHistory:
     def test__unknown(self) -> None:
         with pytest.raises(ValueError, match="Unknown provider: FOO"):
-            create_streaming_history(provider="FOO")  # type: ignore[arg-type]
+            build_streaming_history(provider="FOO")  # type: ignore[arg-type]

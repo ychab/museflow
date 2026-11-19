@@ -397,7 +397,7 @@ class TestPlaylistHistoryCommand:
     "mock_user_repository",
     "mock_track_repository",
     "mock_playlist_repository",
-    "mock_create_provider_library",
+    "mock_build_provider_library",
 )
 class TestPlaylistHistoryLogic:
     TARGET_PATH: Final[str] = TARGET_PATH

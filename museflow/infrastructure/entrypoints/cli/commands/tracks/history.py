@@ -23,7 +23,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
-from museflow.infrastructure.entrypoints.wiring import create_streaming_history
+from museflow.infrastructure.entrypoints.wiring import build_streaming_history
 from museflow.infrastructure.utils.formatting import format_duration
 
 
@@ -105,6 +105,6 @@ async def tracks_history_logic(
     user = await get_user(email=email, uow=uow)
 
     use_case = ImportStreamingHistoryUseCase(
-        uow=uow, streaming_history=create_streaming_history(provider), progress=progress
+        uow=uow, streaming_history=build_streaming_history(provider), progress=progress
     )
     return await use_case.import_history(user=user, config=config)

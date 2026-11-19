@@ -5,7 +5,7 @@ import pytest
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.enums import DiscoveryFocus
-from museflow.infrastructure.entrypoints.wiring import create_advisor
+from museflow.infrastructure.entrypoints.wiring import build_advisor
 
 
 @pytest.mark.openrouter_live
@@ -29,7 +29,7 @@ class TestOpenRouterAdvisorLive:
 
     @pytest.fixture
     async def openrouter_advisor_live(self) -> AsyncGenerator[AdvisorPort]:
-        async with create_advisor() as client:
+        async with build_advisor() as client:
             yield client
 
     async def test__get_discovery_artists(
