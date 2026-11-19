@@ -48,7 +48,7 @@ museflow/
 └── infrastructure/  # Implements ports
     ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress
     ├── config/settings/
-    ├── entrypoints/ # api (FastAPI), cli (Typer)
+    ├── entrypoints/ # api (FastAPI), cli (Typer), wiring.py (the adapters, built for all of them)
     └── utils/       # pure helpers shared by adapters and entrypoints (formatting)
 ```
 
@@ -94,6 +94,10 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   validation and self-healing of the LLM adapters in `common/llm/`). A pure helper that adapts nothing (formatting a
   duration) goes in `infrastructure/utils/`, grouped by subject in a few modules, never one module per function: the
   entrypoints import it there without reaching into an adapter.
+- **Wiring:** `entrypoints/wiring.py` builds each adapter from the settings, in one place for every entrypoint
+  (`create_advisor`, `create_provider_library`): an async context manager when the adapter holds a client. An
+  entrypoint wraps it in its own way of providing it (a FastAPI `Depends`, the CLI logic) and passes what only it holds,
+  such as the units of work of the running request or command. It imports no entrypoint nor framework (import-linter).
 - **Models** (canonical: `database/models/track.py`):
   - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).

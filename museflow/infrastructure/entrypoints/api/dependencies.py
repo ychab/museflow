@@ -26,12 +26,11 @@ from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
-from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
-from museflow.infrastructure.adapters.security import Argon2PasswordHasher
-from museflow.infrastructure.adapters.security import JwtAccessTokenManager
-from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.config.settings.spotify import spotify_settings
+from museflow.infrastructure.entrypoints.wiring import create_access_token_manager
+from museflow.infrastructure.entrypoints.wiring import create_password_hasher
+from museflow.infrastructure.entrypoints.wiring import create_provider_oauth
+from museflow.infrastructure.entrypoints.wiring import create_state_token_generator
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +38,15 @@ oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{ap
 
 
 def get_password_hasher() -> PasswordHasherPort:
-    return Argon2PasswordHasher()
+    return create_password_hasher()
 
 
 def get_access_token_manager() -> AccessTokenManagerPort:
-    return JwtAccessTokenManager()
+    return create_access_token_manager()
 
 
 def get_state_token_generator() -> StateTokenGeneratorPort:
-    return SystemStateTokenGenerator()
+    return create_state_token_generator()
 
 
 def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
@@ -64,22 +63,8 @@ def get_unit_of_work(
 
 
 async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
-    match provider:
-        case MusicProvider.SPOTIFY:
-            async with SpotifyOAuthAdapter(
-                client_id=spotify_settings.CLIENT_ID,
-                client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
-                redirect_uri=spotify_settings.REDIRECT_URI,
-                base_url=spotify_settings.BASE_URL,
-                auth_endpoint=spotify_settings.AUTH_ENDPOINT,
-                token_endpoint=spotify_settings.TOKEN_ENDPOINT,
-                timeout=spotify_settings.HTTP_TIMEOUT,
-                token_buffer_seconds=spotify_settings.TOKEN_BUFFER_SECONDS,
-                max_retry_wait=spotify_settings.HTTP_MAX_RETRY_WAIT,
-            ) as provider_oauth:
-                yield provider_oauth
-        case _:
-            raise ValueError(f"Unknown provider: {provider}")
+    async with create_provider_oauth(provider) as provider_oauth:
+        yield provider_oauth
 
 
 async def get_current_user(

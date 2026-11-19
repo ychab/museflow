@@ -26,7 +26,7 @@ def patch_session_factory(uow_session_factory: async_sessionmaker[AsyncSession])
 
 @pytest.fixture
 def openrouter_settings_wiremock(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Points the OpenRouter client built by the CLI dependencies at WireMock, which serves a self-signed certificate."""
+    """Points the OpenRouter client built by the wiring at WireMock, which serves a self-signed certificate."""
     monkeypatch.setattr(openrouter_settings, "BASE_URL", HttpUrl(os.environ["WIREMOCK_OPENROUTER_BASE_URL"]))
     monkeypatch.setattr(openrouter_settings, "VERIFY_SSL", False)
     monkeypatch.setattr(OpenRouterClient.make_api_call.retry, "stop", stop_after_attempt(1))

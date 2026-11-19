@@ -58,7 +58,7 @@ Two points are easy to miss:
 | `TrackRepository`, `PlaylistRepository`, `TasteProfileRepository`, `BlacklistRepository`, `UserRepository`, OAuth token and state repositories | `*SQLRepository` classes over the block's `AsyncSession`; they never commit, the unit of work does |
 | `PasswordHasherPort`, `StateTokenGeneratorPort`, `AccessTokenManagerPort` | Argon2, a `random.SystemRandom` state-token generator, PyJWT |
 
-Where the vendor is an enum (`MusicProvider`), the CLI picks the adapter with a `match` in [`dependencies.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/cli/dependencies.py). Adding a provider means one new `case` plus the adapter package. The LLM side needs no such switch: OpenRouter is the single adapter, and the vendor choice became a model setting per step ([LLM pipeline](llm-pipeline.md#model-choice-per-step)). The move from direct Gemini calls to the gateway replaced the adapters and the settings; the ports and the use cases did not change, apart from dropping the vendor enums.
+Where the vendor is an enum (`MusicProvider`), the entrypoints pick the adapter with a `match` in [`wiring.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/wiring.py), which builds the adapters for all of them. Adding a provider means one new `case` plus the adapter package. The LLM side needs no such switch: OpenRouter is the single adapter, and the vendor choice became a model setting per step ([LLM pipeline](llm-pipeline.md#model-choice-per-step)). The move from direct Gemini calls to the gateway replaced the adapters and the settings; the ports and the use cases did not change, apart from dropping the vendor enums.
 
 MuseFlow is deliberately a single application. If it grew, the ports above are where it would split into services (import, profiling, recommendations and playlists, enrichment); the trade-off is discussed in [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app).
 
@@ -70,13 +70,13 @@ The most connected command. It touches every port.
 sequenceDiagram
     autonumber
     participant CLI as CLI playlist_discover_logic
-    participant DI as cli/dependencies.py
+    participant DI as entrypoints/wiring.py
     participant UC as CreateDiscoveryPlaylistUseCase
     participant UoW as Unit of work (short SQL blocks)
     participant Adv as AdvisorPort (OpenRouter adapter)
     participant Lib as ProviderLibraryPort (Spotify adapter)
 
-    CLI->>DI: unit of work, OAuth client, advisor
+    CLI->>DI: provider library (Spotify OAuth client inside), advisor
     CLI->>UoW: block: user by email, auth token
     CLI->>UC: create_playlist(user, config)
     UC->>UoW: block: taste profile (named or latest), blacklist, liked and disliked tracks

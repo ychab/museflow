@@ -19,8 +19,6 @@ from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_advisor
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
@@ -28,6 +26,8 @@ from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
+from museflow.infrastructure.entrypoints.wiring import create_advisor
+from museflow.infrastructure.entrypoints.wiring import create_provider_library
 
 
 @app.command("explore")
@@ -140,8 +140,10 @@ async def playlist_explore_logic(
 
         user = await get_user(email=email, uow=uow)
 
-        provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
-        advisor = await stack.enter_async_context(get_advisor(model, meter=meter))
+        provider_library = await stack.enter_async_context(
+            create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+        )
+        advisor = await stack.enter_async_context(create_advisor(model, meter=meter))
 
         use_case = CreateExplorationPlaylistUseCase(
             uow=uow, provider_library=provider_library, advisor=advisor, progress=progress

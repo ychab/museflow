@@ -14,7 +14,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
-from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
@@ -33,12 +32,6 @@ class TestGetUnitOfWork:
         uow = get_unit_of_work(session_factory)
         assert isinstance(uow, SQLUnitOfWork)
         assert get_unit_of_work(session_factory) is not uow
-
-
-class TestGetProviderOAuth:
-    async def test__unknown(self) -> None:
-        with pytest.raises(ValueError, match="Unknown provider: FOO"):
-            await anext(get_provider_oauth(provider="FOO"))  # type: ignore[arg-type]
 
 
 class TestGetCurrentUser:

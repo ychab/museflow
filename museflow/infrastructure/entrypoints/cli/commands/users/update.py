@@ -8,11 +8,11 @@ from museflow.application.inputs.user import UserUpdateInput
 from museflow.application.use_cases.user_update import update_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
+from museflow.infrastructure.entrypoints.wiring import create_password_hasher
 
 
 @app.command("update", help="Update the email and/or password of a user.")
@@ -44,7 +44,7 @@ async def users_update_logic(
     user_id: uuid.UUID,
     user_in: UserUpdateInput,
 ) -> None:
-    password_hasher = get_password_hasher()
+    password_hasher = create_password_hasher()
     uow = get_unit_of_work()
 
     async with uow:

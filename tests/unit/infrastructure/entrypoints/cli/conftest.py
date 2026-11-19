@@ -144,39 +144,39 @@ def mock_provider_oauth(
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     client = mock.AsyncMock(spec=ProviderOAuthPort)
-    with mock_async_context_dependency_factory(f"{target_path}.get_provider_oauth", client) as mock_client:
+    with mock_async_context_dependency_factory(f"{target_path}.create_provider_oauth", client) as mock_client:
         yield mock_client
 
 
 @pytest.fixture
-def mock_get_provider_library(
+def mock_create_provider_library(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
     mock_provider_library: mock.AsyncMock,
 ) -> Iterable[mock.AsyncMock]:
     with mock_async_context_dependency_factory(
-        f"{target_path}.get_provider_library", mock_provider_library
+        f"{target_path}.create_provider_library", mock_provider_library
     ) as library:
         yield library
 
 
 @pytest.fixture
-def mock_get_profiler(
+def mock_create_profiler(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[])
-    with mock_async_context_dependency_factory(f"{target_path}.get_profiler", profiler) as mock_profiler:
+    with mock_async_context_dependency_factory(f"{target_path}.create_profiler", profiler) as mock_profiler:
         yield mock_profiler
 
 
 @pytest.fixture
-def mock_get_enricher(
+def mock_create_enricher(
     target_path: str,
     mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
 ) -> Iterable[mock.AsyncMock]:
     enricher = mock.AsyncMock(spec=TrackEnricherPort, usages=[])
-    with mock_async_context_dependency_factory(f"{target_path}.get_enricher", enricher) as mock_enricher:
+    with mock_async_context_dependency_factory(f"{target_path}.create_enricher", enricher) as mock_enricher:
         yield mock_enricher
 
 

@@ -23,13 +23,13 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
+from museflow.infrastructure.entrypoints.wiring import create_provider_library
 
 console = Console()
 
@@ -215,7 +215,9 @@ async def playlist_history_logic(
 
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
-            provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
+            provider_library = await stack.enter_async_context(
+                create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+            )
 
         return await create_history_playlist(
             user=user,
