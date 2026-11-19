@@ -14,6 +14,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_token_get import get_provider_token
 from museflow.domain.entities.user import User
@@ -33,6 +34,8 @@ from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAut
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
+from museflow.infrastructure.adapters.storage.local import LocalFileStorage
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
 
@@ -83,6 +86,11 @@ class Wiring:
 
     def build_state_token_generator(self) -> StateTokenGeneratorPort:
         return SystemStateTokenGenerator()
+
+    # --- Files ---
+
+    def build_file_storage(self) -> FileStoragePort:
+        return LocalFileStorage(root=app_settings.FILE_STORAGE_DIR)
 
     # --- LLM ---
 

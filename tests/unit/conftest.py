@@ -24,6 +24,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -229,9 +230,14 @@ def mock_provider_library() -> mock.AsyncMock:
 @pytest.fixture
 def mock_streaming_history() -> mock.AsyncMock:
     port = mock.AsyncMock(spec=StreamingHistoryPort)
-    port.file_glob = "Streaming_History_Audio_*.json"
+    port.file_pattern = "Streaming_History_Audio_*.json"
     port.parse_file.return_value = ([], StreamingHistoryFileStats())
     return port
+
+
+@pytest.fixture
+def mock_file_storage() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=FileStoragePort)
 
 
 @pytest.fixture

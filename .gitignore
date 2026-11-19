@@ -19,5 +19,8 @@ junit.xml
 
 external_data
 
+# Local file storage (FILE_STORAGE_DIR)
+/.storage
+
 # Docs build output
 /site

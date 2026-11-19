@@ -1,18 +1,21 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from fnmatch import fnmatchcase
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import StreamingHistoryEntryInput
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
+from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.track import ProviderLink
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import ProgressStep
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
+from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.utils.text import generate_fingerprint
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
@@ -43,14 +46,21 @@ class ImportStreamingHistoryUseCase:
     """
     Import a user's streaming history from a provider's exported JSON files.
 
-    Parses the provider's streaming history files of the given directory, filters entries by minimum
-    playback duration, deduplicates track IDs, and bulk-upserts them into
-    the repository directly from file metadata — no external API calls.
+    Parses the provider's streaming history files found under the given prefix of the user's file storage, filters
+    entries by minimum playback duration, deduplicates track IDs, and bulk-upserts them into the repository directly
+    from file metadata — no external API calls. The files are left in the storage: the caller deletes them.
     """
 
-    def __init__(self, uow: UnitOfWorkPort, streaming_history: StreamingHistoryPort, progress: ProgressPort) -> None:
+    def __init__(
+        self,
+        uow: UnitOfWorkPort,
+        streaming_history: StreamingHistoryPort,
+        file_storage: FileStoragePort,
+        progress: ProgressPort,
+    ) -> None:
         self._uow = uow
         self._streaming_history = streaming_history
+        self._file_storage = file_storage
         self._progress = progress
 
     async def import_history(
@@ -58,16 +68,15 @@ class ImportStreamingHistoryUseCase:
         user: User,
         config: ImportStreamingHistoryConfigInput,
     ) -> ImportStreamingHistoryReport:
-        # Validate directory
-        if not config.directory.exists() or not config.directory.is_dir():
-            raise StreamingHistoryDirectoryNotFoundError(f"Directory not found: {config.directory}")
-
-        # Validate files
-        json_files = sorted(config.directory.glob(self._streaming_history.file_glob))
-        if not json_files:
-            raise StreamingHistoryDirectoryNotFoundError(
-                f"No {self._streaming_history.file_glob} files found in: {config.directory}"
-            )
+        # The export also holds files of other kinds: only the provider's streaming history files are read
+        pattern = self._streaming_history.file_pattern
+        keys = [
+            key
+            for key in await self._file_storage.list_keys(user_id=user.id, prefix=config.prefix)
+            if fnmatchcase(_file_name(key), pattern)
+        ]
+        if not keys:
+            raise StreamingHistoryFilesNotFoundError(f"No {pattern} files found under: {config.prefix}")
 
         # Collect all play events per track across all files, keyed by fingerprint.
         # When two provider_ids resolve to the same fingerprint, their play times are merged.
@@ -76,9 +85,16 @@ class ImportStreamingHistoryUseCase:
         track_play_times: dict[str, list[datetime]] = {}  # fingerprint → all played_at timestamps
         items_read = items_skipped_no_timestamp = items_skipped_short_play = items_skipped_no_track_id = 0
 
-        await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_READ, total=len(json_files)))
-        for files_done, path in enumerate(json_files, start=1):
-            entries, stats = await self._streaming_history.parse_file(path=path, min_ms_played=config.min_ms_played)
+        await self._progress.publish(StepStarted(step=ProgressStep.HISTORY_READ, total=len(keys)))
+        for files_done, key in enumerate(keys, start=1):
+            content = await self._file_storage.get(user_id=user.id, key=key)
+            try:
+                entries, stats = await self._streaming_history.parse_file(
+                    content=content,
+                    min_ms_played=config.min_ms_played,
+                )
+            except StreamingHistoryInvalidFormatError as e:
+                raise StreamingHistoryInvalidFormatError(f"{_file_name(key)}: {e}") from e
 
             for entry in entries:
                 fp = generate_fingerprint(name=entry.name, artist_names=[entry.artist])
@@ -92,7 +108,7 @@ class ImportStreamingHistoryUseCase:
             items_skipped_short_play += stats.items_skipped_short_play
             items_skipped_no_track_id += stats.items_skipped_no_track_id
             await self._progress.publish(
-                StepAdvanced(step=ProgressStep.HISTORY_READ, done=files_done, total=len(json_files))
+                StepAdvanced(step=ProgressStep.HISTORY_READ, done=files_done, total=len(keys))
             )
         await self._progress.publish(StepDone(step=ProgressStep.HISTORY_READ))
 
@@ -157,3 +173,7 @@ class ImportStreamingHistoryUseCase:
             tracks_created=tracks_created,
             tracks_purged=tracks_purged,
         )
+
+
+def _file_name(key: str) -> str:
+    return key.rsplit("/", 1)[-1]

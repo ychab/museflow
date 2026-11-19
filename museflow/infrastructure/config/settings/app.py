@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import EmailStr
@@ -44,6 +45,10 @@ class AppSettings(BaseSettings):
     LOG_LEVEL_THIRD_PARTY: LogLevel = "WARNING"
 
     HTTP_MAX_RETRIES: int = 5
+
+    # Root of the files kept between their upload and their processing (streaming history exports), one directory
+    # per user: a volume shared by the API and the workers once deployed.
+    FILE_STORAGE_DIR: Path = BASE_DIR / ".storage"
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
     # How long a build holds its profile without saving a checkpoint; longer than its slowest period.

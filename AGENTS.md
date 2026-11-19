@@ -44,9 +44,10 @@ museflow/
 │   ├── utils/       # pure helpers shared by use cases
 │   ├── inputs/      # command/input schemas
 │   ├── mappers/     # pure functions from a domain shape to an input schema
-│   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security)
+│   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security, file storage)
 └── infrastructure/  # Implements ports
-    ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress
+    ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress,
+    │                # storage
     ├── config/settings/
     ├── entrypoints/ # api (FastAPI), cli (Typer), wiring.py (the adapters, built for all of them)
     └── utils/       # pure helpers shared by adapters and entrypoints (formatting)

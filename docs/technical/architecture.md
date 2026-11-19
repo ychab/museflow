@@ -51,6 +51,7 @@ Two points are easy to miss:
 | `ProviderLibraryPort` (search, create / delete playlist, play) | `SpotifyLibraryAdapter`, built by `SpotifyLibraryFactory` |
 | `ProviderOAuthPort` | `SpotifyOAuthAdapter` |
 | `StreamingHistoryPort` (parse an export file) | `SpotifyStreamingHistoryAdapter` |
+| `FileStoragePort` (a user's files between their upload and their processing, keyed per user) | `LocalFileStorage`, a directory per user on a disk or a shared volume |
 | `AdvisorPort` | `OpenRouterAdvisorAdapter` |
 | `TasteProfilerPort` | `OpenRouterTasteProfileAdapter` |
 | `TrackEnricherPort` | `OpenRouterTrackEnricherAdapter` |

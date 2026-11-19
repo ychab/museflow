@@ -3,6 +3,7 @@ import os
 import re
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from pathlib import Path
 
 from pydantic import HttpUrl
 
@@ -68,6 +69,8 @@ from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOA
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
+from museflow.infrastructure.adapters.storage.local import LocalFileStorage
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.wiring import Wiring
@@ -324,6 +327,22 @@ def uow(uow_session_factory: async_sessionmaker[AsyncSession]) -> UnitOfWorkPort
 def wiring(uow_session_factory: async_sessionmaker[AsyncSession]) -> Wiring:
     """The wiring of the entrypoints, on the test database."""
     return Wiring(uow_session_factory)
+
+
+# --- File storage impl ---
+
+
+@pytest.fixture(autouse=True)
+def file_storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Roots the file storage in the test's own directory, never in the repository."""
+    directory = tmp_path / "storage"
+    monkeypatch.setattr(app_settings, "FILE_STORAGE_DIR", directory)
+    return directory
+
+
+@pytest.fixture
+def file_storage(file_storage_dir: Path) -> LocalFileStorage:
+    return LocalFileStorage(root=file_storage_dir)
 
 
 # --- Entity factories ---

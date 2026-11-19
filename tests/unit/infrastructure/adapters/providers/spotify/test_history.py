@@ -18,12 +18,13 @@ class TestSpotifyStreamingHistoryAdapter:
     def adapter(self) -> SpotifyStreamingHistoryAdapter:
         return SpotifyStreamingHistoryAdapter()
 
-    def test__file_glob__audio_history_only(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
-        assert adapter.file_glob == "Streaming_History_Audio_*.json"
+    def test__file_pattern__audio_history_only(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
+        assert adapter.file_pattern == "Streaming_History_Audio_*.json"
 
     async def test__parse_file__nominal(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_valid_single_track.json", min_ms_played=30_000
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_valid_single_track.json").read_bytes(),
+            min_ms_played=30_000,
         )
 
         assert len(entries) == 1
@@ -38,7 +39,8 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__filter__no_timestamp(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_timestamp.json", min_ms_played=0
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_timestamp.json").read_bytes(),
+            min_ms_played=0,
         )
 
         assert len(entries) == 1
@@ -47,7 +49,8 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__filter__short_play(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_short_play.json", min_ms_played=30_000
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_skips_short_play.json").read_bytes(),
+            min_ms_played=30_000,
         )
 
         assert len(entries) == 1
@@ -56,7 +59,8 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__filter__no_track_id(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_track_id.json", min_ms_played=0
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_skips_no_track_id.json").read_bytes(),
+            min_ms_played=0,
         )
 
         assert len(entries) == 1
@@ -65,7 +69,8 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__filter__non_track_uri(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_skips_invalid_uri.json", min_ms_played=0
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_skips_invalid_uri.json").read_bytes(),
+            min_ms_played=0,
         )
 
         assert len(entries) == 1
@@ -74,7 +79,8 @@ class TestSpotifyStreamingHistoryAdapter:
 
     async def test__parse_file__duplicate_tracks_all_kept(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
         entries, stats = await adapter.parse_file(
-            path=HISTORY_SCENARIOS / "Streaming_History_Audio_duplicate_track_ids.json", min_ms_played=0
+            content=(HISTORY_SCENARIOS / "Streaming_History_Audio_duplicate_track_ids.json").read_bytes(),
+            min_ms_played=0,
         )
 
         assert len(entries) == 3
@@ -86,9 +92,6 @@ class TestSpotifyStreamingHistoryAdapter:
         }
         assert stats.items_read == 3
 
-    async def test__parse_file__invalid_json(self, adapter: SpotifyStreamingHistoryAdapter, tmp_path: Path) -> None:
-        path = tmp_path / "history.json"
-        path.write_text("{invalid json")
-
-        with pytest.raises(StreamingHistoryInvalidFormatError):
-            await adapter.parse_file(path=path, min_ms_played=0)
+    async def test__parse_file__invalid_json(self, adapter: SpotifyStreamingHistoryAdapter) -> None:
+        with pytest.raises(StreamingHistoryInvalidFormatError, match="Invalid streaming history file"):
+            await adapter.parse_file(content=b"{invalid json", min_ms_played=0)

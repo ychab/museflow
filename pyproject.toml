@@ -209,7 +209,7 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-# Pydantic stays allowed: input schemas may be Pydantic models.
+# Pydantic stays allowed: input schemas may be Pydantic models. No pathlib: files go through FileStoragePort.
 name = "Application imports no infrastructure framework"
 type = "forbidden"
 source_modules = ["museflow.application"]
@@ -218,6 +218,7 @@ forbidden_modules = [
     "asyncpg",
     "fastapi",
     "httpx",
+    "pathlib",
     "pydantic_settings",
     "sqlalchemy",
     "tenacity",

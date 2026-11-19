@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC
 from datetime import datetime
-from pathlib import Path
+from typing import Final
 from unittest import mock
 
 import pytest
@@ -13,7 +13,7 @@ from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import ProgressStep
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
 from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.value_objects.progress import StepAdvanced
 from museflow.domain.value_objects.progress import StepDone
@@ -24,10 +24,13 @@ from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory
 
 
 class TestImportStreamingHistorySpotifyUseCase:
-    @pytest.fixture
-    def history_dir(self, tmp_path: Path) -> Path:
-        (tmp_path / "Streaming_History_Audio_0.json").write_text("[]")
-        return tmp_path
+    PREFIX: Final[str] = "history/batch"
+
+    @pytest.fixture(autouse=True)
+    def mock_file_storage(self, mock_file_storage: mock.AsyncMock) -> mock.AsyncMock:
+        mock_file_storage.list_keys.return_value = [f"{self.PREFIX}/Streaming_History_Audio_0.json"]
+        mock_file_storage.get.return_value = b"[]"
+        return mock_file_storage
 
     @pytest.fixture(autouse=True)
     def track_ids(self, mock_track_repository: mock.AsyncMock) -> dict[str, uuid.UUID]:
@@ -47,18 +50,19 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         mock_uow: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
         mock_progress: mock.AsyncMock,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
             uow=mock_uow,
             streaming_history=mock_streaming_history,
+            file_storage=mock_file_storage,
             progress=mock_progress,
         )
 
     async def test__tracks_built_from_file_metadata(
         self,
         user: User,
-        history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
@@ -73,7 +77,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
         )
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]
@@ -90,7 +94,6 @@ class TestImportStreamingHistorySpotifyUseCase:
     async def test__purge__deletes_the_unlinked_tracks(
         self,
         user: User,
-        history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
@@ -100,7 +103,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(directory=history_dir, purge=True),
+            config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX, purge=True),
         )
 
         mock_track_repository.unlink_provider.assert_awaited_once_with(user_id=user.id, provider=MusicProvider.SPOTIFY)
@@ -110,7 +113,6 @@ class TestImportStreamingHistorySpotifyUseCase:
     async def test__purge__invalid_file__nothing_deleted(
         self,
         user: User,
-        history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
@@ -120,7 +122,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         with pytest.raises(StreamingHistoryInvalidFormatError):
             await use_case.import_history(
                 user=user,
-                config=ImportStreamingHistoryConfigInput(directory=history_dir, purge=True),
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX, purge=True),
             )
 
         mock_track_repository.unlink_provider.assert_not_awaited()
@@ -129,73 +131,92 @@ class TestImportStreamingHistorySpotifyUseCase:
     async def test__no_tracks_parsed__nothing_saved(
         self,
         user: User,
-        history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
     ) -> None:
         report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(directory=history_dir),
+            config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
         )
 
         assert report.unique_track_ids == 0
         mock_track_repository.bulk_upsert.assert_not_called()
 
-    async def test__directory__not_found(
+    async def test__invalid_file__file_named(
         self,
         user: User,
-        use_case: ImportStreamingHistoryUseCase,
-        tmp_path: Path,
-    ) -> None:
-        with pytest.raises(StreamingHistoryDirectoryNotFoundError):
-            await use_case.import_history(
-                user=user,
-                config=ImportStreamingHistoryConfigInput(directory=tmp_path / "nonexistent"),
-            )
-
-    async def test__directory__no_json_files(
-        self,
-        user: User,
-        tmp_path: Path,
-        use_case: ImportStreamingHistoryUseCase,
-    ) -> None:
-        (tmp_path / "not_json.txt").write_text("")
-        with pytest.raises(StreamingHistoryDirectoryNotFoundError):
-            await use_case.import_history(
-                user=user,
-                config=ImportStreamingHistoryConfigInput(directory=tmp_path),
-            )
-
-    async def test__directory__ignores_non_audio_json_files(
-        self,
-        user: User,
-        history_dir: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_streaming_history: mock.AsyncMock,
     ) -> None:
-        (history_dir / "Streaming_History_Video_2020_2024.json").write_text("[]")
-        (history_dir / "Userdata.json").write_text("{}")
-        mock_streaming_history.parse_file.return_value = ([], StreamingHistoryFileStats())
+        mock_streaming_history.parse_file.side_effect = StreamingHistoryInvalidFormatError("Invalid file")
 
-        await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(directory=history_dir))
+        with pytest.raises(
+            StreamingHistoryInvalidFormatError, match=r"^Streaming_History_Audio_0\.json: Invalid file$"
+        ):
+            await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX))
 
-        mock_streaming_history.parse_file.assert_awaited_once_with(
-            path=history_dir / "Streaming_History_Audio_0.json", min_ms_played=90_000
+    async def test__files__not_found(
+        self,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_file_storage: mock.AsyncMock,
+    ) -> None:
+        mock_file_storage.list_keys.return_value = []
+
+        with pytest.raises(
+            StreamingHistoryFilesNotFoundError, match="No Streaming_History_Audio_\\*.json files found"
+        ):
+            await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX))
+
+        mock_file_storage.list_keys.assert_awaited_once_with(user_id=user.id, prefix=self.PREFIX)
+
+    async def test__files__none_of_the_provider(
+        self,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_file_storage: mock.AsyncMock,
+    ) -> None:
+        mock_file_storage.list_keys.return_value = [f"{self.PREFIX}/not_json.txt"]
+
+        with pytest.raises(StreamingHistoryFilesNotFoundError):
+            await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX))
+
+    async def test__files__ignores_other_files(
+        self,
+        user: User,
+        use_case: ImportStreamingHistoryUseCase,
+        mock_file_storage: mock.AsyncMock,
+        mock_streaming_history: mock.AsyncMock,
+    ) -> None:
+        mock_file_storage.list_keys.return_value = [
+            f"{self.PREFIX}/Streaming_History_Audio_0.json",
+            f"{self.PREFIX}/Streaming_History_Video_2020_2024.json",
+            f"{self.PREFIX}/Userdata.json",
+        ]
+        mock_file_storage.get.return_value = b"[1]"
+
+        await use_case.import_history(user=user, config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX))
+
+        mock_file_storage.get.assert_awaited_once_with(
+            user_id=user.id, key=f"{self.PREFIX}/Streaming_History_Audio_0.json"
         )
+        mock_streaming_history.parse_file.assert_awaited_once_with(content=b"[1]", min_ms_played=90_000)
 
     async def test__merge_across_files__every_play_saved(
         self,
         user: User,
-        tmp_path: Path,
         use_case: ImportStreamingHistoryUseCase,
         mock_track_repository: mock.AsyncMock,
         mock_track_play_repository: mock.AsyncMock,
         mock_streaming_history: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
         mock_progress: mock.AsyncMock,
         track_ids: dict[str, uuid.UUID],
     ) -> None:
-        (tmp_path / "Streaming_History_Audio_1.json").write_text("[]")
-        (tmp_path / "Streaming_History_Audio_2.json").write_text("[]")
+        mock_file_storage.list_keys.return_value = [
+            f"{self.PREFIX}/Streaming_History_Audio_1.json",
+            f"{self.PREFIX}/Streaming_History_Audio_2.json",
+        ]
 
         mock_streaming_history.parse_file.side_effect = [
             (
@@ -248,7 +269,7 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(directory=tmp_path),
+            config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
         )
 
         upserted: list[Track] = mock_track_repository.bulk_upsert.call_args.kwargs["tracks"]

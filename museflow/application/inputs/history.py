@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 
 
 @dataclass(frozen=True, kw_only=True)
 class ImportStreamingHistoryConfigInput:
-    directory: Path
+    prefix: str  # where the export files are, in the user's file storage
     min_ms_played: int = 90_000
     batch_size: int = 20
     purge: bool = False
