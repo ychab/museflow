@@ -9,8 +9,10 @@ from typer.testing import CliRunner
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
+from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import StreamingHistoryDirectoryNotFoundError
+from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
+from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks.history import tracks_history_logic
 from museflow.infrastructure.entrypoints.cli.main import app
@@ -55,6 +57,17 @@ class TestTracksHistoryParserCommand:
         # fmt: on
         assert result.exit_code == 0
 
+    def test__directory__not_found(self, runner: CliRunner, tmp_path: Path, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(
+            app,
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path / "nonexistent")],
+        )
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--directory'" in output
+        assert "does not exist" in output
+
     def test__provider__invalid(self, runner: CliRunner, tmp_path: Path) -> None:
         # fmt: off
         result = runner.invoke(
@@ -90,8 +103,9 @@ class TestTracksHistoryParserCommand:
         email: str,
         expected_msg: str,
         clean_typer_text: TextCleaner,
+        tmp_path: Path,
     ) -> None:
-        result = runner.invoke(app, ["tracks", "history", "--email", email, "--directory", "/tmp"])
+        result = runner.invoke(app, ["tracks", "history", "--email", email, "--directory", str(tmp_path)])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
@@ -116,6 +130,7 @@ class TestTracksHistoryParserCommand:
         batch_size: Any,
         expected_msg: str,
         clean_typer_text: TextCleaner,
+        tmp_path: Path,
     ) -> None:
         # fmt: off
         result = runner.invoke(
@@ -123,7 +138,7 @@ class TestTracksHistoryParserCommand:
             [
                 "tracks", "history",
                 "--email", "test@example.com",
-                "--directory", "/tmp",
+                "--directory", str(tmp_path),
                 "--batch-size", batch_size,
             ],
         )
@@ -159,15 +174,15 @@ class TestTracksHistoryCommand:
         output = clean_typer_text(result.stderr)
         assert "User not found with email: test@example.com" in output
 
-    def test__directory_not_found(
+    def test__files_not_found(
         self,
         mock_tracks_history_logic: mock.AsyncMock,
         runner: CliRunner,
         clean_typer_text: TextCleaner,
         tmp_path: Path,
     ) -> None:
-        mock_tracks_history_logic.side_effect = StreamingHistoryDirectoryNotFoundError(
-            "Directory not found: /bad/path"
+        mock_tracks_history_logic.side_effect = StreamingHistoryFilesNotFoundError(
+            "No Streaming_History_Audio_*.json files found in: /bad/path"
         )
 
         result = runner.invoke(
@@ -177,7 +192,7 @@ class TestTracksHistoryCommand:
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
-        assert "Directory not found: /bad/path" in output
+        assert "No Streaming_History_Audio_*.json files found in: /bad/path" in output
 
     def test__generic_exception(
         self,
@@ -238,6 +253,17 @@ class TestTracksHistoryCommand:
 )
 class TestTracksHistoryLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.tracks.history"
+    PREFIX: Final[str] = "history/batch"
+
+    @pytest.fixture(autouse=True)
+    def mock_build_adapters(
+        self,
+        mock_wiring: mock.MagicMock,
+        mock_streaming_history: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
+    ) -> None:
+        mock_wiring.build_streaming_history.return_value = mock_streaming_history
+        mock_wiring.build_file_storage.return_value = mock_file_storage
 
     @pytest.fixture
     def mock_use_case_cls(self) -> Iterable[mock.Mock]:
@@ -245,13 +271,71 @@ class TestTracksHistoryLogic:
             patched.return_value.import_history = mock.AsyncMock(return_value=ImportStreamingHistoryReport())
             yield patched
 
-    async def test__user__not_found(self, mock_user_repository: mock.AsyncMock, mock_progress: mock.AsyncMock) -> None:
+    @pytest.fixture
+    def history_dir(self, tmp_path: Path) -> Path:
+        (tmp_path / "Streaming_History_Audio_0.json").write_text("[]")
+        return tmp_path
+
+    async def test__user__not_found(
+        self,
+        mock_user_repository: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
+        history_dir: Path,
+    ) -> None:
         mock_user_repository.get_by_email.return_value = None
 
         with pytest.raises(UserNotFoundError):
             await tracks_history_logic(
                 progress=mock_progress,
                 email="test@example.com",
-                config=ImportStreamingHistoryConfigInput(directory=Path("/tmp")),
+                directory=history_dir,
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
                 provider=MusicProvider.SPOTIFY,
             )
+
+    async def test__files__not_found(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
+        mock_progress: mock.AsyncMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        (tmp_path / "Streaming_History_Video_2020.json").write_text("[]")
+
+        with pytest.raises(
+            StreamingHistoryFilesNotFoundError, match="No Streaming_History_Audio_\\*.json files found in"
+        ):
+            await tracks_history_logic(
+                progress=mock_progress,
+                email=user.email,
+                directory=tmp_path,
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
+                provider=MusicProvider.SPOTIFY,
+            )
+
+        mock_file_storage.put.assert_not_awaited()
+
+    async def test__import__error__files_deleted(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
+        mock_use_case_cls: mock.Mock,
+        mock_progress: mock.AsyncMock,
+        history_dir: Path,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        mock_use_case_cls.return_value.import_history.side_effect = StreamingHistoryInvalidFormatError("Invalid file")
+
+        with pytest.raises(StreamingHistoryInvalidFormatError):
+            await tracks_history_logic(
+                progress=mock_progress,
+                email=user.email,
+                directory=history_dir,
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
+                provider=MusicProvider.SPOTIFY,
+            )
+
+        mock_file_storage.delete.assert_awaited_once_with(user_id=user.id, prefix=self.PREFIX)

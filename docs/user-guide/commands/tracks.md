@@ -25,6 +25,10 @@ museflow tracks history [--email <email>] --directory <path> [OPTIONS]
 - A directory containing the exported `Streaming_History_Audio_*.json` files. Other files of the export
   (video history, `Userdata.json`, ...) are ignored.
 
+The history files are copied into the file storage (`MUSEFLOW_FILE_STORAGE_DIR`, `.storage/` at the repository root by
+default) for the time of the import, the same path an upload through the API takes, then deleted, also when the import
+fails. Your export directory is left as it is.
+
 **Example**
 
 ```bash

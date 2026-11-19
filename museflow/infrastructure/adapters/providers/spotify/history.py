@@ -1,7 +1,7 @@
 import asyncio
+import io
 import logging
 from datetime import datetime
-from pathlib import Path
 
 import ijson
 
@@ -15,24 +15,24 @@ logger = logging.getLogger(__name__)
 
 class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
     @property
-    def file_glob(self) -> str:
+    def file_pattern(self) -> str:
         # Spotify exports also contain video history and account files, which must not be parsed
         return "Streaming_History_Audio_*.json"
 
     async def parse_file(
         self,
-        path: Path,
+        content: bytes,
         min_ms_played: int,
     ) -> tuple[list[StreamingHistoryEntryInput], StreamingHistoryFileStats]:
         return await asyncio.to_thread(
             self._parse_file_sync,
-            path=path,
+            content=content,
             min_ms_played=min_ms_played,
         )
 
     @staticmethod
     def _parse_file_sync(
-        path: Path,
+        content: bytes,
         min_ms_played: int,
     ) -> tuple[list[StreamingHistoryEntryInput], StreamingHistoryFileStats]:
         track_entries: list[StreamingHistoryEntryInput] = []
@@ -43,46 +43,45 @@ class SpotifyStreamingHistoryAdapter(StreamingHistoryPort):
         items_skipped_no_track_id = 0
 
         try:
-            with open(path, "rb") as file:
-                for item in ijson.items(file, "item"):
-                    items_read += 1
+            for item in ijson.items(io.BytesIO(content), "item"):
+                items_read += 1
 
-                    ts_raw = item.get("ts")
-                    if not ts_raw:
-                        items_skipped_no_timestamp += 1
-                        continue
-                    ts = datetime.fromisoformat(ts_raw)
+                ts_raw = item.get("ts")
+                if not ts_raw:
+                    items_skipped_no_timestamp += 1
+                    continue
+                ts = datetime.fromisoformat(ts_raw)
 
-                    if item.get("ms_played", 0) < min_ms_played:
-                        items_skipped_short_play += 1
-                        continue
+                if item.get("ms_played", 0) < min_ms_played:
+                    items_skipped_short_play += 1
+                    continue
 
-                    uri = item.get("spotify_track_uri")
-                    name = item.get("master_metadata_track_name")
-                    if uri is None or not name:
-                        items_skipped_no_track_id += 1
-                        continue
+                uri = item.get("spotify_track_uri")
+                name = item.get("master_metadata_track_name")
+                if uri is None or not name:
+                    items_skipped_no_track_id += 1
+                    continue
 
-                    parts = uri.split(":")
-                    if len(parts) != 3 or parts[1] != "track":
-                        items_skipped_no_track_id += 1
-                        continue
+                parts = uri.split(":")
+                if len(parts) != 3 or parts[1] != "track":
+                    items_skipped_no_track_id += 1
+                    continue
 
-                    track_id = parts[2]
-                    artist = item.get("master_metadata_album_artist_name") or ""
-                    album_name = item.get("master_metadata_album_album_name") or None
+                track_id = parts[2]
+                artist = item.get("master_metadata_album_artist_name") or ""
+                album_name = item.get("master_metadata_album_album_name") or None
 
-                    track_entries.append(
-                        StreamingHistoryEntryInput(
-                            provider_id=track_id,
-                            played_at=ts,
-                            name=name,
-                            artist=artist,
-                            album_name=album_name,
-                        )
+                track_entries.append(
+                    StreamingHistoryEntryInput(
+                        provider_id=track_id,
+                        played_at=ts,
+                        name=name,
+                        artist=artist,
+                        album_name=album_name,
                     )
+                )
         except Exception as exc:
-            raise StreamingHistoryInvalidFormatError(f"Failed to parse {path}: {exc}") from exc
+            raise StreamingHistoryInvalidFormatError(f"Invalid streaming history file: {exc}") from exc
 
         return track_entries, StreamingHistoryFileStats(
             items_read=items_read,

@@ -1,5 +1,8 @@
 import io
 import json
+import uuid
+from collections.abc import Awaitable
+from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -21,12 +24,15 @@ from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import TrackModel
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
+from museflow.infrastructure.adapters.storage.local import LocalFileStorage
 
 from tests import ASSETS_DIR
 from tests.integration.factories.models.track import TrackModelFactory
 
 HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "samples"
 REIMPORT_HISTORY_DIR: Final[Path] = ASSETS_DIR / "history" / "spotify" / "reimport"
+
+type HistoryUploader = Callable[[Path], Awaitable[str]]
 
 
 class TestImportStreamingHistorySpotifyUseCase:
@@ -47,15 +53,29 @@ class TestImportStreamingHistorySpotifyUseCase:
         return list(sample_fingerprints.keys())
 
     @pytest.fixture
+    def upload(self, user: User, file_storage: LocalFileStorage) -> HistoryUploader:
+        """Puts the files of an export directory into the user's storage, as an upload does; returns their prefix."""
+
+        async def put_files(directory: Path) -> str:
+            prefix = f"history/{uuid.uuid4()}"
+            for path in sorted(directory.iterdir()):
+                await file_storage.put(user_id=user.id, key=f"{prefix}/{path.name}", content=path.read_bytes())
+            return prefix
+
+        return put_files
+
+    @pytest.fixture
     def use_case(
         self,
         uow: UnitOfWorkPort,
         spotify_streaming_history: SpotifyStreamingHistoryAdapter,
+        file_storage: LocalFileStorage,
         progress: RichProgressAdapter,
     ) -> ImportStreamingHistoryUseCase:
         return ImportStreamingHistoryUseCase(
             uow=uow,
             streaming_history=spotify_streaming_history,
+            file_storage=file_storage,
             progress=progress,
         )
 
@@ -63,6 +83,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
+        upload: HistoryUploader,
         progress_output: io.StringIO,
     ) -> None:
         """
@@ -74,7 +95,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         report = await use_case.import_history(
             user=user,
             config=ImportStreamingHistoryConfigInput(
-                directory=HISTORY_DIR,
+                prefix=await upload(HISTORY_DIR),
                 min_ms_played=30_000,
                 batch_size=3,
             ),
@@ -101,6 +122,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         async_session_db: AsyncSession,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
+        upload: HistoryUploader,
     ) -> None:
         # Create 3 HISTORY tracks for the user to purge.
         tracks = await TrackModelFactory.create_batch_async(
@@ -112,7 +134,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         report = await use_case.import_history(
             user=user,
             config=ImportStreamingHistoryConfigInput(
-                directory=HISTORY_DIR,
+                prefix=await upload(HISTORY_DIR),
                 min_ms_played=30_000,
                 purge=True,
             ),
@@ -142,6 +164,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         sample_fingerprints: dict[str, str],
         track_ids: list[str],
         use_case: ImportStreamingHistoryUseCase,
+        upload: HistoryUploader,
     ) -> None:
         expected_played_at = {
             track_ids[0]: datetime(2017, 1, 10, 12, 34, 10, tzinfo=UTC),
@@ -163,7 +186,7 @@ class TestImportStreamingHistorySpotifyUseCase:
         report = await use_case.import_history(
             user=user,
             config=ImportStreamingHistoryConfigInput(
-                directory=HISTORY_DIR,
+                prefix=await upload(HISTORY_DIR),
                 min_ms_played=30_000,
             ),
         )
@@ -187,9 +210,10 @@ class TestImportStreamingHistorySpotifyUseCase:
         self,
         user: User,
         use_case: ImportStreamingHistoryUseCase,
+        upload: HistoryUploader,
         track_repository: TrackRepository,
     ) -> None:
-        config = ImportStreamingHistoryConfigInput(directory=REIMPORT_HISTORY_DIR, min_ms_played=0)
+        config = ImportStreamingHistoryConfigInput(prefix=await upload(REIMPORT_HISTORY_DIR), min_ms_played=0)
 
         first_report = await use_case.import_history(user=user, config=config)
         assert first_report.tracks_created == 1
@@ -208,14 +232,13 @@ class TestImportStreamingHistorySpotifyUseCase:
         user: User,
         track_repository: TrackRepository,
         use_case: ImportStreamingHistoryUseCase,
-        tmp_path: Path,
-        spotify_streaming_history: SpotifyStreamingHistoryAdapter,
-        progress: RichProgressAdapter,
+        file_storage: LocalFileStorage,
     ) -> None:
         """Two Spotify IDs for the same song collapse into one DB row with merged play count."""
-        history_file = tmp_path / "Streaming_History_Audio_dup.json"
-        history_file.write_text(
-            json.dumps(
+        await file_storage.put(
+            user_id=user.id,
+            key="history/dup/Streaming_History_Audio_dup.json",
+            content=json.dumps(
                 [
                     {
                         "ts": "2024-01-01T10:00:00Z",
@@ -234,18 +257,12 @@ class TestImportStreamingHistorySpotifyUseCase:
                         "spotify_track_uri": "spotify:track:album_version",
                     },
                 ]
-            )
+            ).encode(),
         )
 
-        dup_use_case = ImportStreamingHistoryUseCase(
-            uow=use_case._uow,
-            streaming_history=spotify_streaming_history,
-            progress=progress,
-        )
-
-        report = await dup_use_case.import_history(
+        report = await use_case.import_history(
             user=user,
-            config=ImportStreamingHistoryConfigInput(directory=tmp_path, min_ms_played=0),
+            config=ImportStreamingHistoryConfigInput(prefix="history/dup", min_ms_played=0),
         )
 
         assert report.unique_track_ids == 1
