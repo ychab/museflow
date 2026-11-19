@@ -357,7 +357,7 @@ class TestPlaylistDiscoverCommand:
     "mock_taste_profile_repository",
     "mock_blacklist_repository",
     "mock_playlist_repository",
-    "mock_create_provider_library",
+    "mock_build_provider_library",
 )
 class TestPlaylistDiscoverLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.discover"
@@ -368,7 +368,7 @@ class TestPlaylistDiscoverLogic:
         mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
     ) -> Iterable[mock.AsyncMock]:
         client = mock.AsyncMock()
-        with mock_async_context_dependency_factory(f"{TARGET_PATH}.create_advisor", client) as mock_client:
+        with mock_async_context_dependency_factory(f"{TARGET_PATH}.build_advisor", client) as mock_client:
             yield mock_client
 
     async def test__user__not_found(

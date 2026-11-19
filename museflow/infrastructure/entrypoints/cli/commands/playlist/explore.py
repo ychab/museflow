@@ -26,8 +26,8 @@ from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
-from museflow.infrastructure.entrypoints.wiring import create_advisor
-from museflow.infrastructure.entrypoints.wiring import create_provider_library
+from museflow.infrastructure.entrypoints.wiring import build_advisor
+from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 
 @app.command("explore")
@@ -141,9 +141,9 @@ async def playlist_explore_logic(
         user = await get_user(email=email, uow=uow)
 
         provider_library = await stack.enter_async_context(
-            create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+            build_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
         )
-        advisor = await stack.enter_async_context(create_advisor(model, meter=meter))
+        advisor = await stack.enter_async_context(build_advisor(model, meter=meter))
 
         use_case = CreateExplorationPlaylistUseCase(
             uow=uow, provider_library=provider_library, advisor=advisor, progress=progress

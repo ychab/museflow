@@ -188,7 +188,7 @@ class TestPlaylistDeleteCommand:
     "mock_get_unit_of_work",
     "mock_user_repository",
     "mock_playlist_repository",
-    "mock_create_provider_library",
+    "mock_build_provider_library",
 )
 class TestPlaylistDeleteLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
@@ -203,10 +203,10 @@ class TestPlaylistDeleteLogic:
     @pytest.fixture
     def mock_get_provider_libraries(self, provider_libraries: dict[str, mock.AsyncMock]) -> Iterable[mock.Mock]:
         @asynccontextmanager
-        async def _create_provider_library(provider: str, **_: object) -> AsyncGenerator[mock.AsyncMock]:
+        async def _build_provider_library(provider: str, **_: object) -> AsyncGenerator[mock.AsyncMock]:
             yield provider_libraries[provider]
 
-        with mock.patch(f"{TARGET_PATH}.create_provider_library", side_effect=_create_provider_library) as patched:
+        with mock.patch(f"{TARGET_PATH}.build_provider_library", side_effect=_build_provider_library) as patched:
             yield patched
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:

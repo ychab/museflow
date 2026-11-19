@@ -27,10 +27,10 @@ from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.wiring import create_access_token_manager
-from museflow.infrastructure.entrypoints.wiring import create_password_hasher
-from museflow.infrastructure.entrypoints.wiring import create_provider_oauth
-from museflow.infrastructure.entrypoints.wiring import create_state_token_generator
+from museflow.infrastructure.entrypoints.wiring import build_access_token_manager
+from museflow.infrastructure.entrypoints.wiring import build_password_hasher
+from museflow.infrastructure.entrypoints.wiring import build_provider_oauth
+from museflow.infrastructure.entrypoints.wiring import build_state_token_generator
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +38,15 @@ oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{ap
 
 
 def get_password_hasher() -> PasswordHasherPort:
-    return create_password_hasher()
+    return build_password_hasher()
 
 
 def get_access_token_manager() -> AccessTokenManagerPort:
-    return create_access_token_manager()
+    return build_access_token_manager()
 
 
 def get_state_token_generator() -> StateTokenGeneratorPort:
-    return create_state_token_generator()
+    return build_state_token_generator()
 
 
 def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
@@ -63,7 +63,7 @@ def get_unit_of_work(
 
 
 async def get_provider_oauth(provider: MusicProvider) -> AsyncGenerator[ProviderOAuthPort]:
-    async with create_provider_oauth(provider) as provider_oauth:
+    async with build_provider_oauth(provider) as provider_oauth:
         yield provider_oauth
 
 

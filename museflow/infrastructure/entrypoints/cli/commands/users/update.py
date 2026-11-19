@@ -12,7 +12,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
-from museflow.infrastructure.entrypoints.wiring import create_password_hasher
+from museflow.infrastructure.entrypoints.wiring import build_password_hasher
 
 
 @app.command("update", help="Update the email and/or password of a user.")
@@ -44,7 +44,7 @@ async def users_update_logic(
     user_id: uuid.UUID,
     user_in: UserUpdateInput,
 ) -> None:
-    password_hasher = create_password_hasher()
+    password_hasher = build_password_hasher()
     uow = get_unit_of_work()
 
     async with uow:

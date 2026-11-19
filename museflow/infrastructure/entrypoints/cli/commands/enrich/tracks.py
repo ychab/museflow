@@ -27,7 +27,7 @@ from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
-from museflow.infrastructure.entrypoints.wiring import create_enricher
+from museflow.infrastructure.entrypoints.wiring import build_enricher
 
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
@@ -155,7 +155,7 @@ async def enrich_tracks_logic(
     )
 
     async with AsyncExitStack() as stack:
-        enricher = await stack.enter_async_context(create_enricher(model=model, meter=meter))
+        enricher = await stack.enter_async_context(build_enricher(model=model, meter=meter))
 
         uow = get_unit_of_work()
         user = await get_user(email=email, uow=uow)

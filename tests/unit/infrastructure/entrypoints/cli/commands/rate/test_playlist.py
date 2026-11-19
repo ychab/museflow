@@ -196,7 +196,7 @@ class TestRatePlaylistCommand:
     "mock_playlist_repository",
     "mock_track_repository",
     "mock_blacklist_repository",
-    "mock_create_provider_library",
+    "mock_build_provider_library",
 )
 class TestRatePlaylistLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.playlist"

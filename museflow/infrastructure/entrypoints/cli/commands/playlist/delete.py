@@ -16,7 +16,7 @@ from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.wiring import create_provider_library
+from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 
 @app.command(
@@ -111,7 +111,7 @@ async def playlist_delete_logic(
     async with AsyncExitStack() as stack:
         provider_libraries = {
             playlist_provider: await stack.enter_async_context(
-                create_provider_library(playlist_provider, user=user, uow=uow, token_uow=get_unit_of_work())
+                build_provider_library(playlist_provider, user=user, uow=uow, token_uow=get_unit_of_work())
             )
             for playlist_provider in {playlist.provider for playlist in playlists}
         }
