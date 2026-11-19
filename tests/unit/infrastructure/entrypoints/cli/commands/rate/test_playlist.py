@@ -155,12 +155,12 @@ class TestRatePlaylistCommand:
         runner: CliRunner,
         clean_typer_text: TextCleaner,
     ) -> None:
-        mock_rate_playlist_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found")
+        mock_rate_playlist_logic.side_effect = ProviderAuthTokenNotFoundError("No Spotify auth token found.")
 
         result = runner.invoke(app, ["rate", "playlist", "--email", "test@example.com", "--play"])
         assert result.exit_code != 0
         output = clean_typer_text(result.stderr)
-        assert "No Spotify auth token found" in output
+        assert "No Spotify auth token found. Run 'museflow provider connect' first." in output
 
     def test__premium_required(
         self,
@@ -196,7 +196,7 @@ class TestRatePlaylistCommand:
     "mock_playlist_repository",
     "mock_track_repository",
     "mock_blacklist_repository",
-    "mock_get_provider_library",
+    "mock_create_provider_library",
 )
 class TestRatePlaylistLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.playlist"

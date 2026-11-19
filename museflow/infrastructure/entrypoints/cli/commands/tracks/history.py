@@ -19,11 +19,11 @@ from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_streaming_history_adapter
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
+from museflow.infrastructure.entrypoints.wiring import create_streaming_history
 from museflow.infrastructure.utils.formatting import format_duration
 
 
@@ -105,6 +105,6 @@ async def tracks_history_logic(
     user = await get_user(email=email, uow=uow)
 
     use_case = ImportStreamingHistoryUseCase(
-        uow=uow, streaming_history=get_streaming_history_adapter(provider), progress=progress
+        uow=uow, streaming_history=create_streaming_history(provider), progress=progress
     )
     return await use_case.import_history(user=user, config=config)

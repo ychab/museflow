@@ -238,6 +238,19 @@ modules = [
     "museflow.infrastructure.entrypoints.cli",
 ]
 
+[[tool.importlinter.contracts]]
+# Every entrypoint imports it, a future worker included: no entrypoint framework, no entrypoint module.
+name = "Wiring imports no entrypoint"
+type = "forbidden"
+source_modules = ["museflow.infrastructure.entrypoints.wiring"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "typer",
+    "museflow.infrastructure.entrypoints.api",
+    "museflow.infrastructure.entrypoints.cli",
+]
+
 
 [tool.pytest.ini_options]
 junit_family = "legacy"

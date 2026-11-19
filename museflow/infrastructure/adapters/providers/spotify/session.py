@@ -31,9 +31,7 @@ class SpotifyOAuthSessionClient:
       database keeps a token refreshed or reconnected by another session meanwhile.
     """
 
-    _RECONNECT_MESSAGE: Final[str] = (
-        "Spotify refresh token is no longer valid — run 'museflow provider connect --provider spotify' first."
-    )
+    _RECONNECT_MESSAGE: Final[str] = "Spotify refresh token is no longer valid: reconnect the provider."
 
     def __init__(
         self,

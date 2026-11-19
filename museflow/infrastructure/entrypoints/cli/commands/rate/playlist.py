@@ -18,10 +18,10 @@ from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import RateAnswer
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_track
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
-from museflow.infrastructure.entrypoints.cli.dependencies import get_provider_library
 from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.wiring import create_provider_library
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -63,7 +63,7 @@ def rate_playlist_command(
         typer.secho(f"Playlist {playlist_id} not found.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except ProviderAuthTokenNotFoundError as e:
-        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        typer.secho(f"Error: {e} Run 'museflow provider connect' first.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except ProviderPremiumRequiredError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
@@ -97,7 +97,9 @@ async def rate_playlist_logic(
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
-            provider_library = await stack.enter_async_context(get_provider_library(provider, user=user, uow=uow))
+            provider_library = await stack.enter_async_context(
+                create_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+            )
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         if playlist_id is not None:

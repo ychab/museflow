@@ -186,7 +186,7 @@ class TestPlaylistExploreCommand:
         assert "Dry run: no playlist created" in clean_typer_text(result.stdout)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_get_provider_library")
+@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_create_provider_library")
 class TestPlaylistExploreLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
@@ -195,7 +195,7 @@ class TestPlaylistExploreLogic:
         self,
         mock_async_context_dependency_factory: AsyncDependencyPatcherFactory,
     ) -> Iterable[mock.AsyncMock]:
-        with mock_async_context_dependency_factory(f"{TARGET_PATH}.get_advisor", mock.AsyncMock()) as mock_client:
+        with mock_async_context_dependency_factory(f"{TARGET_PATH}.create_advisor", mock.AsyncMock()) as mock_client:
             yield mock_client
 
     async def test__user__not_found(
