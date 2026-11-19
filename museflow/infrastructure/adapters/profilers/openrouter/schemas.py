@@ -47,9 +47,11 @@ def _weighted_tags() -> JsonSchemaProperty:
 def split_weights(weights: dict[str, float]) -> dict[str, list[dict[str, str | float]]]:
     """Groups a `{tag: weight}` map by tier, the shape the response schema asks the model to write."""
     tiers: dict[str, list[dict[str, str | float]]] = {tier: [] for tier in _WEIGHT_TIERS}
+
     for key, value in weights.items():
         if key in _TIER_BY_TAG:
             tiers[_TIER_BY_TAG[key]].append({"key": key, "value": value})
+
     return tiers
 
 

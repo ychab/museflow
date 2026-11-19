@@ -26,6 +26,7 @@ async def import_enrichment(
             dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locales=entry.locales)
             for entry, track in matches.matched
         ]
+
         if updated_tracks:
             await uow.tracks.bulk_update(updated_tracks, fields=frozenset(EnrichField))
 

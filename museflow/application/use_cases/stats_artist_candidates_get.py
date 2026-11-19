@@ -17,6 +17,7 @@ async def get_artist_candidates(
         all_stats = await uow.tracks.get_artist_stats(user_id=user_id, source=source.to_track_source())
 
     rows: list[ArtistCandidate] = []
+
     for stats in all_stats:
         if stats.track_count > max_tracks or stats.rated_count == 0:
             continue

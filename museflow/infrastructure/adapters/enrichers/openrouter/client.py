@@ -50,6 +50,7 @@ class OpenRouterTrackEnricherAdapter(OpenRouterAdapterMixin, TrackEnricherPort):
             ],
             ensure_ascii=False,
         )
+
         try:
             content = await self._client.complete(
                 [

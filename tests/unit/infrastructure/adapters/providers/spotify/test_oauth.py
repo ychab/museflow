@@ -273,6 +273,7 @@ class TestSpotifyOAuthAdapter:
                 endpoint="/foo/bar",
                 token_payload=token_payload,
             )
+
         assert len(httpx_mock.get_requests()) == 1
 
     async def test__make_api_call__retry__not_on_404(
@@ -293,6 +294,7 @@ class TestSpotifyOAuthAdapter:
                 endpoint="/foo/bar",
                 token_payload=token_payload,
             )
+
         assert exc_info.value.response.status_code == codes.NOT_FOUND
         assert len(httpx_mock.get_requests()) == 1
 
@@ -310,6 +312,7 @@ class TestSpotifyOAuthAdapter:
                 endpoint="/foo/bar",
                 token_payload=token_payload,
             )
+
         assert len(httpx_mock.get_requests()) == 1
 
     async def test__make_api_call__retry__server_error(

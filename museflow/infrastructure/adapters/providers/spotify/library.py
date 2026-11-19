@@ -110,6 +110,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
             asyncio.create_task(self._search_tracks_bounded(query, max_pages=max_pages, semaphore=semaphore))
             for query in SpotifySearchArtistQuery.by_release_years(artist=artist)
         ]
+
         try:
             results = await asyncio.gather(*searches)
         finally:
@@ -155,6 +156,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 endpoint=f"/playlists/{spotify_playlist.id}/items",
                 json_data={"uris": list(batch)},
             )
+
         spotify_playlist.snapshot_id = data["snapshot_id"]
 
         return to_domain_playlist(spotify_playlist, user_id=self.user.id, type=type, tracks=tracks)
@@ -179,6 +181,7 @@ class SpotifyLibraryAdapter(ProviderLibraryPort):
                 raise ProviderNoActiveDeviceError() from e
             if e.status_code == 403:
                 raise ProviderPremiumRequiredError() from e
+
             raise  # pragma: no cover
 
     # -------------------------------------------------------------------------

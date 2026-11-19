@@ -36,8 +36,10 @@ class TestTasteProfileBuildSQLRepository:
             TasteProfileBuildModel.name == name,
         )
         lease_db: TasteProfileBuildModel | None = (await async_session_db.execute(stmt)).scalar_one_or_none()
+
         if lease_db is not None:
             await async_session_db.refresh(lease_db)
+
         return lease_db
 
     async def test__claim__free(

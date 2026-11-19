@@ -58,8 +58,10 @@ class TestImportStreamingHistorySpotifyUseCase:
 
         async def put_files(directory: Path) -> str:
             prefix = f"history/{uuid.uuid4()}"
+
             for path in sorted(directory.iterdir()):
                 await file_storage.put(user_id=user.id, key=f"{prefix}/{path.name}", content=path.read_bytes())
+
             return prefix
 
         return put_files

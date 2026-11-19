@@ -52,6 +52,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         rows = [LLMUsageModel.from_entity(record) for record in records]
 
         created = 0
+
         for chunk in itertools.batched(rows, self._CHUNK_SIZE, strict=False):
             stmt = (
                 pg_insert(LLMUsageModel)
@@ -60,6 +61,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
                 .returning(LLMUsageModel.id)
             )
             created += len((await self.session.execute(stmt)).all())
+
         return created
 
     async def summarize(
@@ -75,6 +77,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         # Level by level: the level's own order first, then its keys, so the rows of a group stay together.
         keys: list[SQLColumnExpression[object]] = []
         order_by: list[SQLColumnExpression[object]] = []
+
         for grouping, dimension in zip(group_by, dimensions, strict=True):
             keys = [*keys, *dimension.keys]
             order_by += [self._level_order(grouping, dimension, keys), *dimension.keys]
@@ -150,6 +153,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         until: date | None,
     ) -> list[SQLColumnExpression[bool]]:
         filters: list[SQLColumnExpression[bool]] = []
+
         if user_id is not None:
             filters.append(LLMUsageModel.user_id == user_id)
         if operation is not None:
@@ -161,6 +165,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
             filters.append(
                 LLMUsageModel.created_at < datetime.combine(until + timedelta(days=1), time.min, tzinfo=UTC)
             )
+
         return filters
 
     def _sums(self) -> list[SQLColumnExpression[object]]:

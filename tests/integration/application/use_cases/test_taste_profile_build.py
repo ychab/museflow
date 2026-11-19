@@ -60,10 +60,12 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         # 6 plays in 2 periods of 3: the replayed track seeds both periods, the never-played one none.
         replayed, early, late, _ = [await TrackModelFactory.create_async(user_id=user.id) for _ in range(4)]
+
         for track_db, day in [(replayed, 1), (replayed, 2), (early, 3)]:
             await TrackPlayModelFactory.create_async(
                 track_id=track_db.id, played_at=datetime(2020, 1, day, tzinfo=UTC)
             )
+
         for track_db, day in [(replayed, 1), (replayed, 2), (late, 3)]:
             await TrackPlayModelFactory.create_async(
                 track_id=track_db.id, played_at=datetime(2022, 1, day, tzinfo=UTC)

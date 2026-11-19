@@ -73,19 +73,24 @@ def llm_usage_command(
     show_runs = LLMUsageGroupBy.RUN not in group_by
     total = summary.total
     table = Table(title="LLM usage", show_footer=True)
+
     for index, grouping in enumerate(group_by):
         footer = ""
         if index == 0:
             footer = "Total" if show_runs else f"Total ({total.runs} runs)"
+
         table.add_column(grouping.value.capitalize(), footer=footer, overflow="fold")
+
     if show_runs:
         table.add_column("Runs", justify="right", footer=str(total.runs))
+
     table.add_column("Calls", justify="right", footer=str(total.calls))
     table.add_column("Prompt", justify="right", footer=f"{total.prompt_tokens:,}")
     table.add_column("Completion", justify="right", footer=f"{total.completion_tokens:,}")
     table.add_column("Reasoning", justify="right", footer=f"{total.reasoning_tokens:,}")
     table.add_column("Cost", justify="right", footer=f"${total.cost:.4f}")
     table.add_column("Time", justify="right", footer=format_duration(total.duration))
+
     for group in summary.groups:
         totals = group.totals
         table.add_row(
@@ -98,6 +103,7 @@ def llm_usage_command(
             f"${totals.cost:.4f}",
             format_duration(totals.duration),
         )
+
     console.print(table)
 
 

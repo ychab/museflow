@@ -62,6 +62,7 @@ class DiscoveryService:
             )
             for artist in artists
         ]
+
         try:
             results = await asyncio.gather(*searches)
         finally:
@@ -71,6 +72,7 @@ class DiscoveryService:
 
         artist_searches: list[ArtistSearch] = []
         fingerprints_seen = set(fingerprints_kept)
+
         for artist, tracks in zip(artists, results, strict=True):
             if tracks is None:
                 artist_searches.append(ArtistSearch(artist=artist, rejected=True))
@@ -80,6 +82,7 @@ class DiscoveryService:
             tracks_wanted = tracks_matched
             if artist in artists_deep:
                 tracks_wanted = [track for track in tracks_matched if not is_live_or_medley(track)]
+
             kept = keep_new_tracks(tracks=tracks_wanted, blacklist=blacklist, fingerprints_seen=fingerprints_seen)
             fingerprints_seen.update(track.fingerprint for track in kept)
             artist_searches.append(
@@ -161,6 +164,7 @@ class DiscoveryService:
     async def _drop_known_tracks(self, user: User, tracks: list[Track]) -> list[Track]:
         if not tracks:
             return []
+
         library_tracks: list[Track] = []
 
         async with self._uow as uow:
@@ -169,6 +173,7 @@ class DiscoveryService:
                 fingerprints=[track.fingerprint for track in tracks],
             )
             tracks_unknown: list[Track] = []
+
             for track in tracks:
                 if known_identifiers.is_known(track):
                     logger.debug(f"Excluded {str(track)!r}")

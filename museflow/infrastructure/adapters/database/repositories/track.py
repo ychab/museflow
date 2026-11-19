@@ -237,6 +237,7 @@ class TrackSQLRepository(TrackRepository):
 
         plays = TrackPlaySQLRepository.plays_summary(TrackModel)
         column = getattr(TrackModel, self._ENRICH_FIELD_TO_COLUMN[field])
+
         if tier is not None:
             # PostgreSQL arrays start at 1; past the end, the element is NULL
             tag = column[tier.position + 1]
@@ -349,6 +350,7 @@ class TrackSQLRepository(TrackRepository):
     async def bulk_update(self, tracks: list[Track], fields: frozenset[EnrichField]) -> None:
         if not tracks:
             return
+
         columns = {self._ENRICH_FIELD_TO_COLUMN[f] for f in fields}
 
         await self.session.execute(
@@ -454,10 +456,12 @@ class TrackSQLRepository(TrackRepository):
     @staticmethod
     def _rated_condition(score_min: int | None, score_max: int | None) -> ColumnElement[bool]:
         conditions: list[ColumnElement[bool]] = [TrackModel.score.is_not(None)]
+
         if score_min is not None:
             conditions.append(TrackModel.score >= score_min)
         if score_max is not None:
             conditions.append(TrackModel.score <= score_max)
+
         return and_(*conditions)
 
     @classmethod

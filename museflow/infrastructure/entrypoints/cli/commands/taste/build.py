@@ -169,14 +169,18 @@ def _print_profile(profile: TasteProfile) -> None:
     eras = data["taste_timeline"]
     # Text, not markup: an AI-written label may hold brackets
     lines: list[Text] = []
+
     if data["personality_archetype"]:
         lines.append(Text(data["personality_archetype"], style="bold cyan"))
+
     lines.append(
         Text(f"{profile.tracks_count} tracks · {len(eras)} eras · logic {profile.logic_version}", style="dim")
     )
+
     if eras:
         lines.append(Text())
         lines.extend(Text.assemble((f"{era['time_range']:<9}", "dim"), "  ", era["era_label"]) for era in eras)
+
     if data["life_phase_insights"]:
         lines.append(Text())
         lines.extend(Text(f"• {insight}") for insight in data["life_phase_insights"])

@@ -109,9 +109,11 @@ def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:
 
     def find(server: str) -> str:
         parent.setdefault(server, server)
+
         while parent[server] != server:
             parent[server] = parent[parent[server]]
             server = parent[server]
+
         return server
 
     def union(server_a: str, server_b: str) -> None:
@@ -123,10 +125,12 @@ def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:
         if marker := item.get_closest_marker("wiremock"):
             servers = sorted(set(marker.args))
             find(servers[0])  # registers a server only ever used alone
+
             for server in servers[1:]:
                 union(servers[0], server)
 
     components: dict[str, set[str]] = {}
+
     for server in parent:
         components.setdefault(find(server), set()).add(server)
 

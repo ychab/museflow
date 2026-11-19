@@ -169,8 +169,10 @@ class TestGetUnknownArtistTracks:
             nonlocal running, running_max
             running += 1
             running_max = max(running_max, running)
+
             for _turn in range(yields[artist]):
                 await asyncio.sleep(0)
+
             running -= 1
             return tracks[artist]
 

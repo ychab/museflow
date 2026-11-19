@@ -38,6 +38,7 @@ def provider_info_command(
     if token:
         if not show_tokens:
             token = replace(token, token_access=_mask(token.token_access), token_refresh=_mask(token.token_refresh))
+
         console.print(f"{provider.title()} Auth Token:")
         console.print(Pretty(asdict(token)), soft_wrap=True)
 

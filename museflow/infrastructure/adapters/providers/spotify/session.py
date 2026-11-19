@@ -146,6 +146,7 @@ class SpotifyOAuthSessionClient:
             # a reconnect) may replace the stored token at any time, so each write below holds only if the token is
             # still the one this session read (compare-and-swap); otherwise the newer token wins.
             stale_token = self.auth_token
+
             try:
                 token_payload = await self.oauth_client.refresh_access_token(stale_token.token_refresh)
             except SpotifyRefreshTokenInvalidError as e:
@@ -160,6 +161,7 @@ class SpotifyOAuthSessionClient:
                         if discarded
                         else await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
                     )
+
                 if auth_token is None:
                     logger.warning(
                         "Spotify refresh token invalid — user must reconnect",
@@ -187,6 +189,7 @@ class SpotifyOAuthSessionClient:
                         provider=MusicProvider.SPOTIFY,
                         auth_token_in=to_auth_token_create_input(token_payload),
                     )
+
             self.auth_token = auth_token
 
     def _should_skip_refresh(self, stale_access_token: str | None) -> bool:

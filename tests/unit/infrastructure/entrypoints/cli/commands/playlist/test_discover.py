@@ -34,6 +34,7 @@ class TestPlaylistDiscoverParserCommand:
     def mock_playlist_discover_logic(self) -> Iterable[mock.AsyncMock]:
         target_path = f"{TARGET_PATH}.playlist_discover_logic"
         strategy = DiscoveryArtistStrategyFactory.build()
+
         with mock.patch(target_path, autospec=True) as patched:
             patched.return_value = CreateDiscoveryPlaylistResult(playlist=None, strategy=strategy, tracks=[])
             yield patched

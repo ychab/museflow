@@ -83,6 +83,7 @@ class CreateExplorationPlaylistUseCase:
                 limit=config.liked_tracks_limit,
             )
             artist_stats = await uow.tracks.get_artist_stats(user_id=user.id)
+
         artists = self._draw_artists(artist_stats, blacklist, config)
 
         # What the advisor spent is saved whatever the outcome: a failed run was billed too.
@@ -97,6 +98,7 @@ class CreateExplorationPlaylistUseCase:
                 usages=self._advisor.usages,
                 playlist_id=playlist_id,
             )
+
         return result
 
     async def _explore(
@@ -154,10 +156,12 @@ class CreateExplorationPlaylistUseCase:
                 max_tracks_per_artist=config.max_tracks_per_artist,
                 playlist_limit=config.playlist_limit,
             )
+
             if candidates:
                 await self._progress.publish(
                     PicksMade(attempt=attempt, picks=tracks_picked_now, tracks=tracks, target=config.playlist_limit)
                 )
+
             logger.debug(
                 f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
                 f"(total: {len(tracks_picked)}, {len(tracks)} kept)",
@@ -214,8 +218,10 @@ class CreateExplorationPlaylistUseCase:
     def _group_liked_tracks(cls, liked_tracks: list[Track], artists: list[str]) -> dict[str, list[Track]]:
         """Returns the user's best-rated tracks crediting each artist, best first, for the artists with any."""
         liked_by_artist: dict[str, list[Track]] = {}
+
         for artist in artists:
             liked = filter_by_artist(artist=artist, tracks=liked_tracks, log_enabled=False)
             if liked:
                 liked_by_artist[artist] = liked[: cls._LIKED_TRACKS_PER_ARTIST]
+
         return liked_by_artist

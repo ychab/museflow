@@ -77,6 +77,7 @@ async def async_client(
         session_factory = request.getfixturevalue("unavailable_session_factory")
     else:
         session_factory = uow_session_factory
+
     wiring = Wiring(session_factory)
     app.dependency_overrides[get_wiring] = lambda: wiring
 

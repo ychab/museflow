@@ -61,6 +61,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
 
     async def bulk_create(self, plays: list[TrackPlay]) -> int:
         created = 0
+
         for chunk in itertools.batched(plays, self._CHUNK_SIZE, strict=False):
             stmt = (
                 pg_insert(TrackPlayModel)
@@ -69,6 +70,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 .returning(TrackPlayModel.id)
             )
             created += len((await self.session.execute(stmt)).all())
+
         return created
 
     async def count_played_tracks(self, user_id: uuid.UUID, min_score: int | None = None) -> int:
@@ -79,6 +81,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
         )
         if min_score is not None:
             stmt = stmt.where(TrackModel.score >= min_score)
+
         return (await self.session.execute(stmt)).scalar_one()
 
     async def get_periods(
@@ -101,6 +104,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
         )
         if min_score is not None:
             user_plays = user_plays.where(TrackModel.score >= min_score)
+
         plays = user_plays.cte("plays")
 
         # 2. Each period's first and last play and its number of plays.
@@ -154,6 +158,7 @@ class TrackPlaySQLRepository(TrackPlayRepository):
         )
 
         listening_periods: dict[int, ListeningPeriod] = {}
+
         for row in (await self.session.execute(stmt)).all():
             listening_period = listening_periods.setdefault(
                 row.period,
@@ -165,4 +170,5 @@ class TrackPlaySQLRepository(TrackPlayRepository):
                 played_at_last=row.played_at_last,
             )
             listening_period.tracks.append(PeriodTrack(track=track_entity, plays=row.plays))
+
         return list(listening_periods.values())

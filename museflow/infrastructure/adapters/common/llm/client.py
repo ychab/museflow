@@ -227,6 +227,7 @@ class OpenRouterClient(HttpClientMixin):
             provider=ProviderPreferences(zdr=self._zdr),
         )
         started_at = time.monotonic()
+
         try:
             response_data = await self.make_api_call(
                 method="POST",
@@ -277,6 +278,7 @@ class OpenRouterClient(HttpClientMixin):
     async def _check_zdr_endpoints(self, steps: Mapping[str, LLMSettings]) -> None:
         response_data = await self.make_api_call(method="GET", endpoint="/endpoints/zdr")
         zdr_parameters: dict[str, set[str]] = defaultdict(set)
+
         for endpoint in ZdrEndpointsResponse.model_validate(response_data).data:
             zdr_parameters[endpoint.model_id].update(endpoint.supported_parameters)
 
@@ -325,6 +327,7 @@ def _error_message(response: httpx.Response, error: ChatCompletionError | None) 
         # OpenRouter's own message is often generic ("Provider returned error"): the cause is in the provider's error
         message = error.message
         metadata = error.metadata
+
         if metadata is not None and metadata.raw is not None:
             raw = metadata.raw if isinstance(metadata.raw, str) else json.dumps(metadata.raw)
             message += f" ({metadata.provider_name or 'provider'}: {raw[:_RAW_ERROR_MAX_LENGTH]})"
@@ -332,4 +335,5 @@ def _error_message(response: httpx.Response, error: ChatCompletionError | None) 
     if response.status_code == codes.UNAUTHORIZED:
         # OpenRouter answers "Missing Authentication header" to an invalid key too
         message = f"{message.rstrip('.')}. Check OPENROUTER_API_KEY."
+
     return message

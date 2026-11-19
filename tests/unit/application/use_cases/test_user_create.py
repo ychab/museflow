@@ -27,4 +27,5 @@ class TestCreateUserUseCase:
 
         with pytest.raises(UserAlreadyExistsError) as exc_info:
             await create_user(user_create_data, mock_uow, mock_password_hasher)
+
         assert "Email already registered" in str(exc_info.value)

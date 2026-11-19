@@ -41,6 +41,7 @@ def build_ranking_table[S: RankableStats](
     table.add_column("Rated", justify="right")
     table.add_column("Tracks", justify="right")
     table.add_column("Played", justify="right")
+
     if sort == RankingSortBy.OVERALL:
         table.add_column("Overall", justify="center")
 
@@ -54,8 +55,10 @@ def build_ranking_table[S: RankableStats](
             str(ranking.stats.track_count),
             str(ranking.stats.plays_count),
         ]
+
         if sort == RankingSortBy.OVERALL:
             cells.append(f"{ranking.overall_score:.1f}")
+
         table.add_row(*cells)
 
     return table
@@ -71,8 +74,10 @@ def print_playlist_outcome(tracks: list[Track], playlist: Playlist | None, targe
     table.add_column("Artist(s)")
     table.add_column("Track")
     table.add_column("Album", style="dim")
+
     for i, track in enumerate(tracks, start=1):
         table.add_row(str(i), ", ".join(track.artists), track.name, track.album_name or "")
+
     console.print(table)
     console.print()
 
@@ -90,6 +95,7 @@ def print_playlist_outcome(tracks: list[Track], playlist: Playlist | None, targe
         )
         console.print(Text(f"  View it: museflow playlist view {playlist.id}", style="cyan"))
         console.print(Text("  Rate tracks: museflow rate playlist --play", style="cyan"))
+
     if len(tracks) < target:
         console.print(
             Text.assemble(("! ", "bold yellow"), (f"Only {len(tracks)}/{target} tracks found: ", "yellow"), hint)
@@ -104,6 +110,7 @@ def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
     usages = meter.usages
     if not usages:
         return
+
     # Its own block, after the results or the error
     console.print()
     if not verbose:
@@ -121,6 +128,7 @@ def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
     table.add_column("Reasoning", justify="right", footer=f"{sum(usage.reasoning_tokens for usage in usages):,}")
     table.add_column("Cost", justify="right", footer=f"${meter.total_cost:.4f}")
     table.add_column("Time", justify="right", footer=format_duration(sum((u.duration for u in usages), timedelta(0))))
+
     for usage in usages:
         table.add_row(
             usage.step,
@@ -133,6 +141,7 @@ def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
             f"${usage.cost:.4f}",
             format_duration(usage.duration),
         )
+
     console.print(table)
     # Wall-clock time: the LLM calls, plus the database work and the throttling sleeps
     console.print(f"Elapsed: {format_duration(meter.elapsed)}")

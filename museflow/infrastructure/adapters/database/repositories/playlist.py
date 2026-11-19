@@ -44,6 +44,7 @@ class PlaylistSQLRepository(PlaylistRepository):
             stmt = stmt.where(PlaylistModel.type == type)
         if provider is not None:
             stmt = stmt.where(PlaylistModel.provider == provider)
+
         result = await self.session.execute(stmt)
         return [row.to_entity() for row in result.scalars()]
 

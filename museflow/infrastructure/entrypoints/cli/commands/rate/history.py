@@ -113,6 +113,7 @@ async def rate_history_logic(
             provider_library = await stack.enter_async_context(
                 wiring.build_provider_library(provider, user=user, uow=uow)
             )
+
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         tracks = await use_case.find_history(limit=limit, artist=artist)

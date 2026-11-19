@@ -52,6 +52,7 @@ class BuildTasteProfileUseCase:
         """
         # Before any paid call: two builds of one profile would pay twice and overwrite each other's checkpoints.
         build_id = uuid.uuid4()
+
         async with self._uow as uow:
             claimed = await uow.taste_builds.claim(
                 user_id=user.id,
@@ -59,6 +60,7 @@ class BuildTasteProfileUseCase:
                 build_id=build_id,
                 lease_duration=config.lease_duration,
             )
+
         if not claimed:
             raise TasteProfileBuildInProgressError(
                 f"Another build of taste profile '{config.name}' is running: wait for it to end, or for its lease to "
@@ -76,6 +78,7 @@ class BuildTasteProfileUseCase:
                 profile_name=config.name,
             )
             await self._release_lease(user, config, build_id)
+
         return profile
 
     async def _build_profile(
@@ -87,6 +90,7 @@ class BuildTasteProfileUseCase:
         # Cut the listening history into periods holding the same number of plays, each seeded with the tracks most
         # played in it: a period is described by what was listened to then, a track replayed years later in each.
         min_score = 0 if config.rated_only else None
+
         async with self._uow as uow:
             played_tracks = await uow.track_plays.count_played_tracks(user_id=user.id, min_score=min_score)
             seeds = min(config.track_limit, played_tracks)
@@ -102,6 +106,7 @@ class BuildTasteProfileUseCase:
                 tracks_per_period=tracks_per_period,
                 min_score=min_score,
             )
+
         tracks_count = sum(len(period.tracks) for period in periods)
         logger.debug(
             f"Taste profile periods: {len(periods)} of up to {tracks_per_period} tracks ({tracks_count} seeds)"
@@ -120,6 +125,7 @@ class BuildTasteProfileUseCase:
                 logger.warning("No checkpoint found for this profile, starting from scratch")
 
         await self._progress.publish(StepStarted(step=ProgressStep.TASTE_PERIODS, total=len(periods)))
+
         if start_batch_index:
             await self._progress.publish(
                 StepResumed(step=ProgressStep.TASTE_PERIODS, done=start_batch_index, total=len(periods))
@@ -159,6 +165,7 @@ class BuildTasteProfileUseCase:
                         profile_data=current_profile,
                         batch_index=i,
                     )
+
                 await self._progress.publish(StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=i, total=len(periods)))
 
                 if config.throttling_sleep_seconds > 0 and i < len(periods):

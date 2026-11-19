@@ -54,11 +54,13 @@ async def create_history_playlist(
             order=[(TrackOrderBy(config.sort_by.value), SortOrder.DESC)],
             limit=config.limit,
         )
+
     if not tracks:
         raise PlaylistNoTracksError()
 
     if config.group_by_artists:
         groups: dict[str, list[Track]] = defaultdict(list)
+
         for track in tracks:
             groups[track.primary_artist].append(track)
 
@@ -84,6 +86,7 @@ async def create_history_playlist(
         type=PlaylistType.HISTORY,
         tracks=tracks,
     )
+
     async with uow:
         playlist = await uow.playlists.create(playlist)
 

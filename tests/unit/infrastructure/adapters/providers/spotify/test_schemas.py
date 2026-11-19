@@ -37,6 +37,7 @@ class TestSpotifyTrack:
                 is_local=False,
                 artists=[SpotifyTrackArtist(name="foo")],
             )
+
         assert "1 validation error for SpotifyTrack\nid" in str(exc_info.value)
         assert "String should have at most 512 characters" in str(exc_info.value)
 
@@ -49,6 +50,7 @@ class TestSpotifyTrack:
                 is_local=False,
                 artists=[SpotifyTrackArtist(name="foo")],
             )
+
         assert "1 validation error for SpotifyTrack\nname" in str(exc_info.value)
         assert "String should have at most 255 characters" in str(exc_info.value)
 
@@ -61,6 +63,7 @@ class TestSpotifyTrack:
                 is_local=True,
                 artists=[SpotifyTrackArtist(name="foo")],
             )
+
         assert exc_info.value.errors()[0]["type"] == LocalUnsupported
         assert "1 validation error for SpotifyTrack" in str(exc_info.value)
         assert "Unsupported local file" in str(exc_info.value)

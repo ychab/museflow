@@ -100,6 +100,7 @@ async def rate_playlist_logic(
             provider_library = await stack.enter_async_context(
                 wiring.build_provider_library(provider, user=user, uow=uow)
             )
+
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 
         if playlist_id is not None:

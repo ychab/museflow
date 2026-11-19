@@ -13,6 +13,7 @@ def rank_stats[S: RankableStats](
     limit: int,
 ) -> list[Ranking[S]]:
     rankings: list[Ranking[S]] = []
+
     for stats in all_stats:
         rate_avg = stats.rated_sum / stats.rated_count if stats.rated_count else None
         quality = compute_quality(rate_avg, stats.rated_count, global_mean, confidence)

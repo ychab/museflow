@@ -52,6 +52,7 @@ class LocalFileStorage(FileStoragePort):
         path = (user_root / relative).resolve()
         if not path.is_relative_to(user_root):  # a symbolic link pointing outside
             raise ValueError(f"Invalid storage key: {key!r}")
+
         return path
 
     @staticmethod
@@ -68,6 +69,8 @@ class LocalFileStorage(FileStoragePort):
     @classmethod
     def _delete_tree(cls, directory: Path) -> int:
         count = len(cls._files(directory))
+
         if directory.is_dir():
             shutil.rmtree(directory)
+
         return count

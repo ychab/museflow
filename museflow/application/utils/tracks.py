@@ -29,6 +29,7 @@ def match_fingerprints[EntryT: FingerprintEntry](
 
     matched: list[tuple[EntryT, Track]] = []
     not_found: list[EntryT] = []
+
     for entry in entries:
         track = fingerprint_to_track.get(entry.fingerprint)
         if track is None:

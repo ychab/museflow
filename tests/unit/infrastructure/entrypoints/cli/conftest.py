@@ -92,6 +92,7 @@ def mock_wiring(target_path: str, mock_uow: mock.AsyncMock) -> Iterable[mock.Mag
     """
     wiring = mock.MagicMock(spec=Wiring)
     wiring.build_unit_of_work.return_value = mock_uow
+
     with mock.patch(f"{target_path}.get_wiring", return_value=wiring):
         yield wiring
 

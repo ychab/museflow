@@ -21,6 +21,7 @@ class WireMockContext:
     ) -> None:
         for mapping_id in self._mapping_ids:
             httpx.delete(f"{self.admin_url}/mappings/{mapping_id}")
+
         self._mapping_ids.clear()
 
         # Reset scenario states only when this context used scenarios, so the next
@@ -56,9 +57,11 @@ class WireMockContext:
             body["request"]["queryParameters"] = {k: {"equalTo": str(v)} for k, v in query_params.items()}
         if json_body is not None:
             body["response"]["jsonBody"] = json_body
+
         if scenario_name:
             body["scenarioName"] = scenario_name
             self._has_scenarios = True
+
         if required_state:
             body["requiredScenarioState"] = required_state
         if new_state:
