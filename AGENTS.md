@@ -203,6 +203,16 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   only one class uses lives in that class (`_`-prefixed when private); module level is for one several members of the
   module share, one imported elsewhere, or one only a Pydantic model uses (in a model body, `Final` turns into a field
   or a private attribute).
+- **Blank lines** split a body into its steps, never inside one. A statement that exists only for its neighbour
+  belongs to its step:
+  - a block (`for`, `while`, `with`, `try`, an `if` chain, `match`) or a statement spanning several lines is a step,
+    with one blank line before and after; a variable only that block uses sticks to it;
+  - a guard (`if` without `else` ending with `raise`, `return`, `continue`, `break`) sticks to the statement it checks
+    or to the one it makes possible; checks of one kind in a row (validation, confirmation) form one step;
+  - a default that the next `if` overrides sticks to it; a result that the body accumulates (a list, a counter) is a
+    step of its own, set apart from the `return`;
+  - the closing log, or an `if ...: return` right above, sticks to the final `return`;
+  - a body of one or two statements stays compact; in tests, arrange / act / assert.
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
   repeating the types.
 
