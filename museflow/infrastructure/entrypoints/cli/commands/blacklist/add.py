@@ -8,7 +8,7 @@ from museflow.domain.entities.blacklist import BlacklistedArtist
 from museflow.domain.entities.blacklist import BlacklistedTrack
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
@@ -31,7 +31,7 @@ def blacklist_add_artist_command(
 
 
 async def blacklist_add_artist_logic(email: EmailStr, artist_names: list[str]) -> list[BlacklistedArtist]:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     use_case = AddToBlacklistUseCase(uow=uow)
@@ -59,7 +59,7 @@ def blacklist_add_track_command(
 
 
 async def blacklist_add_track_logic(email: EmailStr, name: str, artist_name: str) -> BlacklistedTrack:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

@@ -12,14 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from museflow import __version__
-from museflow.infrastructure.adapters.database.session import create_engine_from_settings
-from museflow.infrastructure.adapters.database.session import create_session_factory
 from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +32,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         handlers=app_settings.LOG_HANDLERS_API,
     )
 
-    # Created in the server's event loop, in the process that serves (never before a fork).
-    engine = create_engine_from_settings()
-    app.state.session_factory = create_session_factory(engine)
-    try:
+    # Opened in the server's event loop, in the process that serves (never before a fork).
+    async with Wiring.open() as wiring:
+        app.state.wiring = wiring
         yield
-    finally:
-        await engine.dispose()
 
 
 app = FastAPI(

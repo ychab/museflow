@@ -216,7 +216,7 @@ class TestLLMUsageCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository")
 class TestLLMUsageLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

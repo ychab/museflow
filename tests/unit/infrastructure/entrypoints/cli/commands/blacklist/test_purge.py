@@ -87,7 +87,7 @@ class TestBlacklistPurgeCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository", "mock_blacklist_repository")
 class TestBlacklistPurgeLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

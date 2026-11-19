@@ -7,11 +7,10 @@ from museflow.application.use_cases.user_create import create_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.infrastructure.entrypoints.cli.commands.users import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 from museflow.infrastructure.entrypoints.cli.parsers import parse_password
-from museflow.infrastructure.entrypoints.wiring import build_password_hasher
 
 
 @app.command("create", help="Create a new user account.")
@@ -39,10 +38,11 @@ def users_create_command(
 
 
 async def users_create_logic(email: EmailStr, password: str) -> User:
-    password_hasher = build_password_hasher()
+    wiring = get_wiring()
+    password_hasher = wiring.build_password_hasher()
 
     return await create_user(
         user_in=UserCreateInput(email=email, password=password),
-        uow=get_unit_of_work(),
+        uow=wiring.build_unit_of_work(),
         password_hasher=password_hasher,
     )

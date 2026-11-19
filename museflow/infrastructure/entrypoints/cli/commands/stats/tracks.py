@@ -12,7 +12,7 @@ from museflow.domain.enums import TrackSortBy
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
@@ -78,7 +78,7 @@ async def stats_tracks_logic(
     score_max: int | None,
     sort: TrackSortBy,
 ) -> list[Track]:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

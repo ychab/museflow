@@ -13,7 +13,7 @@ from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_email
@@ -108,7 +108,7 @@ async def llm_usage_logic(
     since: date | None,
     until: date | None,
 ) -> LLMUsageSummary:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user_id = None
     if email is not None:

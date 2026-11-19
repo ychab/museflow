@@ -18,10 +18,9 @@ from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import RateAnswer
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_track
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -91,14 +90,15 @@ async def rate_playlist_logic(
     provider: MusicProvider | None = None,
 ) -> RatePlaylistResult:
     async with AsyncExitStack() as stack:
-        uow = get_unit_of_work()
+        wiring = get_wiring()
+        uow = wiring.build_unit_of_work()
 
         user = await get_user(email=email, uow=uow)
 
         provider_library: ProviderLibraryPort | None = None
         if provider is not None:
             provider_library = await stack.enter_async_context(
-                build_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+                wiring.build_provider_library(provider, user=user, uow=uow)
             )
         use_case = RateTrackUseCase(user_id=user.id, provider=provider, uow=uow, provider_library=provider_library)
 

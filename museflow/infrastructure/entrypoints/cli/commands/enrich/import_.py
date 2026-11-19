@@ -12,7 +12,7 @@ from museflow.application.use_cases.track_enrichment_import import import_enrich
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
@@ -43,7 +43,7 @@ def enrich_import_command(
 async def enrich_import_logic(email: EmailStr, data: list[Any]) -> ImportEnrichmentResult:
     entries = TypeAdapter(list[EnrichmentEntryInput]).validate_python(data)
 
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     return await import_enrichment(user_id=user.id, entries=entries, uow=uow)

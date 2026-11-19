@@ -14,24 +14,25 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
-from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
+from museflow.infrastructure.entrypoints.api.dependencies import get_wiring
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 
-class TestGetSessionFactory:
-    def test__built_by_the_lifespan(self) -> None:
+class TestGetWiring:
+    def test__opened_by_the_lifespan(self) -> None:
         request = mock.Mock()
-        assert get_session_factory(request) is request.app.state.session_factory
+        assert get_wiring(request) is request.app.state.wiring
 
 
 class TestGetUnitOfWork:
     def test__new_instance_per_call(self) -> None:
         # FastAPI caches it per request only: two requests never share a unit of work.
-        session_factory = mock.Mock(spec=async_sessionmaker)
-        uow = get_unit_of_work(session_factory)
+        wiring = Wiring(mock.Mock(spec=async_sessionmaker))
+        uow = get_unit_of_work(wiring)
         assert isinstance(uow, SQLUnitOfWork)
-        assert get_unit_of_work(session_factory) is not uow
+        assert get_unit_of_work(wiring) is not uow
 
 
 class TestGetCurrentUser:

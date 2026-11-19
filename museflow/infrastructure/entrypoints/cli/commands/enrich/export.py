@@ -9,7 +9,7 @@ from museflow.application.use_cases.track_enrichment_export import export_enrich
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
@@ -37,7 +37,7 @@ def enrich_export_command(
 
 
 async def enrich_export_logic(email: EmailStr) -> list[dict[str, Any]]:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     tracks = await export_enrichment(user_id=user.id, uow=uow)

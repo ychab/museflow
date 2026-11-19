@@ -185,7 +185,7 @@ class TestPlaylistDeleteCommand:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work",
+    "mock_wiring",
     "mock_user_repository",
     "mock_playlist_repository",
     "mock_build_provider_library",
@@ -201,13 +201,18 @@ class TestPlaylistDeleteLogic:
         }
 
     @pytest.fixture
-    def mock_get_provider_libraries(self, provider_libraries: dict[str, mock.AsyncMock]) -> Iterable[mock.Mock]:
+    def mock_get_provider_libraries(
+        self,
+        mock_wiring: mock.MagicMock,
+        provider_libraries: dict[str, mock.AsyncMock],
+    ) -> mock.MagicMock:
         @asynccontextmanager
         async def _build_provider_library(provider: str, **_: object) -> AsyncGenerator[mock.AsyncMock]:
             yield provider_libraries[provider]
 
-        with mock.patch(f"{TARGET_PATH}.build_provider_library", side_effect=_build_provider_library) as patched:
-            yield patched
+        builder: mock.MagicMock = mock_wiring.build_provider_library
+        builder.side_effect = _build_provider_library
+        return builder
 
     async def test__user_not_found(self, mock_user_repository: mock.AsyncMock) -> None:
         mock_user_repository.get_by_email.return_value = None

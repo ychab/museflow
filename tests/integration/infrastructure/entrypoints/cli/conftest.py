@@ -6,21 +6,18 @@ from unittest.mock import patch
 
 from pydantic import HttpUrl
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.asyncio import async_sessionmaker
-
 import pytest
 from tenacity import stop_after_attempt
 
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 
 @pytest.fixture(scope="function", autouse=True)
-def patch_session_factory(uow_session_factory: async_sessionmaker[AsyncSession]) -> Iterator[None]:
-    """Points the CLI units of work at the test database, each block in a savepoint of the test transaction."""
-    target_path = "museflow.infrastructure.entrypoints.cli.dependencies.session_factory"
-    with patch(target_path, uow_session_factory):
+def patch_wiring(wiring: Wiring) -> Iterator[None]:
+    """Points the CLI wiring at the test database, each unit of work block in a savepoint of the test transaction."""
+    with patch("museflow.infrastructure.entrypoints.cli.dependencies.wiring", wiring):
         yield
 
 

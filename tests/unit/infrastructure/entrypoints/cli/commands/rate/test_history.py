@@ -199,7 +199,7 @@ class TestRateHistoryCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work")
+@pytest.mark.usefixtures("mock_wiring")
 class TestRateHistoryResetLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.rate.history"
 
@@ -217,7 +217,7 @@ class TestRateHistoryResetLogic:
 
 
 @pytest.mark.usefixtures(
-    "mock_get_unit_of_work",
+    "mock_wiring",
     "mock_user_repository",
     "mock_track_repository",
     "mock_blacklist_repository",

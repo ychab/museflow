@@ -11,7 +11,7 @@ from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
@@ -73,7 +73,7 @@ async def tracks_delete_logic(
     purge: bool = False,
     yes: bool = False,
 ) -> TracksDeleteResult:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

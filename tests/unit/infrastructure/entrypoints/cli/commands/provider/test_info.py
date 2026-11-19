@@ -163,7 +163,7 @@ class TestProviderInfoCommand:
         assert output == ""
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work")
+@pytest.mark.usefixtures("mock_wiring")
 class TestProviderInfoLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.provider.info"
 

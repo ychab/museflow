@@ -137,7 +137,7 @@ class TestLlmExportCommand:
         assert entry["cost"] == "0.0624"
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository")
 class TestLlmExportLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

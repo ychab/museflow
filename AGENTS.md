@@ -94,11 +94,14 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   validation and self-healing of the LLM adapters in `common/llm/`). A pure helper that adapts nothing (formatting a
   duration) goes in `infrastructure/utils/`, grouped by subject in a few modules, never one module per function: the
   entrypoints import it there without reaching into an adapter.
-- **Wiring:** `entrypoints/wiring.py` builds each adapter from the settings, in one place for every entrypoint, as an
-  async context manager when the adapter holds a client. Its functions are `build_*` (`build_provider_library`): a new
-  instance the caller owns, apart from a CRUD `create` and from the `get_*` of an entrypoint, which hands over the
-  instance of the running request or command (FastAPI `Depends`, `cli/dependencies.py`). An entrypoint passes what only
-  it holds, such as its units of work. The wiring imports no entrypoint nor framework (import-linter).
+- **Wiring:** the `Wiring` class (`entrypoints/wiring.py`) builds each adapter from the settings and the resources of
+  the process (the session factory), in one place for every entrypoint. Each entrypoint opens one per process with
+  `Wiring.open()`, which creates those resources in the running event loop and closes them on exit, then reaches it
+  through its own `get_wiring` (a FastAPI dependency, `cli/dependencies.py`). Its methods are `build_*`
+  (`wiring.build_provider_library(...)`): a new instance the caller owns, an async context manager when the adapter
+  holds a client, apart from a CRUD `create` and from the `get_*` that hand over what the entrypoint already holds.
+  A resource of the process (a pool, a client) goes in `open()` and the constructor, never in a `build_*` signature.
+  The wiring imports no entrypoint nor framework (import-linter).
 - **Models** (canonical: `database/models/track.py`):
   - A schema change never adds a migration while in development: follow `migrations/AGENTS.md`.
   - `MappedAsDataclass` + `Base`; `id`, `created_at`, `updated_at` come from mixins (`init=False`).
@@ -119,9 +122,10 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `run_logic()` (`cli/dependencies.py`) on a co-located
-    `<command>_logic` function (never a `_`-prefixed name): it runs the logic like `asyncio.run()`, with an engine
-    created for the run and disposed of at the end. A command that must print between two steps runs them in one
-    `init_logic_runner()` (`provider/connect.py`): the pooled connections are bound to its event loop.
+    `<command>_logic` function (never a `_`-prefixed name): it runs the logic like `asyncio.run()`, with the wiring
+    opened for the run and closed at the end. A command that must print between two steps runs them in one
+    `init_logic_runner()` (`provider/connect.py`): the pooled connections are bound to its event loop. The logic
+    builds what it needs from `get_wiring()`, held in a local `wiring` when it builds several things.
   - The callback is `<group>_<command>_command`, its logic `<group>_<command>_logic`, one
     `<group>_<command>_<step>_logic` per step when the command runs several (`provider_connect_start_logic`), with the
     CLI names (dashes become underscores). The group looks redundant inside its module, but a reader skimming a test

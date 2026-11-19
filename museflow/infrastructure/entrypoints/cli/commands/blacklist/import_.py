@@ -11,7 +11,7 @@ from museflow.application.use_cases.blacklist_import import import_blacklist
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
@@ -42,7 +42,7 @@ def blacklist_import_command(
 async def blacklist_import_logic(email: EmailStr, data: Any) -> ImportBlacklistResult:
     blacklist_in = BlacklistImportInput.model_validate(data)
 
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
     return await import_blacklist(user_id=user.id, blacklist_in=blacklist_in, uow=uow)

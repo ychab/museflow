@@ -6,7 +6,7 @@ from museflow.application.use_cases.blacklist_remove import RemoveFromBlacklistU
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
@@ -33,7 +33,7 @@ def blacklist_purge_command(
 
 
 async def blacklist_purge_logic(email: EmailStr) -> int:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

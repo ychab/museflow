@@ -13,7 +13,7 @@ from museflow.domain.types import ArtistRanking
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
@@ -83,7 +83,7 @@ async def stats_artists_logic(
     confidence: int,
     sort: RankingSortBy,
 ) -> list[ArtistRanking]:
-    uow = get_unit_of_work()
+    uow = get_wiring().build_unit_of_work()
 
     user = await get_user(email=email, uow=uow)
 

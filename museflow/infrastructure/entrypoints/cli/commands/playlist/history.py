@@ -23,13 +23,12 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
-from museflow.infrastructure.entrypoints.cli.dependencies import get_unit_of_work
+from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
-from museflow.infrastructure.entrypoints.wiring import build_provider_library
 
 console = Console()
 
@@ -209,14 +208,15 @@ async def playlist_history_logic(
         PlaylistNoTracksError: If no history tracks match the given filters.
     """
     async with AsyncExitStack() as stack:
-        uow = get_unit_of_work()
+        wiring = get_wiring()
+        uow = wiring.build_unit_of_work()
 
         user = await get_user(email=email, uow=uow)
 
         provider_library: ProviderLibraryPort | None = None
         if not config.dry_run:
             provider_library = await stack.enter_async_context(
-                build_provider_library(provider, user=user, uow=uow, token_uow=get_unit_of_work())
+                wiring.build_provider_library(provider, user=user, uow=uow)
             )
 
         return await create_history_playlist(

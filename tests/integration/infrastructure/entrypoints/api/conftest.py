@@ -18,8 +18,9 @@ from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
-from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
+from museflow.infrastructure.entrypoints.api.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.api.main import app
+from museflow.infrastructure.entrypoints.wiring import Wiring
 
 
 @pytest.fixture(name="mock_api_logger")
@@ -76,7 +77,8 @@ async def async_client(
         session_factory = request.getfixturevalue("unavailable_session_factory")
     else:
         session_factory = uow_session_factory
-    app.dependency_overrides[get_session_factory] = lambda: session_factory
+    wiring = Wiring(session_factory)
+    app.dependency_overrides[get_wiring] = lambda: wiring
 
     # Override Spotify client if fixture is used
     if "spotify_oauth" in request.fixturenames:

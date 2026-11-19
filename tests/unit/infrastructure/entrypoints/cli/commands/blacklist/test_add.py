@@ -80,7 +80,7 @@ class TestBlacklistAddArtistCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository", "mock_blacklist_repository")
 class TestBlacklistAddArtistLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 
@@ -168,7 +168,7 @@ class TestBlacklistAddTrackCommand:
         assert "Error: Boom" in clean_typer_text(result.stderr)
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_blacklist_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository", "mock_blacklist_repository")
 class TestBlacklistAddTrackLogic:
     TARGET_PATH: Final[str] = TARGET_PATH
 

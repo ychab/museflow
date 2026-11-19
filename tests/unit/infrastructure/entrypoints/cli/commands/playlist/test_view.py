@@ -109,7 +109,7 @@ class TestPlaylistViewCommand:
         assert "Error: Boom" in output
 
 
-@pytest.mark.usefixtures("mock_get_unit_of_work", "mock_user_repository", "mock_playlist_repository")
+@pytest.mark.usefixtures("mock_wiring", "mock_user_repository", "mock_playlist_repository")
 class TestPlaylistViewLogic:
     TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.playlist.view"
 
