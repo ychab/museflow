@@ -70,12 +70,14 @@ class TrackModelFactory(BaseModelFactory[TrackModel]):
         anchor, step = (played_at_last, -1) if played_at_first is None and played_at_last else (played_at_first, 1)
         anchor = anchor or datetime(2024, 1, 1, tzinfo=UTC)
         offset = 1
+
         while played_count is not None and len(played_at) < played_count:
             played_at.append(anchor + timedelta(seconds=step * offset))
             offset += 1
 
         for moment in played_at:
             await TrackPlayModelFactory.create_async(track_id=track.id, played_at=moment)
+
         return track
 
     @classmethod

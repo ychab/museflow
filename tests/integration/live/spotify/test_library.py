@@ -53,8 +53,10 @@ class TestSpotifyLibraryLive:
     @pytest.fixture
     def spotify_refresh_token(self, request: pytest.FixtureRequest) -> str:
         token = request.config.getoption("--spotify-refresh-token")
+
         if not token:
             pytest.skip("Skipping live Spotify tests (missing token)")
+
         return str(token)
 
     @pytest.fixture

@@ -50,6 +50,7 @@ def parse_locale(value: str) -> LocaleCode:
     locale = validate_locale(value)
     if locale is None:
         raise typer.BadParameter(f"Locale must be a 2-letter ISO 639-1 code, got '{value}'")
+
     return locale
 
 

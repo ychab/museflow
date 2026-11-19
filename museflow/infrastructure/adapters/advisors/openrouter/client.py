@@ -59,6 +59,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         covered_artists: dict[str, int] | None = None,
     ) -> DiscoveryArtistStrategy:
         exclusion_parts: list[str] = []
+
         if excluded_artists:
             formatted = "\n".join(f"- {artist}" for artist in excluded_artists)
             exclusion_parts.append(
@@ -66,6 +67,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "These artists have already been considered in this session. You MUST suggest DIFFERENT artists:\n"
                 f"{formatted}"
             )
+
         exclusion_parts.extend(self._library_exclusion_parts(covered_artists, blacklisted_artists, blacklisted_tracks))
 
         # With a request, the profile still leads, except on what the request settles: the sound it implies, and the
@@ -199,10 +201,12 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         prompt: str | None = None,
     ) -> list[TrackPicked]:
         headers: dict[str, str] = {}
+
         for artist in candidates:
             headers[artist] = f"#### {artist}"
             if liked := liked_tracks.get(artist):
                 headers[artist] += "\nLiked by the user: " + "; ".join(track.name for track in liked)
+
         candidates_block, candidates_by_id = self._candidates_block(candidates, headers)
 
         system_prompt = (
@@ -249,17 +253,21 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
             step=step,
         )
         tracks_mapped = to_tracks_picked(content, candidates_by_id)
+
         if len(tracks_mapped) < len(content.picks):
             logger.warning(
                 f"Picks dropped, not among the candidates or picked twice: {len(content.picks) - len(tracks_mapped)}",
                 extra={"returned": len(content.picks), "kept": len(tracks_mapped)},
             )
+
         tracks_picked = [tp for tp in tracks_mapped if tp.score >= self._PICK_SCORE_MIN]
+
         if len(tracks_picked) < len(tracks_mapped):
             logger.warning(
                 f"Picks dropped, scored below {self._PICK_SCORE_MIN}: {len(tracks_mapped) - len(tracks_picked)}",
                 extra={"returned": len(tracks_mapped), "kept": len(tracks_picked)},
             )
+
         return tracks_picked
 
     async def _complete[T: BaseModel](
@@ -311,6 +319,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         traits = data.get("behavioral_traits", {})
         openness = traits.get("openness", 0.5)
         adventurousness = traits.get("adventurousness", 0.5)
+
         if openness < 0.4 and adventurousness < 0.4:
             risk_calibration = (
                 "User prefers sonic comfort zones — stay close to established core identity. No genre leaps."
@@ -381,6 +390,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         blacklisted_tracks: list[str] | None,
     ) -> list[str]:
         parts: list[str] = []
+
         if covered_artists:
             formatted = "\n".join(f"- {artist} ({count} tracks)" for artist, count in covered_artists.items())
             parts.append(
@@ -390,6 +400,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "other artists, unless the user request asks for one of these artists' own tracks:\n"
                 f"{formatted}"
             )
+
         if blacklisted_artists:
             formatted = "\n".join(f"- {a}" for a in blacklisted_artists)
             parts.append(
@@ -397,6 +408,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "The user has permanently excluded these artists. Do NOT suggest any track by them:\n"
                 f"{formatted}"
             )
+
         if blacklisted_tracks:
             formatted = "\n".join(f"- {t}" for t in blacklisted_tracks)
             parts.append(
@@ -404,6 +416,7 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
                 "The user has permanently excluded these tracks:\n"
                 f"{formatted}"
             )
+
         return parts
 
     @staticmethod
@@ -415,15 +428,19 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
         # Short ids instead of titles: the reply can only point at a listed track, never write a new one.
         candidates_by_id: dict[str, Track] = {}
         artist_blocks: list[str] = []
+
         for artist, tracks in candidates.items():
             lines: list[str] = []
+
             for track in tracks:
                 track_id = str(len(candidates_by_id) + 1)
                 candidates_by_id[track_id] = track
                 album = track.album_name or "?"
                 year = track.album_year or "?"
                 lines.append(f"- {track_id} | {track.name} | {album} | {year}")
+
             artist_blocks.append(headers[artist] + "\n" + "\n".join(lines))
+
         block = "### CANDIDATES (id | title | album | album release year)\n" + "\n\n".join(artist_blocks) + "\n\n"
         return block, candidates_by_id
 
@@ -454,8 +471,10 @@ class OpenRouterAdvisorAdapter(OpenRouterAdapterMixin, AdvisorPort):
     @staticmethod
     def _user_message(prompt: str | None, focus: DiscoveryFocus | None, default: str) -> str:
         user_parts: list[str] = []
+
         if focus:
             user_parts.append(f"Apply the '{focus.value}' focus strategy.")
         if prompt:
             user_parts.append(f"User request: {prompt}")
+
         return " ".join(user_parts) or default

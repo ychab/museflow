@@ -39,4 +39,5 @@ class SpotifySearchArtistQuery(BaseModel):
         query = f'artist:"{self.artist.replace('"', '\\"')}"'
         if self.years is not None:
             query += f" year:{self.years[0]}-{self.years[1]}"
+
         return query

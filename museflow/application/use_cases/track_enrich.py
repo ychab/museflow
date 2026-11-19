@@ -66,6 +66,7 @@ class EnrichTracksUseCase:
         missing_fields = None if config.force else config.fields
 
         not_found_count = 0
+
         async with self._uow as uow:
             tracks = await uow.tracks.get_list(
                 user_id=user.id,
@@ -89,6 +90,7 @@ class EnrichTracksUseCase:
         tracks_done = 0  # sent to the enricher, failed batches included
 
         await self._progress.publish(StepStarted(step=ProgressStep.ENRICH_TRACKS, total=len(tracks)))
+
         for i, batch in enumerate(batches, start=1):
             try:
                 enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)
@@ -131,6 +133,7 @@ class EnrichTracksUseCase:
                         enriched_count,
                         reason=f"{consecutive_failures} batches failed in a row (last: {last_failure})",
                     )
+
                 continue
 
             consecutive_failures = 0
@@ -140,6 +143,7 @@ class EnrichTracksUseCase:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 
             enriched_count += len(enriched_tracks)
+
             # Left out by the model or with no usable answer: those tracks stay eligible for the next run
             if skipped := len(batch) - len(enriched_tracks):
                 logger.warning(
@@ -162,6 +166,7 @@ class EnrichTracksUseCase:
     ) -> list[Track]:
         enrichment_by_id = {e.track_id: e for e in enrichments}
         enriched_tracks = []
+
         for track in batch:
             if track.id not in enrichment_by_id:
                 continue
@@ -176,6 +181,7 @@ class EnrichTracksUseCase:
                     logger.warning(
                         f"Enrichment returned no genres for {str(track)!r}", extra={"track_id": str(track.id)}
                     )
+
             if EnrichField.MOOD in fields:
                 if enrichment.moods:
                     enriched = dataclasses.replace(enriched, moods=enrichment.moods)
@@ -183,6 +189,7 @@ class EnrichTracksUseCase:
                     logger.warning(
                         f"Enrichment returned no moods for {str(track)!r}", extra={"track_id": str(track.id)}
                     )
+
             # An empty locales list is an answer (no sung language); None means no usable answer.
             if EnrichField.LOCALE in fields and enrichment.locales is not None:
                 enriched = dataclasses.replace(enriched, locales=enrichment.locales)

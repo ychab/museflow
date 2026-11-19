@@ -98,4 +98,5 @@ async def tracks_delete_logic(
         deleted = await use_case.purge()
     else:
         deleted = await use_case.delete(track_ids=[track.id for track in tracks])
+
     return TracksDeleteResult(deleted_count=deleted)

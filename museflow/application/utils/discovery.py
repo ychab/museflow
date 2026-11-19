@@ -36,10 +36,12 @@ def rank_favourite_artists(all_stats: list[ArtistStats], confidence: int) -> lis
 
     rated: list[tuple[float, ArtistStats]] = []
     played: list[ArtistStats] = []
+
     for stats in all_stats:
         if stats.rated_count:
             rate_avg = stats.rated_sum / stats.rated_count
             quality = compute_quality(rate_avg, stats.rated_count, global_mean, confidence)
+
             if quality >= global_mean:
                 rated.append((quality, stats))
         elif stats.plays_count:
@@ -61,6 +63,7 @@ def filter_by_artist(artist: str, tracks: list[Track], log_enabled: bool = True)
         more = len(rejected) - _REJECTED_LOGGED_MAX
         listed = f"{rejected[:_REJECTED_LOGGED_MAX]} (+{more} more)" if more > 0 else f"{rejected}"
         logger.debug(f"Artist {artist!r}: rejected tracks of {listed}")
+
     return kept
 
 
@@ -123,8 +126,10 @@ def keep_new_tracks(tracks: list[Track], blacklist: UserBlacklist, fingerprints_
     for track in tracks:
         if track.fingerprint in fingerprints_seen | fingerprints_kept or _is_blacklisted(track, blacklist):
             continue
+
         fingerprints_kept.add(track.fingerprint)
         kept.append(track)
+
     return kept
 
 
@@ -136,17 +141,21 @@ def drop_tracks_known_by_credits(tracks: list[Track], library_tracks: list[Track
     # Accepted risk (#214): two different songs with one title and one artist in common (an "Intro" on two albums)
     # count as one, as the fingerprint already does when that artist is credited first.
     library_artists: dict[str, set[str]] = {}
+
     for library_track in library_tracks:
         title = get_fingerprint_title(library_track.fingerprint)
         library_artists.setdefault(title, set()).update(normalize_text(a) for a in library_track.artists)
 
     kept: list[Track] = []
+
     for track in tracks:
         artists = library_artists.get(get_fingerprint_title(track.fingerprint), set())
         if artists & {normalize_text(a) for a in track.artists}:
             logger.debug(f"Excluded {str(track)!r}: known under other credits")
             continue
+
         kept.append(track)
+
     return kept
 
 

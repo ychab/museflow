@@ -33,6 +33,7 @@ def init_logic_runner() -> Iterator[asyncio.Runner]:
     with asyncio.Runner() as runner:
         opened = Wiring.open()
         wiring = runner.run(opened.__aenter__())
+
         try:
             yield runner
         finally:

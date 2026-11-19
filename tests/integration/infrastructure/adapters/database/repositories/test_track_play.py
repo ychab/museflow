@@ -33,8 +33,10 @@ class TestTrackPlaySQLRepository:
             ("late", datetime(2022, 1, 3, tzinfo=UTC)),
             ("late", datetime(2022, 1, 4, tzinfo=UTC)),
         ]
+
         for name, played_at in plays:
             await TrackPlayModelFactory.create_async(track_id=tracks_db[name].id, played_at=played_at)
+
         # Another user's plays stay out
         other_user_db = await UserModelFactory.create_async()
         await TrackModelFactory.create_async(user_id=other_user_db.id, played_count=5)

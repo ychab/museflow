@@ -291,6 +291,7 @@ class TestTrackSQLRepository:
         # Play counts in another order than the creation, so each ordering gives a different list
         played_counts = [2, 5, 1]
         tracks: list[TrackModel] = []
+
         for played_count in played_counts:
             tracks.append(await TrackModelFactory.create_async(user_id=user.id, played_count=played_count))
             await asyncio.sleep(0.01)
@@ -299,6 +300,7 @@ class TestTrackSQLRepository:
             return played_counts[tracks.index(track)]
 
         key_func: Callable[[TrackModel], object]
+
         match order_by:
             case TrackOrderBy.CREATED_AT:
                 key_func = operator.attrgetter("created_at")
@@ -405,6 +407,7 @@ class TestTrackSQLRepository:
         ]:
             for _ in range(tracks_count):
                 await TrackModelFactory.create_async(user_id=user.id, artists=[artist, "A Featured Artist"])
+
         for _ in range(4):
             await TrackModelFactory.create_async(artists=["Lone Band"])  # Another user
 
@@ -498,6 +501,7 @@ class TestTrackSQLRepository:
             await TrackModelFactory.create_async(
                 user_id=user.id, locales=["fr"], score=score, source=TrackSource.HISTORY
             )
+
         await TrackModelFactory.create_async(user_id=user.id, locales=None, score=6, source=TrackSource.HISTORY)
         await TrackModelFactory.create_async(user_id=user.id, locales=["fr"], score=6, source=TrackSource.DISCOVERY)
 

@@ -136,6 +136,7 @@ class CreateDiscoveryPlaylistUseCase:
                 profile_name=profile.name,
                 playlist_id=playlist_id,
             )
+
         return result
 
     async def _discover(
@@ -226,10 +227,12 @@ class CreateDiscoveryPlaylistUseCase:
                 playlist_limit=config.playlist_limit,
                 uncapped_artists=artists_requested,
             )
+
             if candidates:
                 await self._progress.publish(
                     PicksMade(attempt=attempt, picks=tracks_picked_now, tracks=tracks, target=config.playlist_limit)
                 )
+
             logger.debug(
                 f"Attempt {attempt}/{config.max_attempts}: +{len(tracks_picked_now)} tracks "
                 f"(total: {len(tracks_picked)}, {len(tracks)} kept)",

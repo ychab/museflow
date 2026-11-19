@@ -26,6 +26,7 @@ class DeletePlaylistUseCase:
     async def find(self, playlist_id: uuid.UUID) -> Playlist:
         async with self._uow as uow:
             playlist = await uow.playlists.get(user_id=self._user_id, playlist_id=playlist_id)
+
         if playlist is None:
             raise PlaylistNotFoundError()
 
@@ -59,8 +60,10 @@ class DeletePlaylistUseCase:
         provider_libraries: Mapping[MusicProvider, ProviderLibraryPort],
     ) -> int:
         count = 0
+
         for playlist in playlists:
             provider_library = provider_libraries[playlist.provider]
+
             try:
                 await provider_library.delete_playlist(playlist.provider_id)
             except Exception:

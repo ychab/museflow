@@ -17,6 +17,7 @@ class TestUserCreateInput:
     def test__password__length(self, length: int, error_msg: str) -> None:
         with pytest.raises(ValidationError) as exc_info:
             UserCreateInput(email="foo@example.com", password="".join("a" for _ in range(0, length)))
+
         assert "1 validation error for UserCreateInput\npassword" in str(exc_info.value)
         assert error_msg in str(exc_info.value)
 
@@ -32,6 +33,7 @@ class TestUserUpdateInput:
     def test__password__length(self, length: int, error_msg: str) -> None:
         with pytest.raises(ValidationError) as exc_info:
             UserUpdateInput(email="foo@example.com", password="".join("a" for _ in range(0, length)))
+
         assert "1 validation error for UserUpdateInput\npassword" in str(exc_info.value)
         assert error_msg in str(exc_info.value)
 

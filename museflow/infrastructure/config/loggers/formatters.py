@@ -31,5 +31,6 @@ class JsonFormatter(logging.Formatter):
             line["extra"] = extra
         if record.exc_info:
             line["exception"] = self.formatException(record.exc_info)
+
         # str() for what JSON cannot hold (a UUID, a Decimal): a log line never fails on its data
         return json.dumps(line, ensure_ascii=False, default=str)

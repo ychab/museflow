@@ -35,8 +35,10 @@ def to_tracks_picked(content: DiscoveryPicksResponse, candidates: dict[str, Trac
         track = candidates.get(pick_id)
         if track is None or pick_id in seen:
             continue
+
         seen.add(pick_id)
         tracks_picked.append(TrackPicked(track=track, score=_clamp_score(pick.score)))
+
     return tracks_picked
 
 

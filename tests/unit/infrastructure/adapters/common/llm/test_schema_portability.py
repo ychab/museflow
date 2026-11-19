@@ -15,8 +15,10 @@ from museflow.infrastructure.adapters.profilers.openrouter.schemas import TASTE_
 def _walk(node: JsonSchemaProperty) -> Iterator[JsonSchemaProperty]:
     yield node
     children = [*(node.anyOf or []), *(node.properties or {}).values()]
+
     if node.items:
         children.append(node.items)
+
     for child in children:
         yield from _walk(child)
 

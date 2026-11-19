@@ -52,6 +52,7 @@ def stats_tags_command(
 ) -> None:
     if tier is not None and by != EnrichField.GENRE:
         raise typer.BadParameter("--tier only applies to --by genre")
+
     validate_score_range(score_min, score_max)
 
     try:

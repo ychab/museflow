@@ -53,8 +53,10 @@ class PlaylistModelFactory(BaseModelFactory[PlaylistModel]):
 
         if track_ids:
             session = cls.__async_session__
+
             for i, track_id in enumerate(track_ids):
                 session.add(PlaylistTrackModel(playlist_id=playlist.id, track_id=track_id, position=i))  # type: ignore[union-attr]
+
             await session.flush()  # type: ignore[union-attr]
 
         return playlist

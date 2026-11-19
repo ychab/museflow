@@ -98,6 +98,7 @@ async def get_current_user(
 
     async with uow:
         user = await uow.users.get_by_id(uuid.UUID(user_id))
+
     if user is None:
         logger.debug("No user associated to the token", extra={"user_id": str(user_id)})
         raise credentials_exception

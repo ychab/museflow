@@ -25,6 +25,7 @@ class TestMigrations:
     async def migration_db_url(self, test_db_name: str) -> AsyncGenerator[str]:
         db_name = f"{test_db_name}_migrations"
         admin_engine = create_async_engine(url=str(database_settings.URI), isolation_level="AUTOCOMMIT")
+
         async with admin_engine.connect() as conn:
             await conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
             await conn.execute(text(f"CREATE DATABASE {db_name}"))
@@ -33,6 +34,7 @@ class TestMigrations:
 
         async with admin_engine.connect() as conn:
             await conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+
         await admin_engine.dispose()
 
     async def test__upgrade_head__matches_models(self, migration_db_url: str) -> None:

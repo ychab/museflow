@@ -45,6 +45,7 @@ def merge_taste_profiles(
     """
     timeline = list(foundation["taste_timeline"])
     segment_eras = segment["taste_timeline"]
+
     if absorb and timeline and segment_eras:
         last_era = timeline[-1].copy()
         last_era["time_range"] = _span_time_range(last_era["time_range"], segment_eras[-1]["time_range"])

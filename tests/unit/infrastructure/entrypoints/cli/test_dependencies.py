@@ -15,6 +15,7 @@ class TestRunLogic:
     def mock_engine(self) -> Iterator[mock.AsyncMock]:
         engine = mock.AsyncMock(spec=AsyncEngine)
         target_path = "museflow.infrastructure.entrypoints.wiring.create_engine_from_settings"
+
         with mock.patch(target_path, return_value=engine):
             yield engine
 

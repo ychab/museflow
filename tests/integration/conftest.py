@@ -117,6 +117,7 @@ async def create_test_database(anyio_backend: str, test_db_name: str) -> AsyncGe
         url=str(database_settings.URI),
         isolation_level="AUTOCOMMIT",
     )
+
     # Then drop/create test database
     async with async_engine_admin.connect() as async_conn:
         await async_conn.execute(text(f"DROP DATABASE IF EXISTS {test_db_name}"))
@@ -127,6 +128,7 @@ async def create_test_database(anyio_backend: str, test_db_name: str) -> AsyncGe
     # Finally drop the test database
     async with async_engine_admin.connect() as async_conn:
         await async_conn.execute(text(f"DROP DATABASE IF EXISTS {test_db_name}"))
+
     await async_engine_admin.dispose()
 
 

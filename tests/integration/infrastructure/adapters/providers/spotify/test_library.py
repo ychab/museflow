@@ -112,6 +112,7 @@ class TestSpotifyLibrary:
             return {"tracks": {**search_page["tracks"], "items": tracks, "total": len(tracks)}}
 
         spotify_wiremock.create_mapping(method="GET", url_path="/search", status=200, json_body=EMPTY_SEARCH_PAGE)
+
         for years, tracks in [("1980-1989", items[:1]), ("2005-2009", items[2:4])]:
             spotify_wiremock.create_mapping(
                 method="GET",

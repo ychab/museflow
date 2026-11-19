@@ -146,12 +146,15 @@ class RichProgressAdapter(ProgressPort):
             # A blank line between two attempts: their steps and the logs printed meanwhile form one block
             if self._attempt is not None:
                 self._print_blank()
+
             self._attempt = event.attempt
             of = f"/{event.max_attempts}" if event.max_attempts is not None else ""
             self._print(Text(f"Attempt {event.attempt}{of}", style="bold"))
+
         if self._progress is not None:
             self._remove_task()
             self._task = self._progress.add_task(self._RUNNING_LABELS[event.step], total=event.total)
+
         self._started_at = time.monotonic()
         self._cost_before = self._spent()
         self._total = event.total
@@ -159,6 +162,7 @@ class RichProgressAdapter(ProgressPort):
     def _resume(self, event: StepResumed) -> None:
         if self._progress is not None and self._task is not None:
             self._progress.update(self._task, completed=event.done, total=event.total)
+
         _, unit = self._DONE_LABELS[event.step]
         self._print(
             self._line(
@@ -181,6 +185,7 @@ class RichProgressAdapter(ProgressPort):
     def _print_details(self, rows: list[Text]) -> None:
         if not self._verbose or not rows:
             return
+
         # Under the label of the step's line, then a blank line: a step and its details form one block
         self._print(Padding(Group(*rows), (0, 0, 0, 3), expand=False))
         self._print_blank()
@@ -201,6 +206,7 @@ class RichProgressAdapter(ProgressPort):
     def _search_rows(event: CandidatesFound) -> list[Text]:
         width = max((len(search.artist) for search in event.searches), default=0)
         rows: list[Text] = []
+
         for search in event.searches:
             name = f"{search.artist:<{width}}  "
             if search.rejected:
@@ -208,6 +214,7 @@ class RichProgressAdapter(ProgressPort):
             else:
                 counts = f"{search.found} found · {search.matched} by the artist · {len(search.tracks)} unknown"
                 rows.append(Text.assemble(name, (counts, "" if search.tracks else "dim")))
+
         return rows
 
     @staticmethod

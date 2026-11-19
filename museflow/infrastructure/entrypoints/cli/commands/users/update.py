@@ -22,6 +22,7 @@ def users_update_command(
 ) -> None:
     # Set only explicit values to update.
     attributes = {k: v for k, v in {"email": email, "password": password}.items() if v is not None}
+
     try:
         user_in = UserUpdateInput(**attributes)
     except ValidationError as e:

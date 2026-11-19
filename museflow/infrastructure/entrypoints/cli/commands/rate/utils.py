@@ -26,6 +26,7 @@ async def play_track(use_case: RateTrackUseCase, track: Track, provider: MusicPr
     except ProviderNoActiveDeviceError:
         typer.secho(f"No active {provider} device found.", fg=typer.colors.YELLOW)
         input("Start playback on your device and press Enter to retry...")
+
         try:
             await use_case.play(track)
         except ProviderNoActiveDeviceError:
@@ -38,6 +39,7 @@ async def play_track(use_case: RateTrackUseCase, track: Track, provider: MusicPr
 async def rate_track(use_case: RateTrackUseCase, track: Track, allow_permanent_skip: bool) -> RateAnswer:
     """Prompts until a valid answer, saves it, then offers the blacklist for a low score."""
     choices = "s=skip, u=permanently skip" if allow_permanent_skip else "s=skip"
+
     while True:
         raw = typer.prompt(f"  Rate ({DISCOVERY_TRACK_SCORE_MIN}-{DISCOVERY_TRACK_SCORE_MAX}, {choices})", default="s")
         answer = raw.strip().lower()

@@ -111,6 +111,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                 "redirect_uri": str(self.redirect_uri),
             },
         )
+
         if response.is_error:
             logger.error(
                 f"Spotify token exchange failed: HTTP {response.status_code}",
@@ -136,6 +137,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                 "refresh_token": refresh_token,
             },
         )
+
         if response.is_error:
             # Spotify returns 400 + {"error": "invalid_grant"} for revoked/expired refresh tokens.
             # This is an expected lifecycle event, not an infra failure — the caller handles it

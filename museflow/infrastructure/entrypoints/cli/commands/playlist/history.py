@@ -169,10 +169,12 @@ def playlist_history_command(
     track_table.add_column("Track")
     track_table.add_column("Played", justify="right")
     track_table.add_column("Score", justify="right")
+
     for i, track in enumerate(result.tracks, start=1):
         artists = ", ".join(track.artists)
         score_str = str(track.score) if track.score is not None else "-"
         track_table.add_row(str(i), artists, track.name, str(track.played_count), score_str)
+
     console.print(track_table)
 
     if result.playlist is None:

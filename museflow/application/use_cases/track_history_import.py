@@ -89,6 +89,7 @@ class ImportStreamingHistoryUseCase:
 
         for files_done, key in enumerate(keys, start=1):
             content = await self._file_storage.get(user_id=user.id, key=key)
+
             try:
                 entries, stats = await self._streaming_history.parse_file(
                     content=content,
@@ -102,6 +103,7 @@ class ImportStreamingHistoryUseCase:
                 if fp not in track_metadata:
                     track_metadata[fp] = entry
                     track_play_times[fp] = []
+
                 track_play_times[fp].append(entry.played_at)
 
             items_read += stats.items_read
@@ -147,6 +149,7 @@ class ImportStreamingHistoryUseCase:
                 )
                 for fp in chunk_fps
             ]
+
             # One block per chunk: an interrupted import keeps the chunks already saved, each with its plays.
             async with self._uow as uow:
                 track_ids, created = await uow.tracks.bulk_upsert(tracks=chunk_tracks, batch_size=config.batch_size)
@@ -157,6 +160,7 @@ class ImportStreamingHistoryUseCase:
                         for played_at in track_play_times[track.fingerprint]
                     ]
                 )
+
             tracks_created += created
             tracks_done = min(offset + config.batch_size, len(fingerprints))
             await self._progress.publish(

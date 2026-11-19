@@ -35,6 +35,7 @@ async def import_blacklist(
             if fingerprint in artist_fingerprints:
                 skipped_count += 1
                 continue
+
             await uow.blacklist.add_artist(user_id=user_id, artist_name=artist_in.artist_name)
             artist_fingerprints.add(fingerprint)
             imported_artists_count += 1
@@ -44,6 +45,7 @@ async def import_blacklist(
             if fingerprint in track_fingerprints:
                 skipped_count += 1
                 continue
+
             await uow.blacklist.add_track(user_id=user_id, name=track_in.name, artist_name=track_in.artist_name)
             track_fingerprints.add(fingerprint)
             imported_tracks_count += 1

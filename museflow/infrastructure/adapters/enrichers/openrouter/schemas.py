@@ -20,6 +20,7 @@ def build_enrichment_schema(fields: frozenset[EnrichField]) -> JsonSchemaPropert
         properties["genre_macro"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MACRO_TAGS])
         properties["genre_meso"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MESO_TAGS])
         properties["genre_micro"] = JsonSchemaProperty.enum_string([g.value for g in GENRE_MICRO_TAGS], nullable=True)
+
     if EnrichField.MOOD in fields:
         properties["moods"] = JsonSchemaProperty.array(
             items=JsonSchemaProperty.enum_string([m.value for m in MoodTag])

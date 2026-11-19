@@ -142,6 +142,7 @@ class TestLLMUsageSQLRepository:
             cost=Decimal("0.010000"),
             duration=timedelta(seconds=2),
         )
+
         for cost in ("0.020000", "0.030000"):
             await LLMUsageModelFactory.create_async(
                 user_id=user.id,
@@ -153,6 +154,7 @@ class TestLLMUsageSQLRepository:
                 cost=Decimal(cost),
                 duration=timedelta(seconds=3),
             )
+
         # Another user's spending stays out.
         await LLMUsageModelFactory.create_async(operation=LLMOperation.DISCOVER)
 
@@ -362,10 +364,12 @@ class TestLLMUsageSQLRepository:
     async def test__summarize__all_users__by_profile(self, llm_usage_repository: LLMUsageRepository) -> None:
         alice_db = await UserModelFactory.create_async(email="alice@example.com")
         bob_db = await UserModelFactory.create_async(email="bob@example.com")
+
         # Same profile name for both users: the email keeps them apart.
         for user_db, cost in ((alice_db, 3), (bob_db, 2)):
             profile_db = await TasteProfileModelFactory.create_async(user_id=user_db.id, name="evening")
             await LLMUsageModelFactory.create_async(user_id=user_db.id, profile_id=profile_db.id, cost=Decimal(cost))
+
         await LLMUsageModelFactory.create_async(user_id=bob_db.id, profile_id=None, cost=Decimal(1))
 
         summary = await llm_usage_repository.summarize(user_id=None, group_by=[LLMUsageGroupBy.PROFILE])
@@ -378,6 +382,7 @@ class TestLLMUsageSQLRepository:
 
     async def test__summarize__by_run__by_step(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         build_id = uuid.uuid4()
+
         # A build saves its rows together, one per step: they make one run, dated by its first row.
         for step, cost in (("profiler merge", 1), ("profiler segment", 2)):
             await LLMUsageModelFactory.create_async(
@@ -387,6 +392,7 @@ class TestLLMUsageSQLRepository:
                 created_at=datetime(2026, 11, 3, 10, 0, tzinfo=UTC),
                 cost=Decimal(cost),
             )
+
         # Older, and pricier: runs stay chronological.
         await LLMUsageModelFactory.create_async(
             user_id=user.id, step="enricher", created_at=datetime(2026, 11, 2, 9, 30, tzinfo=UTC), cost=Decimal(5)
