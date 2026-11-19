@@ -40,7 +40,8 @@ from museflow.infrastructure.config.settings.spotify import spotify_settings
 class Wiring:
     """Builds the adapters of one process, for every entrypoint, from the settings and the resources it holds.
 
-    Framework-free: an entrypoint opens one per process (`open`) and hands it to its own code, the CLI logic or the
+    The composition root of the process: it holds the process resources and builds the adapters (what other stacks
+    call a DI container). Framework-free: an entrypoint opens one per process (`open`) and hands it to its own code, the CLI logic or the
     FastAPI dependencies. Each `build_*` returns a new instance the caller owns: an async context manager when the
     adapter holds a client to close.
     """

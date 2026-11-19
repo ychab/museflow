@@ -95,7 +95,8 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   duration) goes in `infrastructure/utils/`, grouped by subject in a few modules, never one module per function: the
   entrypoints import it there without reaching into an adapter.
 - **Wiring:** the `Wiring` class (`entrypoints/wiring.py`) builds each adapter from the settings and the resources of
-  the process (the session factory), in one place for every entrypoint. Each entrypoint opens one per process with
+  the process (the session factory), in one place for every entrypoint. It is the composition root of the process:
+  it holds the process resources and builds the adapters (what other stacks call a DI container). Each entrypoint opens one per process with
   `Wiring.open()`, which creates those resources in the running event loop and closes them on exit, then reaches it
   through its own `get_wiring` (a FastAPI dependency, `cli/dependencies.py`). Its methods are `build_*`
   (`wiring.build_provider_library(...)`): a new instance the caller owns, an async context manager when the adapter
