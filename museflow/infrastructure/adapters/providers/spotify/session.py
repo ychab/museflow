@@ -179,6 +179,7 @@ class SpotifyOAuthSessionClient:
                     auth_token_in=to_auth_token_update_input(token_payload),
                     expected_token_access=stale_token.token_access,
                 )
+
                 if auth_token is None:
                     auth_token = await uow.auth_tokens.get(user_id=self.user.id, provider=MusicProvider.SPOTIFY)
                 if auth_token is None:

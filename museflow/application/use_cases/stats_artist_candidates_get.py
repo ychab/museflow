@@ -34,6 +34,6 @@ async def get_artist_candidates(
                 total_count=stats.track_count,
             )
         )
-
     rows.sort(key=lambda r: (-r.avg_score, r.artist))
+
     return rows[:limit]

@@ -49,7 +49,6 @@ def playlist_view_command(
     track_table.add_column("Artist(s)")
     track_table.add_column("Track")
     track_table.add_column("Score", justify="center")
-
     for i, track in enumerate(playlist.tracks, start=1):
         track_table.add_row(
             str(i),
@@ -58,7 +57,6 @@ def playlist_view_command(
             track.name,
             str(track.score) if track.score is not None else "—",
         )
-
     console.print(track_table)
 
 

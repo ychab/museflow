@@ -125,9 +125,11 @@ class DiscoveryService:
         playlist = await self._provider_library.create_playlist(name=name, type=type, tracks=tracks)
 
         discovery_tracks = [replace(track, source=TrackSource.DISCOVERY) for track in tracks]
+
         # One block: the discovery tracks and their local playlist are saved together, or not at all.
         async with self._uow as uow:
             track_ids, _ = await uow.tracks.bulk_upsert(discovery_tracks, batch_size=100)
+
             # The DB IDs are needed for the join table FK (an existing row keeps its own ID).
             tracks_with_ids = [replace(track, id=track_ids[track.fingerprint]) for track in discovery_tracks]
 
@@ -139,6 +141,7 @@ class DiscoveryService:
                 focus=focus,
                 tracks=tracks_with_ids,
             )
+
             return await uow.playlists.create(playlist)
 
     async def _search_artist_tracks(
@@ -172,6 +175,7 @@ class DiscoveryService:
                 user_id=user.id,
                 fingerprints=[track.fingerprint for track in tracks],
             )
+
             tracks_unknown: list[Track] = []
 
             for track in tracks:

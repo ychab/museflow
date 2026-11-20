@@ -21,6 +21,7 @@ async def import_llm_usage(
     # One block: the import is saved as a whole, or not at all.
     async with uow:
         profile_ids = {profile.name: profile.id for profile in await uow.taste_profiles.get_list(user_id=user_id)}
+
         records = [
             LLMUsageRecord(
                 user_id=user_id,
@@ -43,6 +44,7 @@ async def import_llm_usage(
             )
             for entry in entries
         ]
+
         # A run has one row per step and model: a row already there is skipped, so importing twice adds nothing.
         imported_count = await uow.llm_usage.bulk_create(records) if records else 0
 
