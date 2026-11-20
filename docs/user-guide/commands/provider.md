@@ -8,7 +8,7 @@ Connects a user account to a provider through OAuth. A browser window opens on t
 accepted, the provider sends the browser back to `http://127.0.0.1:<port>/cli/callback`
 (`MUSEFLOW_CLI_OAUTH_REDIRECT_PORT`, default `65535`). Nothing listens there, so the page does not load: paste its full
 URL, which holds the authorisation code, into the terminal. The code therefore never leaves the machine running the command, and the API server is not
-needed.
+needed. The flow, step by step: [OAuth flows](../../technical/oauth-flows.md#cli).
 
 ```bash
 museflow provider connect [--email <email>] [OPTIONS]

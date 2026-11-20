@@ -48,6 +48,7 @@ nav = [
     { "Data model" = "technical/data-model.md" },
     { "LLM pipeline" = "technical/llm-pipeline.md" },
     { "Logging & output" = "technical/logging.md" },
+    { "OAuth flows" = "technical/oauth-flows.md" },
     { "Privacy & data" = "technical/privacy-and-data.md" },
     { "Quality & testing" = "technical/quality.md" },
     { "AI-assisted development" = "technical/ai-assisted-development.md" },
@@ -55,8 +56,8 @@ nav = [
   ] },
 ]
 
-# extra_css = ["stylesheets/extra.css"]
-# extra_javascript = ["javascripts/extra.js"]
+extra_css = ["stylesheets/sequence.css"]
+extra_javascript = ["javascripts/sequence.js"]
 
 [project.theme]
 # variant = "classic"
