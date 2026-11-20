@@ -26,6 +26,9 @@ class AppSettings(BaseSettings):
     DEBUG: bool = False
 
     CLI_DEFAULT_EMAIL: EmailStr | None = None
+    # Port of the redirect URI of `provider connect`, see `cli_oauth_redirect_uri`: one where nothing listens, so that
+    # the page doesn't load and no service (the API on 8000) receives the code.
+    CLI_OAUTH_REDIRECT_PORT: int = Field(default=65535, ge=1, le=65535)
 
     LOCALE: str = Field(default="en-US", pattern=r"^[a-z]{2}-[A-Z]{2}$")
 
@@ -108,6 +111,16 @@ class AppSettings(BaseSettings):
         # An empty MUSEFLOW_CLI_DEFAULT_EMAIL= reads as "not set", not as an invalid email. Not env_ignore_empty: an
         # empty variable would no longer override .env, and an empty value could no longer be set on purpose.
         return value or None
+
+    @property
+    def cli_oauth_redirect_uri(self) -> HttpUrl:
+        """Where the provider sends the browser back after the consent of `provider connect`, registered with each
+        provider.
+
+        On the loopback address, so the code never leaves the machine running the command; nothing listens there: the
+        user pastes the URL of that page into the terminal.
+        """
+        return HttpUrl(f"http://127.0.0.1:{self.CLI_OAUTH_REDIRECT_PORT}/cli/callback")
 
 
 app_settings = AppSettings()

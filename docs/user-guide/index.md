@@ -8,8 +8,8 @@ This page walks through the path from an empty install to a first playlist. Ever
 - MuseFlow installed and configured as described in the
   [README installation section](https://github.com/ychab/museflow#installation) (database, Spotify
   application credentials, settings).
-- The API server running (`make run` or `make up`) when connecting a Spotify account: the OAuth callback is
-  received by the API, and the CLI waits for it.
+- The CLI's redirect URI registered in the Spotify application, when connecting a Spotify account: see
+  [`provider connect`](commands/provider.md#provider-connect).
 - An OpenRouter API key configured, for the steps that call an LLM (`enrich tracks`, `taste build`,
   `playlist discover`).
 - Your Spotify **Extended streaming history**, see [Spotify data export](spotify-data-export.md).
@@ -54,8 +54,8 @@ The password is prompted for (hidden, with confirmation). See [`users`](commands
 museflow provider connect
 ```
 
-A browser window opens on the Spotify consent page; the command waits until the callback has been processed
-by the API server. See [`provider`](commands/provider.md).
+A browser window opens on the Spotify consent page; once accepted, paste the URL the browser lands on (the page
+does not load) into the terminal. See [`provider`](commands/provider.md).
 
 ### 3. Import the streaming history
 
