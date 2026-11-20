@@ -48,6 +48,7 @@ nav = [
     { "Data model" = "technical/data-model.md" },
     { "LLM pipeline" = "technical/llm-pipeline.md" },
     { "Logging & output" = "technical/logging.md" },
+    { "API authentication" = "technical/api-authentication.md" },
     { "OAuth flows" = "technical/oauth-flows.md" },
     { "Privacy & data" = "technical/privacy-and-data.md" },
     { "Quality & testing" = "technical/quality.md" },

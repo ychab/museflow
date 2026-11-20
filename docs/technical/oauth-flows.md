@@ -101,7 +101,7 @@ redirect URI is listed in `SPOTIFY_REDIRECT_URIS` and registered in the Spotify 
 </div>
 
 The API stores no Bearer token: the client keeps its own JWT and sends it with each request, and the API reads the user
-from its signed `sub`. The redirect to Spotify reloads the page, so a web client keeps the JWT in a storage that
+from its signed `sub` (see [API authentication](api-authentication.md)). The redirect to Spotify reloads the page, so a web client keeps the JWT in a storage that
 survives it (`sessionStorage`, for instance) to send it again to `connect/complete`.
 
 ## Mobile client
