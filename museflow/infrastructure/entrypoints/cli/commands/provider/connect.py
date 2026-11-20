@@ -1,20 +1,22 @@
-import asyncio
-import time
 import uuid
 from dataclasses import dataclass
+from urllib.parse import parse_qs
+from urllib.parse import urlsplit
 
 from pydantic import EmailStr
 
 import typer
-from rich import get_console
 
+from museflow.application.use_cases.provider_oauth_code_exchange import exchange_oauth_code
 from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
-from museflow.application.use_cases.provider_oauth_state_discard import discard_oauth_state
-from museflow.application.use_cases.provider_token_get import get_provider_token
+from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.application.use_cases.user_get import get_user
-from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ProviderExchangeCodeError
+from museflow.domain.exceptions import ProviderOAuthAuthorizationError
+from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import init_logic_runner
@@ -25,7 +27,6 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 class ConnectStart:
     user_id: uuid.UUID
     provider: MusicProvider
-    previous_token: OAuthProviderUserToken | None
     authorization_url: str
 
 
@@ -33,14 +34,12 @@ class ConnectStart:
 def provider_connect_command(
     email: str = EMAIL_OPTION,
     provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider to connect"),
-    timeout: float = typer.Option(60.0, help="Seconds to wait for authentication.", min=10),
-    poll_interval: float = typer.Option(2.0, help="Seconds between status checks.", min=0.5),
 ) -> None:
     """
     Initiates the provider's OAuth flow for a specific user.
 
-    Important: the app must be run and being able to receive the provider's callback
-    define with the provider's redirect URI setting (e.g. SPOTIFY_REDIRECT_URI).
+    The provider sends the browser back to a loopback address where nothing listens: the user pastes the URL of that
+    page, so the code never leaves the machine running the command.
     """
     try:
         # One event loop for both steps: the pooled database connections are bound to it.
@@ -50,13 +49,26 @@ def provider_connect_command(
             typer.echo(f"Opening browser for authentication: {start.authorization_url}")
             typer.launch(start.authorization_url)
 
-            with get_console().status("Waiting for authentication completion..."):
-                runner.run(provider_connect_wait_logic(start, timeout, poll_interval))
+            redirect_url = typer.prompt(
+                f"Once you have accepted, the browser lands on {app_settings.cli_oauth_redirect_uri}, which does not "
+                "load: paste the full URL of that page"
+            )
+            runner.run(provider_connect_complete_logic(start, redirect_url))
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except TimeoutError as e:
+    except ProviderOAuthStateInvalidError as e:
         typer.secho(
-            f"Unable to connect after {timeout} seconds. Did you open your browser and accept?",
+            "The URL holds an unknown or expired state: run the command again.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1) from e
+    except ProviderOAuthAuthorizationError as e:
+        typer.secho(f"The provider refused the authorisation: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from e
+    except ProviderExchangeCodeError as e:
+        typer.secho(
+            f"Unable to exchange the authorisation code with the provider: {e.__cause__}",
             fg=typer.colors.RED,
             err=True,
         )
@@ -65,7 +77,7 @@ def provider_connect_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    typer.secho("Authentication successful! \u2705", fg=typer.colors.GREEN)
+    typer.secho("Authentication successful! ✅", fg=typer.colors.GREEN)
 
 
 async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider) -> ConnectStart:
@@ -73,9 +85,7 @@ async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider)
     uow = wiring.build_unit_of_work()
     user = await get_user(email=email, uow=uow)
 
-    previous_token = await get_provider_token(user_id=user.id, provider=provider, uow=uow)
-
-    async with wiring.build_provider_oauth(provider) as provider_oauth:
+    async with wiring.build_provider_oauth(provider, app_settings.cli_oauth_redirect_uri) as provider_oauth:
         authorization_url = await build_oauth_redirect_url(
             user=user,
             uow=uow,
@@ -84,26 +94,35 @@ async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider)
             state_token_generator=wiring.build_state_token_generator(),
         )
 
-    return ConnectStart(
-        user_id=user.id,
-        provider=provider,
-        previous_token=previous_token,
-        authorization_url=authorization_url,
-    )
+    return ConnectStart(user_id=user.id, provider=provider, authorization_url=authorization_url)
 
 
-async def provider_connect_wait_logic(start: ConnectStart, timeout: float, poll_interval: float) -> None:
-    uow = get_wiring().build_unit_of_work()
-    start_time = time.time()
+async def provider_connect_complete_logic(start: ConnectStart, redirect_url: str) -> None:
+    redirect_uri = app_settings.cli_oauth_redirect_uri
+    url = urlsplit(redirect_url.strip())
 
-    while time.time() - start_time < timeout:
-        await asyncio.sleep(poll_interval)
+    # Checked before the state is consumed: a wrong paste (the authorisation URL, which holds the state too) must not
+    # spend it.
+    if f"{url.scheme}://{url.netloc}{url.path}" != str(redirect_uri):
+        raise ValueError(f"Not the URL of the redirect: it starts with {redirect_uri}")
 
-        # Only a new token proves success: the API callback consumes the state even when the flow then fails.
-        token = await get_provider_token(user_id=start.user_id, provider=start.provider, uow=uow)
-        if token != start.previous_token:
-            return
+    params = {key: values[0] for key, values in parse_qs(url.query).items()}
+    wiring = get_wiring()
+    uow = wiring.build_unit_of_work()
 
-    # The command gives up: a late consent must not link the account behind its back.
-    await discard_oauth_state(user_id=start.user_id, provider=start.provider, uow=uow)
-    raise TimeoutError()
+    # Single use, even when the consent was refused: a new flow needs a new command.
+    user = await consume_oauth_state(state=params.get("state", ""), provider=start.provider, uow=uow)
+
+    if user.id != start.user_id:
+        raise ProviderOAuthStateInvalidError()
+    if "error" in params or "code" not in params:
+        raise ProviderOAuthAuthorizationError(params.get("error", "no authorisation code received"))
+
+    async with wiring.build_provider_oauth(start.provider, redirect_uri) as provider_oauth:
+        await exchange_oauth_code(
+            code=params["code"],
+            user=user,
+            provider=start.provider,
+            uow=uow,
+            provider_oauth=provider_oauth,
+        )

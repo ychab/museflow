@@ -279,6 +279,8 @@ env = [
     'MUSEFLOW_LOG_HANDLERS_CLI=["null"]',
     # A CLI_DEFAULT_EMAIL from a local .env must not change the CLI tests
     'MUSEFLOW_CLI_DEFAULT_EMAIL=',
+    # The CLI's redirect URI the tests expect, whatever a local .env says
+    'MUSEFLOW_CLI_OAUTH_REDIRECT_PORT=65535',
     # Database required settings (could be overriden)
     'D:DATABASE_HOST=127.0.0.1',
     'D:DATABASE_PORT=5432',

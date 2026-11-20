@@ -4,8 +4,11 @@ Link a user to a music provider account and inspect the link. Spotify is the onl
 
 ## `provider connect`
 
-Connects a user account to a provider through OAuth. A browser window opens on the provider's consent page; the
-command then polls until the authorisation has been completed.
+Connects a user account to a provider through OAuth. A browser window opens on the provider's consent page; once
+accepted, the provider sends the browser back to `http://127.0.0.1:<port>/cli/callback`
+(`MUSEFLOW_CLI_OAUTH_REDIRECT_PORT`, default `65535`). Nothing listens there, so the page does not load: paste its full
+URL, which holds the authorisation code, into the terminal. The code therefore never leaves the machine running the command, and the API server is not
+needed.
 
 ```bash
 museflow provider connect [--email <email>] [OPTIONS]
@@ -15,27 +18,24 @@ museflow provider connect [--email <email>] [OPTIONS]
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--provider` | `spotify` | The music provider to connect. |
-| `--timeout` | `60.0` | Seconds to wait for authentication (minimum 10). |
-| `--poll-interval` | `2.0` | Seconds between status checks (minimum 0.5). |
 
 **Prerequisites**
 
 - The user exists ([`users create`](users.md#users-create)).
-- The API server is running and reachable at the provider's redirect URI (the `SPOTIFY_REDIRECT_URI`
-  setting for Spotify). It receives the provider's callback.
+- `http://127.0.0.1:65535/cli/callback` (with your port, if you changed it) is registered as a redirect URI of the
+  provider's application (the Spotify Developer Dashboard).
 
 **Example**
 
 ```bash
-museflow provider connect --timeout 120
+museflow provider connect --email user@example.com
 ```
 
-**Output.** The authorisation URL is printed and opened in the browser, then a spinner shows while waiting,
-and finally `Authentication successful!` once a new token is stored. Otherwise the command times out with an error
-asking whether the browser was opened and the consent accepted: a refused consent or a failed code exchange ends there
-too, and the browser page shows the API's error. If the browser cannot be opened automatically, copy the printed URL.
-A timeout cancels the flow: accepting the consent afterwards fails, so run the command again. The flow also expires
-after 10 minutes, whatever `--timeout` says.
+**Output.** The authorisation URL is printed and opened in the browser (if it cannot be opened automatically, copy
+it), then the command asks for the URL the browser lands on, and prints `Authentication successful!` once the token is
+stored. A URL that is not the redirect's (the authorisation URL, for instance) stops the command without spending the
+flow. A refused consent, an expired flow or a failed code exchange ends the command with an error: run it again. The
+flow expires after 10 minutes.
 
 !!! note
     A connected account is needed by the commands that talk to the provider: [`playlist discover`](playlist.md#playlist-discover),

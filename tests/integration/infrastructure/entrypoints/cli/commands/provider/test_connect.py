@@ -1,125 +1,52 @@
-import asyncio
-from collections.abc import Callable
-
-from sqlalchemy import delete
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Iterable
+from typing import Final
+from unittest import mock
+from urllib.parse import parse_qs
+from urllib.parse import urlsplit
 
 import pytest
 
-from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
-from museflow.domain.entities.auth import OAuthProviderUserToken
+from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
-from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
+from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_complete_logic
 from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_start_logic
-from museflow.infrastructure.entrypoints.cli.commands.provider.connect import provider_connect_wait_logic
+
+TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.provider.connect"
 
 
 class TestProviderConnectLogic:
     @pytest.fixture
-    def simulate_oauth_callback(
-        self,
-        user: User,
-        auth_token_create: OAuthProviderUserTokenCreateInput,
-        async_session_db: AsyncSession,
-    ) -> Callable[[float], asyncio.Task[None]]:
-        """
-        Helper to simulate the external OAuth callback in the background.
-        Yeah, I had to confess for this one: thank Gemini pro!
-        """
-
-        def _trigger(delay: float = 0.2) -> asyncio.Task[None]:
-            async def _background_update() -> None:
-                # Wait for the CLI to start polling
-                await asyncio.sleep(delay)
-
-                # Delete user auth state.
-                stmt_delete = delete(AuthProviderStateModel).where(
-                    AuthProviderStateModel.user_id == user.id,
-                    AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
-                )
-                await async_session_db.execute(stmt_delete)
-
-                # Then save the token, replacing the previous one on a reconnection.
-                token_values = {
-                    "token_type": auth_token_create.token_type,
-                    "token_access": auth_token_create.token_access,
-                    "token_refresh": auth_token_create.token_refresh,
-                    "token_expires_at": auth_token_create.token_expires_at,
-                }
-                stmt_upsert = (
-                    pg_insert(AuthProviderTokenModel)
-                    .values(user_id=user.id, provider=MusicProvider.SPOTIFY, **token_values)
-                    .on_conflict_do_update(constraint="uq_user_provider_auth_token", set_=token_values)
-                )
-                await async_session_db.execute(stmt_upsert)
-
-                # Flush to make this change visible to the CLI's query
-                await async_session_db.flush()
-
-            return asyncio.create_task(_background_update())
-
-        return _trigger
+    def mock_exchange_oauth_code(self) -> Iterable[mock.AsyncMock]:
+        with mock.patch(f"{TARGET_PATH}.exchange_oauth_code", new_callable=mock.AsyncMock) as patched:
+            yield patched
 
     async def test__nominal(
         self,
         user: User,
-        auth_token_create: OAuthProviderUserTokenCreateInput,
-        simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
-        async_session_db: AsyncSession,
+        auth_state_repository: OAuthProviderStateRepository,
+        mock_exchange_oauth_code: mock.AsyncMock,
     ) -> None:
         start = await provider_connect_start_logic(user.email, MusicProvider.SPOTIFY)
-        assert start.previous_token is None
 
-        # Start the "callback" simulator in the background
-        task = simulate_oauth_callback(0.2)
+        auth_state = await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
+        assert auth_state is not None
 
-        await provider_connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
-        # Ensure the background task completed without error
-        await task
+        # The provider sends the browser back to the loopback address, not to the API.
+        query = parse_qs(urlsplit(start.authorization_url).query)
+        assert query["redirect_uri"] == [str(app_settings.cli_oauth_redirect_uri)]
+        assert query["state"] == [auth_state.state]
 
-        stmt_state = select(AuthProviderStateModel).where(
-            AuthProviderStateModel.user_id == user.id,
-            AuthProviderStateModel.provider == MusicProvider.SPOTIFY,
+        # The URL the user pastes, with the spaces of a sloppy copy.
+        redirect_url = f" {app_settings.cli_oauth_redirect_uri}?code=my_secret_code&state={auth_state.state}\n"
+        await provider_connect_complete_logic(start, redirect_url)
+
+        assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None
+        mock_exchange_oauth_code.assert_awaited_once_with(
+            code="my_secret_code",
+            user=user,
+            provider=MusicProvider.SPOTIFY,
+            uow=mock.ANY,
+            provider_oauth=mock.ANY,
         )
-        result_state = await async_session_db.execute(stmt_state)
-        auth_state_db = result_state.scalar_one_or_none()
-        assert auth_state_db is None
-
-        stmt_token = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
-        )
-        result_token = await async_session_db.execute(stmt_token)
-        auth_token_db = result_token.scalar_one_or_none()
-        assert auth_token_db is not None
-        assert auth_token_db.token_type == auth_token_create.token_type
-        assert auth_token_db.token_access == auth_token_create.token_access
-        assert auth_token_db.token_refresh == auth_token_create.token_refresh
-        assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
-
-    async def test__reconnect__token_renewed(
-        self,
-        user: User,
-        auth_token: OAuthProviderUserToken,
-        auth_token_create: OAuthProviderUserTokenCreateInput,
-        simulate_oauth_callback: Callable[[float], asyncio.Task[None]],
-        async_session_db: AsyncSession,
-    ) -> None:
-        start = await provider_connect_start_logic(user.email, MusicProvider.SPOTIFY)
-        assert start.previous_token == auth_token
-
-        task = simulate_oauth_callback(0.2)
-
-        # Returns once the stored token differs from the previous one, without waiting for the timeout.
-        await provider_connect_wait_logic(start, timeout=2.0, poll_interval=0.1)
-        await task
-
-        stmt_token = select(AuthProviderTokenModel.token_access).where(
-            AuthProviderTokenModel.user_id == user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
-        )
-        assert (await async_session_db.execute(stmt_token)).scalar_one() == auth_token_create.token_access

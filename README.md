@@ -105,13 +105,15 @@ Before running the application, you need to configure the environment variables 
 
 2.  **Spotify App Configuration:**
 
-    You must add the redirect URI to your Spotify App settings in the Developer Dashboard.
+    You must add the redirect URIs to your Spotify App settings in the Developer Dashboard.
 
     *   Go to your app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
     *   Click on "Edit Settings".
-    *   Under "Redirect URIs", add the callback URL.
-    *   By default, the application uses: `http://127.0.0.1:8000/api/v1/spotify/callback`
-    *   Ensure this matches the `SPOTIFY_REDIRECT_URI` in your `.envrc` (default: `http://127.0.0.1:8000/api/v1/spotify/callback`).
+    *   Under "Redirect URIs", add the callback URLs:
+        *   `http://127.0.0.1:65535/cli/callback` for the CLI (`provider connect`): its port is
+            `MUSEFLOW_CLI_OAUTH_REDIRECT_PORT`.
+        *   `http://127.0.0.1:8000/api/v1/spotify/callback` for the API: it must match `SPOTIFY_REDIRECT_URI` in your
+            `.envrc`.
 
 ## Running the Application
 
