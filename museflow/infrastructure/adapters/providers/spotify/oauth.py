@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 import httpx
 from httpx import codes
 
+from pydantic import AnyUrl
 from pydantic import HttpUrl
 
 from tenacity import retry
@@ -59,7 +60,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         self,
         client_id: str,
         client_secret: str,
-        redirect_uri: HttpUrl,
+        redirect_uri: AnyUrl | None = None,
         base_url: HttpUrl | None = None,
         auth_endpoint: HttpUrl | None = None,
         token_endpoint: HttpUrl | None = None,
@@ -88,10 +89,11 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         return self._token_endpoint
 
     def get_authorization_url(self, state: str) -> str:
+        redirect_uri = self._get_redirect_uri()
         params = {
             "client_id": self.client_id,
             "response_type": "code",
-            "redirect_uri": str(self.redirect_uri),
+            "redirect_uri": str(redirect_uri),
             "scope": SpotifyScope.required_scopes(),
             "state": state,
         }
@@ -99,6 +101,8 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
         return f"{self._auth_endpoint}?{urlencode(params)}"
 
     async def exchange_code_for_token(self, code: str) -> OAuthProviderTokenPayload:
+        redirect_uri = self._get_redirect_uri()
+
         response = await self._client.post(
             url=str(self.token_endpoint),
             headers={
@@ -108,7 +112,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
             data={
                 "grant_type": "authorization_code",
                 "code": code,
-                "redirect_uri": str(self.redirect_uri),
+                "redirect_uri": str(redirect_uri),
             },
         )
 
@@ -117,7 +121,7 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
                 f"Spotify token exchange failed: HTTP {response.status_code}",
                 extra={
                     "status_code": response.status_code,
-                    "redirect_uri": str(self.redirect_uri),
+                    "redirect_uri": str(redirect_uri),
                 },
             )
 
@@ -232,6 +236,12 @@ class SpotifyOAuthAdapter(HttpClientMixin, ProviderOAuthPort):
             return {}
 
         return cast(dict[str, Any], response.json())
+
+    def _get_redirect_uri(self) -> AnyUrl:
+        # Only the authorisation flow needs one: a library, which only refreshes tokens, is built without.
+        if self.redirect_uri is None:
+            raise ValueError("A redirect URI is required for the authorisation flow")
+        return self.redirect_uri
 
     def _get_basic_auth_header(self) -> str:
         credentials = f"{self.client_id}:{self.client_secret}"

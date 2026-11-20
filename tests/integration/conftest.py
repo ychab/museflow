@@ -429,7 +429,7 @@ async def spotify_oauth(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[Spoti
     async with SpotifyOAuthAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
-        redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+        redirect_uri=HttpUrl("https://app.example.com/spotify/callback"),
         base_url=HttpUrl(base_url) if base_url else None,
         # For simplicity, we are using the same WireMock server for these two dedicated endpoints
         auth_endpoint=HttpUrl(f"{base_url}/authorize") if base_url else None,

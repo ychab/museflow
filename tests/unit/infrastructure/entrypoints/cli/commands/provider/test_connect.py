@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import Iterable
 from typing import Final
 from unittest import mock
@@ -7,7 +6,6 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.domain.entities.auth import OAuthProviderState
-from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.exceptions import ProviderOAuthAuthorizationError
@@ -29,7 +27,7 @@ REDIRECT_URL: Final[str] = "http://127.0.0.1:65535/cli/callback?code=abc&state=x
 @pytest.fixture
 def connect_start() -> ConnectStart:
     return ConnectStart(
-        user_id=uuid.uuid4(),
+        user=UserFactory.build(),
         provider=MusicProvider.SPOTIFY,
         authorization_url="http://example.com",
     )
@@ -238,15 +236,12 @@ class TestProviderConnectLogic:
     async def test__complete__state__other_user(
         self,
         mock_auth_state_repository: mock.AsyncMock,
-        mock_user_repository: mock.AsyncMock,
         mock_provider_oauth: mock.AsyncMock,
         connect_start: ConnectStart,
         auth_state: OAuthProviderState,
-        user: User,
     ) -> None:
         # The state of another flow, still valid: only the flow of this command may finish here.
         mock_auth_state_repository.consume.return_value = auth_state
-        mock_user_repository.get_by_id.return_value = user
 
         with pytest.raises(ProviderOAuthStateInvalidError):
             await provider_connect_complete_logic(
@@ -266,16 +261,13 @@ class TestProviderConnectLogic:
     async def test__complete__authorization_error(
         self,
         mock_auth_state_repository: mock.AsyncMock,
-        mock_user_repository: mock.AsyncMock,
         mock_provider_oauth: mock.AsyncMock,
         connect_start: ConnectStart,
         query: str,
         expected_msg: str,
     ) -> None:
-        user = UserFactory.build(id=connect_start.user_id)
-        auth_state = OAuthProviderStateFactory.build(user_id=user.id, provider=connect_start.provider)
+        auth_state = OAuthProviderStateFactory.build(user_id=connect_start.user.id, provider=connect_start.provider)
         mock_auth_state_repository.consume.return_value = auth_state
-        mock_user_repository.get_by_id.return_value = user
 
         with pytest.raises(ProviderOAuthAuthorizationError, match=expected_msg):
             await provider_connect_complete_logic(

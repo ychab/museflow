@@ -57,7 +57,7 @@ app.add_middleware(
 )
 
 api_v1_router = APIRouter()
-# Static prefixes first: "/{provider}" would otherwise shadow any of their "/connect" or "/callback" routes.
+# Static prefixes first: "/{provider}" would otherwise shadow any of their "/connect" routes.
 api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
 api_v1_router.include_router(provider_router, prefix="/{provider}", tags=["provider"])
 

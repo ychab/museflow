@@ -1,6 +1,6 @@
 # Technical overview
 
-MuseFlow is a Python backend with a CLI as its primary interface and a small FastAPI surface for the OAuth callback and user endpoints. It is organised as a hexagonal (ports and adapters) application. This section documents how it is built and why, with each claim traceable to code in the [repository](https://github.com/ychab/museflow).
+MuseFlow is a Python backend with a CLI as its primary interface and a small FastAPI surface for the OAuth connection and user endpoints. It is organised as a hexagonal (ports and adapters) application. This section documents how it is built and why, with each claim traceable to code in the [repository](https://github.com/ychab/museflow).
 
 ## Stack
 

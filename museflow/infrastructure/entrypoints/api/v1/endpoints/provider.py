@@ -4,21 +4,23 @@ from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import status
-from fastapi.responses import RedirectResponse
 
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_code_exchange import exchange_oauth_code
 from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
+from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
+from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
+from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectCompleteRequest
+from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectResponse
 from museflow.infrastructure.entrypoints.api.schemas import SuccessResponse
 
 logger = logging.getLogger(__name__)
@@ -26,14 +28,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/connect", name="provider_connect")
+@router.post("/connect", name="provider_connect")
 async def connect(
     provider: MusicProvider,
     current_user: User = Depends(get_current_user),
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
     state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
-) -> RedirectResponse:
+) -> ProviderConnectResponse:
+    """Starts the OAuth flow: the client opens the URL, and the provider sends the browser back to `redirect_uri`.
+
+    The provider never calls the API: the client reads the code and the state back from its redirect URI, then hands
+    them to `connect/complete` with its own Bearer token.
+    """
     authorization_url = await build_oauth_redirect_url(
         user=current_user,
         uow=uow,
@@ -41,38 +48,31 @@ async def connect(
         provider_oauth=provider_oauth,
         state_token_generator=state_token_generator,
     )
-    return RedirectResponse(str(authorization_url))
+    return ProviderConnectResponse(authorization_url=authorization_url)
 
 
-@router.get("/callback", name="provider_callback", status_code=status.HTTP_200_OK)
-async def callback(
+@router.post("/connect/complete", name="provider_connect_complete")
+async def connect_complete(
     provider: MusicProvider,
-    code: str | None = None,
-    error: str | None = None,
-    current_user: User = Depends(get_user_from_state),
+    payload: ProviderConnectCompleteRequest,
+    current_user: User = Depends(get_current_user),
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
 ) -> SuccessResponse:
-    # Accepted risk (#101): the state isn't tied to the person who started the flow, so someone could get another
-    # person to consent and have that person's provider tokens stored on their own account. Harmless today: the app is
-    # local and single-user, no API route uses the tokens, and the CLI no longer goes through it. To fix before the API
-    # uses them or the app is shared: see the known gaps in docs/technical/privacy-and-data.md.
-    if error:
-        logger.warning(
-            f"OAuth callback error received from {provider}: {error}",
-            extra={"user_id": str(current_user.id), "provider": provider, "error": error},
-        )
-        raise HTTPException(status_code=400, detail="OAuth authorisation failed")
-    if not code:
-        logger.warning(
-            f"OAuth callback received from {provider} without code",
-            extra={"user_id": str(current_user.id), "provider": provider},
-        )
-        raise HTTPException(status_code=400, detail="No authorization code received")
+    """Ends the OAuth flow: stores the provider tokens of the user who started it, and of no one else.
+
+    The state must have been issued to the user of the Bearer token: a code obtained by someone else, sent to this
+    user, can't link that person's provider account to the wrong user (#101). `redirect_uri` is the one of `connect`:
+    the provider refuses the exchange otherwise.
+    """
+    try:
+        await consume_oauth_state(state=payload.state, user=current_user, provider=provider, uow=uow)
+    except ProviderOAuthStateInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired state") from e
 
     try:
         await exchange_oauth_code(
-            code=code,
+            code=payload.code,
             user=current_user,
             provider=provider,
             uow=uow,
@@ -82,6 +82,6 @@ async def callback(
         logger.exception(
             "Failed to exchange OAuth code", extra={"user_id": str(current_user.id), "provider": provider}
         )
-        raise HTTPException(status_code=400, detail="Failed to exchange code") from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to exchange code") from e
 
     return SuccessResponse(message=f"{provider.title()} account linked successfully")

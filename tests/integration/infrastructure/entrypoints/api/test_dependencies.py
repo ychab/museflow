@@ -7,12 +7,9 @@ import pytest
 
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.user import User
-from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
-from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 
 
 class TestGetCurrentUser:
@@ -63,20 +60,3 @@ class TestGetCurrentUser:
         assert exc_info is not None
         assert "Could not validate credentials" in str(exc_info.value)
         assert "No user associated to the token" in caplog.text
-
-
-class TestGetUserFromState:
-    async def test__nominal(
-        self,
-        uow: UnitOfWorkPort,
-        user: User,
-        auth_state: OAuthProviderState,
-    ) -> None:
-        current_user = await get_user_from_state(
-            state=auth_state.state,
-            provider=MusicProvider.SPOTIFY,
-            uow=uow,
-        )
-
-        assert current_user is not None
-        assert current_user.id == user.id

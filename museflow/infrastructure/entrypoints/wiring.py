@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Self
 
-from pydantic import HttpUrl
+from pydantic import AnyUrl
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -152,9 +152,10 @@ class Wiring:
     async def build_provider_oauth(
         self,
         provider: MusicProvider,
-        redirect_uri: HttpUrl | None = None,
+        redirect_uri: AnyUrl | None = None,
     ) -> AsyncGenerator[ProviderOAuthPort]:
-        """The OAuth adapter of a provider, redirecting to `redirect_uri`, or to the API callback by default."""
+        """The OAuth adapter of a provider: `redirect_uri`, where the provider sends the browser back, starts or ends a
+        flow; without it, the adapter only refreshes tokens."""
         match provider:
             case MusicProvider.SPOTIFY:
                 async with self._build_spotify_oauth(redirect_uri) as oauth_client:
@@ -211,11 +212,11 @@ class Wiring:
         )
 
     @asynccontextmanager
-    async def _build_spotify_oauth(self, redirect_uri: HttpUrl | None = None) -> AsyncGenerator[SpotifyOAuthAdapter]:
+    async def _build_spotify_oauth(self, redirect_uri: AnyUrl | None = None) -> AsyncGenerator[SpotifyOAuthAdapter]:
         async with SpotifyOAuthAdapter(
             client_id=spotify_settings.CLIENT_ID,
             client_secret=spotify_settings.CLIENT_SECRET.get_secret_value(),
-            redirect_uri=redirect_uri or spotify_settings.REDIRECT_URI,
+            redirect_uri=redirect_uri,
             base_url=spotify_settings.BASE_URL,
             auth_endpoint=spotify_settings.AUTH_ENDPOINT,
             token_endpoint=spotify_settings.TOKEN_ENDPOINT,
