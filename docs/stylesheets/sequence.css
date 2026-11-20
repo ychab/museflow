@@ -1,0 +1,196 @@
+/* Sequence diagrams (docs/javascripts/sequence.js): one lane per actor, steps top to bottom, grouped in phases. */
+:root {
+  --seq-lane-teal: #0f7a6c;
+  --seq-lane-indigo: #4357ad;
+  --seq-lane-amber: #8a5a00;
+  --seq-lane-green: #2f7d32;
+  --seq-lane-grey: #8b93a1;
+  --seq-human: #8a5a00;
+  --seq-fail: #b42318;
+}
+
+[data-md-color-scheme="slate"] {
+  --seq-lane-teal: #3cc4ae;
+  --seq-lane-indigo: #8fa0f0;
+  --seq-lane-amber: #e0a83a;
+  --seq-lane-green: #6cc070;
+  --seq-lane-grey: #6f7988;
+  --seq-human: #e0a83a;
+  --seq-fail: #f97066;
+}
+
+.seq-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.7rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.seq-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.seq-legend i {
+  width: 1.6rem;
+  border-top: 2px solid var(--md-default-fg-color);
+}
+
+.seq-legend i.human { border-top: 2px dashed var(--seq-human); }
+.seq-legend i.attacker { border-top: 2px dashed var(--seq-fail); }
+.seq-legend i.fail { border-top: 2px dotted var(--seq-fail); }
+
+.seq {
+  overflow-x: auto;
+  margin: 1em 0;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.4rem;
+}
+
+.seq > script { display: none; }
+
+.seq-grid {
+  position: relative;
+  display: grid;
+  padding: 0 0.4rem 1.2rem;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.seq-lifeline {
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.seq-lifeline::before {
+  content: "";
+  border-left: 1px dashed var(--md-default-fg-color--lightest);
+}
+
+.seq-actor {
+  grid-row: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 0.3rem 0.7rem;
+}
+
+.seq-actor div {
+  border: 1.5px solid var(--seq-color);
+  border-radius: 0.4rem;
+  background: var(--md-default-bg-color);
+  padding: 0.3rem 0.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.seq-actor small {
+  display: block;
+  font-weight: 400;
+  color: var(--md-default-fg-color--light);
+}
+
+.seq-phase {
+  grid-column: 1 / -1;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+}
+
+.seq-phase::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.seq-step {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding-top: 0.7rem;
+}
+
+.seq-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding-bottom: 0.3rem;
+}
+
+.seq-label p { margin: 0; min-width: 0; }
+
+.seq-num {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: var(--md-default-fg-color);
+  color: var(--md-default-bg-color);
+  font-size: 0.55rem;
+  font-weight: 700;
+}
+
+.seq-detail {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.seq-grid code { overflow-wrap: anywhere; }
+
+.seq-arrow {
+  position: relative;
+  height: 10px;
+  --seq-arrow: var(--md-default-fg-color);
+}
+
+.seq-arrow i {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  border-top: 2px solid var(--seq-arrow);
+}
+
+.seq-arrow b {
+  position: absolute;
+  top: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+.seq-arrow.right b { right: -1px; border-left: 9px solid var(--seq-arrow); }
+.seq-arrow.left b { left: -1px; border-right: 9px solid var(--seq-arrow); }
+
+.seq-step.human .seq-arrow { --seq-arrow: var(--seq-human); }
+.seq-step.human .seq-arrow i { border-top-style: dashed; }
+.seq-step.human .seq-num { background: var(--seq-human); }
+.seq-step.attacker .seq-arrow { --seq-arrow: var(--seq-fail); }
+.seq-step.attacker .seq-arrow i { border-top-style: dashed; }
+.seq-step.attacker .seq-num { background: var(--seq-fail); }
+.seq-step.fail .seq-arrow { --seq-arrow: var(--seq-fail); }
+.seq-step.fail .seq-arrow i { border-top-style: dotted; }
+.seq-step.fail .seq-num { background: var(--seq-fail); }
+
+.seq-note {
+  margin: 0 0.3rem;
+  border-left: 3px solid var(--seq-lane-grey);
+  border-radius: 0.4rem;
+  background: var(--md-code-bg-color);
+  padding: 0.4rem 0.5rem;
+}
+
+.seq-note.check { border-left-color: var(--seq-lane-teal); }
+.seq-note.done { border-left-color: var(--seq-lane-green); }
+.seq-note.refused { border-left-color: var(--seq-fail); }
