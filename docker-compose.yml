@@ -52,6 +52,8 @@ services:
       <<: *common-env
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-dummy-client-id}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-dummy-client-secret}
+      # Required at startup: the wiring, shared with the CLI, builds the LLM adapters too
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
       MUSEFLOW_SECRET_KEY: ${MUSEFLOW_SECRET_KEY:-dummy-app-secret-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
     ports:
       - ${APP_PORT_LOCAL_FORWARD:-8000}:8000
