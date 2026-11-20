@@ -49,7 +49,6 @@ def stats_candidates_command(
     table.add_column("Avg Score", justify="center")
     table.add_column("Rated", justify="right")
     table.add_column("Total", justify="right")
-
     for i, row in enumerate(rows, start=1):
         table.add_row(
             str(i),
@@ -58,7 +57,6 @@ def stats_candidates_command(
             str(row.rated_count),
             str(row.total_count),
         )
-
     console.print(table)
 
 

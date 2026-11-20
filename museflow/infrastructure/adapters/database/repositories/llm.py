@@ -47,11 +47,11 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         return [row.to_entity() for row in (await self.session.execute(stmt)).scalars()]
 
     async def bulk_create(self, records: list[LLMUsageRecord]) -> int:
+        created = 0
+
         # The unique key decides, in the statement itself: two imports of one file at once can't both add a row.
         columns = LLMUsageModel.__table__.columns
         rows = [LLMUsageModel.from_entity(record) for record in records]
-
-        created = 0
 
         for chunk in itertools.batched(rows, self._CHUNK_SIZE, strict=False):
             stmt = (

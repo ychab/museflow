@@ -111,6 +111,7 @@ class CreateDiscoveryPlaylistUseCase:
                 order=[(TrackOrderBy.SCORE, SortOrder.ASC)],
                 limit=config.disliked_tracks_limit,
             )
+
             # Told from the first attempt on, so that it suggests fewer known tracks (#154). It mirrors the
             # known-tracks filter, which drops any track of the library: if that filter changes, this count must
             # follow. The most played tracks were measured too: no gain, as 100 tracks barely cover a library of

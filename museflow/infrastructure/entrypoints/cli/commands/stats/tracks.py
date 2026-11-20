@@ -66,10 +66,8 @@ def stats_tracks_command(
     table.add_column("Track")
     table.add_column("Score", justify="center")
     table.add_column("Played", justify="center")
-
     for i, track in enumerate(tracks, start=1):
         table.add_row(str(i), ", ".join(track.artists), track.name, str(track.score), str(track.played_count))
-
     console.print(table)
 
 

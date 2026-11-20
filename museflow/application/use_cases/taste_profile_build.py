@@ -93,6 +93,7 @@ class BuildTasteProfileUseCase:
 
         async with self._uow as uow:
             played_tracks = await uow.track_plays.count_played_tracks(user_id=user.id, min_score=min_score)
+
             seeds = min(config.track_limit, played_tracks)
             if not seeds:
                 raise TasteProfileNoSeedError(f"No played tracks found for user {user.id}")
@@ -100,6 +101,7 @@ class BuildTasteProfileUseCase:
             tracks_per_period = config.batch_size or max(
                 TASTE_BATCH_SIZE_MIN, math.ceil(seeds / TASTE_BATCH_COUNT_TARGET)
             )
+
             periods = await uow.track_plays.get_periods(
                 user_id=user.id,
                 periods=math.ceil(seeds / tracks_per_period),

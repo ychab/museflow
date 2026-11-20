@@ -22,6 +22,7 @@ async def import_enrichment(
     # One block: the import is saved as a whole, or not at all.
     async with uow:
         matches = match_fingerprints(entries, await uow.tracks.get_list(user_id=user_id))
+
         updated_tracks = [
             dataclasses.replace(track, genres=entry.genres, moods=entry.moods, locales=entry.locales)
             for entry, track in matches.matched

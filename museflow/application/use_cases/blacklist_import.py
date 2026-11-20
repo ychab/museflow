@@ -26,6 +26,7 @@ async def import_blacklist(
     # One block: the import is saved as a whole, or not at all.
     async with uow:
         blacklist = await uow.blacklist.get(user_id=user_id)
+
         # Entries already blacklisted (or repeated in the file) are kept as they are: the import is idempotent.
         artist_fingerprints = blacklist.artist_fingerprints
         track_fingerprints = blacklist.track_fingerprints
@@ -37,6 +38,7 @@ async def import_blacklist(
                 continue
 
             await uow.blacklist.add_artist(user_id=user_id, artist_name=artist_in.artist_name)
+
             artist_fingerprints.add(fingerprint)
             imported_artists_count += 1
 
@@ -47,6 +49,7 @@ async def import_blacklist(
                 continue
 
             await uow.blacklist.add_track(user_id=user_id, name=track_in.name, artist_name=track_in.artist_name)
+
             track_fingerprints.add(fingerprint)
             imported_tracks_count += 1
 

@@ -26,11 +26,14 @@ async def import_ratings(
     # One block: the import is saved as a whole, or not at all.
     async with uow:
         matches = match_fingerprints(entries, await uow.tracks.get_list(user_id=user_id))
+
         entry_track_ids = [(entry, track.id) for entry, track in matches.matched]
 
         # Recreate the tracks the library lacks (e.g. a rated discovery never played, after a reset)
         tracks_missing = [track for entry in matches.not_found if (track := _to_track(user_id, entry)) is not None]
+
         track_ids, created_count = await uow.tracks.bulk_upsert(tracks_missing, batch_size=100)
+
         entry_track_ids += [
             (entry, track_ids[entry.fingerprint]) for entry in matches.not_found if entry.fingerprint in track_ids
         ]

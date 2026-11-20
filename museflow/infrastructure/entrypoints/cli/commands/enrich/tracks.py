@@ -78,7 +78,6 @@ def enrich_tracks_command(
         raise typer.BadParameter(f"User not found with email: {email}") from e
     except TrackEnrichmentAbortedError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-
         if force:
             typer.secho("With --force, a new run starts over from the first track.", fg=typer.colors.YELLOW, err=True)
         else:
@@ -87,7 +86,6 @@ def enrich_tracks_command(
                 fg=typer.colors.YELLOW,
                 err=True,
             )
-
         raise typer.Exit(code=1) from e
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)

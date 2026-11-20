@@ -64,7 +64,6 @@ class EnrichTracksUseCase:
 
     async def _enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
         missing_fields = None if config.force else config.fields
-
         not_found_count = 0
 
         async with self._uow as uow:
@@ -83,11 +82,8 @@ class EnrichTracksUseCase:
 
         batches = [tracks[i : i + config.batch_size] for i in range(0, len(tracks), config.batch_size)]
         total_batches = len(batches)
-        enriched_count = 0
-        error_count = 0
-        consecutive_failures = 0
+        enriched_count = error_count = consecutive_failures = tracks_done = 0
         last_failure = ""
-        tracks_done = 0  # sent to the enricher, failed batches included
 
         await self._progress.publish(StepStarted(step=ProgressStep.ENRICH_TRACKS, total=len(tracks)))
 
@@ -119,6 +115,7 @@ class EnrichTracksUseCase:
                     last_failure = "no enrichment returned"
 
             tracks_done += len(batch)
+
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=tracks_done, total=len(tracks))
             )
@@ -126,6 +123,7 @@ class EnrichTracksUseCase:
             if not enriched_tracks:
                 error_count += 1
                 consecutive_failures += 1
+
                 if consecutive_failures >= config.max_consecutive_failures:
                     raise TrackEnrichmentAbortedError(
                         i,
@@ -133,9 +131,7 @@ class EnrichTracksUseCase:
                         enriched_count,
                         reason=f"{consecutive_failures} batches failed in a row (last: {last_failure})",
                     )
-
                 continue
-
             consecutive_failures = 0
 
             # One block per batch: a paid batch survives a later failure.
@@ -152,6 +148,7 @@ class EnrichTracksUseCase:
                 )
 
         await self._progress.publish(StepDone(step=ProgressStep.ENRICH_TRACKS))
+
         return EnrichTracksReport(
             enriched_count=enriched_count,
             error_count=error_count,
