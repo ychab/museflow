@@ -210,9 +210,14 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   - a guard (`if` without `else` ending with `raise`, `return`, `continue`, `break`) sticks to the statement it checks
     or to the one it makes possible; checks of one kind in a row (validation, confirmation) form one step;
   - a default that the next `if` overrides sticks to it; a result that the body accumulates (a list, a counter) is a
-    step of its own, set apart from the `return`;
+    step of its own when the body starts with it, set apart from the `return`; set further down, it sticks to the
+    loop that fills it, as does what finishes it (a sort);
+  - a database access always breathes, so that no remote call slips into a transaction: an `async with uow:` block, or
+    a repository call among other statements, has one blank line before and after, which wins over the rules above;
+    several calls in a row form one step;
   - the closing log, or an `if ...: return` right above, sticks to the final `return`;
-  - a body of one or two statements stays compact; in tests, arrange / act / assert.
+  - a body of one or two statements stays compact; a table printed by a command (its columns, the loop adding its
+    rows, the print) is one step; in tests, arrange / act / assert.
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
   repeating the types.
 
