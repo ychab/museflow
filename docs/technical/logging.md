@@ -29,7 +29,8 @@ Chosen with `--log-handlers` on the CLI (repeatable) or the settings `MUSEFLOW_L
 The levels come from `--log-level` / `-l` (CLI) and the settings `MUSEFLOW_LOG_LEVEL_CLI`, `MUSEFLOW_LOG_LEVEL_API`
 for the `museflow` loggers, `MUSEFLOW_LOG_LEVEL_THIRD_PARTY` for the libraries. Two libraries stay at `WARNING`
 whatever the setting: from `INFO`, `sqlalchemy.engine` logs the SQL with its parameters (tokens, password hashes) and
-`httpx` every URL with its query string.
+`httpx` every URL with its query string. The uvicorn access logs, one line per request, follow
+`MUSEFLOW_LOG_LEVEL_THIRD_PARTY` too: the `museflow-app` container gets it from the shell or `.env`, `INFO` shows them.
 
 ### The JSON line
 
