@@ -279,6 +279,9 @@ env = [
     'MUSEFLOW_LOG_HANDLERS_CLI=["null"]',
     # A CLI_DEFAULT_EMAIL from a local .env must not change the CLI tests
     'MUSEFLOW_CLI_DEFAULT_EMAIL=',
+    # Never a terminal for Rich, whatever the shell says (FORCE_COLOR, a TTY): its consoles pick their colours when the
+    # modules are imported, so a fixture comes too late, and colour codes would break the output assertions
+    'TTY_COMPATIBLE=0',
     # The CLI's redirect URI the tests expect, whatever a local .env says
     'MUSEFLOW_CLI_OAUTH_REDIRECT_PORT=65535',
     # Database required settings (could be overriden)
