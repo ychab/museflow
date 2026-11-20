@@ -290,7 +290,8 @@ env = [
     # Spotify client required settings (could be overriden for live tests)
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
     'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
-    'SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/api/v1/spotify/callback',
+    # The redirect URIs of the API clients the tests expect, whatever a local .env says
+    'SPOTIFY_REDIRECT_URIS=["https://app.example.com/spotify/callback", "museflow://spotify/callback"]',
     # Wiremock spotify settings
     'WIREMOCK_SPOTIFY_ADMIN_URL=http://localhost:8081',
     'WIREMOCK_SPOTIFY_BASE_URL=https://localhost:8444',

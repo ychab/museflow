@@ -1,3 +1,4 @@
+from pydantic import AnyUrl
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import SecretStr
@@ -23,7 +24,9 @@ class SpotifySettings(BaseSettings):
     AUTH_ENDPOINT: HttpUrl = Field(default=HttpUrl("https://accounts.spotify.com/authorize"))
     TOKEN_ENDPOINT: HttpUrl = Field(default=HttpUrl("https://accounts.spotify.com/api/token"))
 
-    REDIRECT_URI: HttpUrl = Field(default=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"))
+    # The redirect URIs an API client may ask for (its web page, its app scheme), each registered with Spotify: the
+    # provider sends the browser back to the client, which hands the code to the API. Empty: the API connects no one.
+    REDIRECT_URIS: list[AnyUrl] = Field(default_factory=list)
 
     HTTP_TIMEOUT: float = 30.0
     HTTP_MAX_RETRIES: int = 5

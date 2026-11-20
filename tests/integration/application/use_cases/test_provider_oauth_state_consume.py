@@ -14,7 +14,6 @@ class TestConsumeOAuthStateUseCase:
         auth_state: OAuthProviderState,
         auth_state_repository: OAuthProviderStateRepository,
     ) -> None:
-        state_user = await consume_oauth_state(state=auth_state.state, provider=MusicProvider.SPOTIFY, uow=uow)
+        await consume_oauth_state(state=auth_state.state, user=user, provider=MusicProvider.SPOTIFY, uow=uow)
 
-        assert state_user.id == user.id
         assert await auth_state_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY) is None

@@ -1,21 +1,20 @@
 import logging
-import uuid
 from unittest import mock
 
 from fastapi import HTTPException
+
+from pydantic import AnyUrl
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import pytest
 from jwt import InvalidTokenError
 
-from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.user import User
-from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
+from museflow.infrastructure.entrypoints.api.dependencies import get_redirect_uri
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.api.dependencies import get_user_from_state
 from museflow.infrastructure.entrypoints.api.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
@@ -92,46 +91,10 @@ class TestGetCurrentUser:
         assert "Invalid token" in caplog.text
 
 
-class TestGetUserFromState:
-    async def test__state__missing(
-        self,
-        mock_uow: mock.AsyncMock,
-    ) -> None:
-        with pytest.raises(HTTPException, match="Missing state parameter"):
-            await get_user_from_state(
-                state="",
-                provider=MusicProvider.SPOTIFY,
-                uow=mock_uow,
-            )
-
-    async def test__state__invalid(
-        self,
-        mock_uow: mock.AsyncMock,
-        mock_auth_state_repository: mock.AsyncMock,
-    ) -> None:
-        mock_auth_state_repository.consume.return_value = None
-
-        with pytest.raises(HTTPException, match="Invalid or expired state"):
-            await get_user_from_state(
-                state="dummy-state",
-                provider=MusicProvider.SPOTIFY,
-                uow=mock_uow,
-            )
-
-    @pytest.mark.parametrize("auth_state", [{"user_id": uuid.uuid4()}], indirect=True)
-    async def test__user__unknown(
-        self,
-        mock_uow: mock.AsyncMock,
-        auth_state: OAuthProviderState,
-        mock_auth_state_repository: mock.AsyncMock,
-        mock_user_repository: mock.AsyncMock,
-    ) -> None:
-        mock_auth_state_repository.consume.return_value = auth_state
-        mock_user_repository.get_by_id.return_value = None
-
-        with pytest.raises(HTTPException, match="Unable to load user from state"):
-            await get_user_from_state(
-                state=auth_state.state,
-                provider=MusicProvider.SPOTIFY,
-                uow=mock_uow,
+class TestGetRedirectUri:
+    def test__provider__unknown(self) -> None:
+        with pytest.raises(ValueError, match="Unknown provider: FOO"):
+            get_redirect_uri(
+                provider="FOO",  # type: ignore[arg-type]
+                redirect_uri=AnyUrl("https://app.example.com/spotify/callback"),
             )

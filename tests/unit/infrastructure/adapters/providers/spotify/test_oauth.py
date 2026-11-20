@@ -53,11 +53,19 @@ class TestSpotifyOAuthAdapter:
         assert parsed.path == "/authorize"
         assert query_params["client_id"] == ["dummy-client-id"]
         assert query_params["response_type"] == ["code"]
-        assert query_params["redirect_uri"] == ["http://127.0.0.1:8000/api/v1/spotify/callback"]
+        assert query_params["redirect_uri"] == ["https://app.example.com/spotify/callback"]
         assert query_params["scope"] == [
             "playlist-modify-public playlist-modify-private user-modify-playback-state user-library-modify"
         ]
         assert query_params["state"] == [spotify_token_payload]
+
+    async def test__authorization_flow__no_redirect_uri(self) -> None:
+        # The adapter of a library only refreshes tokens: it has no redirect URI to start or end a flow with.
+        async with SpotifyOAuthAdapter(client_id="dummy-client-id", client_secret="dummy-client-secret") as client:
+            with pytest.raises(ValueError, match="A redirect URI is required for the authorisation flow"):
+                client.get_authorization_url(state="dummy-state")
+            with pytest.raises(ValueError, match="A redirect URI is required for the authorisation flow"):
+                await client.exchange_code_for_token("dummy-code")
 
     async def test__exchange_code_for_token__nominal(
         self,
@@ -440,7 +448,7 @@ class TestSpotifyOAuthAdapter:
         async with SpotifyOAuthAdapter(
             client_id="dummy-client-id",
             client_secret="dummy-client-secret",
-            redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+            redirect_uri=HttpUrl("https://app.example.com/spotify/callback"),
             max_retry_wait=max_retry_wait,
         ) as client:
             httpx_mock.add_response(

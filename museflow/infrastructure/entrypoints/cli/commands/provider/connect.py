@@ -1,4 +1,3 @@
-import uuid
 from dataclasses import dataclass
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
@@ -11,6 +10,7 @@ from museflow.application.use_cases.provider_oauth_code_exchange import exchange
 from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
 from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.application.use_cases.user_get import get_user
+from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.exceptions import ProviderOAuthAuthorizationError
@@ -25,7 +25,7 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
 
 @dataclass(frozen=True, kw_only=True)
 class ConnectStart:
-    user_id: uuid.UUID
+    user: User
     provider: MusicProvider
     authorization_url: str
 
@@ -94,7 +94,7 @@ async def provider_connect_start_logic(email: EmailStr, provider: MusicProvider)
             state_token_generator=wiring.build_state_token_generator(),
         )
 
-    return ConnectStart(user_id=user.id, provider=provider, authorization_url=authorization_url)
+    return ConnectStart(user=user, provider=provider, authorization_url=authorization_url)
 
 
 async def provider_connect_complete_logic(start: ConnectStart, redirect_url: str) -> None:
@@ -111,17 +111,15 @@ async def provider_connect_complete_logic(start: ConnectStart, redirect_url: str
     uow = wiring.build_unit_of_work()
 
     # Single use, even when the consent was refused: a new flow needs a new command.
-    user = await consume_oauth_state(state=params.get("state", ""), provider=start.provider, uow=uow)
+    await consume_oauth_state(state=params.get("state", ""), user=start.user, provider=start.provider, uow=uow)
 
-    if user.id != start.user_id:
-        raise ProviderOAuthStateInvalidError()
     if "error" in params or "code" not in params:
         raise ProviderOAuthAuthorizationError(params.get("error", "no authorisation code received"))
 
     async with wiring.build_provider_oauth(start.provider, redirect_uri) as provider_oauth:
         await exchange_oauth_code(
             code=params["code"],
-            user=user,
+            user=start.user,
             provider=start.provider,
             uow=uow,
             provider_oauth=provider_oauth,

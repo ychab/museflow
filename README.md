@@ -112,8 +112,10 @@ Before running the application, you need to configure the environment variables 
     *   Under "Redirect URIs", add the callback URLs:
         *   `http://127.0.0.1:65535/cli/callback` for the CLI (`provider connect`): its port is
             `MUSEFLOW_CLI_OAUTH_REDIRECT_PORT`.
-        *   `http://127.0.0.1:8000/api/v1/spotify/callback` for the API: it must match `SPOTIFY_REDIRECT_URI` in your
-            `.envrc`.
+        *   For the API, the page or app scheme of each client (e.g. `https://app.example.com/spotify/callback`,
+            `museflow://spotify/callback`), also listed in `SPOTIFY_REDIRECT_URIS`: the API refuses any other. The
+            provider sends the browser back to the client, which hands the code and the state to
+            `POST /api/v1/spotify/connect/complete` with its Bearer token.
 
 ## Running the Application
 

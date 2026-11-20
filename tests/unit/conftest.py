@@ -266,7 +266,7 @@ async def spotify_oauth() -> AsyncGenerator[SpotifyOAuthAdapter]:
     async with SpotifyOAuthAdapter(
         client_id="dummy-client-id",
         client_secret="dummy-client-secret",
-        redirect_uri=HttpUrl("http://127.0.0.1:8000/api/v1/spotify/callback"),
+        redirect_uri=HttpUrl("https://app.example.com/spotify/callback"),
         max_retry_wait=5,
     ) as client:
         yield client

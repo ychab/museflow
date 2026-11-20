@@ -5,9 +5,12 @@ from typing import Final
 
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Query
 from fastapi import Request
 from fastapi import status
 from fastapi.security import OAuth2PasswordBearer
+
+from pydantic import AnyUrl
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -19,13 +22,10 @@ from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
-from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ProviderOAuthStateInvalidError
-from museflow.domain.exceptions import UserInactiveError
-from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.config.settings.spotify import spotify_settings
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)
@@ -60,11 +60,29 @@ def get_state_token_generator(wiring: Wiring = Depends(get_wiring)) -> StateToke
     return wiring.build_state_token_generator()
 
 
+def get_redirect_uri(
+    provider: MusicProvider,
+    redirect_uri: AnyUrl = Query(description="Where the provider sends the browser back: the client's page or app"),
+) -> AnyUrl:
+    # Only the clients registered with the provider: any other URI would send the code to someone else.
+    match provider:
+        case MusicProvider.SPOTIFY:
+            allowed_uris = spotify_settings.REDIRECT_URIS
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
+
+    if str(redirect_uri) not in {str(uri) for uri in allowed_uris}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Redirect URI not allowed")
+
+    return redirect_uri
+
+
 async def get_provider_oauth(
     provider: MusicProvider,
+    redirect_uri: AnyUrl = Depends(get_redirect_uri),
     wiring: Wiring = Depends(get_wiring),
 ) -> AsyncGenerator[ProviderOAuthPort]:
-    async with wiring.build_provider_oauth(provider) as provider_oauth:
+    async with wiring.build_provider_oauth(provider, redirect_uri) as provider_oauth:
         yield provider_oauth
 
 
@@ -107,21 +125,3 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
 
     return user
-
-
-async def get_user_from_state(
-    state: str,
-    provider: MusicProvider,
-    uow: UnitOfWorkPort = Depends(get_unit_of_work),
-) -> User:
-    if not state:
-        raise HTTPException(status_code=400, detail="Missing state parameter")
-
-    try:
-        return await consume_oauth_state(state=state, provider=provider, uow=uow)
-    except ProviderOAuthStateInvalidError as e:
-        raise HTTPException(status_code=400, detail="Invalid or expired state") from e
-    except UserNotFoundError as e:
-        raise HTTPException(status_code=400, detail="Unable to load user from state") from e
-    except UserInactiveError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive") from e
