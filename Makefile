@@ -79,7 +79,7 @@ up-wiremock:  ## Start wiremock containers only
 up-test: up-db up-wiremock  ## Start DB and Wiremock containers
 
 down: ## Stop containers
-	docker compose down --remove-orphans
+	docker compose --profile "*" down --remove-orphans
 
 restart: ## Restart containers
 	docker compose restart
@@ -87,7 +87,7 @@ restart: ## Restart containers
 reload: down up ## Stop and start containers
 
 reset:  ## Remove volumes and images
-	docker compose down --remove-orphans --volumes --rmi local
+	docker compose --profile "*" down --remove-orphans --volumes --rmi local
 
 
 #####

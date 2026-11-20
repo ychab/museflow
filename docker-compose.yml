@@ -55,6 +55,8 @@ services:
       # Required at startup: the wiring, shared with the CLI, builds the LLM adapters too
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
       MUSEFLOW_SECRET_KEY: ${MUSEFLOW_SECRET_KEY:-dummy-app-secret-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
+      # INFO shows uvicorn's access logs (one line per request)
+      MUSEFLOW_LOG_LEVEL_THIRD_PARTY: ${MUSEFLOW_LOG_LEVEL_THIRD_PARTY:-WARNING}
     ports:
       - ${APP_PORT_LOCAL_FORWARD:-8000}:8000
     depends_on:
@@ -67,6 +69,8 @@ services:
     restart: unless-stopped
 
   wiremock-spotify:
+    # For the integration tests only: `make up` leaves it out, `make up-wiremock` names it
+    profiles: [test]
     image: wiremock/wiremock:3.13.2
     container_name: museflow-wiremock-spotify
     ports:
@@ -77,6 +81,8 @@ services:
     command: ["--verbose", "--https-port", "8443", "--global-response-templating"]
 
   wiremock-openrouter:
+    # For the integration tests only: `make up` leaves it out, `make up-wiremock` names it
+    profiles: [test]
     image: wiremock/wiremock:3.13.2
     container_name: museflow-wiremock-openrouter
     ports:

@@ -23,7 +23,7 @@ make db-upgrade     # apply the schema
 | `make test` | The full suite with the 100% branch gate (starts PostgreSQL and both WireMock containers, stops them afterwards) |
 | `make test-unit` | Unit tests only; needs no containers |
 | `make test-integration` | Integration tests (real PostgreSQL, WireMock) |
-| `make up`, `make up-db`, `make up-wiremock`, `make down` | Docker Compose services |
+| `make up`, `make up-db`, `make up-wiremock`, `make down` | Docker Compose services: `make up` starts the app and the database, WireMock (profile `test`) starts only for the integration tests |
 | `make db-revision` | Create an Alembic migration |
 | `make db-upgrade` / `make db-downgrade` | Apply or roll back migrations |
 | `make docs-serve` | Serve this documentation locally with live reload |
