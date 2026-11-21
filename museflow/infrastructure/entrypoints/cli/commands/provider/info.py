@@ -35,12 +35,19 @@ def provider_info_command(
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
 
-    if token:
-        if not show_tokens:
-            token = replace(token, token_access=_mask(token.token_access), token_refresh=_mask(token.token_refresh))
+    if token is None:
+        # Never stored, or no longer readable (encryption key changed, see the warning): a reconnect stores a new one
+        typer.secho(
+            f"No {provider.title()} token for this user. Run `museflow provider connect` first.",
+            fg=typer.colors.YELLOW,
+        )
+        return
 
-        console.print(f"{provider.title()} Auth Token:")
-        console.print(Pretty(asdict(token)), soft_wrap=True)
+    if not show_tokens:
+        token = replace(token, token_access=_mask(token.token_access), token_refresh=_mask(token.token_refresh))
+
+    console.print(f"{provider.title()} Auth Token:")
+    console.print(Pretty(asdict(token)), soft_wrap=True)
 
 
 async def provider_info_logic(email: EmailStr, provider: MusicProvider) -> OAuthProviderUserToken | None:

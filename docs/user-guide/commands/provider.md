@@ -57,8 +57,9 @@ museflow provider info [--email <email>]
 | `--provider` | `spotify` | The music provider of the token. |
 | `--show-tokens` | off | Print the access and refresh tokens in clear, after a confirmation. |
 
-**Output.** A `Spotify Auth Token:` header followed by the token record. Nothing is printed when the user has no
-token. The access and refresh tokens are masked to their last 4 characters (`****abcd`), enough to tell whether a
+**Output.** A `Spotify Auth Token:` header followed by the token record. Without a token, the command says so and
+points to `provider connect`: the user never connected, or the token can no longer be decrypted (a warning then says
+so, after a change of the encryption key). The access and refresh tokens are masked to their last 4 characters (`****abcd`), enough to tell whether a
 token changed. With `--show-tokens` they are printed in clear, for instance to pass the refresh token to the live
 Spotify tests: do not paste that output in public.
 
