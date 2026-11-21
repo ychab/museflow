@@ -7,7 +7,6 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
-from museflow.domain.exceptions import UserNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,8 @@ async def authenticate_user(
         The authenticated `User` entity.
 
     Raises:
-        UserNotFoundError: If no user with the given email exists.
-        UserInvalidCredentialsError: If the provided password does not match.
+        UserInvalidCredentialsError: If no user has this email, or the password does not match: the caller can't tell
+            which, so the answer reveals no account.
         UserInactiveError: If the user account is not active.
     """
     async with uow:
@@ -42,7 +41,7 @@ async def authenticate_user(
 
     if not user:
         password_hasher.verify_simulate(password)
-        raise UserNotFoundError()
+        raise UserInvalidCredentialsError()
 
     if not password_hasher.verify(password, user.hashed_password):
         raise UserInvalidCredentialsError()
