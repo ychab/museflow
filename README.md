@@ -139,6 +139,9 @@ You can run the application and the database using Docker Compose or the provide
     ```bash
     make run-worker
     ```
+    *Note: It starts the database and RabbitMQ, then consumes the tasks waiting in the queue. `make broker-queues`
+    and `make broker-dead-letters` show the queues and the failed tasks; the RabbitMQ UI is on
+    `http://localhost:15672`.*
 
 **Using Docker Compose directly:**
 

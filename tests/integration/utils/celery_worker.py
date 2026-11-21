@@ -12,7 +12,7 @@ from tenacity import Retrying
 from tenacity import retry_if_result
 from tenacity import stop_after_delay
 
-from museflow.infrastructure.entrypoints.worker.app import celery_app
+from museflow.infrastructure.entrypoints.worker.main import celery_app
 
 
 class CeleryWorker:
@@ -62,7 +62,7 @@ class CeleryWorker:
             "-m",
             "celery",
             "--app",
-            "museflow.infrastructure.entrypoints.worker.app",
+            "museflow.infrastructure.entrypoints.worker.main",
             "worker",
             "--include",
             "tests.integration.utils.celery_tasks",

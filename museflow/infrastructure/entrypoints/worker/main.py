@@ -61,12 +61,18 @@ class MuseflowTask(Task):  # type: ignore[type-arg]
     max_retries = app_settings.WORKER_TASK_MAX_RETRIES
     retry_backoff = True
     retry_backoff_max = app_settings.WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS
+    # Each wait drawn at random below its backoff: tasks that failed together (the database restarting) don't all retry
+    # at the same second and bring it down again
     retry_jitter = True
     # Before the retry of a task whose process was lost (killed, out of memory)
     default_retry_delay = 10
 
 
-celery_app = Celery("museflow", broker=broker_settings.URL.get_secret_value(), task_cls=MuseflowTask)
+celery_app = Celery(
+    "museflow",
+    broker=broker_settings.URL.get_secret_value(),  # type: ignore[union-attr]
+    task_cls=MuseflowTask,
+)
 celery_app.conf.update(
     task_queues=(TASK_QUEUE,),
     task_default_queue=TASK_QUEUE.name,

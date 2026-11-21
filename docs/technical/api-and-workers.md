@@ -130,7 +130,7 @@ The first job, enrichment (#262), sets the pattern every other job copies.
   idempotent**: it checks the job status first, and the use cases already resume from their checkpoints (enrichment,
   profile build, history import chunks).
 - **Retries for transient errors only**, with an exponential backoff and jitter: the database or the network
-  unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/app.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
+  unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/main.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
   each wait capped at `MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS` (600). The adapters already retry their own
   HTTP calls (tenacity); a task does not retry a domain error, which would fail the same way.
 - **Two ways to lose a worker.** The whole worker dies (a crash, a redeploy killing the container): its connection
@@ -140,7 +140,7 @@ The first job, enrichment (#262), sets the pattern every other job copies.
   process every time.
 - **A dead-letter queue**, `museflow.dead_letter`, keeps the messages of the failed tasks: after their retries, or at
   once for an error not worth one (`task_acks_on_failure=False` rejects them, and RabbitMQ moves them there). They are
-  inspected in the RabbitMQ UI (`http://localhost:15672`) instead of being lost. The worker declares it when it
+  inspected in the RabbitMQ UI (`http://localhost:15672`) or with `make broker-dead-letters` instead of being lost. The worker declares it when it
   starts, as no worker consumes it.
 - **RabbitMQ's consumer timeout** (30 minutes by default) closes the channel of a message left unacknowledged longer
   than that, which `acks_late` does for a long task. The longest job, a first enrichment, took 8 minutes for 10,000

@@ -94,7 +94,8 @@ with no branch of its own gets no unit `TestXLogic`: the integration one covers 
 ## Worker
 The worker's integration tests start a real Celery worker in a process of its own (`CeleryWorker`, in
 `tests/integration/utils/`), on a RabbitMQ virtual host per test process and on the test database: its tasks commit,
-so the test reads with `async_session_trans`. The test tasks live in `tests/integration/utils/celery_tasks.py`, which
+so the test reads with `async_session_trans`. Its fixtures (`worker`, `broker_connection`) live in the worker's
+`conftest.py`, for every test of a task. The test tasks live in `tests/integration/utils/celery_tasks.py`, which
 only the test workers load. Coverage measures those processes too (`patch` in `[tool.coverage.run]`), except one
 that the test kills.
 
