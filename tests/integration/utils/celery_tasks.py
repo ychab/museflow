@@ -7,9 +7,9 @@ from celery import Task
 
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.use_cases.user_create import create_user
-from museflow.infrastructure.entrypoints.worker.app import celery_app
 from museflow.infrastructure.entrypoints.worker.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.worker.dependencies import run_task
+from museflow.infrastructure.entrypoints.worker.main import celery_app
 
 # Tasks that prove the worker setup, loaded by the test workers only (`celery worker --include`). Each one runs a use
 # case against the database, as a real task does: the test sees it ran from the user it created.

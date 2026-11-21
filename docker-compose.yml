@@ -112,7 +112,7 @@ services:
   worker:
     build: *app-build
     container_name: museflow-worker
-    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.app", "worker"]
+    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.main", "worker"]
     environment:
       <<: *app-env
       # Per process, which runs one task at a time: one connection for the use case, one for a provider token refresh,
@@ -125,7 +125,7 @@ services:
       - file_storage:/app/.storage
     healthcheck:
       # The image's check calls the API; a worker answers a ping through the broker instead
-      test: ["CMD-SHELL", "celery --app museflow.infrastructure.entrypoints.worker.app inspect ping --destination celery@$$HOSTNAME --timeout 5"]
+      test: ["CMD-SHELL", "celery --app museflow.infrastructure.entrypoints.worker.main inspect ping --destination celery@$$HOSTNAME --timeout 5"]
       interval: 30s
       timeout: 15s
       retries: 3

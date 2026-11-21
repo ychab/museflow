@@ -102,11 +102,33 @@ reset:  ## Remove volumes and images
 run: ## Run the application
 	uv run fastapi dev museflow/infrastructure/entrypoints/api/main.py
 
-run-worker: up-broker ## Run a Celery worker
-	uv run celery --app museflow.infrastructure.entrypoints.worker.app worker
+run-worker: up-db up-broker ## Run a Celery worker on the host, which consumes the tasks waiting in the queue
+	uv run celery --app museflow.infrastructure.entrypoints.worker.main worker
 
 app-shell: up ## Connect to the application shell
 	docker compose exec app /bin/bash
+
+
+########
+# Broker
+########
+
+# The number of dead-lettered messages broker-dead-letters shows
+COUNT ?= 10
+
+.PHONY: broker-queues broker-dead-letters worker-inspect
+
+broker-queues: up-broker ## List the queues, with their messages waiting, delivered but not acknowledged, and consumers
+	docker compose exec rabbitmq rabbitmqctl list_queues --quiet name messages_ready messages_unacknowledged consumers
+
+broker-dead-letters: up-broker ## Show the first COUNT dead-lettered messages (default: 10), left in their queue
+	docker compose exec rabbitmq sh -c 'rabbitmqadmin --username "$$RABBITMQ_DEFAULT_USER" --password "$$RABBITMQ_DEFAULT_PASS" \
+		get messages --queue museflow.dead_letter --count $(COUNT) --ack-mode ack_requeue_true'
+
+worker-inspect: ## Show the tasks the workers of `make up` run, hold in their prefetch, and wait to retry
+	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect active
+	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect reserved
+	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect scheduled
 
 
 ##########

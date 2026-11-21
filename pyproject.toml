@@ -303,7 +303,10 @@ env = [
     'D:DATABASE_PASSWORD=museflow',
     'D:DATABASE_PATH=museflow',
     # Broker required settings (could be overriden); each test process gets a virtual host of its own on it
-    'D:BROKER_URL=amqp://museflow:museflow@localhost:5672//',
+    'D:BROKER_HOST=127.0.0.1',
+    'D:BROKER_PORT=5672',
+    'D:BROKER_USER=museflow',
+    'D:BROKER_PASSWORD=museflow',
     'D:BROKER_MANAGEMENT_URL=http://localhost:15672',
     # Spotify client required settings (could be overriden for live tests)
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
