@@ -15,8 +15,8 @@ class OAuthProviderUserTokenCreateInput(BaseInput):
     """
 
     token_type: str = Field(..., max_length=512)
-    token_access: str = Field(..., max_length=512)
-    token_refresh: str = Field(..., max_length=512)
+    token_access: str
+    token_refresh: str
     token_expires_at: AwareDatetime
 
 
@@ -28,8 +28,8 @@ class OAuthProviderUserTokenUpdateInput(BaseInput):
     """
 
     token_type: str | None = Field(None, max_length=512)
-    token_access: str | None = Field(None, max_length=512)
-    token_refresh: str | None = Field(None, max_length=512)
+    token_access: str | None = None
+    token_refresh: str | None = None
     token_expires_at: AwareDatetime | None = None
 
     @model_validator(mode="after")

@@ -97,7 +97,8 @@ Before running the application, you need to configure the environment variables 
     *   `SPOTIFY_CLIENT_ID`: Your Spotify App Client ID.
     *   `SPOTIFY_CLIENT_SECRET`: Your Spotify App Client Secret.
     *   `OPENROUTER_API_KEY`: Your OpenRouter API key.
-    *   `MUSEFLOW_SECRET_KEY`: A secret key for the application (min 32 characters, generate with `openssl rand -hex 32`).
+    *   `MUSEFLOW_JWT_SIGNING_KEY`: The key signing the API access tokens (min 32 characters, generate with `openssl rand -hex 32`).
+    *   `MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY`: The key encrypting the Spotify tokens in the database, distinct from the one above (min 32 characters, `openssl rand -hex 32`). Changing it means reconnecting with `museflow provider connect`.
 
     Set `MUSEFLOW_CLI_DEFAULT_EMAIL` to skip `--email` on the CLI commands (except the `users` ones): the option wins over the environment, which wins over `.env`. An invalid email stops the app at startup; an empty value means not set.
 

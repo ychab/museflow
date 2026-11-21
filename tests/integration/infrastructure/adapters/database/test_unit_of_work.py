@@ -10,6 +10,7 @@ from sqlalchemy.pool import QueuePool
 
 import pytest
 
+from museflow.application.ports.security import TokenCipherPort
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
@@ -25,8 +26,12 @@ class TestSQLUnitOfWork:
     """Real commits (`async_session_trans`): the default test session runs each block in a savepoint."""
 
     @pytest.fixture
-    def unit_of_work(self, async_session_factory: async_sessionmaker[AsyncSession]) -> SQLUnitOfWork:
-        return SQLUnitOfWork(async_session_factory)
+    def unit_of_work(
+        self,
+        async_session_factory: async_sessionmaker[AsyncSession],
+        token_cipher: TokenCipherPort,
+    ) -> SQLUnitOfWork:
+        return SQLUnitOfWork(async_session_factory, token_cipher)
 
     @pytest.fixture
     def tracks(self, user: User) -> list[Track]:

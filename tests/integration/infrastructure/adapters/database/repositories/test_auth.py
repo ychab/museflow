@@ -1,6 +1,9 @@
+import logging
 import uuid
 from datetime import UTC
 from datetime import datetime
+
+from pydantic import SecretStr
 
 from sqlalchemy import func
 from sqlalchemy import select
@@ -20,6 +23,8 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
+from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
+from museflow.infrastructure.adapters.security import AesSivTokenCipher
 
 
 class TestOAuthProviderStateSQLRepository:
@@ -122,15 +127,41 @@ class TestOAuthProviderStateSQLRepository:
 
 
 class TestOAuthProviderTokenSQLRepository:
+    @pytest.fixture
+    def auth_token_repository_former_key(self, async_session_db: AsyncSession) -> OAuthProviderTokenRepository:
+        return OAuthProviderTokenSQLRepository(
+            async_session_db, AesSivTokenCipher(key=SecretStr("a-former-key-of-at-least-32-characters"))
+        )
+
     async def test__get__nominal(
         self,
         auth_token: OAuthProviderUserToken,
         auth_token_repository: OAuthProviderTokenRepository,
     ) -> None:
-        assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider)
+        assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider) == auth_token
 
     async def test__get__none(self, auth_token_repository: OAuthProviderTokenRepository) -> None:
         assert await auth_token_repository.get(uuid.uuid4(), provider=MusicProvider.SPOTIFY) is None
+
+    async def test__get__encryption_key_changed(
+        self,
+        user: User,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        auth_token_repository_former_key: OAuthProviderTokenRepository,
+        auth_token_repository: OAuthProviderTokenRepository,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        await auth_token_repository_former_key.upsert(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_create,
+        )
+
+        with caplog.at_level(logging.WARNING):
+            auth_token = await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
+
+        assert auth_token is None
+        assert f"The spotify token of user {user.id} can't be decrypted" in caplog.text
 
     async def test__upsert__create(
         self,
@@ -151,6 +182,26 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_access == auth_token_create.token_access
         assert auth_token_db.token_refresh == auth_token_create.token_refresh
         assert auth_token_db.token_expires_at == auth_token_create.token_expires_at
+
+    async def test__upsert__encrypted_at_rest(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        await auth_token_repository.upsert(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_create,
+        )
+
+        stmt = select(AuthProviderTokenModel.token_access, AuthProviderTokenModel.token_refresh).where(
+            AuthProviderTokenModel.user_id == user.id,
+        )
+        token_access_stored, token_refresh_stored = (await async_session_db.execute(stmt)).one()
+        assert auth_token_create.token_access.encode() not in token_access_stored
+        assert auth_token_create.token_refresh.encode() not in token_refresh_stored
 
     async def test__upsert__replace(
         self,
@@ -200,6 +251,24 @@ class TestOAuthProviderTokenSQLRepository:
         assert auth_token_db.token_access == auth_token.token_access
         assert auth_token_db.token_refresh == auth_token_in.token_refresh
         assert auth_token_db.token_expires_at == auth_token_in.token_expires_at
+
+    async def test__update__token_refresh_kept(
+        self,
+        auth_token: OAuthProviderUserToken,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        # Spotify doesn't always issue a new refresh token: the stored one is kept, and still decrypts
+        auth_token_in = OAuthProviderUserTokenUpdateInput(token_access="dummy-new-token-access")
+        auth_token_db = await auth_token_repository.update(
+            user_id=auth_token.user_id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_in,
+            expected_token_access=auth_token.token_access,
+        )
+
+        assert auth_token_db is not None
+        assert auth_token_db.token_access == auth_token_in.token_access
+        assert auth_token_db.token_refresh == auth_token.token_refresh
 
     async def test__update__all(
         self,

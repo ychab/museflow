@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 31e5841196d1
+Revision ID: 07c10dc3210b
 Revises:
-Create Date: 2026-11-18 08:55:28.046089
+Create Date: 2026-11-21 05:53:10.124445
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '31e5841196d1'
+revision: str = '07c10dc3210b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -48,8 +48,8 @@ def upgrade() -> None:
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('provider', sa.Enum('SPOTIFY', name='musicprovider'), nullable=False),
     sa.Column('token_type', sa.String(length=512), nullable=False),
-    sa.Column('token_access', sa.String(length=512), nullable=False),
-    sa.Column('token_refresh', sa.String(length=512), nullable=False),
+    sa.Column('token_access', sa.LargeBinary(), nullable=False),
+    sa.Column('token_refresh', sa.LargeBinary(), nullable=False),
     sa.Column('token_expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),

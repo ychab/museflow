@@ -6,7 +6,7 @@ hide:
 # API authentication
 
 The API authenticates its clients with a Bearer token: a JWT the API signs at login and the client sends with every
-request. The API keeps no session: what it needs to know is in the token, signed with `MUSEFLOW_SECRET_KEY`. The
+request. The API keeps no session: what it needs to know is in the token, signed with `MUSEFLOW_JWT_SIGNING_KEY`. The
 Bearer token is also what ties an [OAuth flow](oauth-flows.md) to the user who started it.
 
 <div class="seq-legend">
@@ -33,7 +33,7 @@ Bearer token is also what ties an [OAuth flow](oauth-flows.md) to the user who s
     {"from": "client", "to": "api", "text": "POST /api/v1/users/login", "style": "human", "detail": "Form <code>username=&lt;email&gt;&amp;password=…</code>, typed by the user"},
     {"from": "api", "to": "db", "text": "Reads the user by email"},
     {"note": "api", "style": "check", "text": "Checks the password against its Argon2 hash", "detail": "Unknown email: a dummy hash is checked all the same, to answer in the same time. 401 “Invalid credentials” in both cases, 403 for an inactive account."},
-    {"note": "api", "style": "check", "text": "Signs a JWT (HS256, <code>MUSEFLOW_SECRET_KEY</code>)", "detail": "<code>{\"sub\": &lt;user id&gt;, \"iat\": now, \"exp\": +30 min}</code>"},
+    {"note": "api", "style": "check", "text": "Signs a JWT (HS256, <code>MUSEFLOW_JWT_SIGNING_KEY</code>)", "detail": "<code>{\"sub\": &lt;user id&gt;, \"iat\": now, \"exp\": +30 min}</code>"},
     {"from": "api", "to": "client", "text": "200 <code>{\"user\": …, \"access_token\": \"eyJ…\", \"token_type\": \"Bearer\"}</code>"},
     {"from": "client", "to": "storage", "text": "Keeps the token", "detail": "Nothing is stored on the API side"},
     {"phase": "Every request"},
@@ -54,19 +54,19 @@ Bearer token is also what ties an [OAuth flow](oauth-flows.md) to the user who s
 ## What the token holds
 
 A JWT is three base64 parts joined by dots: a header, the claims, a signature. Anyone can read the claims; only the
-signature needs `MUSEFLOW_SECRET_KEY`.
+signature needs `MUSEFLOW_JWT_SIGNING_KEY`.
 
 ```text
 {"alg": "HS256", "typ": "JWT"}
 {"sub": "3f2c…-the-user-id", "iat": 1795300000, "exp": 1795301800}
-HMAC-SHA256(header.claims, MUSEFLOW_SECRET_KEY)
+HMAC-SHA256(header.claims, MUSEFLOW_JWT_SIGNING_KEY)
 ```
 
 - **Nothing is stored on the server.** The API keeps no session nor list of tokens: it checks the signature and the
   expiry, then reads the user from `sub`. Each client keeps its own token on its own device.
 - **The signature prevents forgery.** Changing `sub` to become someone else breaks the signature, and computing a new
-  one needs the secret key. That is why an attacker can't make another user's Bearer token (see
+  one needs the signing key. That is why an attacker can't make another user's Bearer token (see
   [the #101 attack](oauth-flows.md#the-attack-the-flow-prevents-101)).
-- **Current limits** (#282). A token is valid until its `exp` (`MUSEFLOW_ACCESS_TOKEN_EXPIRE_MINUTES`, 30 by default):
-  no revocation before it, and no refresh token, so the user logs in again. Changing the secret key ends every token at
+- **Current limits** (#282). A token is valid until its `exp` (`MUSEFLOW_JWT_EXPIRE_MINUTES`, 30 by default):
+  no revocation before it, and no refresh token, so the user logs in again. Changing the signing key ends every token at
   once.

@@ -24,6 +24,12 @@ class UserInvalidCredentialsError(Exception): ...
 class RateLimitExceededError(Exception): ...
 
 
+# --- Security exceptions ---
+
+
+class TokenDecryptionError(Exception): ...
+
+
 # --- Provider exceptions ---
 
 

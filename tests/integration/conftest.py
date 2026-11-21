@@ -3,6 +3,9 @@ import os
 import re
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
 from pydantic import HttpUrl
@@ -36,6 +39,7 @@ from museflow.application.ports.repositories.users import UserRepository
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.security import TokenCipherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -66,6 +70,7 @@ from museflow.infrastructure.adapters.providers.spotify.history import SpotifySt
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryAdapter
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
+from museflow.infrastructure.adapters.security import AesSivTokenCipher
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -76,7 +81,6 @@ from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
 from tests.integration.factories.models.auth import AuthProviderStateModelFactory
-from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.base import BaseModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.utils.wiremock import WireMockContext
@@ -251,6 +255,11 @@ def state_token_generator() -> StateTokenGeneratorPort:
     return get_state_token_generator()
 
 
+@pytest.fixture
+def token_cipher() -> TokenCipherPort:
+    return get_token_cipher()
+
+
 # --- Repository impl ---
 
 
@@ -265,8 +274,10 @@ def auth_state_repository(async_session_db: AsyncSession) -> OAuthProviderStateR
 
 
 @pytest.fixture
-def auth_token_repository(async_session_db: AsyncSession) -> OAuthProviderTokenRepository:
-    return OAuthProviderTokenSQLRepository(async_session_db)
+def auth_token_repository(
+    async_session_db: AsyncSession, token_cipher: TokenCipherPort
+) -> OAuthProviderTokenRepository:
+    return OAuthProviderTokenSQLRepository(async_session_db, token_cipher)
 
 
 @pytest.fixture
@@ -321,8 +332,8 @@ def uow_session_factory(
 
 
 @pytest.fixture
-def uow(uow_session_factory: async_sessionmaker[AsyncSession]) -> UnitOfWorkPort:
-    return SQLUnitOfWork(uow_session_factory)
+def uow(uow_session_factory: async_sessionmaker[AsyncSession], token_cipher: TokenCipherPort) -> UnitOfWorkPort:
+    return SQLUnitOfWork(uow_session_factory, token_cipher)
 
 
 @pytest.fixture
@@ -407,13 +418,21 @@ async def auth_state(request: pytest.FixtureRequest, user: User) -> OAuthProvide
 
 
 @pytest.fixture
-async def auth_token(request: pytest.FixtureRequest, user: User) -> OAuthProviderUserToken:
+async def auth_token(request: pytest.FixtureRequest, user: User, uow: UnitOfWorkPort) -> OAuthProviderUserToken:
     params = getattr(request, "param", {})
     user_id = params.pop("user_id", user.id)
     provider = params.pop("provider", MusicProvider.SPOTIFY)
+    params.setdefault("token_expires_at", datetime.now(UTC) + timedelta(days=5))
 
-    auth_token_db = await AuthProviderTokenFactory.create_async(user_id=user_id, provider=provider, **params)
-    return auth_token_db.to_entity()
+    # Saved by the repository, which encrypts the tokens as in production: a row the factory wrote would not decrypt
+    async with uow:
+        auth_token = await uow.auth_tokens.upsert(
+            user_id=user_id,
+            provider=provider,
+            auth_token_in=OAuthProviderUserTokenCreateInputFactory.build(**params),
+        )
+
+    return auth_token
 
 
 # --- Providers impl ---
@@ -446,13 +465,14 @@ def spotify_session_client(
     user: User,
     auth_token: OAuthProviderUserToken,
     uow_session_factory: async_sessionmaker[AsyncSession],
+    token_cipher: TokenCipherPort,
     spotify_oauth: SpotifyOAuthAdapter,
 ) -> SpotifyOAuthSessionClient:
     return SpotifyOAuthSessionClient(
         user=user,
         auth_token=auth_token,
         # Its own unit of work, as in production: a refresh happens in the middle of a remote call.
-        uow=SQLUnitOfWork(uow_session_factory),
+        uow=SQLUnitOfWork(uow_session_factory, token_cipher),
         oauth_client=spotify_oauth,
     )
 
@@ -565,3 +585,7 @@ def get_access_token_manager() -> AccessTokenManagerPort:
 
 def get_state_token_generator() -> StateTokenGeneratorPort:
     return SystemStateTokenGenerator()
+
+
+def get_token_cipher() -> TokenCipherPort:
+    return AesSivTokenCipher(key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY)

@@ -9,8 +9,8 @@ class OAuthProviderUserTokenCreateInputFactory(ModelFactory[OAuthProviderUserTok
     __model__ = OAuthProviderUserTokenCreateInput
 
     token_type = "bearer"
-    # Never empty: a max length without a min lets polyfactory pick 0, and an empty token type or token makes an
-    # illegal Authorization header.
+    # Never empty: a max length without a min lets polyfactory pick 0 (token type), and an empty token type or token
+    # makes an illegal Authorization header.
     token_access = Use(ModelFactory.__faker__.sha256)
     token_refresh = Use(ModelFactory.__faker__.sha256)
 

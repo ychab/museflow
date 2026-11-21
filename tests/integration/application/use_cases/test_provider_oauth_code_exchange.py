@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_code_exchange import exchange_oauth_code
 from museflow.domain.entities.auth import OAuthProviderUserToken
@@ -13,7 +14,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
 from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
-from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 
 from tests.integration.utils.wiremock import WireMockContext
@@ -25,6 +25,7 @@ class TestExchangeOAuthCodeUseCase:
         self,
         uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
+        auth_token_repository: OAuthProviderTokenRepository,
         frozen_time: datetime,
         user: User,
         token_payload: OAuthProviderTokenPayload,
@@ -59,24 +60,20 @@ class TestExchangeOAuthCodeUseCase:
         auth_state_db = result_state.scalar_one_or_none()
         assert auth_state_db is None
 
-        stmt_token = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
-        )
-        result_token = await async_session_db.execute(stmt_token)
-        auth_token_db = result_token.scalar_one_or_none()
+        saved_token = await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
 
-        assert auth_token_db is not None
-        assert auth_token_db.token_type == token_payload.token_type
-        assert auth_token_db.token_access == token_payload.access_token
-        assert auth_token_db.token_refresh == token_payload.refresh_token
-        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+        assert saved_token is not None
+        assert saved_token.token_type == token_payload.token_type
+        assert saved_token.token_access == token_payload.access_token
+        assert saved_token.token_refresh == token_payload.refresh_token
+        assert saved_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     @pytest.mark.parametrize("auth_token", [{"provider": MusicProvider.SPOTIFY}], indirect=["auth_token"])
     async def test__token_payload__update(
         self,
         uow: UnitOfWorkPort,
         async_session_db: AsyncSession,
+        auth_token_repository: OAuthProviderTokenRepository,
         frozen_time: datetime,
         user: User,
         token_payload: OAuthProviderTokenPayload,
@@ -112,15 +109,10 @@ class TestExchangeOAuthCodeUseCase:
         auth_state_db = result_state.scalar_one_or_none()
         assert auth_state_db is None
 
-        stmt_token = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
-        )
-        result_token = await async_session_db.execute(stmt_token)
-        auth_token_db = result_token.scalar_one_or_none()
+        saved_token = await auth_token_repository.get(user_id=user.id, provider=MusicProvider.SPOTIFY)
 
-        assert auth_token_db is not None
-        assert auth_token_db.token_type == token_payload.token_type
-        assert auth_token_db.token_access == token_payload.access_token
-        assert auth_token_db.token_refresh == token_payload.refresh_token
-        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+        assert saved_token is not None
+        assert saved_token.token_type == token_payload.token_type
+        assert saved_token.token_access == token_payload.access_token
+        assert saved_token.token_refresh == token_payload.refresh_token
+        assert saved_token.token_expires_at == frozen_time + timedelta(seconds=3600)

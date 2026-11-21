@@ -3,9 +3,6 @@ from dataclasses import replace
 from datetime import datetime
 from datetime import timedelta
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import pytest
 
 from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
@@ -15,7 +12,6 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.value_objects.auth import OAuthProviderTokenPayload
-from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
 from museflow.infrastructure.adapters.providers.spotify.session import SpotifyOAuthSessionClient
 
@@ -43,7 +39,6 @@ class TestSpotifyOAuthSessionClient:
 
     async def test__execute__proactive_refresh(
         self,
-        async_session_db: AsyncSession,
         frozen_time: datetime,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
@@ -80,22 +75,18 @@ class TestSpotifyOAuthSessionClient:
         assert spotify_session_client.auth_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
         # Check that user token is refresh in DB.
-        stmt = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == spotify_session_client.user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        saved_token = await auth_token_repository.get(
+            user_id=spotify_session_client.user.id, provider=MusicProvider.SPOTIFY
         )
-        result = await async_session_db.execute(stmt)
-        auth_token_db = result.scalar_one()
 
-        assert auth_token_db is not None
-        assert auth_token_db.token_type == token_payload.token_type
-        assert auth_token_db.token_access == token_payload.access_token
-        assert auth_token_db.token_refresh == token_payload.refresh_token
-        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+        assert saved_token is not None
+        assert saved_token.token_type == token_payload.token_type
+        assert saved_token.token_access == token_payload.access_token
+        assert saved_token.token_refresh == token_payload.refresh_token
+        assert saved_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__execute__reactive_refresh_on_401(
         self,
-        async_session_db: AsyncSession,
         frozen_time: datetime,
         spotify_oauth: SpotifyOAuthAdapter,
         spotify_session_client: SpotifyOAuthSessionClient,
@@ -142,18 +133,15 @@ class TestSpotifyOAuthSessionClient:
         assert spotify_session_client.auth_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
         # Check that user token is refresh in DB.
-        stmt = select(AuthProviderTokenModel).where(
-            AuthProviderTokenModel.user_id == spotify_session_client.user.id,
-            AuthProviderTokenModel.provider == MusicProvider.SPOTIFY,
+        saved_token = await auth_token_repository.get(
+            user_id=spotify_session_client.user.id, provider=MusicProvider.SPOTIFY
         )
-        result = await async_session_db.execute(stmt)
-        auth_token_db = result.scalar_one()
 
-        assert auth_token_db is not None
-        assert auth_token_db.token_type == token_payload.token_type
-        assert auth_token_db.token_access == token_payload.access_token
-        assert auth_token_db.token_refresh == token_payload.refresh_token
-        assert auth_token_db.token_expires_at == frozen_time + timedelta(seconds=3600)
+        assert saved_token is not None
+        assert saved_token.token_type == token_payload.token_type
+        assert saved_token.token_access == token_payload.access_token
+        assert saved_token.token_refresh == token_payload.refresh_token
+        assert saved_token.token_expires_at == frozen_time + timedelta(seconds=3600)
 
     async def test__execute__refresh__token_replaced_meanwhile(
         self,

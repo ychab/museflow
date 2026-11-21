@@ -32,12 +32,16 @@ class AppSettings(BaseSettings):
 
     LOCALE: str = Field(default="en-US", pattern=r"^[a-z]{2}-[A-Z]{2}$")
 
-    SECRET_KEY: SecretStr = Field(..., min_length=32)
+    # The JWT access tokens of the API. The key signs them: whoever holds it can sign in as any user
+    JWT_SIGNING_KEY: SecretStr = Field(..., min_length=32)
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 30
+
+    # Encrypts the provider OAuth tokens at rest: changing it makes the stored ones unreadable, every user then
+    # reconnects (`provider connect`)
+    PROVIDER_TOKEN_ENCRYPTION_KEY: SecretStr = Field(..., min_length=32)
 
     API_V1_PREFIX: str = "/api/v1"
-
-    ACCESS_TOKEN_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     LOG_LEVEL_API: LogLevel = "WARNING"
     LOG_HANDLERS_API: list[LogHandler] = ["console"]

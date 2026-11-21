@@ -84,6 +84,44 @@ class AccessTokenManagerPort(ABC):
         pass
 
 
+class TokenCipherPort(ABC):
+    """Interface for encrypting secrets stored at rest (the provider OAuth tokens), and decrypting them back.
+
+    The encryption is deterministic: the same value and context always give the same bytes, so a stored value can be
+    compared with an expected one in SQL (the compare-and-swap of the token refresh) without decrypting it.
+    """
+
+    @abstractmethod
+    def encrypt(self, plaintext: str, context: str) -> bytes:
+        """Encrypts a value, bound to its context.
+
+        Args:
+            plaintext: The value to encrypt.
+            context: Where the value belongs (e.g. its row and column), authenticated with it: the bytes only decrypt
+                with the same context, so a value copied elsewhere is rejected.
+
+        Returns:
+            The encrypted bytes.
+        """
+        pass
+
+    @abstractmethod
+    def decrypt(self, ciphertext: bytes, context: str) -> str:
+        """Decrypts a value encrypted with `encrypt`.
+
+        Args:
+            ciphertext: The encrypted bytes.
+            context: The context given to `encrypt`.
+
+        Returns:
+            The value in clear.
+
+        Raises:
+            TokenDecryptionError: If the bytes were altered, encrypted with another key or for another context.
+        """
+        pass
+
+
 class StateTokenGeneratorPort(ABC):
     """Interface for generating random state tokens.
 

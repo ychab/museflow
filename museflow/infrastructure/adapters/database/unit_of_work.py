@@ -4,6 +4,7 @@ from typing import Self
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from museflow.application.ports.security import TokenCipherPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
@@ -20,8 +21,9 @@ from museflow.infrastructure.adapters.database.repositories.users import UserSQL
 class SQLUnitOfWork(UnitOfWorkPort):
     """Opens a new session for each block and closes it on exit, which returns the connection to the pool."""
 
-    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession], token_cipher: TokenCipherPort) -> None:
         self.session_factory = session_factory
+        self.token_cipher = token_cipher
         self.session: AsyncSession | None = None
         self.rolled_back = False
 
@@ -35,7 +37,7 @@ class SQLUnitOfWork(UnitOfWorkPort):
 
         self.users = UserSQLRepository(session)
         self.auth_states = OAuthProviderStateSQLRepository(session)
-        self.auth_tokens = OAuthProviderTokenSQLRepository(session)
+        self.auth_tokens = OAuthProviderTokenSQLRepository(session, self.token_cipher)
         self.tracks = TrackSQLRepository(session)
         self.track_plays = TrackPlaySQLRepository(session)
         self.taste_profiles = TasteProfileSQLRepository(session)
