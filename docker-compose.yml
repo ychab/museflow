@@ -1,6 +1,27 @@
 x-common-env: &common-env
   DATABASE_URI: postgresql+asyncpg://${DATABASE_USER:-museflow}:${DATABASE_PASSWORD:-museflow}@db:5432/${DATABASE_PATH:-museflow}
 
+# What the API and the workers share: they publish and consume the same tasks, and build the same adapters
+x-app-env: &app-env
+  <<: *common-env
+  BROKER_URL: amqp://${BROKER_USER:-museflow}:${BROKER_PASSWORD:-museflow}@rabbitmq:5672//
+  SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-dummy-client-id}
+  SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-dummy-client-secret}
+  SPOTIFY_REDIRECT_URIS: ${SPOTIFY_REDIRECT_URIS:-[]}
+  # Required at startup: the wiring, shared by the entrypoints, builds the LLM adapters too
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
+  MUSEFLOW_JWT_SIGNING_KEY: ${MUSEFLOW_JWT_SIGNING_KEY:-dummy-jwt-signing-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
+  MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY: ${MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY:-dummy-token-encryption-key-Hq3vZt8LmRw2KpXc}
+  # INFO shows uvicorn's access logs (one line per request)
+  MUSEFLOW_LOG_LEVEL_THIRD_PARTY: ${MUSEFLOW_LOG_LEVEL_THIRD_PARTY:-WARNING}
+
+x-app-build: &app-build
+  context: .
+  dockerfile: Dockerfile
+  args:
+    PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
+    UV_VERSION: ${UV_VERSION:-0.13.5}
+
 services:
   db:
     image: postgres:18.6
@@ -22,13 +43,43 @@ services:
     networks:
       - museflow-network
 
+  rabbitmq:
+    # The management plugin: its UI on 15672, and its HTTP API, which the tests use to create their virtual hosts
+    image: rabbitmq:4.2-management
+    container_name: museflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${BROKER_USER:-museflow}
+      RABBITMQ_DEFAULT_PASS: ${BROKER_PASSWORD:-museflow}
+    ports:
+      - ${BROKER_PORT:-5672}:5672
+      - ${BROKER_MANAGEMENT_PORT:-15672}:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - museflow-network
+
+  redis:
+    # The state the processes share: rate limits and locks
+    image: redis:8.4
+    container_name: museflow-redis
+    ports:
+      - ${REDIS_PORT:-6379}:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - museflow-network
+
   migration:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
-        UV_VERSION: ${UV_VERSION:-0.13.5}
+    build: *app-build
     container_name: museflow-migration
     command: alembic upgrade head
     environment:
@@ -41,28 +92,48 @@ services:
     restart: on-failure
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
-        UV_VERSION: ${UV_VERSION:-0.13.5}
+    build: *app-build
     container_name: museflow-app
     environment:
-      <<: *common-env
-      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-dummy-client-id}
-      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-dummy-client-secret}
-      SPOTIFY_REDIRECT_URIS: ${SPOTIFY_REDIRECT_URIS:-[]}
-      # Required at startup: the wiring, shared with the CLI, builds the LLM adapters too
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
-      MUSEFLOW_JWT_SIGNING_KEY: ${MUSEFLOW_JWT_SIGNING_KEY:-dummy-jwt-signing-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
-      MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY: ${MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY:-dummy-token-encryption-key-Hq3vZt8LmRw2KpXc}
-      # INFO shows uvicorn's access logs (one line per request)
-      MUSEFLOW_LOG_LEVEL_THIRD_PARTY: ${MUSEFLOW_LOG_LEVEL_THIRD_PARTY:-WARNING}
+      <<: *app-env
     ports:
       - ${APP_PORT_LOCAL_FORWARD:-8000}:8000
+    volumes:
+      - file_storage:/app/.storage
     depends_on:
       db:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    networks:
+      - museflow-network
+    restart: unless-stopped
+
+  worker:
+    build: *app-build
+    container_name: museflow-worker
+    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.app", "worker"]
+    environment:
+      <<: *app-env
+      # Per process, which runs one task at a time: one connection for the use case, one for a provider token refresh,
+      # one spare. WORKER_CONCURRENCY × 3 connections in all, next to the API's 15 (PostgreSQL allows 100).
+      DATABASE_POOL_SIZE: 2
+      DATABASE_MAX_OVERFLOW: 1
+      MUSEFLOW_WORKER_CONCURRENCY: ${MUSEFLOW_WORKER_CONCURRENCY:-2}
+    volumes:
+      # The files the API received, which the tasks read
+      - file_storage:/app/.storage
+    healthcheck:
+      # The image's check calls the API; a worker answers a ping through the broker instead
+      test: ["CMD-SHELL", "celery --app museflow.infrastructure.entrypoints.worker.app inspect ping --destination celery@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       migration:
         condition: service_completed_successfully
@@ -96,6 +167,9 @@ services:
 
 volumes:
   db_data:
+  rabbitmq_data:
+  # The files kept between their upload by the API and their processing by a worker
+  file_storage:
 
 networks:
   museflow-network:

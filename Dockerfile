@@ -72,6 +72,9 @@ COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser migrations ./migrations
 COPY --chown=appuser:appuser museflow ./museflow
 
+# The file storage, a volume shared by the API and the workers: a new named volume takes this directory's owner
+RUN mkdir .storage && chown appuser:appuser .storage
+
 USER appuser
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \

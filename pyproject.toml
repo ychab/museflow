@@ -32,6 +32,8 @@ dependencies = [
     "ijson>=3.6.0",
     "pyyaml>=6.0.3",
     "cryptography>=50.0.2",
+    "celery>=5.7",
+    "kombu>=5.7",
 ]
 
 [project.scripts]
@@ -62,6 +64,7 @@ dev = [
     # Note: pydantic[dotenv] is usually redundant if you have python-dotenv or pydantic-settings,
     # but kept here to match your original request.
     # "pydantic[dotenv]>=2.14.0",
+    "celery-types>=0.26.0",
 ]
 docs = [
     "zensical>=0.1.1",
@@ -200,8 +203,10 @@ source_modules = ["museflow.domain"]
 forbidden_modules = [
     "alembic",
     "asyncpg",
+    "celery",
     "fastapi",
     "httpx",
+    "kombu",
     "pydantic",
     "pydantic_settings",
     "sqlalchemy",
@@ -217,8 +222,10 @@ source_modules = ["museflow.application"]
 forbidden_modules = [
     "alembic",
     "asyncpg",
+    "celery",
     "fastapi",
     "httpx",
+    "kombu",
     "pathlib",
     "pydantic_settings",
     "sqlalchemy",
@@ -233,24 +240,27 @@ source_modules = ["museflow.infrastructure.adapters"]
 forbidden_modules = ["museflow.infrastructure.entrypoints"]
 
 [[tool.importlinter.contracts]]
-name = "API and CLI entrypoints are independent"
+name = "API, CLI and worker entrypoints are independent"
 type = "independence"
 modules = [
     "museflow.infrastructure.entrypoints.api",
     "museflow.infrastructure.entrypoints.cli",
+    "museflow.infrastructure.entrypoints.worker",
 ]
 
 [[tool.importlinter.contracts]]
-# Every entrypoint imports it, a future worker included: no entrypoint framework, no entrypoint module.
+# Every entrypoint imports it: no entrypoint framework, no entrypoint module.
 name = "Wiring imports no entrypoint"
 type = "forbidden"
 source_modules = ["museflow.infrastructure.entrypoints.wiring"]
 forbidden_modules = [
+    "celery",
     "fastapi",
     "starlette",
     "typer",
     "museflow.infrastructure.entrypoints.api",
     "museflow.infrastructure.entrypoints.cli",
+    "museflow.infrastructure.entrypoints.worker",
 ]
 
 
@@ -292,6 +302,9 @@ env = [
     'D:DATABASE_USER=museflow',
     'D:DATABASE_PASSWORD=museflow',
     'D:DATABASE_PATH=museflow',
+    # Broker required settings (could be overriden); each test process gets a virtual host of its own on it
+    'D:BROKER_URL=amqp://museflow:museflow@localhost:5672//',
+    'D:BROKER_MANAGEMENT_URL=http://localhost:15672',
     # Spotify client required settings (could be overriden for live tests)
     'D:SPOTIFY_CLIENT_ID=dummy-client-id',
     'D:SPOTIFY_CLIENT_SECRET=dummy-client-secret',
@@ -317,6 +330,9 @@ source = [
 ]
 branch = true
 concurrency = ["thread", "greenlet"]
+# Measures the worker processes the tests start too (a Celery worker and its forked children), which exit through
+# os._exit
+patch = ["subprocess", "fork", "_exit"]
 omit = [
     "*/__pycache__/*",
 ]

@@ -52,6 +52,10 @@ class AppSettings(BaseSettings):
     LOG_LEVEL_CLI: LogLevel = "WARNING"
     LOG_HANDLERS_CLI: list[LogHandler] = ["console"]
 
+    # INFO by default: a job's progress goes to the logs, so that a running job can be told from a stuck one
+    LOG_LEVEL_WORKER: LogLevel = "INFO"
+    LOG_HANDLERS_WORKER: list[LogHandler] = ["console"]
+
     LOG_LEVEL_THIRD_PARTY: LogLevel = "WARNING"
 
     HTTP_MAX_RETRIES: int = 5
@@ -59,6 +63,14 @@ class AppSettings(BaseSettings):
     # Root of the files kept between their upload and their processing (streaming history exports), one directory
     # per user: a volume shared by the API and the workers once deployed.
     FILE_STORAGE_DIR: Path = BASE_DIR / ".storage"
+
+    # Processes of a worker, each running one task at a time with a database pool of its own: the database sees up to
+    # WORKER_CONCURRENCY × (DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW) connections from one worker.
+    WORKER_CONCURRENCY: int = Field(default=2, ge=1)
+    # A task that fails on a transient error (the database or the network unreachable) is retried with an exponential
+    # backoff, capped at WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS; a worker process lost mid-task counts as a retry too.
+    WORKER_TASK_MAX_RETRIES: int = Field(default=5, ge=0)
+    WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS: int = Field(default=600, ge=1)
 
     TASTE_PROFILE_BUILD_THROTTLING_SLEEP_SECONDS: float = 0.0
     # How long a build holds its profile without saving a checkpoint; longer than its slowest period.
