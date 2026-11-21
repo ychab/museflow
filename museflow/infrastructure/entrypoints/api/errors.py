@@ -37,7 +37,7 @@ class Problem:
 # The domain exceptions the routes let through; a route's own exceptions are added with the route
 PROBLEMS: Final[dict[type[Exception], Problem]] = {
     # Accepted risk (#102): this answer reveals that the email has an account. A neutral one needs a full user workflow
-    # with email verification, not worth building for a local, single-user app still in development.
+    # with email verification, planned in #289 before the app is open to strangers.
     UserAlreadyExistsError: Problem(status=status.HTTP_409_CONFLICT, detail="Email already registered"),
     UserEmailAlreadyExistsError: Problem(status=status.HTTP_409_CONFLICT, detail="Email already registered"),
     UserInvalidCredentialsError: Problem(
