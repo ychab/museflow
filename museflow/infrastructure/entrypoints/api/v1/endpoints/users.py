@@ -17,8 +17,8 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_access_toke
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.api.schemas import UserResponse
-from museflow.infrastructure.entrypoints.api.schemas import UserWithToken
+from museflow.infrastructure.entrypoints.api.schemas.users import UserResponse
+from museflow.infrastructure.entrypoints.api.schemas.users import UserWithToken
 
 router = APIRouter()
 

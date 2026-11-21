@@ -13,9 +13,9 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_current_use
 from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
 from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
-from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectCompleteRequest
-from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectResponse
-from museflow.infrastructure.entrypoints.api.schemas import SuccessResponse
+from museflow.infrastructure.entrypoints.api.schemas.common import SuccessResponse
+from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectCompleteRequest
+from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectResponse
 
 router = APIRouter()
 
