@@ -22,6 +22,36 @@ x-app-build: &app-build
     PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
     UV_VERSION: ${UV_VERSION:-0.13.5}
 
+# What the workers share: one per task queue (`worker-interactive` below), each with processes of its own
+x-worker: &worker
+  build: *app-build
+  environment: &worker-env
+    <<: *app-env
+    # Per process, which runs one task at a time: one connection for the use case, one for a provider token
+    # refresh, one spare. 3 connections per process in all, next to the API's 15 (PostgreSQL allows 100).
+    DATABASE_POOL_SIZE: 2
+    DATABASE_MAX_OVERFLOW: 1
+  volumes:
+    # The files the API received, which the tasks read
+    - file_storage:/app/.storage
+  healthcheck:
+    # The image's check calls the API; a worker answers a ping through the broker instead
+    test: ["CMD-SHELL", "celery --app museflow.infrastructure.entrypoints.worker.main inspect ping --destination celery@$$HOSTNAME --timeout 5"]
+    interval: 30s
+    timeout: 15s
+    retries: 3
+    start_period: 20s
+  depends_on:
+    db:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+    migration:
+      condition: service_completed_successfully
+  networks:
+    - museflow-network
+  restart: unless-stopped
+
 services:
   db:
     image: postgres:18.6
@@ -110,36 +140,22 @@ services:
     restart: unless-stopped
 
   worker:
-    build: *app-build
+    # The batch queue: history import, enrichment, taste profile build, long and paid
+    <<: *worker
     container_name: museflow-worker
-    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.main", "worker"]
+    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.main", "worker", "--queues", "museflow.batch"]
     environment:
-      <<: *app-env
-      # Per process, which runs one task at a time: one connection for the use case, one for a provider token refresh,
-      # one spare. WORKER_CONCURRENCY × 3 connections in all, next to the API's 15 (PostgreSQL allows 100).
-      DATABASE_POOL_SIZE: 2
-      DATABASE_MAX_OVERFLOW: 1
+      <<: *worker-env
       MUSEFLOW_WORKER_CONCURRENCY: ${MUSEFLOW_WORKER_CONCURRENCY:-2}
-    volumes:
-      # The files the API received, which the tasks read
-      - file_storage:/app/.storage
-    healthcheck:
-      # The image's check calls the API; a worker answers a ping through the broker instead
-      test: ["CMD-SHELL", "celery --app museflow.infrastructure.entrypoints.worker.main inspect ping --destination celery@$$HOSTNAME --timeout 5"]
-      interval: 30s
-      timeout: 15s
-      retries: 3
-      start_period: 20s
-    depends_on:
-      db:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      migration:
-        condition: service_completed_successfully
-    networks:
-      - museflow-network
-    restart: unless-stopped
+
+  worker-interactive:
+    # The interactive queue, apart: a playlist never waits behind an enrichment
+    <<: *worker
+    container_name: museflow-worker-interactive
+    command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.main", "worker", "--queues", "museflow.interactive"]
+    environment:
+      <<: *worker-env
+      MUSEFLOW_WORKER_CONCURRENCY: ${MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY:-2}
 
   wiremock-spotify:
     # For the integration tests only: `make up` leaves it out, `make up-wiremock` names it

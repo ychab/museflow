@@ -26,11 +26,13 @@ class CeleryWorker:
 
     _process: subprocess.Popen[bytes]
 
-    def __init__(self, broker_url: str, database_uri: str, log_file: Path) -> None:
+    def __init__(self, broker_url: str, database_uri: str, log_file: Path, queues: list[str] | None = None) -> None:
+        """`queues`: those it consumes, all of them by default, as `celery worker` without `--queues`."""
         self.name = f"test-{uuid.uuid4().hex[:8]}@museflow"
         self._broker_url = broker_url
         self._database_uri = database_uri
         self._log_file = log_file
+        self._queues = queues
 
     def __enter__(self) -> Self:
         self.start()
@@ -73,6 +75,8 @@ class CeleryWorker:
             "--without-gossip",
             "--without-mingle",
         ]
+        if self._queues is not None:
+            command += ["--queues", ",".join(self._queues)]
 
         with self._log_file.open("ab") as log:
             # A session of its own, so that `kill` reaches its child processes too

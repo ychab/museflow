@@ -22,6 +22,12 @@ def create_user_task(email: str) -> None:
     run_task(_create_user(email))
 
 
+# Named as a playlist task, so that their route takes it
+@celery_app.task(name="playlist.tests_create_user")
+def create_user_as_playlist_task(email: str) -> None:
+    run_task(_create_user(email))
+
+
 @celery_app.task(name="tests.create_user_after_transient_error", bind=True)
 def create_user_after_transient_error_task(self: Task[[str], None], email: str) -> None:
     if self.request.retries == 0:

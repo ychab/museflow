@@ -23,13 +23,13 @@ make db-upgrade     # apply the schema
 | `make test` | The full suite with the 100% branch gate (starts PostgreSQL, RabbitMQ and both WireMock containers, stops them afterwards) |
 | `make test-unit` | Unit tests only; needs no containers |
 | `make test-integration` | Integration tests (real PostgreSQL, RabbitMQ, WireMock) |
-| `make up`, `make up-db`, `make up-broker`, `make up-wiremock`, `make down` | Docker Compose services: `make up` starts the app, a Celery worker, the database, RabbitMQ and Redis; WireMock (profile `test`) starts only for the integration tests |
+| `make up`, `make up-db`, `make up-broker`, `make up-wiremock`, `make down` | Docker Compose services: `make up` starts the app, two Celery workers (one per task queue), the database, RabbitMQ and Redis; WireMock (profile `test`) starts only for the integration tests |
 | `make db-revision` | Create an Alembic migration |
 | `make db-upgrade` / `make db-downgrade` | Apply or roll back migrations |
 | `make docs-serve` | Serve this documentation locally with live reload |
 | `make docs-build` | Build the documentation in strict mode, as CI does |
 | `make run` | Start the FastAPI dev server |
-| `make run-worker` | Start a Celery worker on the host (starts the database and RabbitMQ first) |
+| `make run-worker` | Start a Celery worker on the host, consuming both task queues (starts the database and RabbitMQ first) |
 | `make broker-queues`, `make broker-dead-letters`, `make worker-inspect` | Inspect the queues and their counters, read the dead-lettered messages (left in their queue), list the tasks the workers of `make up` run, hold and wait to retry |
 
 Run `make help` for the full list.
