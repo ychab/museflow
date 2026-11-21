@@ -6,22 +6,25 @@ from fastapi.testclient import TestClient
 
 import pytest
 
-from museflow.domain.exceptions import UserInactiveError
-from museflow.infrastructure.entrypoints.api.errors import add_exception_handlers
+from museflow.infrastructure.entrypoints.api.errors import Problem
+from museflow.infrastructure.entrypoints.api.errors import ProblemDetailsHandler
 
 
-class _UserInactiveSubclassError(UserInactiveError): ...
+class _ParentError(Exception): ...
 
 
-class TestExceptionHandlers:
+class _ChildError(_ParentError): ...
+
+
+class TestProblemDetailsHandler:
     @pytest.fixture
     def client(self) -> TestClient:
         app = FastAPI()
-        add_exception_handlers(app)
+        ProblemDetailsHandler({_ParentError: Problem(status=status.HTTP_409_CONFLICT, detail="Parent")}).register(app)
 
-        @app.get("/subclass")
-        async def subclass() -> None:
-            raise _UserInactiveSubclassError()
+        @app.get("/child")
+        async def child() -> None:
+            raise _ChildError()
 
         @app.get("/unexpected")
         async def unexpected() -> None:
@@ -30,10 +33,10 @@ class TestExceptionHandlers:
         return TestClient(app, raise_server_exceptions=False)
 
     def test__domain_error__subclass(self, client: TestClient) -> None:
-        response = client.get("/subclass")
+        response = client.get("/child")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.json()["detail"] == "User account is inactive"
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.json()["detail"] == "Parent"
 
     def test__unexpected_error(self, client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
         with caplog.at_level(logging.ERROR):

@@ -16,7 +16,8 @@ from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.const import API_V1_PREFIX
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
-from museflow.infrastructure.entrypoints.api.errors import add_exception_handlers
+from museflow.infrastructure.entrypoints.api.errors import PROBLEMS
+from museflow.infrastructure.entrypoints.api.errors import ProblemDetailsHandler
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.playlists import router as playlist_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
@@ -47,7 +48,7 @@ app = FastAPI(
     lifespan=lifespan,
     debug=app_settings.DEBUG,
 )
-add_exception_handlers(app)
+ProblemDetailsHandler(PROBLEMS).register(app)
 
 # CORS middleware must be added at the top of the list to prevent any side effect.
 app.add_middleware(
