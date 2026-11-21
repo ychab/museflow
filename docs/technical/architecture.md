@@ -8,7 +8,7 @@ MuseFlow follows Clean / Hexagonal Architecture. The reason is practical rather 
 flowchart TB
     subgraph INFRA["infrastructure (implements ports, owns every framework)"]
         direction TB
-        EP["entrypoints<br/>cli (Typer) / api (FastAPI)"]
+        EP["entrypoints<br/>cli (Typer) / api (FastAPI) / worker (Celery)"]
         AD["adapters<br/>providers/spotify<br/>advisors, profilers, enrichers / openrouter<br/>database (models + repositories)"]
     end
     subgraph APP["application (orchestration)"]
@@ -38,7 +38,7 @@ flowchart TB
 |---|---|---|---|
 | Domain | `museflow/domain/` | the standard library and a pure helper (`unidecode`) | Frozen-dataclass entities, value objects, pure helpers (text normalization, fingerprint), enums, constants, exceptions |
 | Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, outputs (what the use cases and ports hand to the entrypoints for display), port interfaces (`abc.ABC`) |
-| Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
+| Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, the Typer, FastAPI and Celery entrypoints |
 
 Two points are easy to miss:
 
@@ -62,6 +62,10 @@ Two points are easy to miss:
 | `PasswordHasherPort`, `StateTokenGeneratorPort`, `AccessTokenManagerPort` | Argon2, a `random.SystemRandom` state-token generator, PyJWT |
 
 Where the vendor is an enum (`MusicProvider`), the entrypoints pick the adapter with a `match` in [`wiring.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/wiring.py), which builds the adapters for all of them. Adding a provider means one new `case` plus the adapter package. The LLM side needs no such switch: OpenRouter is the single adapter, and the vendor choice became a model setting per step ([LLM pipeline](llm-pipeline.md#model-choice-per-step)). The move from direct Gemini calls to the gateway replaced the adapters and the settings; the ports and the use cases did not change, apart from dropping the vendor enums.
+
+## Three entrypoints
+
+The CLI (Typer), the API (FastAPI) and the worker (Celery, built by epic #271) do the same three things: parse their input (arguments, a request, a task message), build the adapters from the shared `Wiring` ([`wiring.py`](https://github.com/ychab/museflow/blob/main/museflow/infrastructure/entrypoints/wiring.py)), opened once per process, and call a use case. None of them holds business logic, so a flow runs the same from a terminal or as a background job queued by the API. The worker, the broker and the jobs table: [API and workers](api-and-workers.md).
 
 MuseFlow is deliberately a single application. If it grew, the ports above are where it would split into services (import, profiling, recommendations and playlists, enrichment); the trade-off is discussed in [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app).
 
