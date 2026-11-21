@@ -1,18 +1,17 @@
+from typing import Annotated
+
 from fastapi import APIRouter
 from fastapi import Depends
 
-from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import StateTokenGeneratorPort
-from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_oauth_code_exchange import exchange_oauth_code
 from museflow.application.use_cases.provider_oauth_redirect_url_build import build_oauth_redirect_url
 from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
-from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
-from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
+from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
+from museflow.infrastructure.entrypoints.api.dependencies import ProviderOAuthDep
+from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
-from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_work
 from museflow.infrastructure.entrypoints.api.schemas.common import SuccessResponse
 from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectCompleteRequest
 from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectResponse
@@ -23,10 +22,10 @@ router = APIRouter()
 @router.post("/connect", name="provider_connect")
 async def connect(
     provider: MusicProvider,
-    current_user: User = Depends(get_current_user),
-    uow: UnitOfWorkPort = Depends(get_unit_of_work),
-    provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
-    state_token_generator: StateTokenGeneratorPort = Depends(get_state_token_generator),
+    current_user: CurrentUserDep,
+    uow: UnitOfWorkDep,
+    provider_oauth: ProviderOAuthDep,
+    state_token_generator: Annotated[StateTokenGeneratorPort, Depends(get_state_token_generator)],
 ) -> ProviderConnectResponse:
     """Starts the OAuth flow: the client opens the URL, and the provider sends the browser back to `redirect_uri`.
 
@@ -47,9 +46,9 @@ async def connect(
 async def connect_complete(
     provider: MusicProvider,
     payload: ProviderConnectCompleteRequest,
-    current_user: User = Depends(get_current_user),
-    uow: UnitOfWorkPort = Depends(get_unit_of_work),
-    provider_oauth: ProviderOAuthPort = Depends(get_provider_oauth),
+    current_user: CurrentUserDep,
+    uow: UnitOfWorkDep,
+    provider_oauth: ProviderOAuthDep,
 ) -> SuccessResponse:
     """Ends the OAuth flow: stores the provider tokens of the user who started it, and of no one else.
 
