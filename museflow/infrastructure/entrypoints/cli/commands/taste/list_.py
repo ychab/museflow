@@ -11,12 +11,12 @@ from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command("list", help="List all taste profiles for a user.")
 def taste_list_command(
-    email: str = EMAIL_OPTION,
+    email: EmailOption,
 ) -> None:
     try:
         profiles = run_logic(taste_list_logic(email=email))

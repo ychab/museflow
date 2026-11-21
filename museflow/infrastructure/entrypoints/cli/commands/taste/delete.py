@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -9,14 +11,14 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command("delete", help="Delete a taste profile. Playlists built from it are kept.")
 def taste_delete_command(
-    email: str = EMAIL_OPTION,
-    name: str = typer.Option(..., help="Profile name (unique per user)"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+    email: EmailOption,
+    name: Annotated[str, typer.Option(help="Profile name (unique per user)")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     if not yes:
         typer.confirm(

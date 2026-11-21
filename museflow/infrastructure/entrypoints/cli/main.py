@@ -1,3 +1,4 @@
+from typing import Annotated
 from typing import cast
 
 import typer
@@ -45,28 +46,32 @@ def version_callback(show_version: bool) -> None:
 
 @app.callback()
 def main(
-    log_level: LogLevel = typer.Option(
-        app_settings.LOG_LEVEL_CLI,
-        "--log-level",
-        "-l",
-        case_sensitive=False,
-        help="Set the logging level.",
-    ),
-    log_handlers: list[str] = typer.Option(
-        app_settings.LOG_HANDLERS_CLI,
-        "--log-handlers",
-        case_sensitive=True,
-        callback=parse_log_handlers,
-        help="Set the logging handlers.",
-    ),
-    version: bool | None = typer.Option(
-        None,
-        "--version",
-        "-v",
-        help="Show the application's version and exit.",
-        callback=version_callback,
-        is_eager=True,
-    ),
+    *,
+    log_level: Annotated[
+        LogLevel, typer.Option("--log-level", "-l", case_sensitive=False, help="Set the logging level.")
+    ] = app_settings.LOG_LEVEL_CLI,
+    log_handlers: Annotated[
+        list[str],
+        typer.Option(
+            "--log-handlers",
+            case_sensitive=True,
+            callback=parse_log_handlers,
+            help="Set the logging handlers.",
+            # A copy: the default must not share the list of the settings.
+            default_factory=lambda: list(app_settings.LOG_HANDLERS_CLI),
+            show_default=", ".join(app_settings.LOG_HANDLERS_CLI),
+        ),
+    ],
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            "-v",
+            help="Show the application's version and exit.",
+            callback=version_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ) -> None:
     """Main entry point for the Museflow CLI application.
 

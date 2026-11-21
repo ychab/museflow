@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from dataclasses import replace
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -15,14 +16,18 @@ from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.commands.provider import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command("info", help="Show the stored provider auth token of a user.")
 def provider_info_command(
-    email: str = EMAIL_OPTION,
-    provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider of the token"),
-    show_tokens: bool = typer.Option(False, "--show-tokens", help="Print the tokens in clear, after a confirmation"),
+    email: EmailOption,
+    provider: Annotated[
+        MusicProvider, typer.Option("--provider", help="Music provider of the token")
+    ] = MusicProvider.SPOTIFY,
+    show_tokens: Annotated[
+        bool, typer.Option("--show-tokens", help="Print the tokens in clear, after a confirmation")
+    ] = False,
 ) -> None:
     if show_tokens:
         typer.confirm("This prints the tokens in clear. Continue?", abort=True)

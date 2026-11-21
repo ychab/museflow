@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -27,25 +28,24 @@ console = Console()
     help="Show what the LLM calls cost, grouped by operation, model, effort, step, month, profile, user or run.",
 )
 def llm_usage_command(
-    email: str | None = typer.Option(None, help="User email address (all the users when omitted)", parser=parse_email),
-    operation: LLMOperation | None = typer.Option(None, "--operation", help="Only the runs of this operation"),
-    since: date | None = typer.Option(
-        None,
-        "--since",
-        help="Only the runs from this date on, in UTC (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    until: date | None = typer.Option(
-        None,
-        "--until",
-        help="Only the runs up to this date included, in UTC (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    group_by: list[LLMUsageGroupBy] | None = typer.Option(
-        None,
-        "--by",
-        help="Group the usage by, repeatable to combine groupings (default: operation)",
-    ),
+    email: Annotated[
+        str | None, typer.Option(help="User email address (all the users when omitted)", parser=parse_email)
+    ] = None,
+    operation: Annotated[
+        LLMOperation | None, typer.Option("--operation", help="Only the runs of this operation")
+    ] = None,
+    since: Annotated[
+        date | None,
+        typer.Option("--since", help="Only the runs from this date on, in UTC (YYYY-MM-DD)", parser=parse_date),
+    ] = None,
+    until: Annotated[
+        date | None,
+        typer.Option("--until", help="Only the runs up to this date included, in UTC (YYYY-MM-DD)", parser=parse_date),
+    ] = None,
+    group_by: Annotated[
+        list[LLMUsageGroupBy] | None,
+        typer.Option("--by", help="Group the usage by, repeatable to combine groupings (default: operation)"),
+    ] = None,
 ) -> None:
     group_by = group_by or [LLMUsageGroupBy.OPERATION]
     if len(set(group_by)) < len(group_by):

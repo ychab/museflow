@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Annotated
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
@@ -20,7 +21,7 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.provider import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import init_logic_runner
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -32,8 +33,10 @@ class ConnectStart:
 
 @app.command("connect", help="Connect a user account to a music provider via OAuth.")
 def provider_connect_command(
-    email: str = EMAIL_OPTION,
-    provider: MusicProvider = typer.Option(MusicProvider.SPOTIFY, "--provider", help="Music provider to connect"),
+    email: EmailOption,
+    provider: Annotated[
+        MusicProvider, typer.Option("--provider", help="Music provider to connect")
+    ] = MusicProvider.SPOTIFY,
 ) -> None:
     """
     Initiates the provider's OAuth flow for a specific user.

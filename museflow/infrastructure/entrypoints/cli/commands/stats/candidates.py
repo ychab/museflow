@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -12,16 +14,20 @@ from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command("candidates", help="Show artists to explore: few total tracks but high average score.")
 def stats_candidates_command(
-    email: str = EMAIL_OPTION,
-    limit: int = typer.Option(20, help="Max rows in the table"),
-    source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
-    max_tracks: int = typer.Option(5, "--max-tracks", help="Maximum total tracks for an artist to be a candidate"),
-    min_avg: float = typer.Option(7.0, "--min-avg", help="Minimum average score for an artist to be a candidate"),
+    email: EmailOption,
+    limit: Annotated[int, typer.Option(help="Max rows in the table")] = 20,
+    source: Annotated[SourceFilter, typer.Option("--source", help="Track source to include")] = SourceFilter.ALL,
+    max_tracks: Annotated[
+        int, typer.Option("--max-tracks", help="Maximum total tracks for an artist to be a candidate")
+    ] = 5,
+    min_avg: Annotated[
+        float, typer.Option("--min-avg", help="Minimum average score for an artist to be a candidate")
+    ] = 7.0,
 ) -> None:
     try:
         rows = run_logic(

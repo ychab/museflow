@@ -1,5 +1,6 @@
 import uuid
 from contextlib import AsyncExitStack
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -15,7 +16,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command(
@@ -23,17 +24,24 @@ from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
     help="Delete a playlist. Pass --include-remote to also unfollow it on the provider (e.g. Spotify).",
 )
 def playlist_delete_command(
-    playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist ID (required unless --purge is used)"),
-    email: str = EMAIL_OPTION,
-    purge: bool = typer.Option(False, "--purge", help="Delete all matching playlists instead of a single one"),
-    type: PlaylistType | None = typer.Option(None, "--type", help="Filter by playlist type (only valid with --purge)"),
-    provider: MusicProvider | None = typer.Option(
-        None, "--provider", help="Filter by provider (only valid with --purge)"
-    ),
-    include_remote: bool = typer.Option(
-        False, "--include-remote", help="Also unfollow/delete the playlist on the provider (e.g. Spotify)"
-    ),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+    *,
+    playlist_id: Annotated[
+        uuid.UUID | None, typer.Argument(help="Playlist ID (required unless --purge is used)")
+    ] = None,
+    email: EmailOption,
+    purge: Annotated[
+        bool, typer.Option("--purge", help="Delete all matching playlists instead of a single one")
+    ] = False,
+    type: Annotated[
+        PlaylistType | None, typer.Option("--type", help="Filter by playlist type (only valid with --purge)")
+    ] = None,
+    provider: Annotated[
+        MusicProvider | None, typer.Option("--provider", help="Filter by provider (only valid with --purge)")
+    ] = None,
+    include_remote: Annotated[
+        bool, typer.Option("--include-remote", help="Also unfollow/delete the playlist on the provider (e.g. Spotify)")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     if purge:
         if playlist_id is not None:
