@@ -124,7 +124,7 @@ You can run the application and the database using Docker Compose or the provide
 
 **Using Makefile:**
 
-*   **Start the whole stack (DB + App):**
+*   **Start the whole stack (DB, RabbitMQ, Redis, App, Worker):**
     ```bash
     make up
     ```
@@ -134,6 +134,11 @@ You can run the application and the database using Docker Compose or the provide
     make run
     ```
     *Note: You need to have the database running (`make up-db`).*
+
+*   **Run a Celery worker locally:**
+    ```bash
+    make run-worker
+    ```
 
 **Using Docker Compose directly:**
 

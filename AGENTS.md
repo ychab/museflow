@@ -50,7 +50,7 @@ museflow/
     ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress,
     │                # storage
     ├── config/settings/
-    ├── entrypoints/ # api (FastAPI), cli (Typer), wiring.py (the adapters, built for all of them)
+    ├── entrypoints/ # api (FastAPI), cli (Typer), worker (Celery), wiring.py (the adapters, built for all of them)
     └── utils/       # pure helpers shared by adapters and entrypoints (formatting)
 ```
 
