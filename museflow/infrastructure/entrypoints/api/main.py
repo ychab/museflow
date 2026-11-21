@@ -1,6 +1,7 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -72,7 +73,7 @@ app.include_router(api_v1_router, prefix=API_V1_PREFIX)
 
 @app.get("/health", name="health_check", tags=["health"])
 async def health_check(
-    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+    session_factory: Annotated[async_sessionmaker[AsyncSession], Depends(get_session_factory)],
 ) -> HealthCheckResponse:
     """Health check endpoint to verify application and database status."""
     # A raw session, the health check's only: everything else goes through the unit of work.

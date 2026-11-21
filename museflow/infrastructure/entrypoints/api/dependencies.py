@@ -1,6 +1,7 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from typing import Annotated
 from typing import Final
 
 from fastapi import Depends
@@ -42,37 +43,41 @@ def get_wiring(request: Request) -> Wiring:
     return wiring
 
 
-def get_session_factory(wiring: Wiring = Depends(get_wiring)) -> async_sessionmaker[AsyncSession]:
+def get_session_factory(wiring: Annotated[Wiring, Depends(get_wiring)]) -> async_sessionmaker[AsyncSession]:
     return wiring.session_factory
 
 
-def get_unit_of_work(wiring: Wiring = Depends(get_wiring)) -> UnitOfWorkPort:
+def get_unit_of_work(wiring: Annotated[Wiring, Depends(get_wiring)]) -> UnitOfWorkPort:
     # FastAPI caches it for the request, whose steps run one after another.
     return wiring.build_unit_of_work()
 
 
-def get_password_hasher(wiring: Wiring = Depends(get_wiring)) -> PasswordHasherPort:
+def get_password_hasher(wiring: Annotated[Wiring, Depends(get_wiring)]) -> PasswordHasherPort:
     return wiring.build_password_hasher()
 
 
-def get_access_token_manager(wiring: Wiring = Depends(get_wiring)) -> AccessTokenManagerPort:
+def get_access_token_manager(wiring: Annotated[Wiring, Depends(get_wiring)]) -> AccessTokenManagerPort:
     return wiring.build_access_token_manager()
 
 
-def get_state_token_generator(wiring: Wiring = Depends(get_wiring)) -> StateTokenGeneratorPort:
+def get_state_token_generator(wiring: Annotated[Wiring, Depends(get_wiring)]) -> StateTokenGeneratorPort:
     return wiring.build_state_token_generator()
 
 
 def get_page_params(
-    limit: int = Query(PAGE_LIMIT_DEFAULT, ge=1, le=PAGE_LIMIT_MAX, description="How many items the page holds"),
-    offset: int = Query(0, ge=0, description="How many items to skip, from the start of the collection"),
+    limit: Annotated[
+        int, Query(ge=1, le=PAGE_LIMIT_MAX, description="How many items the page holds")
+    ] = PAGE_LIMIT_DEFAULT,
+    offset: Annotated[int, Query(ge=0, description="How many items to skip, from the start of the collection")] = 0,
 ) -> PageParams:
     return PageParams(limit=limit, offset=offset)
 
 
 def get_redirect_uri(
     provider: MusicProvider,
-    redirect_uri: AnyUrl = Query(description="Where the provider sends the browser back: the client's page or app"),
+    redirect_uri: Annotated[
+        AnyUrl, Query(description="Where the provider sends the browser back: the client's page or app")
+    ],
 ) -> AnyUrl:
     # Only the clients registered with the provider: any other URI would send the code to someone else.
     match provider:
@@ -89,17 +94,17 @@ def get_redirect_uri(
 
 async def get_provider_oauth(
     provider: MusicProvider,
-    redirect_uri: AnyUrl = Depends(get_redirect_uri),
-    wiring: Wiring = Depends(get_wiring),
+    redirect_uri: Annotated[AnyUrl, Depends(get_redirect_uri)],
+    wiring: Annotated[Wiring, Depends(get_wiring)],
 ) -> AsyncGenerator[ProviderOAuthPort]:
     async with wiring.build_provider_oauth(provider, redirect_uri) as provider_oauth:
         yield provider_oauth
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    uow: UnitOfWorkPort = Depends(get_unit_of_work),
-    access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
+    token: Annotated[str, Depends(oauth2_scheme)],
+    uow: Annotated[UnitOfWorkPort, Depends(get_unit_of_work)],
+    access_token_manager: Annotated[AccessTokenManagerPort, Depends(get_access_token_manager)],
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -135,3 +140,12 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
 
     return user
+
+
+# What several routes take: the dependency rides on the type.
+UnitOfWorkDep = Annotated[UnitOfWorkPort, Depends(get_unit_of_work)]
+PasswordHasherDep = Annotated[PasswordHasherPort, Depends(get_password_hasher)]
+AccessTokenManagerDep = Annotated[AccessTokenManagerPort, Depends(get_access_token_manager)]
+ProviderOAuthDep = Annotated[ProviderOAuthPort, Depends(get_provider_oauth)]
+PageParamsDep = Annotated[PageParams, Depends(get_page_params)]
+CurrentUserDep = Annotated[User, Depends(get_current_user)]
