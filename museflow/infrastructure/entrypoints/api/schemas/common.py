@@ -5,11 +5,6 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 
-class HealthCheckResponse(BaseModel):
-    status: str
-    database: str
-
-
 class ProblemDetails(BaseModel):
     """An error body, as RFC 9457 describes it."""
 
@@ -41,3 +36,8 @@ class PageResponse[T](BaseModel):
 
 class SuccessResponse(BaseModel):
     message: str
+
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    database: str
