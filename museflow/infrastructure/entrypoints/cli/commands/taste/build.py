@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from datetime import timedelta
+from typing import Annotated
 from typing import Final
 
 from pydantic import EmailStr
@@ -26,8 +27,8 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
+from museflow.infrastructure.entrypoints.cli.options import VerboseOption
 from museflow.infrastructure.entrypoints.cli.utils.display import console
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
@@ -35,47 +36,47 @@ from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usag
 
 @app.command("build", help="Build a master taste profile from your library.")
 def taste_build_command(
-    email: str = EMAIL_OPTION,
-    name: str = typer.Option(..., "--name", help="Profile name (unique per user)"),
-    resume: bool = typer.Option(False, "--resume/--no-resume", help="Resume from last checkpoint"),
-    rated_only: bool = typer.Option(
-        False,
-        "--rated-only/--no-rated-only",
-        help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
-    ),
-    track_limit: int = typer.Option(
-        BuildTasteProfileConfigInput.track_limit,
-        "--track-limit",
-        help="Max seed tracks to build the profile",
-        min=1,
-        max=20000,
-    ),
-    batch_size: int | None = typer.Option(
-        BuildTasteProfileConfigInput.batch_size,
-        "--batch-size",
-        help=(
-            f"Seed tracks per listening period (one LLM request each). Default: {TASTE_BATCH_SIZE_MIN}, or the seeds "
-            f"split into about {TASTE_BATCH_COUNT_TARGET} periods for a larger library"
+    email: EmailOption,
+    name: Annotated[str, typer.Option("--name", help="Profile name (unique per user)")],
+    resume: Annotated[bool, typer.Option("--resume/--no-resume", help="Resume from last checkpoint")] = False,
+    rated_only: Annotated[
+        bool,
+        typer.Option(
+            "--rated-only/--no-rated-only",
+            help="Restrict seed tracks to only those the user has explicitly rated (score 0–10)",
         ),
-        min=1,
-        max=1000,
-    ),
-    segment_model: str | None = typer.Option(
-        None,
-        "--segment-model",
-        help="OpenRouter model id overriding the configured segment step model (e.g. google/gemini-3.1-flash-lite).",
-    ),
-    merge_model: str | None = typer.Option(
-        None,
-        "--merge-model",
-        help="OpenRouter model id overriding the configured merge step model.",
-    ),
-    reflect_model: str | None = typer.Option(
-        None,
-        "--reflect-model",
-        help="OpenRouter model id overriding the configured reflect step model.",
-    ),
-    verbose: bool = VERBOSE_OPTION,
+    ] = False,
+    track_limit: Annotated[
+        int, typer.Option("--track-limit", help="Max seed tracks to build the profile", min=1, max=20000)
+    ] = BuildTasteProfileConfigInput.track_limit,
+    batch_size: Annotated[
+        int | None,
+        typer.Option(
+            "--batch-size",
+            help=(
+                f"Seed tracks per listening period (one LLM request each). Default: {TASTE_BATCH_SIZE_MIN}, or the seeds "
+                f"split into about {TASTE_BATCH_COUNT_TARGET} periods for a larger library"
+            ),
+            min=1,
+            max=1000,
+        ),
+    ] = BuildTasteProfileConfigInput.batch_size,
+    segment_model: Annotated[
+        str | None,
+        typer.Option(
+            "--segment-model",
+            help="OpenRouter model id overriding the configured segment step model (e.g. google/gemini-3.1-flash-lite).",
+        ),
+    ] = None,
+    merge_model: Annotated[
+        str | None,
+        typer.Option("--merge-model", help="OpenRouter model id overriding the configured merge step model."),
+    ] = None,
+    reflect_model: Annotated[
+        str | None,
+        typer.Option("--reflect-model", help="OpenRouter model id overriding the configured reflect step model."),
+    ] = None,
+    verbose: VerboseOption = False,
 ) -> None:
     meter = LLMUsageMeter()
     try:

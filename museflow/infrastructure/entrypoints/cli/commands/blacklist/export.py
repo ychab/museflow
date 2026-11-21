@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -11,14 +12,14 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export the blacklist to a YAML file.")
 def blacklist_export_command(
-    email: str = EMAIL_OPTION,
-    output: Path = typer.Option(..., help="Path to the output YAML file"),
+    email: EmailOption,
+    output: Annotated[Path, typer.Option(help="Path to the output YAML file")],
 ) -> None:
     try:
         blacklist_in = run_logic(blacklist_export_logic(email=email))

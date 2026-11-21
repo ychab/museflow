@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -13,7 +14,7 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -24,15 +25,20 @@ class TracksDeleteResult:
 
 @app.command("delete", help="Delete tracks matching the given filters.")
 def tracks_delete_command(
-    email: str = EMAIL_OPTION,
-    artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name (case-insensitive)"),
-    name: str | None = typer.Option(None, "--name", help="Filter by track name (case-insensitive)"),
-    source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Filter by track source"),
-    provider: MusicProvider | None = typer.Option(
-        None, "--provider", help="Filter by music provider: unlink it, delete tracks left with none"
-    ),
-    purge: bool = typer.Option(False, "--purge", help="Delete all tracks, or only those matching --source/--provider"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+    email: EmailOption,
+    artist: Annotated[
+        str | None, typer.Option("--artist", help="Filter by primary artist name (case-insensitive)")
+    ] = None,
+    name: Annotated[str | None, typer.Option("--name", help="Filter by track name (case-insensitive)")] = None,
+    source: Annotated[SourceFilter, typer.Option("--source", help="Filter by track source")] = SourceFilter.ALL,
+    provider: Annotated[
+        MusicProvider | None,
+        typer.Option("--provider", help="Filter by music provider: unlink it, delete tracks left with none"),
+    ] = None,
+    purge: Annotated[
+        bool, typer.Option("--purge", help="Delete all tracks, or only those matching --source/--provider")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     if not purge and not artist and not name:
         raise typer.BadParameter("Provide at least --artist or --name, or use --purge to delete all tracks.")

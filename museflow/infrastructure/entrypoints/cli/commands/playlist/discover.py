@@ -1,5 +1,6 @@
 import math
 from contextlib import AsyncExitStack
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -26,8 +27,8 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
+from museflow.infrastructure.entrypoints.cli.options import VerboseOption
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
@@ -37,41 +38,45 @@ console = Console()
 
 @app.command("discover")
 def playlist_discover_command(
-    prompt: str | None = typer.Argument(
-        None,
-        help="Optional freeform request for the advisor: genres, moods, a theme (e.g. 'lo-fi jazz and soul for focus')",
-    ),
-    email: str = EMAIL_OPTION,
-    provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
-    name: str | None = typer.Option(None, "--name", help="Taste profile name (defaults to latest)"),
-    focus: DiscoveryFocus | None = typer.Option(
-        None,
-        "--focus",
-        help="The discovery focus strategy (defaults to expansion without a prompt, none with one)",
-    ),
-    model: str | None = typer.Option(
-        None,
-        "--model",
-        help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
-    ),
-    title: str | None = typer.Option(
-        None,
-        "--title",
-        help="Playlist name, used as is (defaults to the advisor's suggestion with a timestamp)",
-    ),
-    dry_run: bool = typer.Option(
-        False,
-        "--dry-run",
-        help="Discover tracks without creating a playlist (still searches the provider catalogue)",
-    ),
-    verbose: bool = VERBOSE_OPTION,
-    limit: int = typer.Option(
-        CreateDiscoveryPlaylistConfigInput.playlist_limit,
-        "--limit",
-        help="Target number of tracks in the generated playlist",
-        min=1,
-        max=30,
-    ),
+    *,
+    prompt: Annotated[
+        str | None,
+        typer.Argument(
+            help="Optional freeform request for the advisor: genres, moods, a theme (e.g. 'lo-fi jazz and soul for focus')"
+        ),
+    ] = None,
+    email: EmailOption,
+    provider: Annotated[MusicProvider, typer.Option(help="The music provider to use")] = MusicProvider.SPOTIFY,
+    name: Annotated[str | None, typer.Option("--name", help="Taste profile name (defaults to latest)")] = None,
+    focus: Annotated[
+        DiscoveryFocus | None,
+        typer.Option(
+            "--focus", help="The discovery focus strategy (defaults to expansion without a prompt, none with one)"
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
+        ),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option(
+            "--title", help="Playlist name, used as is (defaults to the advisor's suggestion with a timestamp)"
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Discover tracks without creating a playlist (still searches the provider catalogue)"
+        ),
+    ] = False,
+    verbose: VerboseOption = False,
+    limit: Annotated[
+        int, typer.Option("--limit", help="Target number of tracks in the generated playlist", min=1, max=30)
+    ] = CreateDiscoveryPlaylistConfigInput.playlist_limit,
 ) -> None:
     """Discover new tracks guided by your AI taste profile."""
     meter = LLMUsageMeter()

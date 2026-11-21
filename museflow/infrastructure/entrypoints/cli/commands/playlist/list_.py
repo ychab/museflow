@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -10,15 +12,15 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 console = Console()
 
 
 @app.command("list")
 def playlist_list_command(
-    email: str = EMAIL_OPTION,
-    type: PlaylistType | None = typer.Option(None, "--type", help="Filter by playlist type"),
+    email: EmailOption,
+    type: Annotated[PlaylistType | None, typer.Option("--type", help="Filter by playlist type")] = None,
 ) -> None:
     """List all playlists for a user."""
     try:

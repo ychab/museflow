@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 from typing import Any
 
 from pydantic import EmailStr
@@ -12,14 +13,14 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.rate import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export track ratings to a YAML file.")
 def rate_export_command(
-    email: str = EMAIL_OPTION,
-    output: Path = typer.Option(..., help="Path to the output YAML file"),
+    email: EmailOption,
+    output: Annotated[Path, typer.Option(help="Path to the output YAML file")],
 ) -> None:
     try:
         data = run_logic(rate_export_logic(email=email))

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -15,15 +17,20 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 @app.command("create", help="Create a new user account.")
 def users_create_command(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
-    password: str = typer.Option(
-        None,
-        prompt=True,
-        hide_input=True,
-        confirmation_prompt=True,
-        help="User password (prompted if omitted)",
-        parser=parse_password,
-    ),
+    email: Annotated[str, typer.Option(help="User email address", parser=parse_email)],
+    password: Annotated[
+        str,
+        typer.Option(
+            prompt=True,
+            hide_input=True,
+            confirmation_prompt=True,
+            help="User password (prompted if omitted)",
+            parser=parse_password,
+            # No default of its own: the prompt asks for it, so the parameter stays a required `str` for a direct call.
+            default_factory=lambda: None,
+            show_default=False,
+        ),
+    ],
 ) -> None:
     try:
         run_logic(users_create_logic(email, password))

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -13,8 +15,8 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_email
 
 @app.command("delete", help="Delete a user account and all of its data.")
 def users_delete_command(
-    email: str = typer.Option(..., help="User email address", parser=parse_email),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+    email: Annotated[str, typer.Option(help="User email address", parser=parse_email)],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     if not yes:
         typer.confirm(

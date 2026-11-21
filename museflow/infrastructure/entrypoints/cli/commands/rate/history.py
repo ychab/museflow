@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -19,7 +20,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import init_logic_runner
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -33,14 +34,17 @@ class RateHistoryResult:
 
 @app.command("history", help="Interactively rate unrated history tracks ordered by play count.")
 def rate_history_command(
-    email: str = EMAIL_OPTION,
-    limit: int = typer.Option(10, help="Maximum number of tracks to rate", min=1),
-    reset: bool = typer.Option(False, "--reset", help="Clear all existing history track scores before rating"),
-    play: bool = typer.Option(False, "--play", help="Play each track before rating"),
-    play_provider: MusicProvider | None = typer.Option(
-        None, "--play-provider", help="Provider to use for playback (default: spotify). Requires --play."
-    ),
-    artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist (case-insensitive)"),
+    email: EmailOption,
+    limit: Annotated[int, typer.Option(help="Maximum number of tracks to rate", min=1)] = 10,
+    reset: Annotated[
+        bool, typer.Option("--reset", help="Clear all existing history track scores before rating")
+    ] = False,
+    play: Annotated[bool, typer.Option("--play", help="Play each track before rating")] = False,
+    play_provider: Annotated[
+        MusicProvider | None,
+        typer.Option("--play-provider", help="Provider to use for playback (default: spotify). Requires --play."),
+    ] = None,
+    artist: Annotated[str | None, typer.Option("--artist", help="Filter by primary artist (case-insensitive)")] = None,
 ) -> None:
     if play_provider is not None and not play:
         raise typer.BadParameter("--play-provider requires --play")

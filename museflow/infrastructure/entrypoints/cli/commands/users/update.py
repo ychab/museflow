@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 from pydantic import ValidationError
 
@@ -16,9 +17,9 @@ from museflow.infrastructure.entrypoints.cli.parsers import parse_password
 
 @app.command("update", help="Update the email and/or password of a user.")
 def users_update_command(
-    user_id: uuid.UUID = typer.Argument(..., help="User ID to update"),
-    email: str | None = typer.Option(None, help="User email address to change", parser=parse_email),
-    password: str | None = typer.Option(None, help="User password to change", parser=parse_password),
+    user_id: Annotated[uuid.UUID, typer.Argument(help="User ID to update")],
+    email: Annotated[str | None, typer.Option(help="User email address to change", parser=parse_email)] = None,
+    password: Annotated[str | None, typer.Option(help="User password to change", parser=parse_password)] = None,
 ) -> None:
     # Set only explicit values to update.
     attributes = {k: v for k, v in {"email": email, "password": password}.items() if v is not None}

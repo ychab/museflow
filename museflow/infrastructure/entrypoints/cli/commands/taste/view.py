@@ -4,6 +4,7 @@ import webbrowser
 from enum import StrEnum
 from html import escape
 from pathlib import Path
+from typing import Annotated
 from typing import Any
 
 from pydantic import EmailStr
@@ -21,7 +22,7 @@ from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.commands.taste import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 class ViewFormat(StrEnum):
@@ -32,11 +33,11 @@ class ViewFormat(StrEnum):
 
 @app.command("view", help="View a taste profile.")
 def taste_view_command(
-    email: str = EMAIL_OPTION,
-    name: str = typer.Option(..., help="Profile name (unique per user)"),
-    output_format: ViewFormat = typer.Option(
-        ViewFormat.json, "--format", help="Output format: json, python, or html (browser)"
-    ),
+    email: EmailOption,
+    name: Annotated[str, typer.Option(help="Profile name (unique per user)")],
+    output_format: Annotated[
+        ViewFormat, typer.Option("--format", help="Output format: json, python, or html (browser)")
+    ] = ViewFormat.json,
 ) -> None:
     try:
         taste_profile = run_logic(taste_view_logic(email=email, name=name))

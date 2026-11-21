@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -14,29 +16,33 @@ from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 
 
 @app.command("tracks", help="Show top rated tracks.")
 def stats_tracks_command(
-    email: str = EMAIL_OPTION,
-    score_min: int | None = typer.Option(
-        None,
-        "--score-min",
-        help="Minimum score filter (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    score_max: int | None = typer.Option(
-        None,
-        "--score-max",
-        help="Maximum score filter (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    sort: TrackSortBy = typer.Option(TrackSortBy.SCORE, "--sort", help="Ranking strategy"),
-    limit: int = typer.Option(20, help="Max rows in the table", min=1),
+    email: EmailOption,
+    score_min: Annotated[
+        int | None,
+        typer.Option(
+            "--score-min",
+            help="Minimum score filter (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    score_max: Annotated[
+        int | None,
+        typer.Option(
+            "--score-max",
+            help="Maximum score filter (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    sort: Annotated[TrackSortBy, typer.Option("--sort", help="Ranking strategy")] = TrackSortBy.SCORE,
+    limit: Annotated[int, typer.Option(help="Max rows in the table", min=1)] = 20,
 ) -> None:
     validate_score_range(score_min, score_max)
 

@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from pathlib import Path
+from typing import Annotated
 from typing import Any
 
 from pydantic import EmailStr
@@ -22,8 +23,8 @@ from museflow.infrastructure.config.loggers.setup import console_stderr
 from museflow.infrastructure.entrypoints.cli.commands.enrich import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
+from museflow.infrastructure.entrypoints.cli.options import VerboseOption
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
@@ -31,28 +32,32 @@ from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 @app.command("tracks", help="Enrich tracks with AI-inferred genre, mood, and locales (sung languages) metadata.")
 def enrich_tracks_command(
-    email: str = EMAIL_OPTION,
-    only_genre: bool = typer.Option(False, "--only-genre", help="Enrich genre tags only."),
-    only_mood: bool = typer.Option(False, "--only-mood", help="Enrich mood labels only."),
-    only_locale: bool = typer.Option(False, "--only-locale", help="Enrich locales (sung languages) only."),
-    input_path: Path | None = typer.Option(
-        None,
-        "--input",
-        help="YAML file listing the tracks to enrich by fingerprint, as written by `enrich export` (e.g. a sample).",
-    ),
-    force: bool = typer.Option(False, "--force", help="Re-enrich tracks that already have the requested fields."),
-    batch_size: int = typer.Option(
-        EnrichTracksConfigInput.batch_size,
-        "--batch-size",
-        help="Number of tracks per LLM request.",
-    ),
-    model: str | None = typer.Option(
-        None,
-        "--model",
-        help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-3.1-flash-lite).",
-    ),
-    verbose: bool = VERBOSE_OPTION,
-    limit: int | None = typer.Option(None, "--limit", help="Maximum number of tracks to process."),
+    email: EmailOption,
+    only_genre: Annotated[bool, typer.Option("--only-genre", help="Enrich genre tags only.")] = False,
+    only_mood: Annotated[bool, typer.Option("--only-mood", help="Enrich mood labels only.")] = False,
+    only_locale: Annotated[bool, typer.Option("--only-locale", help="Enrich locales (sung languages) only.")] = False,
+    input_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--input",
+            help="YAML file listing the tracks to enrich by fingerprint, as written by `enrich export` (e.g. a sample).",
+        ),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Re-enrich tracks that already have the requested fields.")
+    ] = False,
+    batch_size: Annotated[
+        int, typer.Option("--batch-size", help="Number of tracks per LLM request.")
+    ] = EnrichTracksConfigInput.batch_size,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="OpenRouter model id overriding the configured enricher model (e.g. google/gemini-3.1-flash-lite).",
+        ),
+    ] = None,
+    verbose: VerboseOption = False,
+    limit: Annotated[int | None, typer.Option("--limit", help="Maximum number of tracks to process.")] = None,
 ) -> None:
     data = read_yaml(input_path) if input_path is not None else None
 

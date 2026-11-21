@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from datetime import date
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -25,7 +26,7 @@ from museflow.domain.types import LocaleCode
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.parsers import parse_date
 from museflow.infrastructure.entrypoints.cli.parsers import parse_locale
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
@@ -35,78 +36,98 @@ console = Console()
 
 @app.command("history")
 def playlist_history_command(
-    email: str = EMAIL_OPTION,
-    provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
-    name_suffix: str | None = typer.Option(
-        None, "--name-suffix", help="Custom name suffix for the playlist (replaces the timestamp)"
-    ),
-    score_min: int | None = typer.Option(
-        None,
-        "--score-min",
-        help="Minimum track score (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    score_max: int | None = typer.Option(
-        None,
-        "--score-max",
-        help="Maximum track score (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    artist: str | None = typer.Option(None, "--artist", help="Filter by primary artist name"),
-    genre: list[GenreTag] = typer.Option([], "--genre", help="Filter by genre tag (repeatable, OR logic)"),
-    mood: list[MoodTag] = typer.Option([], "--mood", help="Filter by mood tag (repeatable, OR logic)"),
-    locale: list[LocaleCode] = typer.Option(
-        [],
-        "--locale",
-        help="Filter by sung language, ISO 639-1 (repeatable, matches any of the track's languages)",
-        parser=parse_locale,
-    ),
-    played_first_min: date | None = typer.Option(
-        None,
-        "--played-first-min",
-        help="Filter tracks first played on or after this date (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    played_first_max: date | None = typer.Option(
-        None,
-        "--played-first-max",
-        help="Filter tracks first played on or before this date (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    played_last_min: date | None = typer.Option(
-        None,
-        "--played-last-min",
-        help="Filter tracks last played on or after this date (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    played_last_max: date | None = typer.Option(
-        None,
-        "--played-last-max",
-        help="Filter tracks last played on or before this date (YYYY-MM-DD)",
-        parser=parse_date,
-    ),
-    duplicate: bool = typer.Option(
-        False,
-        "--duplicate",
-        help="Allow tracks already used in a previous history playlist",
-    ),
-    group_by_artists: bool = typer.Option(False, "--group-by-artists", help="Group tracks by primary artist"),
-    dry_run: bool = typer.Option(
-        False,
-        "--dry-run",
-        help="Preview matched tracks without creating a playlist",
-    ),
-    sort: PlaylistHistoryOrderBy = typer.Option(
-        CreateHistoryPlaylistConfigInput.sort_by, "--sort", help="Sort tracks by this field"
-    ),
-    limit: int = typer.Option(
-        CreateHistoryPlaylistConfigInput.limit,
-        "--limit",
-        help="Maximum number of tracks in the playlist",
-        min=1,
-    ),
+    *,
+    email: EmailOption,
+    provider: Annotated[MusicProvider, typer.Option(help="The music provider to use")] = MusicProvider.SPOTIFY,
+    name_suffix: Annotated[
+        str | None, typer.Option("--name-suffix", help="Custom name suffix for the playlist (replaces the timestamp)")
+    ] = None,
+    score_min: Annotated[
+        int | None,
+        typer.Option(
+            "--score-min",
+            help="Minimum track score (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    score_max: Annotated[
+        int | None,
+        typer.Option(
+            "--score-max",
+            help="Maximum track score (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    artist: Annotated[str | None, typer.Option("--artist", help="Filter by primary artist name")] = None,
+    genre: Annotated[
+        list[GenreTag],
+        typer.Option(
+            "--genre", help="Filter by genre tag (repeatable, OR logic)", default_factory=list, show_default=False
+        ),
+    ],
+    mood: Annotated[
+        list[MoodTag],
+        typer.Option(
+            "--mood", help="Filter by mood tag (repeatable, OR logic)", default_factory=list, show_default=False
+        ),
+    ],
+    locale: Annotated[
+        list[LocaleCode],
+        typer.Option(
+            "--locale",
+            help="Filter by sung language, ISO 639-1 (repeatable, matches any of the track's languages)",
+            parser=parse_locale,
+            default_factory=list,
+            show_default=False,
+        ),
+    ],
+    played_first_min: Annotated[
+        date | None,
+        typer.Option(
+            "--played-first-min",
+            help="Filter tracks first played on or after this date (YYYY-MM-DD)",
+            parser=parse_date,
+        ),
+    ] = None,
+    played_first_max: Annotated[
+        date | None,
+        typer.Option(
+            "--played-first-max",
+            help="Filter tracks first played on or before this date (YYYY-MM-DD)",
+            parser=parse_date,
+        ),
+    ] = None,
+    played_last_min: Annotated[
+        date | None,
+        typer.Option(
+            "--played-last-min", help="Filter tracks last played on or after this date (YYYY-MM-DD)", parser=parse_date
+        ),
+    ] = None,
+    played_last_max: Annotated[
+        date | None,
+        typer.Option(
+            "--played-last-max",
+            help="Filter tracks last played on or before this date (YYYY-MM-DD)",
+            parser=parse_date,
+        ),
+    ] = None,
+    duplicate: Annotated[
+        bool, typer.Option("--duplicate", help="Allow tracks already used in a previous history playlist")
+    ] = False,
+    group_by_artists: Annotated[
+        bool, typer.Option("--group-by-artists", help="Group tracks by primary artist")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview matched tracks without creating a playlist")
+    ] = False,
+    sort: Annotated[
+        PlaylistHistoryOrderBy, typer.Option("--sort", help="Sort tracks by this field")
+    ] = CreateHistoryPlaylistConfigInput.sort_by,
+    limit: Annotated[
+        int, typer.Option("--limit", help="Maximum number of tracks in the playlist", min=1)
+    ] = CreateHistoryPlaylistConfigInput.limit,
 ) -> None:
     """Create a playlist from your history tracks, filtered and ordered by play count."""
     validate_score_range(score_min, score_max)

@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -11,13 +12,15 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.blacklist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @app.command("remove", help="Remove one or more blacklist entries by their ID.")
 def blacklist_remove_command(
-    email: str = EMAIL_OPTION,
-    item_ids: list[uuid.UUID] = typer.Argument(..., help="Blacklist entry ID(s) (from `museflow blacklist list`)"),
+    email: EmailOption,
+    item_ids: Annotated[
+        list[uuid.UUID], typer.Argument(help="Blacklist entry ID(s) (from `museflow blacklist list`)")
+    ],
 ) -> None:
     try:
         run_logic(blacklist_remove_logic(email=email, item_ids=item_ids))
