@@ -26,6 +26,9 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
+from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_DEFAULT
+from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_MAX
+from museflow.infrastructure.entrypoints.api.schemas import PageParams
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)
@@ -58,6 +61,13 @@ def get_access_token_manager(wiring: Wiring = Depends(get_wiring)) -> AccessToke
 
 def get_state_token_generator(wiring: Wiring = Depends(get_wiring)) -> StateTokenGeneratorPort:
     return wiring.build_state_token_generator()
+
+
+def get_page_params(
+    limit: int = Query(PAGE_LIMIT_DEFAULT, ge=1, le=PAGE_LIMIT_MAX, description="How many items the page holds"),
+    offset: int = Query(0, ge=0, description="How many items to skip, from the start of the collection"),
+) -> PageParams:
+    return PageParams(limit=limit, offset=offset)
 
 
 def get_redirect_uri(

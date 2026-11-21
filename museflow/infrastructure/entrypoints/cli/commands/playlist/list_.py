@@ -65,4 +65,5 @@ async def playlist_list_logic(email: str, type: PlaylistType | None = None) -> l
 
     user = await get_user(email=email, uow=uow)
 
-    return await get_playlists(user=user, uow=uow, type=type)
+    page = await get_playlists(user=user, uow=uow, type=type)
+    return page.items

@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import func
 from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.playlist import PlaylistRepository
@@ -15,6 +16,7 @@ from museflow.infrastructure.adapters.database.models.playlist import PlaylistTr
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
+from tests.integration.factories.models.user import UserModelFactory
 from tests.unit.factories.entities.playlist import PlaylistFactory
 
 
@@ -133,6 +135,44 @@ class TestPlaylistSQLRepository:
         matching = [p for p in playlists if p.id == playlist_db.id]
         assert len(matching) == 1
         assert matching[0].tracks == []
+
+    async def test__get_list__page(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlists_db = [await PlaylistModelFactory.create_async(user_id=user.id) for _ in range(3)]
+
+        playlists = await playlist_repository.get_list(user.id, limit=2, offset=1)
+
+        assert [playlist.id for playlist in playlists] == [playlists_db[1].id, playlists_db[0].id]
+
+    async def test__get_list__same_created_at__ordered_by_id(
+        self,
+        user: User,
+        async_session_db: AsyncSession,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        playlists_db = [await PlaylistModelFactory.create_async(user_id=user.id) for _ in range(3)]
+        await async_session_db.execute(update(PlaylistModel).values(created_at=func.now()))
+
+        playlists = await playlist_repository.get_list(user.id)
+
+        assert [playlist.id for playlist in playlists] == sorted(playlist_db.id for playlist_db in playlists_db)
+
+    async def test__count(
+        self,
+        user: User,
+        playlist_repository: PlaylistRepository,
+    ) -> None:
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.EXPLORE)
+        await PlaylistModelFactory.create_async(user_id=user.id, type=PlaylistType.HISTORY)
+        other_user_db = await UserModelFactory.create_async()
+        await PlaylistModelFactory.create_async(user_id=other_user_db.id, type=PlaylistType.EXPLORE)
+
+        assert await playlist_repository.count(user.id) == 2
+        assert await playlist_repository.count(user.id, type=PlaylistType.EXPLORE) == 1
+        assert await playlist_repository.count(user.id, provider=MusicProvider.SPOTIFY) == 2
 
     async def test__get__returns_playlist_with_tracks(
         self,
