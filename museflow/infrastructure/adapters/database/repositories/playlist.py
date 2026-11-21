@@ -1,7 +1,9 @@
 import uuid
 from dataclasses import replace
 
+from sqlalchemy import ColumnElement
 from sqlalchemy import delete
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import true
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,15 +40,33 @@ class PlaylistSQLRepository(PlaylistRepository):
         user_id: uuid.UUID,
         type: PlaylistType | None = None,
         provider: MusicProvider | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Playlist]:
-        stmt = select(PlaylistModel).where(PlaylistModel.user_id == user_id).order_by(PlaylistModel.created_at.desc())
-        if type is not None:
-            stmt = stmt.where(PlaylistModel.type == type)
-        if provider is not None:
-            stmt = stmt.where(PlaylistModel.provider == provider)
+        stmt = (
+            select(PlaylistModel)
+            .where(*self._filters(user_id, type=type, provider=provider))
+            # The ID breaks the ties: pages stay stable between two calls
+            .order_by(PlaylistModel.created_at.desc(), PlaylistModel.id)
+            .limit(limit)
+            .offset(offset)
+        )
 
         result = await self.session.execute(stmt)
         return [row.to_entity() for row in result.scalars()]
+
+    async def count(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(PlaylistModel)
+            .where(*self._filters(user_id, type=type, provider=provider))
+        )
+        return (await self.session.execute(stmt)).scalar_one()
 
     async def get(self, user_id: uuid.UUID, playlist_id: uuid.UUID) -> Playlist | None:
         playlist = aliased(PlaylistModel, name="playlist")
@@ -103,12 +123,22 @@ class PlaylistSQLRepository(PlaylistRepository):
         type: PlaylistType | None = None,
         provider: MusicProvider | None = None,
     ) -> int:
-        stmt = delete(PlaylistModel).where(PlaylistModel.user_id == user_id)
-        if type is not None:
-            stmt = stmt.where(PlaylistModel.type == type)
-        if provider is not None:
-            stmt = stmt.where(PlaylistModel.provider == provider)
+        stmt = delete(PlaylistModel).where(*self._filters(user_id, type=type, provider=provider))
 
         result = await self.session.execute(stmt.returning(PlaylistModel.id))
         deleted_ids = result.scalars().all()
         return len(deleted_ids)
+
+    @staticmethod
+    def _filters(
+        user_id: uuid.UUID,
+        type: PlaylistType | None,
+        provider: MusicProvider | None,
+    ) -> list[ColumnElement[bool]]:
+        filters = [PlaylistModel.user_id == user_id]
+        if type is not None:
+            filters.append(PlaylistModel.type == type)
+        if provider is not None:
+            filters.append(PlaylistModel.provider == provider)
+
+        return filters

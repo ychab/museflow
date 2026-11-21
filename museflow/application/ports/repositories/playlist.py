@@ -19,11 +19,23 @@ class PlaylistRepository(ABC):
         user_id: uuid.UUID,
         type: PlaylistType | None = None,
         provider: MusicProvider | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Playlist]:
         """Return playlists for the user, of the given type and provider if any, ordered by creation date descending.
 
-        tracks=[] in all results.
+        tracks=[] in all results. `limit` and `offset` page them; no limit returns them all.
         """
+        ...
+
+    @abstractmethod
+    async def count(
+        self,
+        user_id: uuid.UUID,
+        type: PlaylistType | None = None,
+        provider: MusicProvider | None = None,
+    ) -> int:
+        """Return how many playlists `get_list` finds with the same filters, all pages together."""
         ...
 
     @abstractmethod

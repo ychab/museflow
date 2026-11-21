@@ -1,3 +1,4 @@
+from museflow.application.outputs.pagination import Page
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.playlist_list import get_playlists
 from museflow.domain.entities.user import User
@@ -14,7 +15,7 @@ class TestGetPlaylistsUseCase:
     ) -> None:
         result = await get_playlists(user=user, uow=uow)
 
-        assert result == []
+        assert result == Page(items=[], total=0, limit=None, offset=0)
 
     async def test__nominal(
         self,
@@ -25,8 +26,8 @@ class TestGetPlaylistsUseCase:
 
         result = await get_playlists(user=user, uow=uow)
 
-        ids = [playlist.id for playlist in result]
-        assert playlist_db.id in ids
+        assert [playlist.id for playlist in result.items] == [playlist_db.id]
+        assert result.total == 1
 
     async def test__type(
         self,
@@ -38,4 +39,19 @@ class TestGetPlaylistsUseCase:
 
         result = await get_playlists(user=user, uow=uow, type=PlaylistType.EXPLORE)
 
-        assert [playlist.id for playlist in result] == [explore_db.id]
+        assert [playlist.id for playlist in result.items] == [explore_db.id]
+        assert result.total == 1
+
+    async def test__page(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+    ) -> None:
+        playlists_db = [await PlaylistModelFactory.create_async(user_id=user.id) for _ in range(3)]
+
+        result = await get_playlists(user=user, uow=uow, limit=1, offset=1)
+
+        # The newest first: the second page of one holds the middle playlist; the total counts every page
+        assert [playlist.id for playlist in result.items] == [playlists_db[1].id]
+        assert result.total == 3
+        assert (result.limit, result.offset) == (1, 1)
