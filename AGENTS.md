@@ -128,6 +128,9 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
 - **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
+- **API schemas** (`entrypoints/api/schemas/`): one module per endpoint module, named alike (`schemas/playlists.py`
+  for `v1/endpoints/playlists.py`); `schemas/common.py` holds what every theme reuses (`ProblemDetails`,
+  `PageResponse[T]`, `SuccessResponse`).
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `run_logic()` (`cli/dependencies.py`) on a co-located
     `<command>_logic` function (never a `_`-prefixed name): it runs the logic like `asyncio.run()`, with the wiring

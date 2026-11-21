@@ -18,7 +18,7 @@ from museflow.infrastructure.entrypoints.api.const import API_V1_PREFIX
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.errors import PROBLEMS
 from museflow.infrastructure.entrypoints.api.errors import ProblemDetailsHandler
-from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
+from museflow.infrastructure.entrypoints.api.schemas.common import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.playlists import router as playlist_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
