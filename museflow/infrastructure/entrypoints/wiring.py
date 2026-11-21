@@ -16,6 +16,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.security import TokenCipherPort
 from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.provider_token_get import get_provider_token
@@ -33,6 +34,7 @@ from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRou
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.providers.spotify.library import SpotifyLibraryFactory
 from museflow.infrastructure.adapters.providers.spotify.oauth import SpotifyOAuthAdapter
+from museflow.infrastructure.adapters.security import AesSivTokenCipher
 from museflow.infrastructure.adapters.security import Argon2PasswordHasher
 from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
@@ -76,7 +78,7 @@ class Wiring:
     # --- Database ---
 
     def build_unit_of_work(self) -> UnitOfWorkPort:
-        return SQLUnitOfWork(self._session_factory)
+        return SQLUnitOfWork(self._session_factory, token_cipher=self.build_token_cipher())
 
     # --- Security ---
 
@@ -88,6 +90,9 @@ class Wiring:
 
     def build_state_token_generator(self) -> StateTokenGeneratorPort:
         return SystemStateTokenGenerator()
+
+    def build_token_cipher(self) -> TokenCipherPort:
+        return AesSivTokenCipher(key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY)
 
     # --- Files ---
 

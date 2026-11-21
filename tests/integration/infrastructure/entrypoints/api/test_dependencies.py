@@ -33,7 +33,7 @@ class TestGetCurrentUser:
         access_token_manager: AccessTokenManagerPort,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(app_settings, "ACCESS_TOKEN_EXPIRE_MINUTES", -1)
+        monkeypatch.setattr(app_settings, "JWT_EXPIRE_MINUTES", -1)
 
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(

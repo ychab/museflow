@@ -5,6 +5,8 @@ import pytest
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.security import TokenCipherPort
+from museflow.domain.exceptions import TokenDecryptionError
 
 
 class TestArgon2PasswordHasher:
@@ -25,6 +27,20 @@ class TestJwtAccessTokenManager:
 
         payload = access_token_manager.decode(token)
         assert payload["sub"] == str(user_id)
+
+
+class TestAesSivTokenCipher:
+    def test__encrypt__deterministic(self, token_cipher: TokenCipherPort) -> None:
+        # The compare-and-swap of the token refresh compares encrypted bytes: equal tokens must give equal bytes
+        assert token_cipher.encrypt("token", context="row:column") == token_cipher.encrypt(
+            "token", context="row:column"
+        )
+
+    def test__decrypt__other_context(self, token_cipher: TokenCipherPort) -> None:
+        ciphertext = token_cipher.encrypt("token", context="row:column")
+
+        with pytest.raises(TokenDecryptionError):
+            token_cipher.decrypt(ciphertext, context="other-row:column")
 
 
 class TestSystemStateTokenGenerator:

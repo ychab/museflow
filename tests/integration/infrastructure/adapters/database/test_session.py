@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import pytest
 
+from museflow.application.ports.security import TokenCipherPort
 from museflow.infrastructure.adapters.database.session import create_engine
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 from museflow.infrastructure.config.settings.database import database_settings
@@ -34,8 +35,8 @@ class TestCreateEngine:
             assert await conn.scalar(text("SHOW idle_in_transaction_session_timeout")) == "1min"
 
     @pytest.mark.parametrize("engine", [1], indirect=True)
-    async def test__block_left_idle__fails_loudly(self, engine: AsyncEngine) -> None:
-        unit_of_work = SQLUnitOfWork(async_sessionmaker(bind=engine, expire_on_commit=False))
+    async def test__block_left_idle__fails_loudly(self, engine: AsyncEngine, token_cipher: TokenCipherPort) -> None:
+        unit_of_work = SQLUnitOfWork(async_sessionmaker(bind=engine, expire_on_commit=False), token_cipher)
 
         with pytest.raises(DBAPIError, match="connection is closed"):
             async with unit_of_work as uow:

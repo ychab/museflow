@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC
 from datetime import datetime
@@ -14,11 +15,15 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.security import TokenCipherPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import TokenDecryptionError
 from museflow.infrastructure.adapters.database.models import AuthProviderStateModel
 from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
+
+logger = logging.getLogger(__name__)
 
 
 class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
@@ -74,8 +79,15 @@ class OAuthProviderStateSQLRepository(OAuthProviderStateRepository):
 
 
 class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
-    def __init__(self, session: AsyncSession) -> None:
+    """Encrypts the access and refresh tokens before they reach the database, and decrypts them on the way back.
+
+    Each token is encrypted for its row and column (its context), deterministically: the compare-and-swap of `update`
+    and `delete` encrypts the expected token and compares the bytes in SQL, in the same single statement as before.
+    """
+
+    def __init__(self, session: AsyncSession, token_cipher: TokenCipherPort) -> None:
         self.session = session
+        self.token_cipher = token_cipher
 
     async def get(self, user_id: uuid.UUID, provider: MusicProvider) -> OAuthProviderUserToken | None:
         stmt = select(AuthProviderTokenModel).where(
@@ -84,7 +96,23 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         )
         result = await self.session.execute(stmt)
         auth_token_db = result.scalar_one_or_none()
-        return auth_token_db.to_entity() if auth_token_db else None
+
+        if auth_token_db is None:
+            return None
+
+        try:
+            auth_token = auth_token_db.to_entity(self.token_cipher)
+        except TokenDecryptionError:
+            # Known gap: no key rotation. A token encrypted with a former key is as good as gone, and a reconnect
+            # replaces it.
+            logger.warning(
+                f"The {provider} token of user {user_id} can't be decrypted (encryption key changed?): the user must "
+                "reconnect",
+                extra={"user_id": str(user_id), "provider": provider},
+            )
+            return None
+
+        return auth_token
 
     async def upsert(
         self,
@@ -92,7 +120,10 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         provider: MusicProvider,
         auth_token_in: OAuthProviderUserTokenCreateInput,
     ) -> OAuthProviderUserToken:
-        token_data: dict[str, Any] = auth_token_in.model_dump()
+        token_data: dict[str, Any] = auth_token_in.model_dump() | {
+            "token_access": self._encrypt(auth_token_in.token_access, user_id, provider, "token_access"),
+            "token_refresh": self._encrypt(auth_token_in.token_refresh, user_id, provider, "token_refresh"),
+        }
 
         stmt = (
             pg_insert(AuthProviderTokenModel)
@@ -103,7 +134,7 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         result = await self.session.execute(stmt)
         auth_token_db = result.scalar_one()
 
-        return auth_token_db.to_entity()
+        return auth_token_db.to_entity(self.token_cipher)
 
     async def update(
         self,
@@ -113,15 +144,23 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         expected_token_access: str,
     ) -> OAuthProviderUserToken | None:
         update_data: dict[str, Any] = auth_token_in.model_dump(exclude_none=True)
+        if auth_token_in.token_access is not None:
+            update_data["token_access"] = self._encrypt(auth_token_in.token_access, user_id, provider, "token_access")
+        if auth_token_in.token_refresh is not None:
+            update_data["token_refresh"] = self._encrypt(
+                auth_token_in.token_refresh, user_id, provider, "token_refresh"
+            )
 
         # The condition and the write are one statement: PostgreSQL locks the row, then checks the condition again on
-        # its latest committed version, so a concurrent update of the same token can't slip in between.
+        # its latest committed version, so a concurrent update of the same token can't slip in between. The expected
+        # token is encrypted like the stored one, so equal tokens give equal bytes.
+        expected_token_access_encrypted = self._encrypt(expected_token_access, user_id, provider, "token_access")
         stmt = (
             update(AuthProviderTokenModel)
             .where(
                 AuthProviderTokenModel.user_id == user_id,
                 AuthProviderTokenModel.provider == provider,
-                AuthProviderTokenModel.token_access == expected_token_access,
+                AuthProviderTokenModel.token_access == expected_token_access_encrypted,
             )
             .values(**update_data)
             .returning(AuthProviderTokenModel)
@@ -129,18 +168,25 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         result = await self.session.execute(stmt)
         auth_token_db = result.scalar_one_or_none()
 
-        return auth_token_db.to_entity() if auth_token_db else None
+        return auth_token_db.to_entity(self.token_cipher) if auth_token_db else None
 
     async def delete(self, user_id: uuid.UUID, provider: MusicProvider, expected_token_refresh: str) -> bool:
+        expected_token_refresh_encrypted = self._encrypt(expected_token_refresh, user_id, provider, "token_refresh")
         stmt = (
             delete(AuthProviderTokenModel)
             .where(
                 AuthProviderTokenModel.user_id == user_id,
                 AuthProviderTokenModel.provider == provider,
-                AuthProviderTokenModel.token_refresh == expected_token_refresh,
+                AuthProviderTokenModel.token_refresh == expected_token_refresh_encrypted,
             )
             .returning(AuthProviderTokenModel.id)
         )
         result = await self.session.execute(stmt)
         deleted = result.scalar_one_or_none() is not None
         return deleted
+
+    def _encrypt(self, token: str, user_id: uuid.UUID, provider: MusicProvider, column: str) -> bytes:
+        return self.token_cipher.encrypt(
+            token,
+            context=AuthProviderTokenModel.get_token_context(user_id, provider, column),
+        )

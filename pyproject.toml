@@ -31,6 +31,7 @@ dependencies = [
     "unidecode>=1.4.0",
     "ijson>=3.6.0",
     "pyyaml>=6.0.3",
+    "cryptography>=50.0.2",
 ]
 
 [project.scripts]
@@ -268,7 +269,8 @@ testpaths = ["tests"]
 pythonpath = ["."]
 env = [
     # App required settings
-    'MUSEFLOW_SECRET_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
+    'MUSEFLOW_JWT_SIGNING_KEY=Vp8W9UnJLtCrOPnLiUrPeAs2y10PwYPv',
+    'MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY=q3Fh8LxZt0RmW5cJ2yNvB7kPd4sGaE9U',
     # App backend cors
     'MUSEFLOW_BACKEND_CORS_ALLOW_ORIGINS=["*"]',
     'MUSEFLOW_BACKEND_CORS_ALLOW_CREDENTIALS=False',

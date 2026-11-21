@@ -10,6 +10,7 @@ from museflow import __project_name__
 from museflow.application.mappers.auth import to_auth_token_create_input
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
+from museflow.application.ports.security import TokenCipherPort
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -70,6 +71,7 @@ class TestSpotifyLibraryLive:
         user: User,
         auth_token_repository: OAuthProviderTokenRepository,
         uow_session_factory: async_sessionmaker[AsyncSession],
+        token_cipher: TokenCipherPort,
         spotify_refresh_token: str,
         spotify_oauth_live: SpotifyOAuthAdapter,
     ) -> SpotifyOAuthSessionClient:
@@ -84,7 +86,7 @@ class TestSpotifyLibraryLive:
         return SpotifyOAuthSessionClient(
             user=user,
             auth_token=auth_token,
-            uow=SQLUnitOfWork(uow_session_factory),
+            uow=SQLUnitOfWork(uow_session_factory, token_cipher),
             oauth_client=spotify_oauth_live,
         )
 

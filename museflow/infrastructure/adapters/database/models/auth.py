@@ -4,11 +4,13 @@ from datetime import datetime
 from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy import ForeignKey
+from sqlalchemy import LargeBinary
 from sqlalchemy import String
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
+from museflow.application.ports.security import TokenCipherPort
 from museflow.domain.entities.auth import OAuthProviderState
 from museflow.domain.entities.auth import OAuthProviderUserToken
 from museflow.domain.enums import MusicProvider
@@ -66,19 +68,38 @@ class AuthProviderTokenModel(NumericIdMixin, Base, kw_only=True):
     provider: Mapped[MusicProvider] = mapped_column(Enum(MusicProvider), nullable=False)
 
     token_type: Mapped[str] = mapped_column(String(512), nullable=False)
-    token_access: Mapped[str] = mapped_column(String(512), nullable=False)
-    token_refresh: Mapped[str] = mapped_column(String(512), nullable=False)
+    # Encrypted by the repository (`TokenCipherPort`), never in clear: no length limit, as the provider sets the
+    # length of its tokens and Spotify's grew before
+    token_access: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    token_refresh: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     token_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_user_provider_auth_token"),)
 
-    def to_entity(self) -> OAuthProviderUserToken:
+    def to_entity(self, token_cipher: TokenCipherPort) -> OAuthProviderUserToken:
+        """The entity, with its tokens decrypted.
+
+        Raises:
+            TokenDecryptionError: If a token was encrypted with another key, or altered.
+        """
         return OAuthProviderUserToken(
             id=self.id,
             user_id=self.user_id,
             provider=self.provider,
             token_type=self.token_type,
-            token_access=self.token_access,
-            token_refresh=self.token_refresh,
+            token_access=token_cipher.decrypt(
+                self.token_access,
+                context=self.get_token_context(self.user_id, self.provider, "token_access"),
+            ),
+            token_refresh=token_cipher.decrypt(
+                self.token_refresh,
+                context=self.get_token_context(self.user_id, self.provider, "token_refresh"),
+            ),
             token_expires_at=self.token_expires_at,
         )
+
+    @staticmethod
+    def get_token_context(user_id: uuid.UUID, provider: MusicProvider, column: str) -> str:
+        """The context a token is encrypted for: its row and column, so that bytes copied to another user, provider or
+        column fail to decrypt."""
+        return f"{user_id}:{provider}:{column}"

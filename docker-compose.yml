@@ -55,7 +55,8 @@ services:
       SPOTIFY_REDIRECT_URIS: ${SPOTIFY_REDIRECT_URIS:-[]}
       # Required at startup: the wiring, shared with the CLI, builds the LLM adapters too
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
-      MUSEFLOW_SECRET_KEY: ${MUSEFLOW_SECRET_KEY:-dummy-app-secret-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
+      MUSEFLOW_JWT_SIGNING_KEY: ${MUSEFLOW_JWT_SIGNING_KEY:-dummy-jwt-signing-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
+      MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY: ${MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY:-dummy-token-encryption-key-Hq3vZt8LmRw2KpXc}
       # INFO shows uvicorn's access logs (one line per request)
       MUSEFLOW_LOG_LEVEL_THIRD_PARTY: ${MUSEFLOW_LOG_LEVEL_THIRD_PARTY:-WARNING}
     ports:

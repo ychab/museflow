@@ -50,6 +50,7 @@ nav = [
     { "Logging & output" = "technical/logging.md" },
     { "API authentication" = "technical/api-authentication.md" },
     { "OAuth flows" = "technical/oauth-flows.md" },
+    { "Token encryption" = "technical/token-encryption.md" },
     { "Privacy & data" = "technical/privacy-and-data.md" },
     { "Quality & testing" = "technical/quality.md" },
     { "AI-assisted development" = "technical/ai-assisted-development.md" },

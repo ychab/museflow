@@ -30,10 +30,9 @@ class AuthProviderStateModelFactory(BaseModelFactory[AuthProviderStateModel]):
 class AuthProviderTokenFactory(BaseModelFactory[AuthProviderTokenModel]):
     __model__ = AuthProviderTokenModel
 
+    # The tokens are random bytes, not a ciphertext: a row that must decrypt is saved through the repository (the
+    # `auth_token` fixture).
     token_type = "bearer"
-    # Never empty: String(n) gives polyfactory no min length, and an empty token makes an illegal Authorization header.
-    token_access = Use(BaseModelFactory.__faker__.sha256)
-    token_refresh = Use(BaseModelFactory.__faker__.sha256)
     token_expires_at = Use(lambda: datetime.now(UTC) + timedelta(days=5))
 
     @classmethod

@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.ports.security import TokenCipherPort
 from museflow.infrastructure.adapters.database.unit_of_work import SQLUnitOfWork
 
 
@@ -14,7 +15,7 @@ class TestSQLUnitOfWork:
 
     @pytest.fixture
     def unit_of_work(self, session: mock.AsyncMock) -> SQLUnitOfWork:
-        return SQLUnitOfWork(mock.Mock(return_value=session))
+        return SQLUnitOfWork(mock.Mock(return_value=session), mock.Mock(spec=TokenCipherPort))
 
     async def test__nested_block__raises_and_keeps_outer_block(
         self,
