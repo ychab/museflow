@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Annotated
 
 import typer
 
@@ -14,16 +14,23 @@ def resolve_email(value: str | None) -> str:
     return email
 
 
-# The setting is validated on load: only the option needs the parser.
-EMAIL_OPTION: Final[str] = typer.Option(
-    None,
-    help="User email address [default: MUSEFLOW_CLI_DEFAULT_EMAIL]",
-    parser=parse_email,
-    callback=resolve_email,
-)
+# The setting is validated on load: only the option needs the parser. No default of its own: the callback falls back on
+# the setting, so the parameter stays a required `str` for a direct call.
+EmailOption = Annotated[
+    str,
+    typer.Option(
+        help="User email address [default: MUSEFLOW_CLI_DEFAULT_EMAIL]",
+        parser=parse_email,
+        callback=resolve_email,
+        default_factory=lambda: None,
+        show_default=False,
+    ),
+]
 
-VERBOSE_OPTION: Final[bool] = typer.Option(
-    False,
-    "--verbose",
-    help="Show the details of the run: the LLM usage per step and model, and the steps of each attempt if any.",
-)
+VerboseOption = Annotated[
+    bool,
+    typer.Option(
+        "--verbose",
+        help="Show the details of the run: the LLM usage per step and model, and the steps of each attempt if any.",
+    ),
+]

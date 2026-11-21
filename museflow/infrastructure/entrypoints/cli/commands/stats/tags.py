@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import EmailStr
 
 import typer
@@ -17,38 +19,44 @@ from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.parsers import validate_score_range
 from museflow.infrastructure.entrypoints.cli.utils.display import build_ranking_table
 
 
 @app.command("tags", help="Show top genres, moods or locales ranked by overall score (breadth x depth x quality).")
 def stats_tags_command(
-    email: str = EMAIL_OPTION,
-    by: EnrichField = typer.Option(EnrichField.GENRE, "--by", help="Tags to rank"),
-    tier: GenreTier | None = typer.Option(None, "--tier", help="Genre tier to rank (with --by genre only)"),
-    source: SourceFilter = typer.Option(SourceFilter.ALL, "--source", help="Track source to include"),
-    score_min: int | None = typer.Option(
-        None,
-        "--score-min",
-        help="Minimum score filter (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    score_max: int | None = typer.Option(
-        None,
-        "--score-max",
-        help="Maximum score filter (0-10)",
-        min=DISCOVERY_TRACK_SCORE_MIN,
-        max=DISCOVERY_TRACK_SCORE_MAX,
-    ),
-    confidence: int = typer.Option(
-        app_settings.STATS_BAYESIAN_CONFIDENCE,
-        "--confidence",
-        help="Bayesian confidence constant: tags with fewer rated tracks than this are pulled toward the mean",
-    ),
-    sort: RankingSortBy = typer.Option(RankingSortBy.OVERALL, "--sort", help="Ranking strategy"),
-    limit: int = typer.Option(20, help="Max rows in the table", min=1),
+    email: EmailOption,
+    by: Annotated[EnrichField, typer.Option("--by", help="Tags to rank")] = EnrichField.GENRE,
+    tier: Annotated[GenreTier | None, typer.Option("--tier", help="Genre tier to rank (with --by genre only)")] = None,
+    source: Annotated[SourceFilter, typer.Option("--source", help="Track source to include")] = SourceFilter.ALL,
+    score_min: Annotated[
+        int | None,
+        typer.Option(
+            "--score-min",
+            help="Minimum score filter (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    score_max: Annotated[
+        int | None,
+        typer.Option(
+            "--score-max",
+            help="Maximum score filter (0-10)",
+            min=DISCOVERY_TRACK_SCORE_MIN,
+            max=DISCOVERY_TRACK_SCORE_MAX,
+        ),
+    ] = None,
+    confidence: Annotated[
+        int,
+        typer.Option(
+            "--confidence",
+            help="Bayesian confidence constant: tags with fewer rated tracks than this are pulled toward the mean",
+        ),
+    ] = app_settings.STATS_BAYESIAN_CONFIDENCE,
+    sort: Annotated[RankingSortBy, typer.Option("--sort", help="Ranking strategy")] = RankingSortBy.OVERALL,
+    limit: Annotated[int, typer.Option(help="Max rows in the table", min=1)] = 20,
 ) -> None:
     if tier is not None and by != EnrichField.GENRE:
         raise typer.BadParameter("--tier only applies to --by genre")

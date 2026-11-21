@@ -128,12 +128,18 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   - A new repository is added to `UnitOfWorkPort` and `SQLUnitOfWork.__aenter__`.
 - **External APIs** (Spotify, OpenRouter): DTOs are Pydantic models matching the external shape exactly; standalone mapper
   functions (`to_domain_track(dto) -> Track`) hold the transformations (`providers/spotify/mappers.py`).
+- **Entrypoint parameters** are declared with `Annotated`, never with a framework marker as their default: the type
+  carries the `Query`, `Depends`, `typer.Option` or `typer.Argument`, the default stays a plain value
+  (`limit: Annotated[int, Query(ge=1)] = 20`), and the function can be called without the framework. A dependency or
+  an option several entrypoints take is an alias (`CurrentUserDep` in `api/dependencies.py`, `EmailOption` in
+  `cli/options.py`). A parameter without a default after one with a default makes the parameters keyword-only (`*`)
+  rather than reordering them; a mutable or computed default goes in `default_factory`.
 - **API schemas** (`entrypoints/api/schemas/`): one module per endpoint module, named alike (`schemas/playlists.py`
   for `v1/endpoints/playlists.py`); `schemas/common.py` holds what every theme reuses (`ProblemDetails`,
   `PageResponse[T]`, `SuccessResponse`).
 - **API errors** (`entrypoints/api/errors.py`): a route catches no domain exception. Each one it lets through gets a
   `Problem` (status, fixed detail) in `PROBLEMS`, answered as an RFC 9457 problem details body; another user's object
-  is a 404, as an unknown one. A collection is paged with `get_page_params` and `PageResponse[T]`.
+  is a 404, as an unknown one. A collection is paged with `PageParamsDep` and `PageResponse[T]`.
 - **CLI:**
   - Each Typer command is a thin sync wrapper calling `run_logic()` (`cli/dependencies.py`) on a co-located
     `<command>_logic` function (never a `_`-prefixed name): it runs the logic like `asyncio.run()`, with the wiring

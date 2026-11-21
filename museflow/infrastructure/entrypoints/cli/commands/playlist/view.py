@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -13,15 +14,15 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 console = Console()
 
 
 @app.command("view")
 def playlist_view_command(
-    playlist_id: uuid.UUID = typer.Argument(..., help="Playlist ID"),
-    email: str = EMAIL_OPTION,
+    playlist_id: Annotated[uuid.UUID, typer.Argument(help="Playlist ID")],
+    email: EmailOption,
 ) -> None:
     """View a playlist with its tracks and ratings."""
     try:

@@ -6,7 +6,7 @@ import typer
 from typer.testing import CliRunner
 
 from museflow.infrastructure.config.settings.app import app_settings
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
@@ -17,7 +17,7 @@ class TestEmailOption:
         email_app = typer.Typer()
 
         @email_app.command()
-        def show(email: str = EMAIL_OPTION) -> None:
+        def show(email: EmailOption) -> None:
             typer.echo(f"email={email}")
 
         return email_app

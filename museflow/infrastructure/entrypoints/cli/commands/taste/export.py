@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import EmailStr
 from pydantic import TypeAdapter
@@ -14,15 +15,18 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.utils.files import write_yaml
 
 
 @app.command("export", help="Export taste profiles to a YAML file.")
 def taste_export_command(
-    email: str = EMAIL_OPTION,
-    name: str | None = typer.Option(None, help="Profile name (unique per user); every profile when omitted"),
-    output: Path = typer.Option(..., help="Path to the output YAML file"),
+    *,
+    email: EmailOption,
+    name: Annotated[
+        str | None, typer.Option(help="Profile name (unique per user); every profile when omitted")
+    ] = None,
+    output: Annotated[Path, typer.Option(help="Path to the output YAML file")],
 ) -> None:
     try:
         taste_profiles = run_logic(taste_export_logic(email=email, name=name))

@@ -1,6 +1,7 @@
 import uuid
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -20,7 +21,7 @@ from museflow.infrastructure.entrypoints.cli.commands.rate.utils import play_tra
 from museflow.infrastructure.entrypoints.cli.commands.rate.utils import rate_track
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,13 +37,14 @@ class RatePlaylistResult:
     help="Interactively rate tracks in a playlist, or all unrated discovery tracks if no playlist is specified.",
 )
 def rate_playlist_command(
-    email: str = EMAIL_OPTION,
-    playlist_id: uuid.UUID | None = typer.Argument(None, help="Playlist UUID to rate"),
-    limit: int = typer.Option(20, help="Max unrated tracks to show (queue mode only)", min=1),
-    play: bool = typer.Option(False, "--play", help="Play each track before rating"),
-    play_provider: MusicProvider | None = typer.Option(
-        None, "--play-provider", help="Provider to use for playback (default: spotify). Requires --play."
-    ),
+    email: EmailOption,
+    playlist_id: Annotated[uuid.UUID | None, typer.Argument(help="Playlist UUID to rate")] = None,
+    limit: Annotated[int, typer.Option(help="Max unrated tracks to show (queue mode only)", min=1)] = 20,
+    play: Annotated[bool, typer.Option("--play", help="Play each track before rating")] = False,
+    play_provider: Annotated[
+        MusicProvider | None,
+        typer.Option("--play-provider", help="Provider to use for playback (default: spotify). Requires --play."),
+    ] = None,
 ) -> None:
     if play_provider is not None and not play:
         raise typer.BadParameter("--play-provider requires --play")

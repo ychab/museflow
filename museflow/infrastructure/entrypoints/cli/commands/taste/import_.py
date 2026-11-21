@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 from typing import Any
 
 from pydantic import EmailStr
@@ -13,14 +14,14 @@ from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.cli.commands.taste import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.utils.files import read_yaml
 
 
 @app.command("import", help="Import taste profiles from a YAML file.")
 def taste_import_command(
-    email: str = EMAIL_OPTION,
-    input_path: Path = typer.Option(..., "--input", help="Path to the input YAML file"),
+    email: EmailOption,
+    input_path: Annotated[Path, typer.Option("--input", help="Path to the input YAML file")],
 ) -> None:
     data = read_yaml(input_path)
 

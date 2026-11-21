@@ -2,6 +2,7 @@ import time
 import uuid
 from datetime import timedelta
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -23,37 +24,30 @@ from museflow.infrastructure.entrypoints.cli.commands.tracks import app
 from museflow.infrastructure.entrypoints.cli.commands.tracks import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.utils.formatting import format_duration
 
 
 @app.command("history", help="Import extended streaming history from JSON files.")
 def tracks_history_command(
-    email: str = EMAIL_OPTION,
-    directory: Path = typer.Option(
-        ...,
-        "--directory",
-        help="Directory containing streaming history JSON files",
-        exists=True,
-        file_okay=False,
-    ),
-    provider: MusicProvider = typer.Option(
-        MusicProvider.SPOTIFY, "--provider", help="Music provider to import streaming history from"
-    ),
-    min_duration_played: int = typer.Option(
-        ImportStreamingHistoryConfigInput.min_ms_played // 1_000,
-        "--min-duration-played",
-        help="Minimum duration played in seconds to include",
-    ),
-    batch_size: int = typer.Option(
-        ImportStreamingHistoryConfigInput.batch_size,
-        "--batch-size",
-        help="Number of tracks to upsert per batch",
-        min=1,
-        max=500,
-    ),
-    purge: bool = typer.Option(False, "--purge/--no-purge", help="Purge existing tracks before import"),
+    email: EmailOption,
+    directory: Annotated[
+        Path,
+        typer.Option(
+            "--directory", help="Directory containing streaming history JSON files", exists=True, file_okay=False
+        ),
+    ],
+    provider: Annotated[
+        MusicProvider, typer.Option("--provider", help="Music provider to import streaming history from")
+    ] = MusicProvider.SPOTIFY,
+    min_duration_played: Annotated[
+        int, typer.Option("--min-duration-played", help="Minimum duration played in seconds to include")
+    ] = ImportStreamingHistoryConfigInput.min_ms_played // 1_000,
+    batch_size: Annotated[
+        int, typer.Option("--batch-size", help="Number of tracks to upsert per batch", min=1, max=500)
+    ] = ImportStreamingHistoryConfigInput.batch_size,
+    purge: Annotated[bool, typer.Option("--purge/--no-purge", help="Purge existing tracks before import")] = False,
 ) -> None:
     start_time = time.perf_counter()
 

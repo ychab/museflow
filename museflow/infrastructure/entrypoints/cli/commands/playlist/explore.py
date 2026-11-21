@@ -1,5 +1,6 @@
 import math
 from contextlib import AsyncExitStack
+from typing import Annotated
 
 from pydantic import EmailStr
 
@@ -21,8 +22,8 @@ from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.playlist import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
-from museflow.infrastructure.entrypoints.cli.options import EMAIL_OPTION
-from museflow.infrastructure.entrypoints.cli.options import VERBOSE_OPTION
+from museflow.infrastructure.entrypoints.cli.options import EmailOption
+from museflow.infrastructure.entrypoints.cli.options import VerboseOption
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
 from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist_outcome
@@ -30,35 +31,35 @@ from museflow.infrastructure.entrypoints.cli.utils.display import print_playlist
 
 @app.command("explore")
 def playlist_explore_command(
-    prompt: str | None = typer.Argument(
-        None,
-        help="Optional request on the sound wanted (e.g. 'calm and acoustic'); the artists still come from your data",
-    ),
-    email: str = EMAIL_OPTION,
-    provider: MusicProvider = typer.Option(default=MusicProvider.SPOTIFY, help="The music provider to use"),
-    model: str | None = typer.Option(
-        None,
-        "--model",
-        help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
-    ),
-    title: str | None = typer.Option(
-        None,
-        "--title",
-        help="Playlist name, used as is (defaults to 'Explore' with a timestamp)",
-    ),
-    dry_run: bool = typer.Option(
-        False,
-        "--dry-run",
-        help="Explore tracks without creating a playlist (still searches the provider catalogue)",
-    ),
-    verbose: bool = VERBOSE_OPTION,
-    limit: int = typer.Option(
-        CreateExplorationPlaylistConfigInput.playlist_limit,
-        "--limit",
-        help="Target number of tracks in the generated playlist",
-        min=1,
-        max=30,
-    ),
+    *,
+    prompt: Annotated[
+        str | None,
+        typer.Argument(
+            help="Optional request on the sound wanted (e.g. 'calm and acoustic'); the artists still come from your data"
+        ),
+    ] = None,
+    email: EmailOption,
+    provider: Annotated[MusicProvider, typer.Option(help="The music provider to use")] = MusicProvider.SPOTIFY,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            help="OpenRouter model id overriding the configured advisor model (e.g. google/gemini-3.5-flash).",
+        ),
+    ] = None,
+    title: Annotated[
+        str | None, typer.Option("--title", help="Playlist name, used as is (defaults to 'Explore' with a timestamp)")
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Explore tracks without creating a playlist (still searches the provider catalogue)"
+        ),
+    ] = False,
+    verbose: VerboseOption = False,
+    limit: Annotated[
+        int, typer.Option("--limit", help="Target number of tracks in the generated playlist", min=1, max=30)
+    ] = CreateExplorationPlaylistConfigInput.playlist_limit,
 ) -> None:
     """Play the tracks you don't know from your favourite artists, drawn from your ratings and plays."""
     meter = LLMUsageMeter()
