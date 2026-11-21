@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from museflow import __version__
 from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.api.const import API_V1_PREFIX
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
 from museflow.infrastructure.entrypoints.api.errors import add_exception_handlers
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
@@ -65,7 +66,7 @@ api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
 api_v1_router.include_router(playlist_router, prefix="/playlists", tags=["playlists"])
 api_v1_router.include_router(provider_router, prefix="/{provider}", tags=["provider"])
 
-app.include_router(api_v1_router, prefix=app_settings.API_V1_PREFIX)
+app.include_router(api_v1_router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health", name="health_check", tags=["health"])

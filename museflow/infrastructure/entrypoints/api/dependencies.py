@@ -24,8 +24,8 @@ from museflow.application.ports.security import StateTokenGeneratorPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
+from museflow.infrastructure.entrypoints.api.const import API_V1_PREFIX
 from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_DEFAULT
 from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_MAX
 from museflow.infrastructure.entrypoints.api.schemas import PageParams
@@ -33,7 +33,7 @@ from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)
 
-oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{app_settings.API_V1_PREFIX}/users/login")
+oauth2_scheme: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/users/login")
 
 
 def get_wiring(request: Request) -> Wiring:
