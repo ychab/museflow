@@ -129,12 +129,23 @@ The first job, enrichment (#262), sets the pattern every other job copies.
   dies mid-task leaves its message to another worker. The price is that a task may run twice, so **every task is
   idempotent**: it checks the job status first, and the use cases already resume from their checkpoints (enrichment,
   profile build, history import chunks).
-- **Retries for transient errors only**, with backoff: the database or the broker unreachable. The adapters already
-  retry their own HTTP calls (tenacity); a task does not retry a domain error, which would fail the same way.
-- **A dead-letter queue** keeps the messages that exhausted their retries, to inspect them instead of losing them.
+- **Retries for transient errors only**, with an exponential backoff and jitter: the database or the network
+  unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/app.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
+  each wait capped at `MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS` (600). The adapters already retry their own
+  HTTP calls (tenacity); a task does not retry a domain error, which would fail the same way.
+- **Two ways to lose a worker.** The whole worker dies (a crash, a redeploy killing the container): its connection
+  drops and RabbitMQ redelivers the message, flagged `redelivered`. Only the process running the task dies (the
+  out-of-memory killer): the worker stays up, sees the process lost and retries the task like a transient error
+  (`task_retry_on_worker_lost`), up to the same limit. A plain requeue would loop forever on a task that kills its
+  process every time.
+- **A dead-letter queue**, `museflow.dead_letter`, keeps the messages of the failed tasks: after their retries, or at
+  once for an error not worth one (`task_acks_on_failure=False` rejects them, and RabbitMQ moves them there). They are
+  inspected in the RabbitMQ UI (`http://localhost:15672`) instead of being lost. The worker declares it when it
+  starts, as no worker consumes it.
 - **RabbitMQ's consumer timeout** (30 minutes by default) closes the channel of a message left unacknowledged longer
-  than that, which `acks_late` does for a long task. #260 measures the longest job (a first enrichment) and raises the
-  timeout above it on the queue.
+  than that, which `acks_late` does for a long task. The longest job, a first enrichment, took 8 minutes for 10,000
+  tracks (51 LLM batches of 200): the `museflow` queue raises it to 2 hours (`x-consumer-timeout`), room for a
+  library several times larger and for slow LLM retries.
 
 ### Open point: the job row and the message
 
@@ -170,16 +181,33 @@ flowchart TB
   holds its own engine; the same process resource feeds every task of that child, as the CLI's does for one command.
   `asyncio.run()` per task would rebuild the pool every time.
 - **The connection budget.** Every child holds a pool: the database sees up to
-  *children × (`POOL_SIZE` + max overflow)* connections from the workers, plus the API's. The concurrency of the
-  worker is set with that sum in mind, against PostgreSQL's `max_connections`.
+  *children × (`DATABASE_POOL_SIZE` + `DATABASE_MAX_OVERFLOW`)* connections from the workers, plus the API's. A
+  child runs one task at a time, which needs one connection for the use case and one for a provider token refresh:
+  the `worker` service of Docker Compose sets a pool of 2 plus 1 overflow, and `MUSEFLOW_WORKER_CONCURRENCY` 2
+  children, so 6 connections, next to the API's 15, well within PostgreSQL's 100. A second worker, or more children,
+  adds 3 connections each.
 - **One user's flow, the same use case.** A task calls the use case the CLI calls, with the same unit of work rules
-  ([Unit of work](unit-of-work.md)): no transaction open during an LLM or Spotify call.
+  ([Unit of work](unit-of-work.md)): no transaction open during an LLM or Spotify call. The task is a thin sync
+  function that runs a coroutine on the process's loop, as a CLI command runs its logic:
+
+```python
+@celery_app.task(name="tracks.history_import")
+def import_history_task(job_id: str, user_id: str) -> None:
+    run_task(_import_history(uuid.UUID(job_id), uuid.UUID(user_id)))
+
+
+async def _import_history(job_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    wiring = get_wiring()  # the wiring of the process, opened in worker_process_init
+    ...
+```
 
 ## Progress goes to the logs
 
-The use cases publish progress events through `ProgressPort` (the CLI renders them with Rich). The worker passes an
-adapter that writes each event to the logs (#260): an operator follows a job with `docker compose logs worker`, or in
-the JSON log handler's output with the job ID in `extra` ([Logging & output](logging.md)). Not a no-op: a job that
+The use cases publish progress events through `ProgressPort` (the CLI renders them with Rich). The worker passes
+`LogProgressAdapter`, which writes each event to the logs at `INFO` (`MUSEFLOW_LOG_LEVEL_WORKER`, `INFO` by
+default): an operator follows a job with `docker compose logs worker`, or in the JSON log handler's output with the
+data in `extra` ([Logging & output](logging.md)). A step that advances chunk by chunk logs at `DEBUG`, with an
+`INFO` line every 30 seconds at most; counts only, never the user's tracks or artists. Not a no-op: a job that
 runs for minutes without a trace can't be told from a stuck one. The client sees the status only; the trace of a
 request across the API, the broker and the worker comes with OpenTelemetry (#269).
 

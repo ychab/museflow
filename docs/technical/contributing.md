@@ -20,15 +20,16 @@ make db-upgrade     # apply the schema
 | `make install` | Install dependencies and the pre-commit hooks |
 | `make lint` | Ruff check and format, mypy, deptry (mutating: applies fixes) |
 | `make lint-check` | The same checks without modifying files; what CI runs |
-| `make test` | The full suite with the 100% branch gate (starts PostgreSQL and both WireMock containers, stops them afterwards) |
+| `make test` | The full suite with the 100% branch gate (starts PostgreSQL, RabbitMQ and both WireMock containers, stops them afterwards) |
 | `make test-unit` | Unit tests only; needs no containers |
-| `make test-integration` | Integration tests (real PostgreSQL, WireMock) |
-| `make up`, `make up-db`, `make up-wiremock`, `make down` | Docker Compose services: `make up` starts the app and the database, WireMock (profile `test`) starts only for the integration tests |
+| `make test-integration` | Integration tests (real PostgreSQL, RabbitMQ, WireMock) |
+| `make up`, `make up-db`, `make up-broker`, `make up-wiremock`, `make down` | Docker Compose services: `make up` starts the app, a Celery worker, the database, RabbitMQ and Redis; WireMock (profile `test`) starts only for the integration tests |
 | `make db-revision` | Create an Alembic migration |
 | `make db-upgrade` / `make db-downgrade` | Apply or roll back migrations |
 | `make docs-serve` | Serve this documentation locally with live reload |
 | `make docs-build` | Build the documentation in strict mode, as CI does |
 | `make run` | Start the FastAPI dev server |
+| `make run-worker` | Start a Celery worker on the host (starts RabbitMQ first) |
 
 Run `make help` for the full list.
 
