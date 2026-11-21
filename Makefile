@@ -59,7 +59,7 @@ $(BUMP_TARGETS): bump-%:
 # Docker
 ########
 
-.PHONY: ps logs up up-db up-wiremock up-test down restart reload reset
+.PHONY: ps logs up up-db up-broker up-wiremock up-test down restart reload reset
 
 ps:  ## List containers
 	docker compose ps --all
@@ -73,10 +73,13 @@ up: ## Start containers
 up-db:  ## Start database container only
 	docker compose up --detach --wait db
 
+up-broker:  ## Start the RabbitMQ container only
+	docker compose up --detach --wait rabbitmq
+
 up-wiremock:  ## Start wiremock containers only
 	docker compose up --detach --wait wiremock-spotify wiremock-openrouter
 
-up-test: up-db up-wiremock  ## Start DB and Wiremock containers
+up-test: up-db up-broker up-wiremock  ## Start the DB, RabbitMQ and Wiremock containers
 
 down: ## Stop containers
 	docker compose --profile "*" down --remove-orphans
@@ -94,10 +97,13 @@ reset:  ## Remove volumes and images
 # App
 #####
 
-.PHONY: run app-shell
+.PHONY: run run-worker app-shell
 
 run: ## Run the application
 	uv run fastapi dev museflow/infrastructure/entrypoints/api/main.py
+
+run-worker: up-broker ## Run a Celery worker
+	uv run celery --app museflow.infrastructure.entrypoints.worker.app worker
 
 app-shell: up ## Connect to the application shell
 	docker compose exec app /bin/bash
@@ -177,7 +183,7 @@ backup-import: db-upgrade  ## Migrate, import the streaming history (HISTORY_DIR
 
 .PHONY: test test-unit test-integration
 
-test: up-db up-wiremock ## Run all the testsuite
+test: up-test ## Run all the testsuite
 	uv run pytest ./tests -n auto --dist=loadgroup || ($(MAKE) down && exit 1)
 	@$(MAKE) down
 

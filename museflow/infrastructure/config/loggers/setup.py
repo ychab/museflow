@@ -74,6 +74,12 @@ default_conf: Final[dict[str, Any]] = {
             "handlers": ["console"],
             "propagate": False,
         },
+        # Keeps the worker's startup and its line per task received and done, whatever the third-party level.
+        "celery": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
         # Follows the third-party level: a proxy usually keeps that trace in production.
         "uvicorn.access": {
             "level": "WARNING",

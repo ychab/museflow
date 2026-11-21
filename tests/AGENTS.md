@@ -91,6 +91,13 @@ with no branch of its own gets no unit `TestXLogic`: the integration one covers 
   `Numeric` precision). A `DataclassFactory` knows no column: bound only a field whose generated value breaks a save
   (an unbounded `Decimal`), with a comment saying why.
 
+## Worker
+The worker's integration tests start a real Celery worker in a process of its own (`CeleryWorker`, in
+`tests/integration/utils/`), on a RabbitMQ virtual host per test process and on the test database: its tasks commit,
+so the test reads with `async_session_trans`. The test tasks live in `tests/integration/utils/celery_tasks.py`, which
+only the test workers load. Coverage measures those processes too (`patch` in `[tool.coverage.run]`), except one
+that the test kills.
+
 ## Markers
 - `@pytest.mark.slow`: skipped by default, run with `--slow`.
 - `@pytest.mark.spotify_live`: requires `--spotify-refresh-token`, hits real Spotify.
