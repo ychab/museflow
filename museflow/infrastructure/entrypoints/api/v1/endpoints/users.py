@@ -18,7 +18,6 @@ from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
-from museflow.domain.exceptions import UserNotFoundError
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
@@ -66,7 +65,7 @@ async def login(
             uow=uow,
             password_hasher=password_hasher,
         )
-    except (UserNotFoundError, UserInvalidCredentialsError) as e:
+    except UserInvalidCredentialsError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",

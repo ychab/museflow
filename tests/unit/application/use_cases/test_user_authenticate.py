@@ -6,7 +6,6 @@ from museflow.application.use_cases.user_authenticate import authenticate_user
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
-from museflow.domain.exceptions import UserNotFoundError
 
 
 class TestAuthenticateUserUseCase:
@@ -19,7 +18,7 @@ class TestAuthenticateUserUseCase:
     ) -> None:
         mock_user_repository.get_by_email.return_value = None
 
-        with pytest.raises(UserNotFoundError):
+        with pytest.raises(UserInvalidCredentialsError):
             await authenticate_user(
                 email="foo@example.com",
                 password="testtest",
