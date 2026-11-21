@@ -1,13 +1,13 @@
 import uuid
 from dataclasses import dataclass
 
+from museflow.application.outputs.stats import TagRanking
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.stats import rank_stats
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTier
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
-from museflow.domain.types import TagRanking
 
 
 @dataclass(frozen=True, kw_only=True)

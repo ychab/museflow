@@ -4,6 +4,9 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.use_cases.track_enrich import EnrichTracksReport
 from museflow.application.use_cases.track_enrich import EnrichTracksUseCase
 from museflow.domain.entities.track import Track
@@ -17,9 +20,6 @@ from museflow.domain.exceptions import EnricherRateLimitExceededError
 from museflow.domain.exceptions import EnricherUnavailableError
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import TrackEnrichmentError
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackEnrichment
 
 from tests.unit.factories.entities.track import TrackFactory

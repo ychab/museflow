@@ -5,6 +5,9 @@ from fnmatch import fnmatchcase
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import StreamingHistoryEntryInput
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.history import StreamingHistoryPort
 from museflow.application.ports.storage import FileStoragePort
@@ -17,9 +20,6 @@ from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
 from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.utils.text import generate_fingerprint
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackPlay
 
 logger = logging.getLogger(__name__)

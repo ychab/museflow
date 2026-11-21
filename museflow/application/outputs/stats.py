@@ -76,3 +76,7 @@ class ArtistCandidate:
     avg_score: float
     rated_count: int
     total_count: int
+
+
+type ArtistRanking = Ranking[ArtistStats]
+type TagRanking = Ranking[TagStats]

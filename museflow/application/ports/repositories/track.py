@@ -3,6 +3,9 @@ from abc import ABC
 from abc import abstractmethod
 from datetime import date
 
+from museflow.application.outputs.stats import ArtistStats
+from museflow.application.outputs.stats import LibraryStats
+from museflow.application.outputs.stats import TagStats
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import GenreTag
@@ -12,9 +15,6 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import TrackSource
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.stats import ArtistStats
-from museflow.domain.value_objects.stats import LibraryStats
-from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 
 

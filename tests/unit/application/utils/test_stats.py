@@ -3,7 +3,7 @@ import pytest
 from museflow.application.utils.stats import rank_stats
 from museflow.domain.enums import RankingSortBy
 
-from tests.unit.factories.value_objects.stats import ArtistStatsFactory
+from tests.unit.factories.outputs.stats import ArtistStatsFactory
 
 
 class TestRankStats:

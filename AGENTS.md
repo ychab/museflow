@@ -31,7 +31,7 @@ CLI help, tests, commit messages, issues, PR descriptions, plans and docs.
 museflow/
 ├── domain/          # Pure Python — NO framework imports ever
 │   ├── entities/    # frozen dataclasses
-│   ├── value_objects/
+│   ├── value_objects/ # business values: words of the domain language (a listening period, a blacklist)
 │   ├── mappers/     # pure functions between two domain shapes (entity ↔ value object)
 │   ├── utils/       # pure functions (text normalization, fingerprinting, locale validation)
 │   ├── exceptions.py
@@ -43,6 +43,7 @@ museflow/
 │   ├── services/    # application services, shared by use cases (e.g., record_llm_usage)
 │   ├── utils/       # pure helpers shared by use cases
 │   ├── inputs/      # command/input schemas
+│   ├── outputs/     # shapes handed to the entrypoints for display, by theme (stats, LLM usage, progress events)
 │   ├── mappers/     # pure functions from a domain shape to an input schema
 │   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security, file storage)
 └── infrastructure/  # Implements ports
@@ -63,7 +64,12 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
 - External IDs and slugs are passed in by the mapper, never generated in the entity.
 
 ## Application
-- **Ports** are `abc.ABC` + `@abstractmethod`. They accept input schemas and return domain entities.
+- **Ports** are `abc.ABC` + `@abstractmethod`. They accept input schemas and return domain entities or outputs.
+- **Outputs** (`outputs/`) are the frozen dataclasses the use cases and ports hand over for display, with no business
+  rule: statistics, an LLM usage summary, progress events. The test is what a shape is, not which layer uses it: a
+  word of the domain language (a listening period, a discovery strategy) is a value object of the domain, even when
+  only the application handles it. A `*Result` / `*Report` stays in its use case module; `outputs/` holds what
+  several use cases or a port share, in the module of its theme (`outputs/stats.py`).
 - **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named as in [Naming](#naming).
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
   when it holds injected dependencies and is called with user-specific args (`use_cases/track_history_import.py`), and a

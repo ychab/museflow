@@ -3,11 +3,11 @@ from pydantic import EmailStr
 import typer
 from rich.table import Table
 
+from museflow.application.outputs.stats import ArtistCandidate
 from museflow.application.use_cases.stats_artist_candidates_get import get_artist_candidates
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistCandidate
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring

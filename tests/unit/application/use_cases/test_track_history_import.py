@@ -8,6 +8,9 @@ import pytest
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import StreamingHistoryFileStats
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryUseCase
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
@@ -15,9 +18,6 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
 from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackPlay
 
 from tests.unit.factories.inputs.history import StreamingHistoryEntryFactory

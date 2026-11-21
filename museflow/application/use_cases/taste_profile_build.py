@@ -7,6 +7,10 @@ from datetime import datetime
 from typing import cast
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepResumed
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -22,10 +26,6 @@ from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepResumed
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import TasteProfileData
 
 logger = logging.getLogger(__name__)

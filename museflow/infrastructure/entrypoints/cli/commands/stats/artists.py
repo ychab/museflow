@@ -2,6 +2,7 @@ from pydantic import EmailStr
 
 import typer
 
+from museflow.application.outputs.stats import ArtistRanking
 from museflow.application.use_cases.stats_top_artists_get import get_top_artists
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import DISCOVERY_TRACK_SCORE_MAX
@@ -9,7 +10,6 @@ from museflow.domain.const import DISCOVERY_TRACK_SCORE_MIN
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.types import ArtistRanking
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.cli.commands.stats import app
 from museflow.infrastructure.entrypoints.cli.commands.stats import console

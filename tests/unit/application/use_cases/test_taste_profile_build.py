@@ -11,6 +11,10 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from museflow.application.inputs.taste import BuildTasteProfileConfigInput
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepResumed
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.ports.profilers.taste import TasteProfilerPort
 from museflow.application.use_cases.taste_profile_build import BuildTasteProfileUseCase
 from museflow.domain.entities.user import User
@@ -21,10 +25,6 @@ from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import TasteProfilerRateLimitExceededError
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepResumed
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import ListeningPeriod
 from museflow.domain.value_objects.taste import TasteProfileData
 from museflow.infrastructure.adapters.profilers.openrouter.client import OpenRouterTasteProfileAdapter

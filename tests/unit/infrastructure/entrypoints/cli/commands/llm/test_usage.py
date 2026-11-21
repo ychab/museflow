@@ -7,12 +7,12 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.outputs.llm import LLMUsageGroup
+from museflow.application.outputs.llm import LLMUsageSummary
+from museflow.application.outputs.llm import LLMUsageTotals
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.llm import LLMUsageGroup
-from museflow.domain.value_objects.llm import LLMUsageSummary
-from museflow.domain.value_objects.llm import LLMUsageTotals
 from museflow.infrastructure.entrypoints.cli.commands.llm.usage import llm_usage_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

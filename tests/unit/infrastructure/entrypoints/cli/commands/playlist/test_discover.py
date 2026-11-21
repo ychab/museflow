@@ -7,6 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.discovery import CreateDiscoveryPlaylistConfigInput
+from museflow.application.outputs.progress import StrategyChosen
 from museflow.application.use_cases.playlist_discovery_create import CreateDiscoveryPlaylistResult
 from museflow.domain.enums import DiscoveryFocus
 from museflow.domain.enums import MusicProvider
@@ -15,7 +16,6 @@ from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.infrastructure.entrypoints.cli.commands.playlist.discover import playlist_discover_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

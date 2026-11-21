@@ -3,6 +3,9 @@ import logging
 from dataclasses import dataclass
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.ports.enrichers.track import TrackEnricherPort
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -16,9 +19,6 @@ from museflow.domain.exceptions import EnricherRateLimitExceededError
 from museflow.domain.exceptions import EnricherUnavailableError
 from museflow.domain.exceptions import TrackEnrichmentAbortedError
 from museflow.domain.exceptions import TrackEnrichmentError
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.track import TrackEnrichment
 
 logger = logging.getLogger(__name__)

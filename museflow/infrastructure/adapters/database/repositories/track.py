@@ -26,6 +26,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import Label
 from sqlalchemy.sql.selectable import LateralFromClause
 
+from museflow.application.outputs.stats import ArtistStats
+from museflow.application.outputs.stats import LibraryStats
+from museflow.application.outputs.stats import TagStats
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.domain.entities.track import Track
 from museflow.domain.enums import EnrichField
@@ -39,9 +42,6 @@ from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
 from museflow.domain.types import LocaleCode
 from museflow.domain.types import TrackOrdering
-from museflow.domain.value_objects.stats import ArtistStats
-from museflow.domain.value_objects.stats import LibraryStats
-from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackKnownIdentifiers
 from museflow.infrastructure.adapters.database.models import TrackModel
 from museflow.infrastructure.adapters.database.repositories.track_play import TrackPlaySQLRepository

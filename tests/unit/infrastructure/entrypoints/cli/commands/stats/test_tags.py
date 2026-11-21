@@ -5,16 +5,16 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.outputs.stats import Ranking
 from museflow.application.use_cases.stats_top_tags_get import TopTagsResult
 from museflow.domain.enums import EnrichField
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import Ranking
 from museflow.infrastructure.entrypoints.cli.commands.stats.tags import stats_tags_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 
-from tests.unit.factories.value_objects.stats import TagStatsFactory
+from tests.unit.factories.outputs.stats import TagStatsFactory
 from tests.unit.infrastructure.entrypoints.cli.conftest import TextCleaner
 
 TARGET_PATH: Final[str] = "museflow.infrastructure.entrypoints.cli.commands.stats.tags"

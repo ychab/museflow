@@ -8,7 +8,7 @@ from museflow.application.utils.discovery import is_live_or_medley
 from museflow.application.utils.discovery import rank_favourite_artists
 
 from tests.unit.factories.entities.track import TrackFactory
-from tests.unit.factories.value_objects.stats import ArtistStatsFactory
+from tests.unit.factories.outputs.stats import ArtistStatsFactory
 
 
 class TestFilterByArtist:
