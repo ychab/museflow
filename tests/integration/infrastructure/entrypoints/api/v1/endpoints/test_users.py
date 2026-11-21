@@ -71,13 +71,13 @@ class TestUserRegister:
         url = app.url_path_for("user_register")
 
         response = await async_client.post(url, json=payload)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_409_CONFLICT
         assert response.headers["content-type"] == "application/problem+json"
 
         assert response.json() == {
             "type": "about:blank",
-            "title": "Bad Request",
-            "status": 400,
+            "title": "Conflict",
+            "status": 409,
             "detail": "Email already registered",
             "instance": url,
         }
@@ -235,7 +235,7 @@ class TestUserCurrentUpdate:
         url = app.url_path_for("user_me")
 
         response = await async_client.patch(url, json=payload)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_409_CONFLICT
 
         response_data = response.json()
         assert response_data["detail"] == "Email already registered"

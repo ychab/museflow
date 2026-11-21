@@ -38,8 +38,8 @@ class Problem:
 PROBLEMS: Final[dict[type[Exception], Problem]] = {
     # Accepted risk (#102): this answer reveals that the email has an account. A neutral one needs a full user workflow
     # with email verification, not worth building for a local, single-user app still in development.
-    UserAlreadyExistsError: Problem(status=status.HTTP_400_BAD_REQUEST, detail="Email already registered"),
-    UserEmailAlreadyExistsError: Problem(status=status.HTTP_400_BAD_REQUEST, detail="Email already registered"),
+    UserAlreadyExistsError: Problem(status=status.HTTP_409_CONFLICT, detail="Email already registered"),
+    UserEmailAlreadyExistsError: Problem(status=status.HTTP_409_CONFLICT, detail="Email already registered"),
     UserInvalidCredentialsError: Problem(
         status=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid credentials",
