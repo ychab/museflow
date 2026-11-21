@@ -147,3 +147,15 @@ class OAuthProviderTokenRepository(ABC):
             True if the token was deleted, False if the stored token changed meanwhile or is gone.
         """
         ...
+
+    @abstractmethod
+    async def bulk_reencrypt(self) -> int:
+        """Encrypts every stored token again with the current encryption key, for all users and providers.
+
+        The step of a key rotation before a former key is dropped. A token none of the keys decrypts is skipped, with
+        a warning: dropping a key changes nothing for it.
+
+        Returns:
+            The number of tokens encrypted again; those already under the current key are left as they are.
+        """
+        ...

@@ -89,6 +89,9 @@ class TokenCipherPort(ABC):
 
     The encryption is deterministic: the same value and context always give the same bytes, so a stored value can be
     compared with an expected one in SQL (the compare-and-swap of the token refresh) without decrypting it.
+
+    It holds a current key, which encrypts, and the former keys of a rotation, which still decrypt: a stored value may
+    have been encrypted by any of them until it is encrypted again.
     """
 
     @abstractmethod
@@ -101,13 +104,28 @@ class TokenCipherPort(ABC):
                 with the same context, so a value copied elsewhere is rejected.
 
         Returns:
-            The encrypted bytes.
+            The bytes encrypted with the current key.
+        """
+        pass
+
+    @abstractmethod
+    def encrypt_with_each_key(self, plaintext: str, context: str) -> list[bytes]:
+        """Encrypts a value with the current key, then with each former key.
+
+        What a stored value holding `plaintext` can be equal to, to compare it in SQL during a rotation.
+
+        Args:
+            plaintext: The value to encrypt.
+            context: As for `encrypt`.
+
+        Returns:
+            The encrypted bytes, one per key, the current key first.
         """
         pass
 
     @abstractmethod
     def decrypt(self, ciphertext: bytes, context: str) -> str:
-        """Decrypts a value encrypted with `encrypt`.
+        """Decrypts a value encrypted with the current key or a former one.
 
         Args:
             ciphertext: The encrypted bytes.
@@ -117,7 +135,7 @@ class TokenCipherPort(ABC):
             The value in clear.
 
         Raises:
-            TokenDecryptionError: If the bytes were altered, encrypted with another key or for another context.
+            TokenDecryptionError: If the bytes were altered, encrypted with none of the keys or for another context.
         """
         pass
 

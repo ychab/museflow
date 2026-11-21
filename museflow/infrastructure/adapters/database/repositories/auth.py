@@ -153,14 +153,17 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
 
         # The condition and the write are one statement: PostgreSQL locks the row, then checks the condition again on
         # its latest committed version, so a concurrent update of the same token can't slip in between. The expected
-        # token is encrypted like the stored one, so equal tokens give equal bytes.
-        expected_token_access_encrypted = self._encrypt(expected_token_access, user_id, provider, "token_access")
+        # token is encrypted like the stored one, so equal tokens give equal bytes: with each key, as a rotation may
+        # not have encrypted it again yet.
+        expected_token_access_encrypted = self._encrypt_with_each_key(
+            expected_token_access, user_id, provider, "token_access"
+        )
         stmt = (
             update(AuthProviderTokenModel)
             .where(
                 AuthProviderTokenModel.user_id == user_id,
                 AuthProviderTokenModel.provider == provider,
-                AuthProviderTokenModel.token_access == expected_token_access_encrypted,
+                AuthProviderTokenModel.token_access.in_(expected_token_access_encrypted),
             )
             .values(**update_data)
             .returning(AuthProviderTokenModel)
@@ -171,13 +174,15 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         return auth_token_db.to_entity(self.token_cipher) if auth_token_db else None
 
     async def delete(self, user_id: uuid.UUID, provider: MusicProvider, expected_token_refresh: str) -> bool:
-        expected_token_refresh_encrypted = self._encrypt(expected_token_refresh, user_id, provider, "token_refresh")
+        expected_token_refresh_encrypted = self._encrypt_with_each_key(
+            expected_token_refresh, user_id, provider, "token_refresh"
+        )
         stmt = (
             delete(AuthProviderTokenModel)
             .where(
                 AuthProviderTokenModel.user_id == user_id,
                 AuthProviderTokenModel.provider == provider,
-                AuthProviderTokenModel.token_refresh == expected_token_refresh_encrypted,
+                AuthProviderTokenModel.token_refresh.in_(expected_token_refresh_encrypted),
             )
             .returning(AuthProviderTokenModel.id)
         )
@@ -185,8 +190,57 @@ class OAuthProviderTokenSQLRepository(OAuthProviderTokenRepository):
         deleted = result.scalar_one_or_none() is not None
         return deleted
 
+    async def bulk_reencrypt(self) -> int:
+        # Locked until the commit: a refresh of one of these tokens waits, instead of being overwritten by the value
+        # read here. No remote call happens in this transaction.
+        stmt = select(AuthProviderTokenModel).with_for_update()
+        result = await self.session.execute(stmt)
+
+        reencrypted = 0
+        for auth_token_db in result.scalars():
+            user_id = auth_token_db.user_id
+            provider = auth_token_db.provider
+
+            try:
+                auth_token = auth_token_db.to_entity(self.token_cipher)
+            except TokenDecryptionError:
+                logger.warning(
+                    f"The {provider} token of user {user_id} can't be decrypted with any key: left as it is, the user "
+                    "must reconnect",
+                    extra={"user_id": str(user_id), "provider": provider},
+                )
+                continue
+
+            token_access = self._encrypt(auth_token.token_access, user_id, provider, "token_access")
+            token_refresh = self._encrypt(auth_token.token_refresh, user_id, provider, "token_refresh")
+            # Deterministic encryption: equal bytes mean the token is already under the current key
+            if token_access == auth_token_db.token_access and token_refresh == auth_token_db.token_refresh:
+                continue
+
+            await self.session.execute(
+                update(AuthProviderTokenModel)
+                .where(AuthProviderTokenModel.id == auth_token_db.id)
+                .values(token_access=token_access, token_refresh=token_refresh)
+            )
+
+            reencrypted += 1
+
+        return reencrypted
+
     def _encrypt(self, token: str, user_id: uuid.UUID, provider: MusicProvider, column: str) -> bytes:
         return self.token_cipher.encrypt(
+            token,
+            context=AuthProviderTokenModel.get_token_context(user_id, provider, column),
+        )
+
+    def _encrypt_with_each_key(
+        self,
+        token: str,
+        user_id: uuid.UUID,
+        provider: MusicProvider,
+        column: str,
+    ) -> list[bytes]:
+        return self.token_cipher.encrypt_with_each_key(
             token,
             context=AuthProviderTokenModel.get_token_context(user_id, provider, column),
         )

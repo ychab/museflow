@@ -1,6 +1,7 @@
 import random
 import secrets
 import string
+from collections.abc import Sequence
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -79,29 +80,41 @@ class AesSivTokenCipher(TokenCipherPort):
     SIV derives its IV from the value and the context instead of drawing it at random: the encryption is
     deterministic, as the port requires, and stays authenticated (an altered value fails to decrypt). Equal values in
     one context give equal bytes, which reveals nothing here: the tokens are random and each row has its own context.
+
+    Decryption tries the current key, then the former ones (as `MultiFernet` does): a wrong key fails the
+    authentication, so it never gives a wrong value, and the stored bytes need no key id.
     """
 
     # AES-256-SIV takes two AES-256 keys: 64 bytes
     _KEY_LENGTH: Final[int] = 64
     _KEY_INFO: Final[bytes] = b"museflow provider token encryption"
 
-    def __init__(self, key: SecretStr) -> None:
-        # HKDF turns the secret of the settings (any string of 32+ characters) into a key of the length AES-SIV needs
-        derived_key = HKDF(algorithm=SHA256(), length=self._KEY_LENGTH, salt=None, info=self._KEY_INFO).derive(
-            key.get_secret_value().encode()
-        )
-        self._aes_siv = AESSIV(derived_key)
+    def __init__(self, key: SecretStr, fallback_keys: Sequence[SecretStr] = ()) -> None:
+        # The current key first: it encrypts, and is tried first to decrypt
+        self._aes_sivs = [AESSIV(self._derive_key(secret)) for secret in (key, *fallback_keys)]
 
     def encrypt(self, plaintext: str, context: str) -> bytes:
-        return self._aes_siv.encrypt(plaintext.encode(), [context.encode()])
+        return self._aes_sivs[0].encrypt(plaintext.encode(), [context.encode()])
+
+    def encrypt_with_each_key(self, plaintext: str, context: str) -> list[bytes]:
+        return [aes_siv.encrypt(plaintext.encode(), [context.encode()]) for aes_siv in self._aes_sivs]
 
     def decrypt(self, ciphertext: bytes, context: str) -> str:
-        try:
-            plaintext = self._aes_siv.decrypt(ciphertext, [context.encode()])
-        except InvalidTag as e:
-            raise TokenDecryptionError("The token was altered, or encrypted with another key or context") from e
+        for aes_siv in self._aes_sivs:
+            try:
+                plaintext = aes_siv.decrypt(ciphertext, [context.encode()])
+            except InvalidTag:
+                continue
+            return plaintext.decode()
 
-        return plaintext.decode()
+        raise TokenDecryptionError("The token was altered, or encrypted with none of the keys or for another context")
+
+    @classmethod
+    def _derive_key(cls, secret: SecretStr) -> bytes:
+        # HKDF turns a secret of the settings (any string of 32+ characters) into a key of the length AES-SIV needs
+        return HKDF(algorithm=SHA256(), length=cls._KEY_LENGTH, salt=None, info=cls._KEY_INFO).derive(
+            secret.get_secret_value().encode()
+        )
 
 
 class SystemStateTokenGenerator(StateTokenGeneratorPort):

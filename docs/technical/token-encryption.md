@@ -34,7 +34,8 @@ salt); AES-SIV is, AES-GCM and Fernet are not (random nonce). Encryption here mu
 - **AES-SIV** (RFC 5297, `cryptography`), behind `TokenCipherPort` (`AesSivTokenCipher`). The wiring builds it from
   `MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY`, any secret of 32+ characters that HKDF-SHA256 turns into the 64 bytes
   AES-256-SIV takes. It is distinct from the JWT signing key: each key has one job, and changing one leaves the other
-  alone.
+  alone. During a [rotation](#rotating-the-key), the former keys (`MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY_FALLBACKS`)
+  still decrypt; only the current key encrypts.
 - **Authenticated, and bound to its row.** Each token is encrypted with a context, `user_id:provider:column`, that the
   ciphertext authenticates: bytes copied to another user, provider or column, altered, or encrypted with another key
   fail to decrypt instead of giving a wrong token.
@@ -91,8 +92,8 @@ wrong token.
     {"from": "repo", "to": "db", "text": "<code>SELECT … WHERE user_id = … AND provider = …</code>"},
     {"from": "db", "to": "repo", "text": "The encrypted row"},
     {"from": "repo", "to": "cipher", "text": "<code>decrypt(bytes, context)</code>", "detail": "The context of the save: user_id:provider:column"},
-    {"note": "cipher", "style": "check", "text": "Checks the tag, then decrypts"},
-    {"from": "cipher", "to": "repo", "text": "Key changed or row altered: <code>TokenDecryptionError</code>", "style": "fail", "detail": "Logged as a warning and read as no token: the user reconnects with <code>provider connect</code>"},
+    {"note": "cipher", "style": "check", "text": "Tries the current key, then each fallback key", "detail": "A wrong key fails the tag check: it never gives a wrong token"},
+    {"from": "cipher", "to": "repo", "text": "No key fits, or the row was altered: <code>TokenDecryptionError</code>", "style": "fail", "detail": "Logged as a warning and read as no token: the user reconnects with <code>provider connect</code>"},
     {"from": "repo", "to": "cli", "text": "<code>OAuthProviderUserToken</code> in clear"},
     {"note": "cli", "style": "done", "text": "Masked by default, in clear with <code>--show-tokens</code> after a confirmation", "detail": "No log holds a token, encrypted or not"}
   ]
@@ -106,8 +107,9 @@ A refresh saves the new token only if the row still holds the access token the s
 `UPDATE … WHERE token_access = :expected`, which PostgreSQL checks again on the latest version of the row once it holds
 its lock ([Unit of work](unit-of-work.md)). With a random nonce, the same token encrypts to different bytes each time,
 and that condition would never hold: every refresh would think another session won. SIV is deterministic: the
-repository encrypts the expected token with the same context, and PostgreSQL compares bytes. The port, the session
-and the statement are the same as before #250.
+repository encrypts the expected token with the same context, and PostgreSQL compares bytes. During a rotation the
+stored token may still be under a former key, so the expected token is encrypted with each key and the condition
+becomes `token_access IN (…)`: still one statement. The port and the session are the same as before #250.
 
 <div class="seq">
 <script type="application/json">
@@ -126,15 +128,15 @@ and the statement are the same as before #250.
     {"from": "spotify", "to": "session", "text": "A new access token (sometimes a new refresh token)"},
     {"phase": "Compare-and-swap, one short transaction"},
     {"from": "session", "to": "repo", "text": "<code>update(token_in, expected_token_access=stale.access)</code>", "detail": "The port's signature is unchanged"},
-    {"from": "repo", "to": "cipher", "text": "Encrypts the new values <strong>and</strong> the expected one"},
-    {"note": "cipher", "style": "check", "text": "Deterministic: same token and context give the same bytes", "detail": "<code>encrypt(stale.access)</code> equals the stored bytes as long as nobody replaced them"},
-    {"from": "repo", "to": "db", "text": "<code>UPDATE … WHERE token_access = :expected_encrypted RETURNING …</code>"},
+    {"from": "repo", "to": "cipher", "text": "Encrypts the new values with the current key, the expected one with <strong>each</strong> key"},
+    {"note": "cipher", "style": "check", "text": "Deterministic: same token, context and key give the same bytes", "detail": "One of them equals the stored bytes as long as nobody replaced them, whichever key wrote them"},
+    {"from": "repo", "to": "db", "text": "<code>UPDATE … WHERE token_access IN (:expected_per_key) RETURNING …</code>"},
     {"note": "db", "style": "check", "text": "Locks the row, checks the condition again on its latest version", "detail": "A concurrent write can't slip in between the comparison and the write"},
     {"from": "db", "to": "repo", "text": "1 row: this refresh wins"},
     {"from": "db", "to": "repo", "text": "0 rows: another session replaced the token meanwhile", "style": "fail", "detail": "The session reads the row and takes over the newer token; deleted meanwhile, it saves its own with an upsert"},
     {"phase": "Spotify rejects the refresh token (invalid_grant)"},
     {"from": "session", "to": "repo", "text": "<code>delete(expected_token_refresh=stale.refresh)</code>"},
-    {"from": "repo", "to": "db", "text": "<code>DELETE … WHERE token_refresh = :expected_encrypted</code>", "detail": "Same principle: the expected refresh token is encrypted, then compared as bytes"},
+    {"from": "repo", "to": "db", "text": "<code>DELETE … WHERE token_refresh IN (:expected_per_key)</code>", "detail": "Same principle: the expected refresh token is encrypted with each key, then compared as bytes"},
     {"note": "session", "style": "done", "text": "The guarantee of #244 holds", "detail": "Same statements, same conditions, no lock held during the call to Spotify"}
   ]
 }
@@ -152,12 +154,51 @@ context differs on every row, so nothing can be learnt from it.
   database credentials), or runs code in the application. Keeping the key elsewhere (a secrets manager, a KMS) would
   be the next step for a hosted service.
 
+## Rotating the key
+
+A key is rotated without anyone reconnecting (#286), as Django rotates its `SECRET_KEY` with `SECRET_KEY_FALLBACKS`
+and Python's `MultiFernet` keeps several keys:
+
+1. Move the current key to the fallbacks and set a new one (`openssl rand -hex 32`), then restart the processes:
+   ```bash
+   MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY=<new key>
+   MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY_FALLBACKS=["<former key>"]
+   ```
+   New writes use the new key; every token still reads, and refreshes under concurrency still compare, whichever key
+   wrote them.
+2. Run [`museflow provider reencrypt-tokens`](../user-guide/commands/provider.md#provider-reencrypt-tokens): it encrypts
+   every stored token again with the new key. A refresh is not enough on its own: Spotify doesn't always issue a new
+   refresh token, and the stored one would stay under the former key.
+3. Drop the fallback and restart.
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {"id": "cli", "name": "CLI / use case", "sub": "provider reencrypt-tokens", "color": "teal"},
+    {"id": "repo", "name": "Repository", "sub": "bulk_reencrypt", "color": "indigo"},
+    {"id": "cipher", "name": "Cipher", "sub": "new key + fallbacks", "color": "amber"},
+    {"id": "db", "name": "PostgreSQL", "sub": "museflow_auth_token", "color": "grey"}
+  ],
+  "steps": [
+    {"phase": "One short transaction, no remote call"},
+    {"from": "cli", "to": "repo", "text": "<code>auth_tokens.bulk_reencrypt()</code>"},
+    {"from": "repo", "to": "db", "text": "<code>SELECT … FOR UPDATE</code>", "detail": "Every token, of every user: a refresh of one of them waits for the commit instead of being overwritten"},
+    {"phase": "For each token"},
+    {"from": "repo", "to": "cipher", "text": "Decrypts with whichever key wrote it, encrypts with the new key"},
+    {"from": "cipher", "to": "repo", "text": "No key fits: skipped, with a warning", "style": "fail", "detail": "Dropping a key changes nothing for it: its user reconnects"},
+    {"note": "repo", "style": "check", "text": "Same bytes as stored: already under the new key, skipped"},
+    {"from": "repo", "to": "db", "text": "<code>UPDATE … SET token_access, token_refresh WHERE id = …</code>"},
+    {"phase": "Commit"},
+    {"from": "repo", "to": "cli", "text": "The number of tokens encrypted again"},
+    {"note": "cli", "style": "done", "text": "The fallback key can go"}
+  ]
+}
+</script>
+</div>
+
 ## Known limits
 
-- **No key rotation.** A new `MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY` makes the stored tokens unreadable: each read
-  logs a warning and counts as no token, and every user reconnects (`provider connect`), whose upsert replaces the row.
-  Cheap here, since a reconnect gets a new token. The usual rotation keeps several keys: the newest encrypts, the
-  former ones still decrypt, rows are encrypted again as they are written, then the former key is retired (Python's
-  `MultiFernet` works this way; a KMS does it with envelope encryption). With SIV, the compare-and-swap would then
-  compare against the expected token encrypted under each key.
+- **The rotation is manual**: three steps and two restarts, and nothing checks that the command ran before a fallback
+  is dropped. A token still under a dropped key reads as no token, with a warning, and its user reconnects.
 - **A lost key loses the tokens**, not the rest of the data: reconnecting is enough.

@@ -1,6 +1,7 @@
 # `provider` commands
 
-Link a user to a music provider account and inspect the link. Spotify is the only provider for now.
+Link a user to a music provider account, inspect the link, and encrypt the stored tokens again after a key rotation.
+Spotify is the only provider for now.
 
 ## `provider connect`
 
@@ -60,3 +61,18 @@ museflow provider info [--email <email>]
 token. The access and refresh tokens are masked to their last 4 characters (`****abcd`), enough to tell whether a
 token changed. With `--show-tokens` they are printed in clear, for instance to pass the refresh token to the live
 Spotify tests: do not paste that output in public.
+
+## `provider reencrypt-tokens`
+
+Encrypts the stored tokens of every user again with the current key (`MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY`): the
+step of a key rotation between setting a new key, with the former one in
+`MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY_FALLBACKS`, and dropping that fallback. The procedure:
+[Rotating the key](../../technical/token-encryption.md#rotating-the-key).
+
+```bash
+museflow provider reencrypt-tokens
+```
+
+**Output.** `Encrypted <n> token(s) again with the current key.` Tokens already under the current key are left as they
+are, so running it twice is harmless. A token no key decrypts is skipped, with a warning: its user reconnects with
+`provider connect`.
