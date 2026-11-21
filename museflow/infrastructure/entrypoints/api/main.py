@@ -15,6 +15,7 @@ from museflow import __version__
 from museflow.infrastructure.config.loggers.setup import configure_loggers
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import get_session_factory
+from museflow.infrastructure.entrypoints.api.errors import add_exception_handlers
 from museflow.infrastructure.entrypoints.api.schemas import HealthCheckResponse
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
@@ -44,6 +45,7 @@ app = FastAPI(
     lifespan=lifespan,
     debug=app_settings.DEBUG,
 )
+add_exception_handlers(app)
 
 # CORS middleware must be added at the top of the list to prevent any side effect.
 app.add_middleware(

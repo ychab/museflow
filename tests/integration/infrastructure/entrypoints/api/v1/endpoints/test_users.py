@@ -60,7 +60,8 @@ class TestUserRegister:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
         response_data = response.json()
-        assert "String should have at least 8 characters" in response_data["detail"][0]["msg"]
+        assert response.headers["content-type"] == "application/problem+json"
+        assert "String should have at least 8 characters" in response_data["errors"][0]["msg"]
 
     async def test__user_already_exists(self, user: User, async_client: AsyncClient) -> None:
         payload: dict[str, Any] = {
@@ -71,9 +72,15 @@ class TestUserRegister:
 
         response = await async_client.post(url, json=payload)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.headers["content-type"] == "application/problem+json"
 
-        response_data = response.json()
-        assert "Email already registered" in response_data["detail"]
+        assert response.json() == {
+            "type": "about:blank",
+            "title": "Bad Request",
+            "status": 400,
+            "detail": "Email already registered",
+            "instance": url,
+        }
 
 
 class TestUserLogin:
@@ -114,9 +121,10 @@ class TestUserLogin:
 
         response = await async_client.post(url, headers=headers, data=payload)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.headers["www-authenticate"] == "Bearer"
 
         response_data = response.json()
-        assert "Invalid credentials" in response_data["detail"]
+        assert response_data["detail"] == "Invalid credentials"
 
     async def test__password_invalid(self, async_client: AsyncClient, user: User) -> None:
         url = app.url_path_for("user_login")
@@ -128,9 +136,10 @@ class TestUserLogin:
 
         response = await async_client.post(url, headers=headers, data=payload)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.headers["www-authenticate"] == "Bearer"
 
         response_data = response.json()
-        assert "Invalid credentials" in response_data["detail"]
+        assert response_data["detail"] == "Invalid credentials"
 
     @pytest.mark.parametrize("user", [{"is_active": False}], indirect=True)
     async def test__not_active(self, async_client: AsyncClient, user: User) -> None:

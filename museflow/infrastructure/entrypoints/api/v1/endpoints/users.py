@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi import HTTPException
 from fastapi import status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -14,10 +13,6 @@ from museflow.application.use_cases.user_create import create_user
 from museflow.application.use_cases.user_delete import delete_user
 from museflow.application.use_cases.user_update import update_user
 from museflow.domain.entities.user import User
-from museflow.domain.exceptions import UserAlreadyExistsError
-from museflow.domain.exceptions import UserEmailAlreadyExistsError
-from museflow.domain.exceptions import UserInactiveError
-from museflow.domain.exceptions import UserInvalidCredentialsError
 from museflow.infrastructure.entrypoints.api.dependencies import get_access_token_manager
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_password_hasher
@@ -35,16 +30,11 @@ async def register(
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
-    try:
-        user = await create_user(
-            user_in=user_in,
-            uow=uow,
-            password_hasher=password_hasher,
-        )
-    except UserAlreadyExistsError as e:
-        # Accepted risk (#102): this answer reveals that the email has an account. A neutral one needs a full user
-        # workflow with email verification, not worth building for a local, single-user app still in development.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
+    user = await create_user(
+        user_in=user_in,
+        uow=uow,
+        password_hasher=password_hasher,
+    )
 
     access_token = access_token_manager.create(data={"sub": str(user.id)})
 
@@ -58,21 +48,12 @@ async def login(
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
     access_token_manager: AccessTokenManagerPort = Depends(get_access_token_manager),
 ) -> UserWithToken:
-    try:
-        user = await authenticate_user(
-            email=form_data.username,
-            password=form_data.password,
-            uow=uow,
-            password_hasher=password_hasher,
-        )
-    except UserInvalidCredentialsError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except UserInactiveError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive") from e
+    user = await authenticate_user(
+        email=form_data.username,
+        password=form_data.password,
+        uow=uow,
+        password_hasher=password_hasher,
+    )
 
     access_token = access_token_manager.create(data={"sub": str(user.id)})
 
@@ -91,16 +72,12 @@ async def update_current_user(
     uow: UnitOfWorkPort = Depends(get_unit_of_work),
     password_hasher: PasswordHasherPort = Depends(get_password_hasher),
 ) -> UserResponse:
-    try:
-        updated_user = await update_user(
-            user=current_user,
-            user_in=user_in,
-            uow=uow,
-            password_hasher=password_hasher,
-        )
-    except UserEmailAlreadyExistsError as e:
-        # Accepted risk (#102): see `register`.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered") from e
+    updated_user = await update_user(
+        user=current_user,
+        user_in=user_in,
+        uow=uow,
+        password_hasher=password_hasher,
+    )
 
     return UserResponse.model_validate(updated_user)
 

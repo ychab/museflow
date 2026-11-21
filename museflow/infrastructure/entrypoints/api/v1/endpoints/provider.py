@@ -1,9 +1,5 @@
-import logging
-
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi import HTTPException
-from fastapi import status
 
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import StateTokenGeneratorPort
@@ -13,8 +9,6 @@ from museflow.application.use_cases.provider_oauth_redirect_url_build import bui
 from museflow.application.use_cases.provider_oauth_state_consume import consume_oauth_state
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ProviderExchangeCodeError
-from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.infrastructure.entrypoints.api.dependencies import get_current_user
 from museflow.infrastructure.entrypoints.api.dependencies import get_provider_oauth
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
@@ -22,8 +16,6 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_unit_of_wor
 from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectCompleteRequest
 from museflow.infrastructure.entrypoints.api.schemas import ProviderConnectResponse
 from museflow.infrastructure.entrypoints.api.schemas import SuccessResponse
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -65,23 +57,14 @@ async def connect_complete(
     user, can't link that person's provider account to the wrong user (#101). `redirect_uri` is the one of `connect`:
     the provider refuses the exchange otherwise.
     """
-    try:
-        await consume_oauth_state(state=payload.state, user=current_user, provider=provider, uow=uow)
-    except ProviderOAuthStateInvalidError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired state") from e
+    await consume_oauth_state(state=payload.state, user=current_user, provider=provider, uow=uow)
 
-    try:
-        await exchange_oauth_code(
-            code=payload.code,
-            user=current_user,
-            provider=provider,
-            uow=uow,
-            provider_oauth=provider_oauth,
-        )
-    except ProviderExchangeCodeError as e:
-        logger.exception(
-            "Failed to exchange OAuth code", extra={"user_id": str(current_user.id), "provider": provider}
-        )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to exchange code") from e
+    await exchange_oauth_code(
+        code=payload.code,
+        user=current_user,
+        provider=provider,
+        uow=uow,
+        provider_oauth=provider_oauth,
+    )
 
     return SuccessResponse(message=f"{provider.title()} account linked successfully")
