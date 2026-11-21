@@ -46,8 +46,6 @@ class AppSettings(BaseSettings):
         default_factory=list
     )
 
-    API_V1_PREFIX: str = "/api/v1"
-
     LOG_LEVEL_API: LogLevel = "WARNING"
     LOG_HANDLERS_API: list[LogHandler] = ["console"]
 
