@@ -136,6 +136,7 @@ class PlaylistSQLRepository(PlaylistRepository):
         provider: MusicProvider | None,
     ) -> list[ColumnElement[bool]]:
         filters = [PlaylistModel.user_id == user_id]
+
         if type is not None:
             filters.append(PlaylistModel.type == type)
         if provider is not None:
