@@ -66,7 +66,6 @@ class PlaylistCreated:
     playlist: Playlist
 
 
-# Here rather than in domain/types.py, which the entities these events carry import: a cycle.
 type ProgressEvent = (
     StepStarted
     | StepAdvanced

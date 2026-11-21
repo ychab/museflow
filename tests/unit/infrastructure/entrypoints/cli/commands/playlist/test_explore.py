@@ -7,12 +7,12 @@ import pytest
 from typer.testing import CliRunner
 
 from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
+from museflow.application.outputs.progress import CandidatesFound
 from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistResult
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.progress import CandidatesFound
 from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.infrastructure.entrypoints.cli.commands.playlist.explore import playlist_explore_logic
 from museflow.infrastructure.entrypoints.cli.main import app

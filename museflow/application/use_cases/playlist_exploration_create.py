@@ -7,6 +7,11 @@ from datetime import datetime
 from typing import Final
 
 from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
+from museflow.application.outputs.progress import CandidatesFound
+from museflow.application.outputs.progress import PicksMade
+from museflow.application.outputs.progress import PlaylistCreated
+from museflow.application.outputs.progress import StepStarted
+from museflow.application.outputs.stats import ArtistStats
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
@@ -25,11 +30,6 @@ from museflow.domain.enums import ProgressStep
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.progress import CandidatesFound
-from museflow.domain.value_objects.progress import PicksMade
-from museflow.domain.value_objects.progress import PlaylistCreated
-from museflow.domain.value_objects.progress import StepStarted
-from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.taste import TrackPicked
 
 logger = logging.getLogger(__name__)

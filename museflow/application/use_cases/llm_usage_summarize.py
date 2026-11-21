@@ -1,10 +1,10 @@
 import uuid
 from datetime import date
 
+from museflow.application.outputs.llm import LLMUsageSummary
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
-from museflow.domain.value_objects.llm import LLMUsageSummary
 
 
 async def summarize_llm_usage(

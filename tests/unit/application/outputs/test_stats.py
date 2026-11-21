@@ -1,4 +1,4 @@
-from museflow.domain.value_objects.stats import LibraryStats
+from museflow.application.outputs.stats import LibraryStats
 
 
 class TestLibraryStats:

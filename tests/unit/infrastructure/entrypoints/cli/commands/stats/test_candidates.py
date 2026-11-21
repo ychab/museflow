@@ -5,9 +5,9 @@ from unittest import mock
 import pytest
 from typer.testing import CliRunner
 
+from museflow.application.outputs.stats import ArtistCandidate
 from museflow.domain.enums import SourceFilter
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.stats import ArtistCandidate
 from museflow.infrastructure.entrypoints.cli.commands.stats.candidates import stats_candidates_logic
 from museflow.infrastructure.entrypoints.cli.main import app
 

@@ -22,16 +22,16 @@ from rich.progress import TimeRemainingColumn
 from rich.table import Table
 from rich.text import Text
 
+from museflow.application.outputs.progress import CandidatesFound
+from museflow.application.outputs.progress import PicksMade
+from museflow.application.outputs.progress import ProgressEvent
+from museflow.application.outputs.progress import StepAdvanced
+from museflow.application.outputs.progress import StepDone
+from museflow.application.outputs.progress import StepResumed
+from museflow.application.outputs.progress import StepStarted
+from museflow.application.outputs.progress import StrategyChosen
 from museflow.application.ports.progress import ProgressPort
 from museflow.domain.enums import ProgressStep
-from museflow.domain.value_objects.progress import CandidatesFound
-from museflow.domain.value_objects.progress import PicksMade
-from museflow.domain.value_objects.progress import ProgressEvent
-from museflow.domain.value_objects.progress import StepAdvanced
-from museflow.domain.value_objects.progress import StepDone
-from museflow.domain.value_objects.progress import StepResumed
-from museflow.domain.value_objects.progress import StepStarted
-from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.utils.formatting import format_duration
 

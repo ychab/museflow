@@ -6,12 +6,12 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from museflow.application.outputs.llm import LLMUsageSummary
 from museflow.application.use_cases.llm_usage_summarize import summarize_llm_usage
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
 from museflow.domain.exceptions import UserNotFoundError
-from museflow.domain.value_objects.llm import LLMUsageSummary
 from museflow.infrastructure.entrypoints.cli.commands.llm import app
 from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic

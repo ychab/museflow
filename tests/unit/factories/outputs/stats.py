@@ -1,7 +1,7 @@
 from polyfactory.factories.dataclass_factory import DataclassFactory
 
-from museflow.domain.value_objects.stats import ArtistStats
-from museflow.domain.value_objects.stats import TagStats
+from museflow.application.outputs.stats import ArtistStats
+from museflow.application.outputs.stats import TagStats
 
 
 class ArtistStatsFactory(DataclassFactory[ArtistStats]):

@@ -19,13 +19,13 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from museflow.application.outputs.llm import LLMUsageGroup
+from museflow.application.outputs.llm import LLMUsageSummary
+from museflow.application.outputs.llm import LLMUsageTotals
 from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.domain.entities.llm import LLMUsageRecord
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
-from museflow.domain.value_objects.llm import LLMUsageGroup
-from museflow.domain.value_objects.llm import LLMUsageSummary
-from museflow.domain.value_objects.llm import LLMUsageTotals
 from museflow.infrastructure.adapters.database.models import UserModel
 from museflow.infrastructure.adapters.database.models.llm import LLMUsageModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel

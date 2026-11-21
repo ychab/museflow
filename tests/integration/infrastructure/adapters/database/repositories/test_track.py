@@ -13,6 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
 
+from museflow.application.outputs.stats import ArtistStats
+from museflow.application.outputs.stats import LibraryStats
+from museflow.application.outputs.stats import TagStats
 from museflow.application.ports.repositories.track import TrackRepository
 from museflow.application.ports.repositories.track_play import TrackPlayRepository
 from museflow.domain.entities.track import ProviderLink
@@ -25,9 +28,6 @@ from museflow.domain.enums import SortOrder
 from museflow.domain.enums import TrackOrderBy
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import TrackNotFoundError
-from museflow.domain.value_objects.stats import ArtistStats
-from museflow.domain.value_objects.stats import LibraryStats
-from museflow.domain.value_objects.stats import TagStats
 from museflow.domain.value_objects.track import TrackPlay
 from museflow.infrastructure.adapters.database.models import TrackModel
 

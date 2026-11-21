@@ -5,7 +5,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import SourceFilter
 from museflow.domain.enums import TrackSource
 
-from tests.unit.factories.value_objects.stats import ArtistStatsFactory
+from tests.unit.factories.outputs.stats import ArtistStatsFactory
 
 
 class TestGetArtistCandidatesUseCase:

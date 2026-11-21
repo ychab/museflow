@@ -3,13 +3,13 @@ import re
 from collections import Counter
 from typing import Final
 
+from museflow.application.outputs.stats import ArtistStats
 from museflow.domain.entities.track import Track
 from museflow.domain.utils.stats import compute_quality
 from museflow.domain.utils.text import get_fingerprint_title
 from museflow.domain.utils.text import normalize_text
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.stats import ArtistStats
 from museflow.domain.value_objects.taste import TrackPicked
 
 logger = logging.getLogger(__name__)

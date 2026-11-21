@@ -3,10 +3,10 @@ from abc import ABC
 from abc import abstractmethod
 from datetime import date
 
+from museflow.application.outputs.llm import LLMUsageSummary
 from museflow.domain.entities.llm import LLMUsageRecord
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import LLMUsageGroupBy
-from museflow.domain.value_objects.llm import LLMUsageSummary
 
 
 class LLMUsageRepository(ABC):

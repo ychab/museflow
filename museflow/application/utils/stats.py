@@ -1,8 +1,8 @@
+from museflow.application.outputs.stats import RankableStats
+from museflow.application.outputs.stats import Ranking
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.utils.stats import compute_overall
 from museflow.domain.utils.stats import compute_quality
-from museflow.domain.value_objects.stats import RankableStats
-from museflow.domain.value_objects.stats import Ranking
 
 
 def rank_stats[S: RankableStats](

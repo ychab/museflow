@@ -1,8 +1,8 @@
 import uuid
 
+from museflow.application.outputs.stats import ArtistCandidate
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.enums import SourceFilter
-from museflow.domain.value_objects.stats import ArtistCandidate
 
 
 async def get_artist_candidates(

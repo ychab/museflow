@@ -17,6 +17,7 @@ flowchart TB
         ASVC["services: DiscoveryService, LLMUsageService"]
         PORTS["ports (ABCs)<br/>repositories, providers,<br/>advisors, profilers, enrichers, security"]
         INP["inputs (command schemas)"]
+        OUT["outputs (stats, LLM usage, progress events)"]
     end
     subgraph DOM["domain (pure Python)"]
         direction TB
@@ -36,12 +37,13 @@ flowchart TB
 | Layer | Path | May import | Contains |
 |---|---|---|---|
 | Domain | `museflow/domain/` | the standard library and a pure helper (`unidecode`) | Frozen-dataclass entities, value objects, pure helpers (text normalization, fingerprint), enums, constants, exceptions |
-| Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, port interfaces (`abc.ABC`) |
+| Application | `museflow/application/` | domain only | Use cases, application services shared by the use cases, input schemas, outputs (what the use cases and ports hand to the entrypoints for display), port interfaces (`abc.ABC`) |
 | Infrastructure | `museflow/infrastructure/` | everything | SQLAlchemy models and repositories, Spotify and OpenRouter adapters, settings, Typer and FastAPI entrypoints |
 
 Two points are easy to miss:
 
 - **The domain holds rules, not only data.** A `Track` computes its own fingerprint in `__post_init__`, from its title and artists normalized by `domain/utils`: that fingerprint is how a track is recognised across providers, imports and discovery runs. No I/O, deterministic, so it lives in the domain. A rule only one flow uses stays a pure helper next to its use case (`application/utils/`), with no class or injection around it.
+- **Value objects are business values; outputs are not.** A value object is a word of the business language: a listening period, a discovery strategy, the blacklist of a user. The shapes the application only hands over for display (statistics, an LLM usage summary, progress events) carry no business rule, so they live in `application/outputs/`. The test is what a shape *is*, not which layer uses it today.
 - **Ports are defined by the application, not by the infrastructure.** For example `AdvisorPort` ([`museflow/application/ports/advisors/agent.py`](https://github.com/ychab/museflow/blob/main/museflow/application/ports/advisors/agent.py)) exposes `get_discovery_artists(...)` in domain terms (`TasteProfile`, `Track`, `DiscoveryFocus`) and returns a `DiscoveryArtistStrategy`. Nothing in it mentions HTTP or JSON.
 
 ## Ports and adapters

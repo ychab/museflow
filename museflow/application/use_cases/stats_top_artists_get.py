@@ -1,10 +1,10 @@
 import uuid
 
+from museflow.application.outputs.stats import ArtistRanking
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.utils.stats import rank_stats
 from museflow.domain.enums import RankingSortBy
 from museflow.domain.enums import SourceFilter
-from museflow.domain.types import ArtistRanking
 
 
 async def get_top_artists(

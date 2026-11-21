@@ -5,6 +5,11 @@ from datetime import UTC
 from datetime import datetime
 
 from museflow.application.inputs.discovery import CreateDiscoveryPlaylistConfigInput
+from museflow.application.outputs.progress import CandidatesFound
+from museflow.application.outputs.progress import PicksMade
+from museflow.application.outputs.progress import PlaylistCreated
+from museflow.application.outputs.progress import StepStarted
+from museflow.application.outputs.progress import StrategyChosen
 from museflow.application.ports.advisors.agent import AdvisorPort
 from museflow.application.ports.progress import ProgressPort
 from museflow.application.ports.providers.library import ProviderLibraryPort
@@ -26,11 +31,6 @@ from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import TasteProfileStatusNotReadyError
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.progress import CandidatesFound
-from museflow.domain.value_objects.progress import PicksMade
-from museflow.domain.value_objects.progress import PlaylistCreated
-from museflow.domain.value_objects.progress import StepStarted
-from museflow.domain.value_objects.progress import StrategyChosen
 from museflow.domain.value_objects.taste import DiscoveryArtistStrategy
 from museflow.domain.value_objects.taste import TrackPicked
 

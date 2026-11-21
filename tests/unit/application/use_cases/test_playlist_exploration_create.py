@@ -6,6 +6,9 @@ from unittest import mock
 import pytest
 
 from museflow.application.inputs.explore import CreateExplorationPlaylistConfigInput
+from museflow.application.outputs.progress import CandidatesFound
+from museflow.application.outputs.progress import PicksMade
+from museflow.application.outputs.progress import StepStarted
 from museflow.application.use_cases.playlist_exploration_create import CreateExplorationPlaylistUseCase
 from museflow.domain.entities.track import Track
 from museflow.domain.entities.user import User
@@ -14,17 +17,14 @@ from museflow.domain.enums import ProgressStep
 from museflow.domain.enums import TrackSource
 from museflow.domain.exceptions import DiscoveryTrackNoNewError
 from museflow.domain.value_objects.blacklist import UserBlacklist
-from museflow.domain.value_objects.progress import CandidatesFound
-from museflow.domain.value_objects.progress import PicksMade
-from museflow.domain.value_objects.progress import StepStarted
 from museflow.domain.value_objects.taste import ArtistSearch
 from museflow.domain.value_objects.taste import TrackPicked
 
 from tests.unit.factories.entities.blacklist import BlacklistedArtistFactory
 from tests.unit.factories.entities.playlist import PlaylistFactory
 from tests.unit.factories.entities.track import TrackFactory
+from tests.unit.factories.outputs.stats import ArtistStatsFactory
 from tests.unit.factories.value_objects.llm import LLMUsageFactory
-from tests.unit.factories.value_objects.stats import ArtistStatsFactory
 
 
 class TestCreateExplorationPlaylistUseCase:
