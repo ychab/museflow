@@ -160,7 +160,8 @@ class TestProviderInfoCommand:
 
         output = clean_typer_text(result.stdout)
         assert result.exit_code == 0
-        assert output == ""
+        assert "No Spotify token for this user. Run `museflow provider connect` first." in output
+        assert "Auth Token:" not in output
 
 
 @pytest.mark.usefixtures("mock_wiring")
