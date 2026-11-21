@@ -23,7 +23,7 @@ flowchart LR
         direction LR
         API["api<br/>FastAPI"]
         MQ["RabbitMQ<br/>broker"]
-        WK["worker<br/>Celery, prefork"]
+        WK["workers<br/>Celery, prefork<br/>batch, interactive"]
         PG[("PostgreSQL<br/>jobs table")]
         RD[("Redis<br/>rate limits, locks")]
         VOL[["named volume<br/>uploaded files"]]
@@ -49,6 +49,7 @@ flowchart LR
 | Shared state between processes | Redis: rate limits (#264), the Spotify limiter (#268), locks | PostgreSQL: possible, but a counter written on every request belongs in memory with a TTL |
 | Job state | A `jobs` table in PostgreSQL (#261) | A Celery result backend: see [below](#the-jobs-table-is-the-source-of-truth) |
 | Files | `FileStoragePort` on a named volume (#249, #260) | A cloud bucket now: a cost for a few users; it is one more adapter later |
+| Task queues | Two, by who waits: `museflow.batch` and `museflow.interactive`, each with workers of its own | One queue: a playlist waits behind a first enrichment. RabbitMQ priorities: they reorder the waiting messages, never a running task. A queue per use case: as many worker pools for no gain. See [below](#two-queues-by-who-waits) |
 | Services | One application, three entrypoints | Microservices: out of scope, see [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app) |
 
 ## The jobs table is the source of truth
@@ -143,9 +144,36 @@ The first job, enrichment (#262), sets the pattern every other job copies.
   inspected in the RabbitMQ UI (`http://localhost:15672`) or with `make broker-dead-letters` instead of being lost. The worker declares it when it
   starts, as no worker consumes it.
 - **RabbitMQ's consumer timeout** (30 minutes by default) closes the channel of a message left unacknowledged longer
-  than that, which `acks_late` does for a long task. The longest job, a first enrichment, took 8 minutes for 10,000
-  tracks (51 LLM batches of 200): the `museflow` queue raises it to 2 hours (`x-consumer-timeout`), room for a
-  library several times larger and for slow LLM retries.
+  than that, which `acks_late` does for a long task. Each queue sets its own (`x-consumer-timeout`): the shorter it
+  is, the sooner a consumer that hangs for good is caught. The longest job, a first enrichment, took 8 minutes for
+  10,000 tracks (51 LLM batches of 200): `museflow.batch` raises it to 2 hours, room for a library several times
+  larger and for slow LLM retries. `museflow.interactive` lowers it to 15 minutes, several times a playlist (a
+  minute or two, estimated until #267 measures it).
+
+### Two queues, by who waits
+
+The jobs are not split by length (nearly all of them are long) but by who waits for them:
+
+| Queue | Tasks | Length | Who waits |
+|---|---|---|---|
+| `museflow.batch` | History import (#265), enrichment (#262), taste profile build (#266) | Seconds for an import (no remote call), 8 minutes for a first enrichment (measured), minutes for a profile build | No one: background work, long and paid |
+| `museflow.interactive` | Playlist creation (#267): discover, explore, history | Seconds to a minute or two (estimated) | The user, in front of the screen |
+
+The rest stays synchronous in the API: short reads and writes (ratings, blacklist, playlist delete, YAML imports and
+exports).
+
+- **Workers apart, not priorities.** With 2 processes, one user signing up (import, then enrichment, then profile
+  build) holds both for about 15 minutes. A worker's processes are shared by all the queues it consumes, and a
+  RabbitMQ priority only reorders the waiting messages, never a running task: only a worker per queue keeps a
+  playlist from waiting. Docker Compose runs `worker` (`--queues museflow.batch`) and `worker-interactive`
+  (`--queues museflow.interactive`, `MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY`); `make run-worker` consumes both.
+- **Routed by name.** A task goes to the batch queue unless its name routes it elsewhere: `task_routes` sends
+  `playlist.*` to the interactive one. A task is named `<theme>.<object>_<verb>` (`track.history_import`).
+- **Named for good.** RabbitMQ never renames a queue nor changes its arguments (dead letter, consumer timeout): a
+  declaration with other ones is refused (`PRECONDITION_FAILED`). A change takes a new queue, the old one drained,
+  then deleted; hence the two queues set before the first deployment, with their timeouts.
+- **One dead-letter queue for both.** A dead-lettered message keeps its task in the `task` header and its queue in
+  `x-first-death-queue`.
 
 ### Open point: the job row and the message
 
@@ -183,15 +211,15 @@ flowchart TB
 - **The connection budget.** Every child holds a pool: the database sees up to
   *children × (`DATABASE_POOL_SIZE` + `DATABASE_MAX_OVERFLOW`)* connections from the workers, plus the API's. A
   child runs one task at a time, which needs one connection for the use case and one for a provider token refresh:
-  the `worker` service of Docker Compose sets a pool of 2 plus 1 overflow, and `MUSEFLOW_WORKER_CONCURRENCY` 2
-  children, so 6 connections, next to the API's 15, well within PostgreSQL's 100. A second worker, or more children,
-  adds 3 connections each.
+  the worker services of Docker Compose set a pool of 2 plus 1 overflow, and 2 children each
+  (`MUSEFLOW_WORKER_CONCURRENCY`, `MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY`), so 12 connections, next to the API's
+  15, well within PostgreSQL's 100. Another worker, or more children, adds 3 connections each.
 - **One user's flow, the same use case.** A task calls the use case the CLI calls, with the same unit of work rules
   ([Unit of work](unit-of-work.md)): no transaction open during an LLM or Spotify call. The task is a thin sync
   function that runs a coroutine on the process's loop, as a CLI command runs its logic:
 
 ```python
-@celery_app.task(name="tracks.history_import")
+@celery_app.task(name="track.history_import")
 def import_history_task(job_id: str, user_id: str) -> None:
     run_task(_import_history(uuid.UUID(job_id), uuid.UUID(user_id)))
 

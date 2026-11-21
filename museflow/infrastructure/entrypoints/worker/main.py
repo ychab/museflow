@@ -21,25 +21,47 @@ from museflow.infrastructure.config.settings.broker import broker_settings
 from museflow.infrastructure.entrypoints.worker import dependencies
 
 # How long RabbitMQ lets a consumer hold a message unacknowledged before it closes its channel (30 minutes by default).
-# A task acknowledges its message once it ends (acks late): the timeout must outlast the longest one. A first
-# enrichment, the longest job, took 8 minutes for 10,000 tracks (51 LLM batches of 200): 2 hours leave room for a
-# library several times larger and for the LLM retries, and still catch a consumer that hangs for good.
-CONSUMER_TIMEOUT: Final[timedelta] = timedelta(hours=2)
+# A task acknowledges its message once it ends (acks late): the timeout of a queue must outlast its longest task, and
+# the shorter it is, the sooner a consumer that hangs for good is caught.
+# A first enrichment, the longest job, took 8 minutes for 10,000 tracks (51 LLM batches of 200): 2 hours leave room for
+# a library several times larger and for the LLM retries.
+BATCH_CONSUMER_TIMEOUT: Final[timedelta] = timedelta(hours=2)
+# A playlist takes a minute or two (estimated, until #267 measures it): several times that, LLM retries included.
+INTERACTIVE_CONSUMER_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
 
-# Where RabbitMQ moves a message rejected for good: a task that failed after its retries, or on an error not worth one
+# Where RabbitMQ moves a message rejected for good: a task that failed after its retries, or on an error not worth one.
+# One for both task queues: a message keeps its queue in its `x-first-death-queue` header, and its task in `task`.
 DEAD_LETTER_QUEUE: Final[Queue] = Queue(
     "museflow.dead_letter",
     Exchange("museflow.dead_letter", type="direct"),
     routing_key="museflow.dead_letter",
 )
-TASK_QUEUE: Final[Queue] = Queue(
-    "museflow",
-    Exchange("museflow", type="direct"),
-    routing_key="museflow",
+
+# The task queues, split by who waits for the result, each consumed by workers of its own: the slots of a worker are
+# shared by all its queues, and a priority never stops a task already running, so only workers apart keep a playlist
+# from waiting behind an enrichment. A queue is never renamed, nor its arguments changed: RabbitMQ refuses to declare
+# it again with other ones (PRECONDITION_FAILED); it takes a new queue, drained, then the old one deleted.
+TASK_EXCHANGE: Final[Exchange] = Exchange("museflow", type="direct")
+# Background work no one watches, long and paid: history import, enrichment, taste profile build
+BATCH_QUEUE: Final[Queue] = Queue(
+    "museflow.batch",
+    TASK_EXCHANGE,
+    routing_key="museflow.batch",
     queue_arguments={
         "x-dead-letter-exchange": DEAD_LETTER_QUEUE.exchange.name,
         "x-dead-letter-routing-key": DEAD_LETTER_QUEUE.routing_key,
-        "x-consumer-timeout": int(CONSUMER_TIMEOUT.total_seconds() * 1000),
+        "x-consumer-timeout": int(BATCH_CONSUMER_TIMEOUT.total_seconds() * 1000),
+    },
+)
+# What a user waits for, in front of the screen: the playlists
+INTERACTIVE_QUEUE: Final[Queue] = Queue(
+    "museflow.interactive",
+    TASK_EXCHANGE,
+    routing_key="museflow.interactive",
+    queue_arguments={
+        "x-dead-letter-exchange": DEAD_LETTER_QUEUE.exchange.name,
+        "x-dead-letter-routing-key": DEAD_LETTER_QUEUE.routing_key,
+        "x-consumer-timeout": int(INTERACTIVE_CONSUMER_TIMEOUT.total_seconds() * 1000),
     },
 )
 
@@ -74,10 +96,13 @@ celery_app = Celery(
     task_cls=MuseflowTask,
 )
 celery_app.conf.update(
-    task_queues=(TASK_QUEUE,),
-    task_default_queue=TASK_QUEUE.name,
-    task_default_exchange=TASK_QUEUE.exchange.name,
-    task_default_routing_key=TASK_QUEUE.routing_key,
+    # A worker consumes both unless told one (`--queues`). A task goes to the batch queue, unless its name (`<theme>.`
+    # first) routes it to the interactive one.
+    task_queues=(BATCH_QUEUE, INTERACTIVE_QUEUE),
+    task_routes={"playlist.*": {"queue": INTERACTIVE_QUEUE.name}},
+    task_default_queue=BATCH_QUEUE.name,
+    task_default_exchange=TASK_EXCHANGE.name,
+    task_default_routing_key=BATCH_QUEUE.routing_key,
     # At least once: a message is acknowledged once its task ends, so that a worker dying mid-task leaves it to another
     # one. Every task is idempotent.
     task_acks_late=True,

@@ -102,7 +102,7 @@ reset:  ## Remove volumes and images
 run: ## Run the application
 	uv run fastapi dev museflow/infrastructure/entrypoints/api/main.py
 
-run-worker: up-db up-broker ## Run a Celery worker on the host, which consumes the tasks waiting in the queue
+run-worker: up-db up-broker ## Run a Celery worker on the host, which consumes the tasks waiting in both queues
 	uv run celery --app museflow.infrastructure.entrypoints.worker.main worker
 
 app-shell: up ## Connect to the application shell
@@ -126,6 +126,7 @@ broker-dead-letters: up-broker ## Show the first COUNT dead-lettered messages (d
 		get messages --queue museflow.dead_letter --count $(COUNT) --ack-mode ack_requeue_true'
 
 worker-inspect: ## Show the tasks the workers of `make up` run, hold in their prefetch, and wait to retry
+	@# Through one worker: the control commands reach every worker, of both queues
 	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect active
 	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect reserved
 	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect scheduled

@@ -12,9 +12,12 @@ from kombu import Message
 from kombu import Queue
 
 from museflow.infrastructure.adapters.database.models.user import UserModel
+from museflow.infrastructure.entrypoints.worker.main import BATCH_QUEUE
 from museflow.infrastructure.entrypoints.worker.main import DEAD_LETTER_QUEUE
+from museflow.infrastructure.entrypoints.worker.main import INTERACTIVE_QUEUE
 
 from tests.integration.utils.celery_tasks import create_user_after_transient_error_task
+from tests.integration.utils.celery_tasks import create_user_as_playlist_task
 from tests.integration.utils.celery_tasks import create_user_once_killed_task
 from tests.integration.utils.celery_tasks import create_user_task
 from tests.integration.utils.celery_tasks import fail_task
@@ -29,6 +32,41 @@ class TestCeleryApp:
         create_user_task.delay("worker@example.com")
 
         assert await self._wait_for_user(async_session_trans, "worker@example.com")
+
+    async def test__task__default__batch_queue(
+        self,
+        broker_url: str,
+        database_uri: str,
+        tmp_path: Path,
+        async_session_trans: AsyncSession,
+    ) -> None:
+        # A worker of that queue only: it runs the task only if the task went there
+        with CeleryWorker(
+            broker_url=broker_url,
+            database_uri=database_uri,
+            log_file=tmp_path / "worker.log",
+            queues=[BATCH_QUEUE.name],
+        ):
+            create_user_task.delay("batch@example.com")
+
+            assert await self._wait_for_user(async_session_trans, "batch@example.com")
+
+    async def test__task__playlist__interactive_queue(
+        self,
+        broker_url: str,
+        database_uri: str,
+        tmp_path: Path,
+        async_session_trans: AsyncSession,
+    ) -> None:
+        with CeleryWorker(
+            broker_url=broker_url,
+            database_uri=database_uri,
+            log_file=tmp_path / "worker.log",
+            queues=[INTERACTIVE_QUEUE.name],
+        ):
+            create_user_as_playlist_task.delay("interactive@example.com")
+
+            assert await self._wait_for_user(async_session_trans, "interactive@example.com")
 
     async def test__task__transient_error__retried(
         self,
