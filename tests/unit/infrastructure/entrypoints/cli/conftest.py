@@ -31,12 +31,15 @@ def spend(meter: LLMUsageMeter) -> None:
 
 
 @pytest.fixture(autouse=True)
-def force_rich_terminal_width(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Gives Rich/Typer a fixed width, so that the output wraps the same way everywhere.
+def force_rich_plain_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Gives Rich/Typer a fixed width and no styles, so that the output reads the same everywhere.
 
-    No colour to turn off here: `TTY_COMPATIBLE=0`, in the pytest env, already keeps every console out of a terminal.
+    `TTY_COMPATIBLE=0`, in the pytest env, keeps our module-level consoles out of a terminal. Typer forces its error
+    console into one under GitHub Actions (`GITHUB_ACTIONS`, `FORCE_COLOR`): built at each error, it reads `TERM=dumb`
+    set here, which drops colours and bold alike (`NO_COLOR` keeps the bold).
     """
     monkeypatch.setenv("COLUMNS", "100")
+    monkeypatch.setenv("TERM", "dumb")
 
 
 @pytest.fixture
