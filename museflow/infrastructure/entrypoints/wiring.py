@@ -92,7 +92,10 @@ class Wiring:
         return SystemStateTokenGenerator()
 
     def build_token_cipher(self) -> TokenCipherPort:
-        return AesSivTokenCipher(key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY)
+        return AesSivTokenCipher(
+            key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY,
+            fallback_keys=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY_FALLBACKS,
+        )
 
     # --- Files ---
 

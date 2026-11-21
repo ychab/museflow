@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 from typing import Literal
 
 from pydantic import EmailStr
@@ -37,9 +38,13 @@ class AppSettings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 30
 
-    # Encrypts the provider OAuth tokens at rest: changing it makes the stored ones unreadable, every user then
-    # reconnects (`provider connect`)
+    # Encrypts the provider OAuth tokens at rest. To rotate it, move it to the fallbacks, set a new one, run
+    # `provider reencrypt-tokens`, then drop the fallback: see docs/technical/token-encryption.md
     PROVIDER_TOKEN_ENCRYPTION_KEY: SecretStr = Field(..., min_length=32)
+    # Former keys, which still decrypt the tokens they encrypted until these are encrypted again
+    PROVIDER_TOKEN_ENCRYPTION_KEY_FALLBACKS: list[Annotated[SecretStr, Field(min_length=32)]] = Field(
+        default_factory=list
+    )
 
     API_V1_PREFIX: str = "/api/v1"
 

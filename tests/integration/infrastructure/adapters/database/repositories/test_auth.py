@@ -2,6 +2,7 @@ import logging
 import uuid
 from datetime import UTC
 from datetime import datetime
+from typing import Final
 
 from pydantic import SecretStr
 
@@ -25,6 +26,13 @@ from museflow.infrastructure.adapters.database.models import AuthProviderStateMo
 from museflow.infrastructure.adapters.database.models import AuthProviderTokenModel
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.security import AesSivTokenCipher
+from museflow.infrastructure.config.settings.app import app_settings
+
+from tests.integration.factories.models.user import UserModelFactory
+from tests.unit.factories.inputs.auth import OAuthProviderUserTokenCreateInputFactory
+
+FORMER_KEY: Final[SecretStr] = SecretStr("a-former-key-of-at-least-32-characters")
+UNKNOWN_KEY: Final[SecretStr] = SecretStr("a-key-no-setting-holds-of-32-characters")
 
 
 class TestOAuthProviderStateSQLRepository:
@@ -129,8 +137,25 @@ class TestOAuthProviderStateSQLRepository:
 class TestOAuthProviderTokenSQLRepository:
     @pytest.fixture
     def auth_token_repository_former_key(self, async_session_db: AsyncSession) -> OAuthProviderTokenRepository:
-        return OAuthProviderTokenSQLRepository(
-            async_session_db, AesSivTokenCipher(key=SecretStr("a-former-key-of-at-least-32-characters"))
+        return OAuthProviderTokenSQLRepository(async_session_db, AesSivTokenCipher(key=FORMER_KEY))
+
+    @pytest.fixture
+    def auth_token_repository_rotated(self, async_session_db: AsyncSession) -> OAuthProviderTokenRepository:
+        """Midway through a rotation: the current key encrypts, the former one still decrypts."""
+        token_cipher = AesSivTokenCipher(key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY, fallback_keys=[FORMER_KEY])
+        return OAuthProviderTokenSQLRepository(async_session_db, token_cipher)
+
+    @pytest.fixture
+    async def auth_token_former_key(
+        self,
+        user: User,
+        auth_token_create: OAuthProviderUserTokenCreateInput,
+        auth_token_repository_former_key: OAuthProviderTokenRepository,
+    ) -> OAuthProviderUserToken:
+        return await auth_token_repository_former_key.upsert(
+            user_id=user.id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_create,
         )
 
     async def test__get__nominal(
@@ -337,3 +362,83 @@ class TestOAuthProviderTokenSQLRepository:
 
         assert deleted is False
         assert await auth_token_repository.get(user_id=auth_token.user_id, provider=auth_token.provider) == auth_token
+
+    async def test__get__fallback_key(
+        self,
+        auth_token_former_key: OAuthProviderUserToken,
+        auth_token_repository_rotated: OAuthProviderTokenRepository,
+    ) -> None:
+        auth_token = await auth_token_repository_rotated.get(
+            user_id=auth_token_former_key.user_id, provider=MusicProvider.SPOTIFY
+        )
+        assert auth_token == auth_token_former_key
+
+    async def test__update__fallback_key(
+        self,
+        auth_token_former_key: OAuthProviderUserToken,
+        auth_token_update: OAuthProviderUserTokenUpdateInput,
+        auth_token_repository_rotated: OAuthProviderTokenRepository,
+        auth_token_repository: OAuthProviderTokenRepository,
+    ) -> None:
+        auth_token_db = await auth_token_repository_rotated.update(
+            user_id=auth_token_former_key.user_id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=auth_token_update,
+            expected_token_access=auth_token_former_key.token_access,
+        )
+
+        assert auth_token_db is not None
+        assert auth_token_db.token_access == auth_token_update.token_access
+        # Both tokens written again, with the current key only
+        assert (
+            await auth_token_repository.get(user_id=auth_token_former_key.user_id, provider=MusicProvider.SPOTIFY)
+            == auth_token_db
+        )
+
+    async def test__delete__fallback_key(
+        self,
+        auth_token_former_key: OAuthProviderUserToken,
+        auth_token_repository_rotated: OAuthProviderTokenRepository,
+    ) -> None:
+        deleted = await auth_token_repository_rotated.delete(
+            user_id=auth_token_former_key.user_id,
+            provider=MusicProvider.SPOTIFY,
+            expected_token_refresh=auth_token_former_key.token_refresh,
+        )
+        assert deleted is True
+
+    async def test__bulk_reencrypt__nominal(
+        self,
+        async_session_db: AsyncSession,
+        auth_token_former_key: OAuthProviderUserToken,
+        auth_token_repository_rotated: OAuthProviderTokenRepository,
+        auth_token_repository: OAuthProviderTokenRepository,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        user_current_key = await UserModelFactory.create_async()
+        auth_token_current_key = await auth_token_repository.upsert(
+            user_id=user_current_key.id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=OAuthProviderUserTokenCreateInputFactory.build(),
+        )
+        user_unknown_key = await UserModelFactory.create_async()
+        await OAuthProviderTokenSQLRepository(async_session_db, AesSivTokenCipher(key=UNKNOWN_KEY)).upsert(
+            user_id=user_unknown_key.id,
+            provider=MusicProvider.SPOTIFY,
+            auth_token_in=OAuthProviderUserTokenCreateInputFactory.build(),
+        )
+
+        with caplog.at_level(logging.WARNING):
+            reencrypted = await auth_token_repository_rotated.bulk_reencrypt()
+
+        assert reencrypted == 1
+        assert f"The spotify token of user {user_unknown_key.id} can't be decrypted with any key" in caplog.text
+        # The former key can go: the current one alone reads every token it could read
+        assert (
+            await auth_token_repository.get(user_id=auth_token_former_key.user_id, provider=MusicProvider.SPOTIFY)
+            == auth_token_former_key
+        )
+        assert (
+            await auth_token_repository.get(user_id=user_current_key.id, provider=MusicProvider.SPOTIFY)
+            == auth_token_current_key
+        )
