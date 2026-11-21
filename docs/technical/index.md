@@ -72,6 +72,14 @@ Measured on the current `HEAD` of the branch this documentation was written on:
 
     [:octicons-arrow-right-24: Logging & output](logging.md)
 
+-   **API and workers**
+
+    ---
+
+    The multi-user API and its background jobs: Celery on RabbitMQ, a jobs table clients poll, the worker's event loop, the API conventions.
+
+    [:octicons-arrow-right-24: API and workers](api-and-workers.md)
+
 -   **Privacy & data**
 
     ---
