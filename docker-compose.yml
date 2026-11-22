@@ -157,6 +157,30 @@ services:
       <<: *worker-env
       MUSEFLOW_WORKER_CONCURRENCY: ${MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY:-2}
 
+  relay:
+    # Publishes the jobs the API commits (the outbox): a single one, as two would publish the same jobs
+    build: *app-build
+    container_name: museflow-relay
+    command: ["python", "-m", "museflow.infrastructure.entrypoints.worker.relay"]
+    environment:
+      <<: *app-env
+      # One connection for its rounds, plus the one it listens on, out of the pool
+      DATABASE_POOL_SIZE: 1
+      DATABASE_MAX_OVERFLOW: 0
+    healthcheck:
+      # The image's check calls the API; the relay answers nothing, its logs show its rounds
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    networks:
+      - museflow-network
+    restart: unless-stopped
+
   wiremock-spotify:
     # For the integration tests only: `make up` leaves it out, `make up-wiremock` names it
     profiles: [test]

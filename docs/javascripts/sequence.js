@@ -19,8 +19,7 @@ function renderSequence(container) {
     const actor = document.createElement("div");
     actor.className = "seq-actor";
     actor.style.gridColumn = String(i + 1);
-    const color = lane.color === "fail" ? "--seq-fail" : `--seq-lane-${lane.color}`;
-    actor.style.setProperty("--seq-color", `var(${color})`);
+    actor.style.setProperty("--seq-color", `var(${laneColor(lane)})`);
     actor.innerHTML = `<div>${lane.name}<small>${lane.sub ?? ""}</small></div>`;
     grid.append(actor);
   });
@@ -42,7 +41,10 @@ function renderSequence(container) {
     const step = document.createElement("div");
     step.style.gridRow = String(row++);
     const detail = item.detail ? `<span class="seq-detail">${item.detail}</span>` : "";
-    const label = `<span class="seq-num">${number}</span><p>${item.text}${detail}</p>`;
+    // Each step names the lanes it joins, in their colours: no scrolling back up to the headers of a long diagram
+    const tag = (id) => `<b style="color:var(${laneColor(flow.lanes[index[id]])})">${flow.lanes[index[id]].name}</b>`;
+    const route = item.note ? tag(item.note) : `${tag(item.from)} → ${tag(item.to)}`;
+    const label = `<span class="seq-num">${number}</span><p><span class="seq-route">${route}</span>${item.text}${detail}</p>`;
 
     if (item.note) {
       const lane = index[item.note];
@@ -73,6 +75,10 @@ function renderSequence(container) {
   });
 
   container.append(grid);
+}
+
+function laneColor(lane) {
+  return lane.color === "fail" ? "--seq-fail" : `--seq-lane-${lane.color}`;
 }
 
 function renderSequences() {

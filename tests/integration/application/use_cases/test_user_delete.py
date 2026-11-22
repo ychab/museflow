@@ -17,6 +17,7 @@ from tests.integration.factories.models.auth import AuthProviderStateModelFactor
 from tests.integration.factories.models.auth import AuthProviderTokenFactory
 from tests.integration.factories.models.blacklist import BlacklistedArtistModelFactory
 from tests.integration.factories.models.blacklist import BlacklistedTrackModelFactory
+from tests.integration.factories.models.job import JobModelFactory
 from tests.integration.factories.models.llm import LLMUsageModelFactory
 from tests.integration.factories.models.playlist import PlaylistModelFactory
 from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
@@ -49,6 +50,7 @@ class TestDeleteUserUseCase:
             await LLMUsageModelFactory.create_async(
                 user_id=user_id, profile_id=profile_db.id, playlist_id=playlist_db.id
             )
+            await JobModelFactory.create_async(user_id=user_id)
 
         return other_user_db
 

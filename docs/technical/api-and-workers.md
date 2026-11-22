@@ -23,6 +23,7 @@ flowchart LR
         direction LR
         API["api<br/>FastAPI"]
         MQ["RabbitMQ<br/>broker"]
+        RL["relay<br/>publishes the jobs"]
         WK["workers<br/>Celery, prefork<br/>batch, interactive"]
         PG[("PostgreSQL<br/>jobs table")]
         RD[("Redis<br/>rate limits, locks")]
@@ -31,8 +32,9 @@ flowchart LR
     EXT["Spotify<br/>OpenRouter"]
 
     CLIENT -- "POST: 202 + job ID<br/>GET /jobs/{id}: poll" --> API
-    API -- "job row" --> PG
-    API -- "task: job_id, user_id" --> MQ
+    API -- "job row + NOTIFY" --> PG
+    PG -- "LISTEN, unpublished jobs" --> RL
+    RL -- "task: job_id, user_id" --> MQ
     MQ -- "delivers" --> WK
     WK -- "status, result" --> PG
     API -- "rate limits" --> RD
@@ -48,6 +50,7 @@ flowchart LR
 | Broker | RabbitMQ | Redis as a broker: a task survives a dead worker only through a visibility timeout to tune against the longest task, where RabbitMQ redelivers an unacknowledged message as soon as the connection drops |
 | Shared state between processes | Redis: rate limits (#264), the Spotify limiter (#268), locks | PostgreSQL: possible, but a counter written on every request belongs in memory with a TTL |
 | Job state | A `jobs` table in PostgreSQL (#261) | A Celery result backend: see [below](#the-jobs-table-is-the-source-of-truth) |
+| Publishing a job | The `jobs` table is the outbox, a relay publishes its message (#261) | The API publishing after its commit: a crash in between loses the message. See [below](#the-relay-the-jobs-table-is-the-outbox) |
 | Files | `FileStoragePort` on a named volume (#249, #260) | A cloud bucket now: a cost for a few users; it is one more adapter later |
 | Task queues | Two, by who waits: `museflow.batch` and `museflow.interactive`, each with workers of its own | One queue: a playlist waits behind a first enrichment. RabbitMQ priorities: they reorder the waiting messages, never a running task. A queue per use case: as many worker pools for no gain. See [below](#two-queues-by-who-waits) |
 | Services | One application, three entrypoints | Microservices: out of scope, see [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app) |
@@ -69,6 +72,8 @@ The API records the job, queues a task and answers at once; the client then poll
 - **One job of a kind at a time per user.** A partial unique index on `(user_id, kind)`, restricted to the `pending`
   and `running` statuses, refuses a second one: a domain error, `409 Conflict`. Two enrichments of the same tracks
   would pay the LLM twice.
+- **The API never publishes.** It commits the job, and a relay publishes its task message
+  ([below](#the-relay-the-jobs-table-is-the-outbox)): the API accepts jobs even while RabbitMQ is down.
 - **A task message carries IDs only** (`job_id`, `user_id`), never a serialised entity. The task reloads what it
   needs, so a redelivered message never runs on stale data, and the message never holds a token or a profile.
 
@@ -76,8 +81,8 @@ The API records the job, queues a task and answers at once; the client then poll
 stateDiagram-v2
     direction LR
     [*] --> pending: POST, the job row is committed
-    pending --> running: a worker takes the task
-    running --> running: redelivered after a worker died
+    pending --> running: a worker starts it, compare-and-set
+    running --> running: resumed, after its attempt died
     running --> done: result stored
     running --> failed: error stored, after the retries
     done --> [*]
@@ -95,25 +100,30 @@ The first job, enrichment (#262), sets the pattern every other job copies.
     {"id": "client", "name": "Client", "sub": "app, curl", "color": "grey"},
     {"id": "api", "name": "API", "sub": "FastAPI", "color": "teal"},
     {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "indigo"},
+    {"id": "relay", "name": "Relay", "sub": "publishes", "color": "green"},
     {"id": "mq", "name": "RabbitMQ", "sub": "task queue", "color": "amber"},
     {"id": "worker", "name": "Worker", "sub": "Celery task", "color": "teal"},
-    {"id": "llm", "name": "OpenRouter", "sub": "paid LLM calls", "color": "green"}
+    {"id": "llm", "name": "OpenRouter", "sub": "paid LLM calls", "color": "grey"}
   ],
   "steps": [
-    {"phase": "Queue, inside the request"},
+    {"phase": "Queue, inside the request: one transaction"},
     {"from": "client", "to": "api", "text": "<code>POST /api/v1/tracks/enrichment</code> (config)", "detail": "Bearer access token"},
     {"note": "api", "style": "check", "text": "A paid job: within the user's LLM budget? (#263)"},
-    {"from": "api", "to": "db", "text": "<code>INSERT</code> the job, <code>pending</code>, then commit", "detail": "Committed before the publish: a worker must find the row"},
+    {"from": "api", "to": "db", "text": "<code>INSERT</code> the job, <code>pending</code>, <code>published_at</code> empty; <code>pg_notify</code>; commit", "detail": "The notification leaves on commit only: a rollback sends none"},
     {"from": "db", "to": "api", "text": "A job of this kind is already pending or running", "style": "fail", "detail": "The partial unique index refuses it: <code>409 Conflict</code>"},
-    {"from": "api", "to": "mq", "text": "Publish the task <code>(job_id, user_id)</code>", "detail": "IDs only, never an entity nor a token"},
-    {"from": "api", "to": "client", "text": "<code>202 Accepted</code>, the job ID", "detail": "<code>Location: /api/v1/jobs/{id}</code>"},
+    {"from": "api", "to": "client", "text": "<code>202 Accepted</code>, the job ID", "detail": "<code>Location: /api/v1/jobs/{id}</code>; no call to RabbitMQ"},
+    {"phase": "Publish, in the relay"},
+    {"from": "db", "to": "relay", "text": "<code>NOTIFY</code> wakes the relay, which listens (<code>LISTEN</code>)", "detail": "Otherwise it wakes up every 5 seconds: a notification missed while it restarted is caught up"},
+    {"from": "relay", "to": "db", "text": "Block 1: reads the jobs whose <code>published_at</code> is empty, the oldest first"},
+    {"from": "relay", "to": "mq", "text": "Publishes each task <code>(job_id, user_id)</code>, confirmed by the broker", "detail": "Publisher confirms, out of any transaction. IDs only, never an entity nor a token"},
+    {"from": "relay", "to": "db", "text": "Block 2: <code>published_at = now()</code> for those confirmed"},
     {"phase": "Run, in a worker"},
     {"from": "mq", "to": "worker", "text": "Delivers the message", "detail": "One at a time per process (prefetch 1), acknowledged at the end (acks late)"},
-    {"from": "worker", "to": "db", "text": "Block: the job is <code>running</code>, the user reloaded", "detail": "A job already <code>done</code>: a redelivery, nothing to do"},
+    {"from": "worker", "to": "db", "text": "Block: starts the job, <code>pending → running</code>, by a compare-and-set", "detail": "A message for a job already running is a duplicate, dropped, unless its attempt died: <a href=\"#a-message-for-a-job-already-running\">below</a>"},
     {"from": "worker", "to": "llm", "text": "The use case runs: LLM batches outside any transaction", "detail": "Each batch committed in its own block, as on the CLI"},
     {"note": "worker", "style": "check", "text": "Killed mid-run: the message was never acknowledged", "detail": "RabbitMQ redelivers it; the job resumes from its committed checkpoints"},
     {"from": "worker", "to": "db", "text": "Block: <code>done</code>, the report as the result"},
-    {"from": "worker", "to": "db", "text": "Or, after the retries: <code>failed</code>, with an error fit for the user", "style": "fail", "detail": "Transient errors only are retried, with backoff; then the dead-letter queue"},
+    {"from": "worker", "to": "db", "text": "Or, after the retries: <code>failed</code>, with the name of the error", "style": "fail", "detail": "Transient errors only are retried, with backoff; then the dead-letter queue"},
     {"from": "worker", "to": "mq", "text": "Acknowledges the message"},
     {"phase": "Poll"},
     {"from": "client", "to": "api", "text": "<code>GET /api/v1/jobs/{id}</code>, every few seconds"},
@@ -128,7 +138,8 @@ The first job, enrichment (#262), sets the pattern every other job copies.
 
 - **At least once.** `acks_late` acknowledges a message once the task is over, not when it is received: a worker that
   dies mid-task leaves its message to another worker. The price is that a task may run twice, so **every task is
-  idempotent**: it checks the job status first, and the use cases already resume from their checkpoints (enrichment,
+  idempotent**: it starts its job by a compare-and-set first
+  ([below](#a-message-for-a-job-already-running)), and the use cases already resume from their checkpoints (enrichment,
   profile build, history import chunks).
 - **Retries for transient errors only**, with an exponential backoff and jitter: the database or the network
   unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/const.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
@@ -175,14 +186,164 @@ exports).
 - **One dead-letter queue for both.** A dead-lettered message keeps its task in the `task` header and its queue in
   `x-first-death-queue`.
 
-### Open point: the job row and the message
+### The relay: the jobs table is the outbox
 
-Committing the row and publishing the message are two writes to two systems, with no transaction across them (the
-*dual write* problem). The order above, commit then publish, guarantees a worker finds the row; but if the publish
-fails, or the API dies between the two, the job stays `pending` with no message, and the unique index refuses every
-new job of its kind. #261 settles it; the leading option: the API marks the job `failed` when the publish raises,
-and a `pending` job older than a threshold no longer blocks a new one. The textbook answer, a *transactional outbox*
-(the message written in the same transaction as the row, then relayed to the broker), stays for later.
+Committing the job row and publishing its message are two writes to two systems, with no transaction across them
+(the *dual write* problem). Publishing from the API after its commit, a publish that fails or an API dying in between
+would leave the job `pending` with no message, and the unique index would refuse every new job of its kind; publishing
+before the commit, a worker could get a job not committed yet, or rolled back.
+
+The answer is a **transactional outbox**, where the `jobs` table is the outbox: no table of its own. The API only
+commits the job, with an empty `published_at` and a `pg_notify` in the same transaction. A **relay**, a process of its
+own, publishes the message of every job whose `published_at` is empty, then sets it:
+
+- **Woken by `LISTEN/NOTIFY`**, PostgreSQL's own messaging: a notification reaches the listeners when its transaction
+  commits, never if it rolls back. It is lost while no one listens, so the relay also polls every 5 seconds; the table
+  stays the truth, the notification only wakes the relay sooner.
+- **Out of any transaction while it publishes**: block 1 reads the unpublished jobs, the messages go out with
+  publisher confirms (RabbitMQ answers once it stored each one), block 2 marks them published. A publish the broker
+  refuses stops the round; the job waits for the next one.
+- **At least once.** A relay dying between the publish and block 2 publishes the job again when it restarts; the
+  worker drops the duplicate ([below](#a-message-for-a-job-already-running)).
+- **A single relay**, run from the worker's package (`python -m museflow.infrastructure.entrypoints.worker.relay`, the
+  `relay` service of Docker Compose, `make run-relay` on the host): it publishes through the workers' Celery app, so
+  their routes and queues.
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {"id": "api", "name": "API", "sub": "FastAPI", "color": "teal"},
+    {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "indigo"},
+    {"id": "relay", "name": "Relay", "sub": "publishes", "color": "green"},
+    {"id": "mq", "name": "RabbitMQ", "sub": "broker", "color": "amber"},
+    {"id": "worker", "name": "Worker", "sub": "Celery task", "color": "teal"}
+  ],
+  "steps": [
+    {"phase": "1. The API dies right after its commit"},
+    {"from": "api", "to": "db", "text": "Commits the job"},
+    {"note": "api", "text": "Crashes", "style": "refused", "detail": "Publishing from the API, the message would never leave: the job pending for good, its kind blocked"},
+    {"from": "relay", "to": "mq", "text": "The job is in the table: the relay publishes it all the same"},
+    {"note": "worker", "text": "The job runs", "style": "done"},
+    {"phase": "2. RabbitMQ is down"},
+    {"from": "relay", "to": "mq", "text": "The publish fails", "style": "fail"},
+    {"note": "relay", "text": "<code>published_at</code> stays empty: tried again on the next round, until the broker is back", "detail": "The API still accepts jobs: they wait, <code>pending</code>"},
+    {"phase": "3. The relay dies between the publish and block 2"},
+    {"from": "relay", "to": "mq", "text": "Message published and confirmed"},
+    {"note": "relay", "text": "Crashes before <code>published_at</code>", "style": "refused"},
+    {"from": "relay", "to": "mq", "text": "Restarted, it publishes again: the job has two messages", "detail": "At least once"},
+    {"from": "worker", "to": "db", "text": "Message 1 starts the job; message 2 finds it running, and is dropped", "detail": "Next section"}
+  ]
+}
+</script>
+</div>
+
+**With several relays** (high availability), two of them would read the same jobs. The usual answer,
+`SELECT … FOR UPDATE SKIP LOCKED`, holds a transaction open over the publish, the remote call the unit of work rules
+keep out of a block; a short lease instead (the pattern of the taste profile build, #246) claims a batch in one short
+transaction, publishes out of it, and lets another relay take the batch over once the lease expires. Nothing of it is
+built: one relay publishes thousands of messages a second, and a few users start a few jobs a day. At a much larger
+scale, the relay would read PostgreSQL's log instead (change data capture, Debezium).
+
+### A message for a job already running
+
+The task starts its job by a compare-and-set, `UPDATE … SET status = 'running' WHERE id = … AND status = 'pending'`:
+two workers starting it at once queue on the row lock, and the second one, checking the status again on the row the
+first committed, updates nothing. But a job left `running` does not say whether someone still works on it: a worker
+killed mid-task never sets it back. The message tells:
+
+| Job | Message | The worker |
+|---|---|---|
+| `pending` | any | starts it |
+| `running` | fresh | drops it: a duplicate of the relay's (case a) |
+| `running` | redelivered, or a retry (`retries > 0`) | resumes it: its attempt died (cases b, c) |
+| `done`, `failed` | any | drops it: over |
+
+**Case a: a duplicate of the relay.**
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {"id": "relay", "name": "Relay", "sub": "publishes", "color": "green"},
+    {"id": "mq", "name": "RabbitMQ", "sub": "broker", "color": "amber"},
+    {"id": "a", "name": "Worker A", "sub": "container 1", "color": "teal"},
+    {"id": "b", "name": "Worker B", "sub": "container 2", "color": "indigo"},
+    {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "grey"}
+  ],
+  "steps": [
+    {"phase": "The relay publishes twice (case 3 above)"},
+    {"from": "relay", "to": "mq", "text": "Message 1, then message 2 after its restart"},
+    {"phase": "Message 1 starts the job"},
+    {"from": "mq", "to": "a", "text": "Delivers message 1"},
+    {"from": "a", "to": "db", "text": "Starts the job: <code>pending → running</code>, one row updated", "detail": "Two workers starting it at once queue on the row lock; the second one checks the status again on the committed row"},
+    {"phase": "Message 2 comes meanwhile"},
+    {"from": "mq", "to": "b", "text": "Delivers message 2", "detail": "A fresh message: <code>redelivered = false</code>, <code>retries = 0</code>"},
+    {"from": "b", "to": "db", "text": "Starts the job: no row updated, the job is running", "style": "fail"},
+    {"note": "b", "text": "Running + a fresh message: a duplicate, someone works on it. Acknowledged and dropped", "style": "refused"},
+    {"from": "a", "to": "db", "text": "<code>done</code>, with the result"},
+    {"note": "db", "text": "The job ran once, the LLM was paid once", "style": "done"}
+  ]
+}
+</script>
+</div>
+
+**Case b: the whole worker dies.**
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {"id": "mq", "name": "RabbitMQ", "sub": "broker", "color": "amber"},
+    {"id": "a", "name": "Worker A", "sub": "container 1", "color": "teal"},
+    {"id": "b", "name": "Worker B", "sub": "container 2", "color": "indigo"},
+    {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "grey"}
+  ],
+  "steps": [
+    {"from": "mq", "to": "a", "text": "Delivers the message"},
+    {"from": "a", "to": "db", "text": "Starts the job, then commits batches 1 to 3, each in its own block"},
+    {"note": "a", "text": "Container killed mid-batch 4 (a redeploy): nothing acknowledged", "style": "refused"},
+    {"note": "mq", "text": "The connection of A drops: the unacknowledged message goes back to the queue"},
+    {"from": "mq", "to": "b", "text": "Delivers the same message again", "detail": "<code>redelivered = true</code>"},
+    {"from": "b", "to": "db", "text": "Starts the job again: running + redelivered, its worker died", "style": "", "detail": "No one works on it any more"},
+    {"from": "b", "to": "db", "text": "Skips batches 1 to 3, already committed, runs the rest, then <code>done</code>"},
+    {"note": "db", "text": "Dropping the message instead would leave the job running for good, its kind blocked by the unique index", "style": "done"}
+  ]
+}
+</script>
+</div>
+
+**Case c: only the child process dies.**
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {"id": "mq", "name": "RabbitMQ", "sub": "broker", "color": "amber"},
+    {"id": "main", "name": "Worker A", "sub": "main process", "color": "teal"},
+    {"id": "c1", "name": "Child 1", "sub": "runs the task", "color": "indigo"},
+    {"id": "c2", "name": "Child 2", "sub": "forked instead", "color": "green"},
+    {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "grey"}
+  ],
+  "steps": [
+    {"from": "mq", "to": "main", "text": "Delivers the message"},
+    {"from": "main", "to": "c1", "text": "Hands the task to child 1"},
+    {"from": "c1", "to": "db", "text": "Starts the job, commits batches 1 and 2"},
+    {"note": "c1", "text": "Killed by the kernel, out of memory: the main process survives", "style": "refused"},
+    {"note": "main", "text": "Sees the child lost (<code>WorkerLostError</code>), forks child 2"},
+    {"from": "main", "to": "mq", "text": "Publishes a retry of the task, acknowledges the original", "detail": "<code>task_retry_on_worker_lost</code>: a new message, <code>retries = 1</code>"},
+    {"from": "mq", "to": "main", "text": "Delivers the retry, to child 2"},
+    {"from": "c2", "to": "db", "text": "Starts the job again: running + a retry, its attempt died; resumes at batch 3"},
+    {"note": "db", "text": "Not redelivered (a new message), but <code>retries</code> tells", "style": "done"}
+  ]
+}
+</script>
+</div>
+
+**Accepted risk: a job left running.** Two failures still leave a job `running` for good, its kind blocked: a process
+lost on every try, dead-lettered after its retries with no code left to fail the job, and the database unreachable
+when the last try fails it. Both need the job state written by someone other than the dying attempt: a sweeper that
+fails the jobs running for too long without a heartbeat. Until then, the operator fails such a job by hand.
 
 ## The worker is a third entrypoint
 
@@ -213,7 +374,8 @@ flowchart TB
   child runs one task at a time, which needs one connection for the use case and one for a provider token refresh:
   the worker services of Docker Compose set a pool of 2 plus 1 overflow, and 2 children each
   (`MUSEFLOW_WORKER_CONCURRENCY`, `MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY`), so 12 connections, next to the API's
-  15, well within PostgreSQL's 100. Another worker, or more children, adds 3 connections each.
+  15 and the relay's 2 (one pooled, one listening), well within PostgreSQL's 100. Another worker, or more children,
+  adds 3 connections each.
 - **One user's flow, the same use case.** A task calls the use case the CLI calls, with the same unit of work rules
   ([Unit of work](unit-of-work.md)): no transaction open during an LLM or Spotify call. The task is a thin sync
   function that runs a coroutine on the process's loop, as a CLI command runs its logic:

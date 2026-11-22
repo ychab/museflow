@@ -58,6 +58,8 @@ celery_app.conf.update(
     worker_concurrency=app_settings.WORKER_CONCURRENCY,
     # No result backend: the job state lives in the database.
     task_ignore_result=True,
+    # A publish returns once RabbitMQ has stored the message: the relay marks a job published only then
+    broker_transport_options={"confirm_publish": True},
     task_serializer="json",
     accept_content=["json"],
     broker_connection_retry_on_startup=True,

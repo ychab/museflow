@@ -101,7 +101,8 @@ in `tests/integration/infrastructure/entrypoints/worker/`:
 - `stub_tasks.py`: stub tasks, loaded by the test workers only (`--include`), that prove the Celery setup itself
   (retries, dead letters, a lost worker, routing): a real task is tested on what it does, never bent to fail on
   demand;
-- `conftest.py`: the `worker` and `broker_connection` fixtures, for every test of a task.
+- `conftest.py`: the `worker` fixture, for every test of a task; `broker_url` (the virtual host) and
+  `broker_connection` sit in `tests/integration/conftest.py`, for any test that publishes.
 
 Coverage measures those processes too (`patch` in `[tool.coverage.run]`), except one that the test kills.
 

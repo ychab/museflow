@@ -124,7 +124,7 @@ You can run the application and the database using Docker Compose or the provide
 
 **Using Makefile:**
 
-*   **Start the whole stack (DB, RabbitMQ, Redis, App, Worker):**
+*   **Start the whole stack (DB, RabbitMQ, Redis, App, workers, relay):**
     ```bash
     make up
     ```
@@ -142,6 +142,11 @@ You can run the application and the database using Docker Compose or the provide
     *Note: It starts the database and RabbitMQ, then consumes the tasks waiting in the queue. `make broker-queues`
     and `make broker-dead-letters` show the queues and the failed tasks; the RabbitMQ UI is on
     `http://localhost:15672`.*
+
+*   **Run the relay locally**, which publishes the jobs the API records:
+    ```bash
+    make run-relay
+    ```
 
 **Using Docker Compose directly:**
 
