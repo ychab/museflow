@@ -345,6 +345,7 @@ exclude_lines = [
     "pragma: no cover",
     "raise AssertionError",
     "raise NotImplementedError",
+    "assert_never\\(",
     "def __str__",
     "def __repr__",
     "@abstractmethod",

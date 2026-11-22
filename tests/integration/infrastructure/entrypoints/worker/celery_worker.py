@@ -67,7 +67,7 @@ class CeleryWorker:
             "museflow.infrastructure.entrypoints.worker.main",
             "worker",
             "--include",
-            "tests.integration.utils.celery_tasks",
+            "tests.integration.infrastructure.entrypoints.worker.stub_tasks",
             "--hostname",
             self.name,
             "--concurrency",

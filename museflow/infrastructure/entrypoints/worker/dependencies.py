@@ -4,9 +4,6 @@ from typing import Any
 
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
-# The event loop and the wiring of the running worker process, open between `open_process` and `close_process`.
-process: WorkerProcess | None = None
-
 
 class WorkerProcess:
     """The event loop of one worker process, with the wiring opened in it, kept for the life of the process.
@@ -32,6 +29,9 @@ class WorkerProcess:
 
 
 # --- Process ---
+
+# The event loop and the wiring of the running worker process, open between `open_process` and `close_process`.
+process: WorkerProcess | None = None
 
 
 def open_process() -> None:

@@ -1,9 +1,11 @@
 import logging
 import time
 from typing import Final
+from typing import assert_never
 
 from museflow.application.outputs.progress import CandidatesFound
 from museflow.application.outputs.progress import PicksMade
+from museflow.application.outputs.progress import PlaylistCreated
 from museflow.application.outputs.progress import ProgressEvent
 from museflow.application.outputs.progress import StepAdvanced
 from museflow.application.outputs.progress import StepDone
@@ -30,44 +32,48 @@ class LogProgressAdapter(ProgressPort):
         self._advanced_info_at = time.monotonic()
 
     async def publish(self, event: ProgressEvent) -> None:
-        if isinstance(event, StepStarted):
-            self._advanced_info_at = time.monotonic()
-            total = f" ({event.total} units)" if event.total is not None else ""
-            attempt = f", attempt {event.attempt}" if event.attempt is not None else ""
-            logger.info(
-                f"Step {event.step} started{total}{attempt}",
-                extra={"step": event.step, "total": event.total, "attempt": event.attempt},
-            )
-        elif isinstance(event, StepAdvanced):
-            self._advance(event)
-        elif isinstance(event, StepResumed):
-            logger.info(
-                f"Step {event.step} resumed at {event.done}/{event.total} from its checkpoint",
-                extra={"step": event.step, "done": event.done, "total": event.total},
-            )
-        elif isinstance(event, StepDone):
-            logger.info(f"Step {event.step} done", extra={"step": event.step})
-        elif isinstance(event, StrategyChosen):
-            logger.info(
-                f"Attempt {event.attempt}: {len(event.strategy.artists)} artists suggested",
-                extra={"attempt": event.attempt, "artists": len(event.strategy.artists)},
-            )
-        elif isinstance(event, CandidatesFound):
-            tracks = sum(len(search.tracks) for search in event.searches)
-            logger.info(
-                f"Attempt {event.attempt}: {tracks} unknown tracks found for {len(event.searches)} artists",
-                extra={"attempt": event.attempt, "tracks": tracks, "artists": len(event.searches)},
-            )
-        elif isinstance(event, PicksMade):
-            logger.info(
-                f"Attempt {event.attempt}: {len(event.picks)} tracks picked, {len(event.tracks)}/{event.target} kept",
-                extra={"attempt": event.attempt, "picks": len(event.picks), "kept": len(event.tracks)},
-            )
-        else:
-            logger.info(
-                f"Playlist {event.playlist.id} created with {len(event.playlist.tracks)} tracks",
-                extra={"playlist_id": event.playlist.id, "tracks": len(event.playlist.tracks)},
-            )
+        match event:
+            case StepStarted():
+                self._advanced_info_at = time.monotonic()
+                total = f" ({event.total} units)" if event.total is not None else ""
+                attempt = f", attempt {event.attempt}" if event.attempt is not None else ""
+                logger.info(
+                    f"Step {event.step} started{total}{attempt}",
+                    extra={"step": event.step, "total": event.total, "attempt": event.attempt},
+                )
+            case StepAdvanced():
+                self._advance(event)
+            case StepResumed():
+                logger.info(
+                    f"Step {event.step} resumed at {event.done}/{event.total} from its checkpoint",
+                    extra={"step": event.step, "done": event.done, "total": event.total},
+                )
+            case StepDone():
+                logger.info(f"Step {event.step} done", extra={"step": event.step})
+            case StrategyChosen():
+                logger.info(
+                    f"Attempt {event.attempt}: {len(event.strategy.artists)} artists suggested",
+                    extra={"attempt": event.attempt, "artists": len(event.strategy.artists)},
+                )
+            case CandidatesFound():
+                tracks = sum(len(search.tracks) for search in event.searches)
+                logger.info(
+                    f"Attempt {event.attempt}: {tracks} unknown tracks found for {len(event.searches)} artists",
+                    extra={"attempt": event.attempt, "tracks": tracks, "artists": len(event.searches)},
+                )
+            case PicksMade():
+                logger.info(
+                    f"Attempt {event.attempt}: {len(event.picks)} tracks picked, {len(event.tracks)}/{event.target} kept",
+                    extra={"attempt": event.attempt, "picks": len(event.picks), "kept": len(event.tracks)},
+                )
+            case PlaylistCreated():
+                logger.info(
+                    f"Playlist {event.playlist.id} created with {len(event.playlist.tracks)} tracks",
+                    extra={"playlist_id": event.playlist.id, "tracks": len(event.playlist.tracks)},
+                )
+            case _:
+                # An event added to the union without a case here: mypy fails
+                assert_never(event)
 
     def _advance(self, event: StepAdvanced) -> None:
         level = logging.DEBUG

@@ -22,7 +22,7 @@ x-app-build: &app-build
     PYTHON_VERSION: ${PYTHON_VERSION:-3.14}
     UV_VERSION: ${UV_VERSION:-0.13.5}
 
-# What the workers share: one per task queue (`worker-interactive` below), each with processes of its own
+# What the workers share: one per task queue (`worker-batch` and `worker-interactive` below), each with processes of its own
 x-worker: &worker
   build: *app-build
   environment: &worker-env
@@ -139,10 +139,10 @@ services:
       - museflow-network
     restart: unless-stopped
 
-  worker:
+  worker-batch:
     # The batch queue: history import, enrichment, taste profile build, long and paid
     <<: *worker
-    container_name: museflow-worker
+    container_name: museflow-worker-batch
     command: ["celery", "--app", "museflow.infrastructure.entrypoints.worker.main", "worker", "--queues", "museflow.batch"]
     environment:
       <<: *worker-env
@@ -184,7 +184,6 @@ services:
 volumes:
   db_data:
   rabbitmq_data:
-  # The files kept between their upload by the API and their processing by a worker
   file_storage:
 
 networks:
