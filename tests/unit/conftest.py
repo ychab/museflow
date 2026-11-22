@@ -14,6 +14,7 @@ from museflow.application.ports.providers.library import ProviderLibraryPort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
+from museflow.application.ports.repositories.job import JobRepository
 from museflow.application.ports.repositories.llm import LLMUsageRepository
 from museflow.application.ports.repositories.playlist import PlaylistRepository
 from museflow.application.ports.repositories.taste import TasteProfileRepository
@@ -121,6 +122,11 @@ def mock_llm_usage_repository() -> mock.AsyncMock:
 
 
 @pytest.fixture
+def mock_job_repository() -> mock.AsyncMock:
+    return mock.AsyncMock(spec=JobRepository)
+
+
+@pytest.fixture
 def mock_uow(
     mock_user_repository: mock.AsyncMock,
     mock_auth_state_repository: mock.AsyncMock,
@@ -132,6 +138,7 @@ def mock_uow(
     mock_blacklist_repository: mock.AsyncMock,
     mock_playlist_repository: mock.AsyncMock,
     mock_llm_usage_repository: mock.AsyncMock,
+    mock_job_repository: mock.AsyncMock,
 ) -> mock.AsyncMock:
     """Unit of work whose repositories are the repository mocks above, so tests configure those directly.
 
@@ -163,6 +170,7 @@ def mock_uow(
     uow.blacklist = mock_blacklist_repository
     uow.playlists = mock_playlist_repository
     uow.llm_usage = mock_llm_usage_repository
+    uow.jobs = mock_job_repository
     return uow
 
 

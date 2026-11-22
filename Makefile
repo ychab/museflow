@@ -97,13 +97,16 @@ reset:  ## Remove volumes and images
 # App
 #####
 
-.PHONY: run run-worker app-shell
+.PHONY: run run-worker run-relay app-shell
 
 run: ## Run the application
 	uv run fastapi dev museflow/infrastructure/entrypoints/api/main.py
 
 run-worker: up-db up-broker ## Run a Celery worker on the host, which consumes the tasks waiting in both queues
 	uv run celery --app museflow.infrastructure.entrypoints.worker.main worker
+
+run-relay: up-db up-broker ## Run the relay on the host, which publishes the jobs the API commits
+	uv run python -m museflow.infrastructure.entrypoints.worker.relay
 
 app-shell: up ## Connect to the application shell
 	docker compose exec app /bin/bash

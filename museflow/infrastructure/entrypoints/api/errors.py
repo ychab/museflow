@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from museflow.domain.exceptions import JobNotFoundError
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
 from museflow.domain.exceptions import UserAlreadyExistsError
@@ -123,4 +124,5 @@ PROBLEMS: Final[dict[type[Exception], Problem]] = {
     ProviderOAuthStateInvalidError: Problem(status=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired state"),
     # The adapter logs why the provider refused the code
     ProviderExchangeCodeError: Problem(status=status.HTTP_400_BAD_REQUEST, detail="Failed to exchange code"),
+    JobNotFoundError: Problem(status=status.HTTP_404_NOT_FOUND, detail="Job not found"),
 }

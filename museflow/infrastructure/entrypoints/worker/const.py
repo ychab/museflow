@@ -8,6 +8,8 @@ from sqlalchemy.exc import OperationalError
 from kombu import Exchange
 from kombu import Queue
 
+from museflow.domain.enums import JobKind
+
 # How long RabbitMQ lets a consumer hold a message unacknowledged before it closes its channel (30 minutes by default).
 # A task acknowledges its message once it ends (acks late): the timeout of a queue must outlast its longest task, and
 # the shorter it is, the sooner a consumer that hangs for good is caught.
@@ -62,3 +64,8 @@ TRANSIENT_ERRORS: Final[tuple[type[Exception], ...]] = (
     OperationalError,
     InterfaceError,
 )
+
+# The task each kind of job runs: `<theme>.<verb>`, which routes it to its queue (`task_routes`)
+JOB_TASK_NAMES: Final[dict[JobKind, str]] = {
+    JobKind.TRACK_HISTORY_IMPORT: "track.history_import",
+}

@@ -20,6 +20,7 @@ from museflow.infrastructure.entrypoints.api.dependencies import get_session_fac
 from museflow.infrastructure.entrypoints.api.errors import PROBLEMS
 from museflow.infrastructure.entrypoints.api.errors import ProblemDetailsHandler
 from museflow.infrastructure.entrypoints.api.schemas.common import HealthCheckResponse
+from museflow.infrastructure.entrypoints.api.v1.endpoints.jobs import router as job_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.playlists import router as playlist_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
@@ -66,6 +67,7 @@ api_v1_router = APIRouter()
 # Static prefixes first: "/{provider}" would otherwise shadow any of their "/connect" routes.
 api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
 api_v1_router.include_router(playlist_router, prefix="/playlists", tags=["playlists"])
+api_v1_router.include_router(job_router, prefix="/jobs", tags=["jobs"])
 api_v1_router.include_router(provider_router, prefix="/{provider}", tags=["provider"])
 
 app.include_router(api_v1_router, prefix=API_V1_PREFIX)

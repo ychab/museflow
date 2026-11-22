@@ -3,10 +3,14 @@ import os
 import re
 from collections.abc import AsyncGenerator
 from collections.abc import Iterable
+from collections.abc import Iterator
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
+
+import httpx
 
 from pydantic import HttpUrl
 
@@ -20,6 +24,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import ORMExecuteState
 
 import pytest
+from kombu import Connection
+from kombu import Queue
 from rich.console import Console
 from tenacity import stop_after_attempt
 
@@ -76,9 +82,12 @@ from museflow.infrastructure.adapters.security import JwtAccessTokenManager
 from museflow.infrastructure.adapters.security import SystemStateTokenGenerator
 from museflow.infrastructure.adapters.storage.local import LocalFileStorage
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.config.settings.broker import broker_settings
 from museflow.infrastructure.config.settings.database import database_settings
 from museflow.infrastructure.config.settings.openrouter import LLMSettings
 from museflow.infrastructure.entrypoints.wiring import Wiring
+from museflow.infrastructure.entrypoints.worker.const import BATCH_QUEUE
+from museflow.infrastructure.entrypoints.worker.main import celery_app
 
 from tests.integration.factories.models.auth import AuthProviderStateModelFactory
 from tests.integration.factories.models.base import BaseModelFactory
@@ -595,3 +604,50 @@ def get_state_token_generator() -> StateTokenGeneratorPort:
 
 def get_token_cipher() -> TokenCipherPort:
     return AesSivTokenCipher(key=app_settings.PROVIDER_TOKEN_ENCRYPTION_KEY)
+
+
+# --- Broker ---
+
+
+@pytest.fixture(scope="session")
+def broker_url(worker_id: str) -> Iterator[str]:
+    """The URL of a RabbitMQ virtual host of the test process, created for the session.
+
+    Its own queues: no other worker (the one of `make up`, the one of another xdist process) takes its tasks.
+    """
+    url = urlsplit(broker_settings.URL.get_secret_value())  # type: ignore[union-attr]
+    vhost = f"test_museflow_{worker_id}"
+    test_url = url._replace(path=f"/{vhost}").geturl()
+
+    with httpx.Client(
+        base_url=os.environ["BROKER_MANAGEMENT_URL"],
+        auth=(url.username or "", url.password or ""),
+    ) as management:
+        # A virtual host left by an interrupted session would still hold its messages
+        management.delete(f"/api/vhosts/{vhost}")
+        management.put(f"/api/vhosts/{vhost}").raise_for_status()
+        management.put(
+            f"/api/permissions/{vhost}/{url.username}",
+            json={"configure": ".*", "write": ".*", "read": ".*"},
+        ).raise_for_status()
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(celery_app.conf, "broker_url", test_url)
+            yield test_url
+
+        management.delete(f"/api/vhosts/{vhost}").raise_for_status()
+
+
+@pytest.fixture
+def broker_connection(broker_url: str) -> Iterator[Connection]:
+    with celery_app.connection_for_write() as connection:
+        yield connection
+
+
+@pytest.fixture
+def batch_queue(broker_connection: Connection) -> Queue:
+    """The batch queue of the test virtual host, emptied: a test reads only the messages it published."""
+    queue = BATCH_QUEUE(broker_connection.default_channel)
+    queue.declare()
+    queue.purge()
+    return queue

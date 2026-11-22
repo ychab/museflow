@@ -64,6 +64,19 @@ class TasteProfileStatus(StrEnum):
     FINISHED = "finished"
 
 
+class JobKind(StrEnum):
+    """What a background job runs: at most one job of each kind runs per user at a time."""
+
+    TRACK_HISTORY_IMPORT = "track_history_import"  # the streaming history import (#265)
+
+
+class JobStatus(StrEnum):
+    PENDING = "pending"  # recorded, its task waits in the queue
+    RUNNING = "running"  # taken by a worker
+    DONE = "done"  # finished, with its result
+    FAILED = "failed"  # stopped for good, with its error
+
+
 class LLMOperation(StrEnum):
     TASTE_BUILD = "taste_build"  # `taste build`: segment, merge and reflect steps
     DISCOVER = "discover"  # `playlist discover`: advisor calls

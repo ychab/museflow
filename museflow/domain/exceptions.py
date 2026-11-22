@@ -148,6 +148,18 @@ class PlaylistNotFoundError(Exception): ...
 class PlaylistNoTracksError(Exception): ...
 
 
+# --- Job exceptions ---
+
+
+class JobNotFoundError(Exception): ...
+
+
+class JobAlreadyActiveError(Exception): ...
+
+
+class JobPublishError(Exception): ...
+
+
 # --- Discovery exceptions ---
 
 

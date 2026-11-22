@@ -48,9 +48,10 @@ museflow/
 │   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security, file storage)
 └── infrastructure/  # Implements ports
     ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress,
-    │                # storage
+    │                # storage, queue
     ├── config/settings/
-    ├── entrypoints/ # api (FastAPI), cli (Typer), worker (Celery), wiring.py (the adapters, built for all of them)
+    ├── entrypoints/ # api (FastAPI), cli (Typer), worker (Celery, and the relay publishing the jobs), wiring.py (the
+    │                # adapters, built for all of them)
     └── utils/       # pure helpers shared by adapters and entrypoints (formatting)
 ```
 
@@ -176,7 +177,7 @@ Functions and use case classes start with a verb, classes holding data are nouns
 nothing and other use cases reuse them. Entrypoints use the concrete user-facing verb (`taste view` calls
 `get_taste_profile`). Modules put the theme first so that `ls` groups a feature, which also keeps the module name
 apart from its function (`user_create.create_user`). The theme is one of a closed list of features, singular:
-`user`, `provider`, `track`, `taste`, `playlist`, `blacklist`, `stats`, `llm_usage`; a new feature adds its theme
+`user`, `provider`, `track`, `taste`, `playlist`, `blacklist`, `stats`, `llm_usage`, `job`; a new feature adds its theme
 here. A use case covers one object (`track_history_import`, not `history_import`): another object gets its own use
 case, so its own module.
 

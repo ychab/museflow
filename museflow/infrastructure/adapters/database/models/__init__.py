@@ -6,3 +6,4 @@ from museflow.infrastructure.adapters.database.models.track import *  # noqa
 from museflow.infrastructure.adapters.database.models.playlist import *  # noqa
 from museflow.infrastructure.adapters.database.models.taste import *  # noqa
 from museflow.infrastructure.adapters.database.models.user import *  # noqa
+from museflow.infrastructure.adapters.database.models.job import *  # noqa

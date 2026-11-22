@@ -30,6 +30,7 @@ make db-upgrade     # apply the schema
 | `make docs-build` | Build the documentation in strict mode, as CI does |
 | `make run` | Start the FastAPI dev server |
 | `make run-worker` | Start a Celery worker on the host, consuming both task queues (starts the database and RabbitMQ first) |
+| `make run-relay` | Start the relay on the host, which publishes the jobs the API records to the task queues |
 | `make broker-queues`, `make broker-dead-letters`, `make worker-inspect` | Inspect the queues and their counters, read the dead-lettered messages (left in their queue), list the tasks the workers of `make up` run, hold and wait to retry |
 
 Run `make help` for the full list.

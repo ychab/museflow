@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 07c10dc3210b
+Revision ID: 03b29f673af3
 Revises:
-Create Date: 2026-11-21 05:53:10.124445
+Create Date: 2026-11-22 22:33:11.317580
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '07c10dc3210b'
+revision: str = '03b29f673af3'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -78,6 +78,25 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'fingerprint', name='uq_museflow_blacklisted_track_user_fp')
     )
+    op.create_table('museflow_job',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('kind', sa.Enum('TRACK_HISTORY_IMPORT', name='jobkind'), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'RUNNING', 'DONE', 'FAILED', name='jobstatus'), nullable=False),
+    sa.Column('input', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('result', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('error', sa.Text(), nullable=True),
+    sa.Column('published_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_museflow_job_unpublished', 'museflow_job', ['created_at'], unique=False, postgresql_where=sa.text('published_at IS NULL'))
+    op.create_index(op.f('ix_museflow_job_user_id'), 'museflow_job', ['user_id'], unique=False)
+    op.create_index('uq_museflow_job_user_kind_active', 'museflow_job', ['user_id', 'kind'], unique=True, postgresql_where=sa.text("status IN ('PENDING', 'RUNNING')"))
     op.create_table('museflow_taste_profile',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -209,6 +228,10 @@ def downgrade() -> None:
     op.drop_table('museflow_taste_profile_build')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')
     op.drop_table('museflow_taste_profile')
+    op.drop_index('uq_museflow_job_user_kind_active', table_name='museflow_job', postgresql_where=sa.text("status IN ('PENDING', 'RUNNING')"))
+    op.drop_index(op.f('ix_museflow_job_user_id'), table_name='museflow_job')
+    op.drop_index('ix_museflow_job_unpublished', table_name='museflow_job', postgresql_where=sa.text('published_at IS NULL'))
+    op.drop_table('museflow_job')
     op.drop_table('museflow_blacklisted_track')
     op.drop_table('museflow_blacklisted_artist')
     op.drop_table('museflow_auth_token')

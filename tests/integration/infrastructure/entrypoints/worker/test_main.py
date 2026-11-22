@@ -85,9 +85,9 @@ class TestCeleryApp:
     ) -> None:
         dead_letter_queue = DEAD_LETTER_QUEUE(broker_connection.default_channel)
 
-        fail_task.delay("failed@example.com")
+        result = fail_task.delay("failed@example.com")
 
-        message = await self._wait_for_message(dead_letter_queue)
+        message = await self._wait_for_message(dead_letter_queue, result.id)
         assert message.headers["task"] == "tests.fail"
         assert "Retry in" not in worker.logs
 
@@ -140,9 +140,10 @@ class TestCeleryApp:
                 await anyio.sleep(0.2)
 
     @staticmethod
-    async def _wait_for_message(queue: Queue) -> Message:
+    async def _wait_for_message(queue: Queue, task_id: str) -> Message:
+        """The message of the task: the dead-letter queue also holds those of the other tests of the session."""
         with anyio.fail_after(WAIT_TIMEOUT_SECONDS):
-            while (message := queue.get(no_ack=True)) is None:
+            while (message := queue.get(no_ack=True)) is None or message.headers["id"] != task_id:
                 await anyio.sleep(0.2)
 
         return message

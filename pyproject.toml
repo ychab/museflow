@@ -177,6 +177,11 @@ strict = true
 module = "ijson.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# The driver under SQLAlchemy, used directly for LISTEN only
+module = "asyncpg.*"
+ignore_missing_imports = true
+
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     # Used as a driver for SQLAlchemy.

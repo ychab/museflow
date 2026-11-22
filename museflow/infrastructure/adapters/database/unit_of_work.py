@@ -9,6 +9,7 @@ from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderStateSQLRepository
 from museflow.infrastructure.adapters.database.repositories.auth import OAuthProviderTokenSQLRepository
 from museflow.infrastructure.adapters.database.repositories.blacklist import BlacklistSQLRepository
+from museflow.infrastructure.adapters.database.repositories.job import JobSQLRepository
 from museflow.infrastructure.adapters.database.repositories.llm import LLMUsageSQLRepository
 from museflow.infrastructure.adapters.database.repositories.playlist import PlaylistSQLRepository
 from museflow.infrastructure.adapters.database.repositories.taste import TasteProfileSQLRepository
@@ -45,6 +46,7 @@ class SQLUnitOfWork(UnitOfWorkPort):
         self.blacklist = BlacklistSQLRepository(session)
         self.playlists = PlaylistSQLRepository(session)
         self.llm_usage = LLMUsageSQLRepository(session)
+        self.jobs = JobSQLRepository(session)
 
         return self
 
