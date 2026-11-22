@@ -41,6 +41,186 @@ Measured on the current tree:
 
 **Parallelism without WireMock races.** WireMock is a shared mutable resource: a one-off stub created by one test can match a request from another test running on a different worker. Tests that use it are marked `@pytest.mark.wiremock("spotify")` or `("openrouter")` (or both). A collection hook in [`tests/conftest.py`](https://github.com/ychab/museflow/blob/main/tests/conftest.py) groups tests by server using union-find: if any test uses both servers, the two servers merge into one group transitively. Each group becomes one `xdist_group`, which `--dist=loadgroup` pins to a single worker so its tests run serially. The rest of the suite still runs fully parallel (`-n auto`). The history of this fix (a per-ID cleanup first, then the union-find grouping) is in the git log; the mechanism is documented in the hook's docstring.
 
+**A real Celery worker.** The worker tests start the application's own worker, `celery --app
+museflow.infrastructure.entrypoints.worker.main worker`, in a process of its own, as Docker Compose does: its
+configuration, its signals and the opening of its `Wiring` run for real. Only the tasks are stubs
+([`stub_tasks.py`](https://github.com/ychab/museflow/blob/main/tests/integration/infrastructure/entrypoints/worker/stub_tasks.py)),
+made to succeed, fail, or wait to be killed, so that the delivery settings are proven apart from the real tasks.
+`CeleryWorker` is the harness that starts, pings, stops, kills it and reads its logs. Each test process gets a
+RabbitMQ virtual host of its own, as it gets a database: parallel tests never take each other's messages, and the
+worker of `make up` (on the default virtual host) never sees them, so the worker tests need no xdist group. Coverage
+follows the worker into its processes (`patch = ["subprocess", "fork", "_exit"]`).
+
+<div class="seq">
+<script type="application/json">
+{
+  "lanes": [
+    {
+      "id": "py",
+      "name": "pytest",
+      "sub": "test process (gw0)",
+      "color": "indigo"
+    },
+    {
+      "id": "mq",
+      "name": "RabbitMQ",
+      "sub": "vhost test_museflow_gw0",
+      "color": "amber"
+    },
+    {
+      "id": "main",
+      "name": "Celery worker",
+      "sub": "main process, started by CeleryWorker",
+      "color": "teal"
+    },
+    {
+      "id": "child",
+      "name": "Child process",
+      "sub": "prefork: runs the task",
+      "color": "green"
+    },
+    {
+      "id": "db",
+      "name": "PostgreSQL",
+      "sub": "database test_museflow_gw0",
+      "color": "grey"
+    }
+  ],
+  "steps": [
+    {
+      "phase": "Once per test process (session start)"
+    },
+    {
+      "from": "py",
+      "to": "mq",
+      "text": "Creates the virtual host <code>test_museflow_gw0</code> through RabbitMQ's HTTP API: deletes a leftover, creates it, grants the permissions",
+      "detail": "fixture <code>broker_url</code>"
+    },
+    {
+      "note": "py",
+      "text": "Points <code>celery_app</code> at it: the test's <code>.delay()</code> calls publish there",
+      "detail": "monkeypatched <code>celery_app.conf.broker_url</code>"
+    },
+    {
+      "from": "py",
+      "to": "db",
+      "text": "Creates the test database and its tables",
+      "detail": "fixtures <code>async_engine</code>, <code>database_uri</code>"
+    },
+    {
+      "phase": "Before each test: the worker fixture"
+    },
+    {
+      "from": "py",
+      "to": "main",
+      "text": "Starts <code>python -m celery --app …worker.main worker</code> in a process of its own, as Docker Compose does, on the virtual host and the test database",
+      "detail": "<code>CeleryWorker.start()</code>: <code>--include stub_tasks</code>, <code>--concurrency 1</code>, logs to a file of <code>tmp_path</code>"
+    },
+    {
+      "from": "main",
+      "to": "mq",
+      "text": "Connects, declares the dead-letter queue and both task queues, consumes",
+      "detail": "signal <code>worker_init</code>, <code>task_queues</code>"
+    },
+    {
+      "from": "main",
+      "to": "child",
+      "text": "Forks a child process"
+    },
+    {
+      "from": "child",
+      "to": "db",
+      "text": "Opens its event loop and its <code>Wiring</code>: a pool of connections to the test database",
+      "detail": "signal <code>worker_process_init</code> → <code>open_process()</code>"
+    },
+    {
+      "from": "py",
+      "to": "main",
+      "text": "Pings the worker through RabbitMQ until it answers: it is ready",
+      "detail": "<code>celery_app.control.ping</code>, retried by tenacity, 30 s at most"
+    },
+    {
+      "phase": "The test: test__task__nominal"
+    },
+    {
+      "from": "py",
+      "to": "mq",
+      "text": "<code>create_user_task.delay(email)</code> publishes a message to <code>museflow.batch</code>"
+    },
+    {
+      "from": "mq",
+      "to": "main",
+      "text": "Delivers the message"
+    },
+    {
+      "from": "main",
+      "to": "child",
+      "text": "Hands the task to the child"
+    },
+    {
+      "from": "child",
+      "to": "db",
+      "text": "<code>run_task</code> → use case <code>create_user</code> → commit"
+    },
+    {
+      "from": "main",
+      "to": "mq",
+      "text": "Acknowledges the message, the task over",
+      "detail": "<code>acks_late</code>"
+    },
+    {
+      "from": "py",
+      "to": "db",
+      "text": "Reads the database every 0.2 s until the user shows up (30 s at most)",
+      "detail": "<code>async_session_trans</code>: the task committed for real, which no end-of-test rollback undoes; this session truncates the tables instead"
+    },
+    {
+      "note": "py",
+      "text": "The user exists: the test passes",
+      "style": "done"
+    },
+    {
+      "phase": "After each test"
+    },
+    {
+      "from": "py",
+      "to": "main",
+      "text": "SIGTERM: a warm shutdown, as <code>docker compose stop</code>",
+      "detail": "<code>CeleryWorker.stop()</code>"
+    },
+    {
+      "from": "child",
+      "to": "db",
+      "text": "Closes its <code>Wiring</code> and its pool",
+      "detail": "signal <code>worker_process_shutdown</code> → <code>close_process()</code>"
+    },
+    {
+      "note": "py",
+      "text": "Prints the worker's logs, which pytest shows for a failed test only; truncates the tables"
+    },
+    {
+      "phase": "Session end"
+    },
+    {
+      "from": "py",
+      "to": "mq",
+      "text": "Deletes the virtual host, its queues with it"
+    }
+  ]
+}
+</script>
+</div>
+
+The other tests change the middle only:
+
+| Test | What happens | What it proves |
+|---|---|---|
+| `transient_error__retried` | The task raises `ConnectionError` on its first run | Retried after a backoff, then succeeds |
+| `error__dead_lettered` | The task raises `ValueError` | Rejected without a retry, moved to `museflow.dead_letter`, read there with kombu |
+| `worker_killed__redelivered` | The test kills the whole worker (`killpg`, SIGKILL) mid-task, then starts a second one | The unacknowledged message is redelivered to the second worker |
+| `process_killed__retried` | The test kills the child process only, as the out-of-memory killer would | The worker forks another child and retries the task (`WorkerLostError`) |
+| `default__batch_queue`, `playlist__interactive_queue` | A worker of one queue only (`--queues`) | The task is routed to its queue |
+
 **Markers for what must not run by default.**
 
 | Marker | Behaviour |
