@@ -64,8 +64,8 @@ $(BUMP_TARGETS): bump-%:
 ps:  ## List containers
 	docker compose ps --all
 
-logs:  ## Show container logs
-	docker compose logs -f
+logs:  ## Follow the container logs: all, or some services (make logs s=api, make logs s="api redis")
+	docker compose logs -f $(s)
 
 up: ## Start containers
 	docker compose up --detach --build --wait
