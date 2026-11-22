@@ -11,8 +11,9 @@ from museflow.infrastructure.entrypoints.worker.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.worker.dependencies import run_task
 from museflow.infrastructure.entrypoints.worker.main import celery_app
 
-# Tasks that prove the worker setup, loaded by the test workers only (`celery worker --include`). Each one runs a use
-# case against the database, as a real task does: the test sees it ran from the user it created.
+# Stub tasks that prove the Celery setup itself (retries, dead letters, a lost worker, routing), apart from the real
+# tasks, which are tested on what they do. Loaded by the test workers only (`celery worker --include`). Each one runs a
+# use case against the database, as a real task does: the test sees it ran from the user it created.
 
 PASSWORD: Final[str] = "a-test-password"
 

@@ -12,16 +12,16 @@ from kombu import Message
 from kombu import Queue
 
 from museflow.infrastructure.adapters.database.models.user import UserModel
-from museflow.infrastructure.entrypoints.worker.main import BATCH_QUEUE
-from museflow.infrastructure.entrypoints.worker.main import DEAD_LETTER_QUEUE
-from museflow.infrastructure.entrypoints.worker.main import INTERACTIVE_QUEUE
+from museflow.infrastructure.entrypoints.worker.const import BATCH_QUEUE
+from museflow.infrastructure.entrypoints.worker.const import DEAD_LETTER_QUEUE
+from museflow.infrastructure.entrypoints.worker.const import INTERACTIVE_QUEUE
 
-from tests.integration.utils.celery_tasks import create_user_after_transient_error_task
-from tests.integration.utils.celery_tasks import create_user_as_playlist_task
-from tests.integration.utils.celery_tasks import create_user_once_killed_task
-from tests.integration.utils.celery_tasks import create_user_task
-from tests.integration.utils.celery_tasks import fail_task
-from tests.integration.utils.celery_worker import CeleryWorker
+from tests.integration.infrastructure.entrypoints.worker.celery_worker import CeleryWorker
+from tests.integration.infrastructure.entrypoints.worker.stub_tasks import create_user_after_transient_error_task
+from tests.integration.infrastructure.entrypoints.worker.stub_tasks import create_user_as_playlist_task
+from tests.integration.infrastructure.entrypoints.worker.stub_tasks import create_user_once_killed_task
+from tests.integration.infrastructure.entrypoints.worker.stub_tasks import create_user_task
+from tests.integration.infrastructure.entrypoints.worker.stub_tasks import fail_task
 
 # Long enough for a worker to take a task and run it, retries and a lost process included
 WAIT_TIMEOUT_SECONDS: Final[float] = 30.0

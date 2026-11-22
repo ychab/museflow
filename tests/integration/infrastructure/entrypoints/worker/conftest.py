@@ -5,7 +5,6 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import pytest
@@ -14,7 +13,7 @@ from kombu import Connection
 from museflow.infrastructure.config.settings.broker import broker_settings
 from museflow.infrastructure.entrypoints.worker.main import celery_app
 
-from tests.integration.utils.celery_worker import CeleryWorker
+from tests.integration.infrastructure.entrypoints.worker.celery_worker import CeleryWorker
 
 
 @pytest.fixture(scope="session")
@@ -44,11 +43,6 @@ def broker_url(worker_id: str) -> Iterator[str]:
             yield test_url
 
         management.delete(f"/api/vhosts/{vhost}").raise_for_status()
-
-
-@pytest.fixture
-def database_uri(async_engine: AsyncEngine) -> str:
-    return async_engine.url.render_as_string(hide_password=False)
 
 
 @pytest.fixture

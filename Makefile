@@ -113,23 +113,20 @@ app-shell: up ## Connect to the application shell
 # Broker
 ########
 
-# The number of dead-lettered messages broker-dead-letters shows
-COUNT ?= 10
-
 .PHONY: broker-queues broker-dead-letters worker-inspect
 
 broker-queues: up-broker ## List the queues, with their messages waiting, delivered but not acknowledged, and consumers
 	docker compose exec rabbitmq rabbitmqctl list_queues --quiet name messages_ready messages_unacknowledged consumers
 
-broker-dead-letters: up-broker ## Show the first COUNT dead-lettered messages (default: 10), left in their queue
+broker-dead-letters: up-broker ## Show the first 10 dead-lettered messages, left in their queue
 	docker compose exec rabbitmq sh -c 'rabbitmqadmin --username "$$RABBITMQ_DEFAULT_USER" --password "$$RABBITMQ_DEFAULT_PASS" \
-		get messages --queue museflow.dead_letter --count $(COUNT) --ack-mode ack_requeue_true'
+		get messages --queue museflow.dead_letter --count 10 --ack-mode ack_requeue_true'
 
 worker-inspect: ## Show the tasks the workers of `make up` run, hold in their prefetch, and wait to retry
 	@# Through one worker: the control commands reach every worker, of both queues
-	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect active
-	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect reserved
-	docker compose exec worker celery --app museflow.infrastructure.entrypoints.worker.main inspect scheduled
+	docker compose exec worker-batch celery --app museflow.infrastructure.entrypoints.worker.main inspect active
+	docker compose exec worker-batch celery --app museflow.infrastructure.entrypoints.worker.main inspect reserved
+	docker compose exec worker-batch celery --app museflow.infrastructure.entrypoints.worker.main inspect scheduled
 
 
 ##########

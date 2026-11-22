@@ -131,7 +131,7 @@ The first job, enrichment (#262), sets the pattern every other job copies.
   idempotent**: it checks the job status first, and the use cases already resume from their checkpoints (enrichment,
   profile build, history import chunks).
 - **Retries for transient errors only**, with an exponential backoff and jitter: the database or the network
-  unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/main.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
+  unreachable (`TRANSIENT_ERRORS` in `entrypoints/worker/const.py`), `MUSEFLOW_WORKER_TASK_MAX_RETRIES` times (5),
   each wait capped at `MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS` (600). The adapters already retry their own
   HTTP calls (tenacity); a task does not retry a domain error, which would fail the same way.
 - **Two ways to lose a worker.** The whole worker dies (a crash, a redeploy killing the container): its connection
@@ -165,7 +165,7 @@ exports).
 - **Workers apart, not priorities.** With 2 processes, one user signing up (import, then enrichment, then profile
   build) holds both for about 15 minutes. A worker's processes are shared by all the queues it consumes, and a
   RabbitMQ priority only reorders the waiting messages, never a running task: only a worker per queue keeps a
-  playlist from waiting. Docker Compose runs `worker` (`--queues museflow.batch`) and `worker-interactive`
+  playlist from waiting. Docker Compose runs `worker-batch` (`--queues museflow.batch`) and `worker-interactive`
   (`--queues museflow.interactive`, `MUSEFLOW_WORKER_INTERACTIVE_CONCURRENCY`); `make run-worker` consumes both.
 - **Routed by name.** A task goes to the batch queue unless its name routes it elsewhere: `task_routes` sends
   `playlist.*` to the interactive one. A task is named `<theme>.<object>_<verb>` (`track.history_import`).
@@ -244,7 +244,7 @@ request across the API, the broker and the worker comes with OpenTelemetry (#269
 An upload (the streaming history export, #265) can't travel in a task message: a message stays small. The API
 writes the files through `FileStoragePort` (#249), keyed per user (`history/<batch>/file.json`), and the message
 carries the key. `LocalFileStorage` keeps a directory per user under `MUSEFLOW_FILE_STORAGE_DIR`, on a named Docker
-volume mounted by both `api` and `worker`. A cloud bucket is one more adapter of the same port when the app is hosted
+volume mounted by `app` and both workers. A cloud bucket is one more adapter of the same port when the app is hosted
 somewhere without a shared disk. The task deletes the files once the import is committed.
 
 ## API conventions

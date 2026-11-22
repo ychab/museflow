@@ -153,6 +153,12 @@ async def async_engine(create_test_database: None, test_db_name: str) -> AsyncGe
 
 
 @pytest.fixture(scope="session")
+def database_uri(async_engine: AsyncEngine) -> str:
+    """The URI of the test database, its password included: for a process of its own (a Celery worker)."""
+    return async_engine.url.render_as_string(hide_password=False)
+
+
+@pytest.fixture(scope="session")
 def async_session_factory(async_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     """The application's session factory, on the test database."""
     return create_session_factory(async_engine)

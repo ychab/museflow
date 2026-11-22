@@ -92,12 +92,18 @@ with no branch of its own gets no unit `TestXLogic`: the integration one covers 
   (an unbounded `Decimal`), with a comment saying why.
 
 ## Worker
-The worker's integration tests start a real Celery worker in a process of its own (`CeleryWorker`, in
-`tests/integration/utils/`), on a RabbitMQ virtual host per test process and on the test database: its tasks commit,
-so the test reads with `async_session_trans`. Its fixtures (`worker`, `broker_connection`) live in the worker's
-`conftest.py`, for every test of a task. The test tasks live in `tests/integration/utils/celery_tasks.py`, which
-only the test workers load. Coverage measures those processes too (`patch` in `[tool.coverage.run]`), except one
-that the test kills.
+The worker's integration tests start a real Celery worker in a process of its own, on a RabbitMQ virtual host per
+test process and on the test database: its tasks commit, so the test reads with `async_session_trans`. The virtual
+host keeps each xdist process apart, as the test database does: the worker tests need no xdist group. Next to them,
+in `tests/integration/infrastructure/entrypoints/worker/`:
+- `celery_worker.py`: `CeleryWorker`, the harness that runs the worker (`celery worker`, prefork), kills it, reads
+  its logs;
+- `stub_tasks.py`: stub tasks, loaded by the test workers only (`--include`), that prove the Celery setup itself
+  (retries, dead letters, a lost worker, routing): a real task is tested on what it does, never bent to fail on
+  demand;
+- `conftest.py`: the `worker` and `broker_connection` fixtures, for every test of a task.
+
+Coverage measures those processes too (`patch` in `[tool.coverage.run]`), except one that the test kills.
 
 ## Markers
 - `@pytest.mark.slow`: skipped by default, run with `--slow`.
