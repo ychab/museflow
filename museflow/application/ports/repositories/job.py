@@ -56,11 +56,19 @@ class JobRepository(ABC):
         ...
 
     @abstractmethod
-    async def finish(self, user_id: uuid.UUID, job_id: uuid.UUID, result: dict[str, Any] | None) -> None:
-        """Moves a running job to done, with its result."""
+    async def finish(self, user_id: uuid.UUID, job_id: uuid.UUID, result: dict[str, Any] | None) -> bool:
+        """Moves a running job to done, with its result.
+
+        Returns:
+            False if the job was no longer running: ended elsewhere, nothing changed.
+        """
         ...
 
     @abstractmethod
-    async def fail(self, user_id: uuid.UUID, job_id: uuid.UUID, error: str) -> None:
-        """Moves a running job to failed, with its error."""
+    async def fail(self, user_id: uuid.UUID, job_id: uuid.UUID, error: str) -> bool:
+        """Moves a running job to failed, with its error.
+
+        Returns:
+            False if the job was no longer running: ended elsewhere, nothing changed.
+        """
         ...

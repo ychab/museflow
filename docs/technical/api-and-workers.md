@@ -343,7 +343,10 @@ killed mid-task never sets it back. The message tells:
 **Accepted risk: a job left running.** Two failures still leave a job `running` for good, its kind blocked: a process
 lost on every try, dead-lettered after its retries with no code left to fail the job, and the database unreachable
 when the last try fails it. Both need the job state written by someone other than the dying attempt: a sweeper that
-fails the jobs running for too long without a heartbeat. Until then, the operator fails such a job by hand.
+fails the jobs running for too long without a heartbeat (#299). Until then, the operator fails such a job by hand.
+
+**Retention.** Nothing removes the ended jobs yet: the table grows by a few rows per user and per day, which the
+indexes on the user and on the active jobs absorb. The sweeper of #299 will purge those past a retention period.
 
 ## The worker is a third entrypoint
 
