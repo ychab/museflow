@@ -59,6 +59,9 @@ nav = [
   ] },
 ]
 
+# The rules for agents writing the docs, not a page
+exclude_docs = "AGENTS.md"
+
 extra_css = ["stylesheets/sequence.css"]
 extra_javascript = ["javascripts/sequence.js"]
 

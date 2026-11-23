@@ -2,7 +2,7 @@
 
 The single instruction file for coding agents. Claude Code reads it natively: never add a `CLAUDE.md` or
 `CLAUDE.local.md`, which would replace it. Testing rules live in `tests/AGENTS.md`, loaded when working under `tests/`;
-schema change rules in `migrations/AGENTS.md`.
+schema change rules in `migrations/AGENTS.md`; documentation rules in `docs/AGENTS.md`.
 Claude Code skills (`/arch-review`, `/security-review`) and the `test` agent live in `.claude/`.
 
 ## Stack & tools
