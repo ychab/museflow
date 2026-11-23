@@ -74,7 +74,23 @@ function renderSequence(container) {
     grid.prepend(lifeline);
   });
 
-  container.append(grid);
+  // Wider than the text column on most screens: shown over the page on demand
+  const toolbar = document.createElement("div");
+  toolbar.className = "seq-toolbar";
+  const expand = document.createElement("button");
+  expand.type = "button";
+  expand.className = "seq-expand";
+  expand.textContent = "⤢ Expand";
+  expand.addEventListener("click", () => toggleExpanded(container));
+  toolbar.append(expand);
+
+  container.append(toolbar, grid);
+}
+
+function toggleExpanded(container, expanded = !container.classList.contains("seq-expanded")) {
+  container.classList.toggle("seq-expanded", expanded);
+  document.body.classList.toggle("seq-open", expanded);
+  container.querySelector(".seq-expand").textContent = expanded ? "✕ Close (Esc)" : "⤢ Expand";
 }
 
 function laneColor(lane) {
@@ -84,6 +100,11 @@ function laneColor(lane) {
 function renderSequences() {
   document.querySelectorAll(".seq").forEach(renderSequence);
 }
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  document.querySelectorAll(".seq.seq-expanded").forEach((container) => toggleExpanded(container, false));
+});
 
 // With instant navigation, a page change swaps the content without reloading the scripts: `document$` emits on each.
 if (window.document$) {

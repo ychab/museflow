@@ -51,6 +51,48 @@
 
 .seq > script { display: none; }
 
+/* Stays in view while the diagram scrolls sideways */
+.seq-toolbar {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.4rem 0.4rem 0;
+}
+
+.seq-expand {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.3rem;
+  background: var(--md-default-bg-color);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.65rem;
+  color: var(--md-default-fg-color--light);
+  cursor: pointer;
+}
+
+.seq-expand:hover { color: var(--md-accent-fg-color); border-color: var(--md-accent-fg-color); }
+
+/* Over the whole page, sidebars and header included */
+.seq.seq-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--md-default-bg-color);
+  overflow: auto;
+}
+
+.seq-expanded .seq-grid {
+  max-width: 100rem;
+  margin: 0 auto;
+  font-size: 0.75rem;
+}
+
+body.seq-open { overflow: hidden; }
+
 .seq-grid {
   position: relative;
   display: grid;
