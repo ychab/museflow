@@ -40,8 +40,24 @@ class RunJobUseCase:
 
     async def finish(self, result: dict[str, Any] | None) -> None:
         async with self._uow as uow:
-            await uow.jobs.finish(self._user_id, self._job_id, result)
+            finished = await uow.jobs.finish(self._user_id, self._job_id, result)
+
+        if not finished:
+            self._warn_not_running("finished")
+            return
+
+        logger.info(f"Job {self._job_id} done", extra={"job_id": str(self._job_id)})
 
     async def fail(self, error: str) -> None:
         async with self._uow as uow:
-            await uow.jobs.fail(self._user_id, self._job_id, error)
+            failed = await uow.jobs.fail(self._user_id, self._job_id, error)
+
+        if not failed:
+            self._warn_not_running("failed")
+
+    def _warn_not_running(self, outcome: str) -> None:
+        # Another attempt ran the job too (its worker lost the broker but went on) and ended it first
+        logger.warning(
+            f"Job {self._job_id} not {outcome}: no longer running, ended elsewhere",
+            extra={"job_id": str(self._job_id)},
+        )

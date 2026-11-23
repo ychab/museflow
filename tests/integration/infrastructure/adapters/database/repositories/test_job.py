@@ -216,7 +216,9 @@ class TestJobSQLRepository:
         job_db: JobModel,
         job_repository: JobRepository,
     ) -> None:
-        await job_repository.finish(user.id, job_db.id, {"tracks_count": 12})
+        finished = await job_repository.finish(user.id, job_db.id, {"tracks_count": 12})
+
+        assert finished is True
 
         job_db = await self._get_job(async_session_db, job_db.id)
         assert job_db.status == JobStatus.DONE
@@ -231,7 +233,9 @@ class TestJobSQLRepository:
         job_db: JobModel,
         job_repository: JobRepository,
     ) -> None:
-        await job_repository.fail(user.id, job_db.id, "StreamingHistoryInvalidFormatError")
+        failed = await job_repository.fail(user.id, job_db.id, "StreamingHistoryInvalidFormatError")
+
+        assert failed is True
 
         job_db = await self._get_job(async_session_db, job_db.id)
         assert job_db.status == JobStatus.FAILED
@@ -244,7 +248,8 @@ class TestJobSQLRepository:
         job_db: JobModel,
         job_repository: JobRepository,
     ) -> None:
-        await job_repository.finish(user.id, job_db.id, None)
+        finished = await job_repository.finish(user.id, job_db.id, None)
 
+        assert finished is False
         job_db = await self._get_job(async_session_db, job_db.id)
         assert job_db.status == JobStatus.PENDING

@@ -48,11 +48,11 @@ async def _run_job(job_id: uuid.UUID, user_id: uuid.UUID, work: JobWork, resumed
 
         # The name of the error only: the client may show it, never its message, which may hold internals.
         # Accepted risk: if this write fails too (the database unreachable), or if the process dies on every try (no
-        # code left to run it), the job stays running for good, its kind blocked, until the operator fails it by hand.
+        # code left to run it), the job stays running for good, its kind blocked, until the operator fails it by hand
+        # (a sweeper, #299).
         await use_case.fail(type(e).__name__)
         # Celery logs the traceback of the error raised again
         logger.warning(f"Job {job_id} failed: {type(e).__name__}", extra={"job_id": str(job_id)})
         raise
 
     await use_case.finish(result)
-    logger.info(f"Job {job_id} done", extra={"job_id": str(job_id)})

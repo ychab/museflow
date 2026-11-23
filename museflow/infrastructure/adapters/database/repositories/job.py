@@ -92,11 +92,11 @@ class JobSQLRepository(JobRepository):
         job_db = (await self.session.execute(stmt)).scalar_one_or_none()
         return job_db.to_entity() if job_db else None
 
-    async def finish(self, user_id: uuid.UUID, job_id: uuid.UUID, result: dict[str, Any] | None) -> None:
-        await self._end(user_id, job_id, status=JobStatus.DONE, result=result)
+    async def finish(self, user_id: uuid.UUID, job_id: uuid.UUID, result: dict[str, Any] | None) -> bool:
+        return await self._end(user_id, job_id, status=JobStatus.DONE, result=result)
 
-    async def fail(self, user_id: uuid.UUID, job_id: uuid.UUID, error: str) -> None:
-        await self._end(user_id, job_id, status=JobStatus.FAILED, error=error)
+    async def fail(self, user_id: uuid.UUID, job_id: uuid.UUID, error: str) -> bool:
+        return await self._end(user_id, job_id, status=JobStatus.FAILED, error=error)
 
     async def _end(
         self,
@@ -105,10 +105,12 @@ class JobSQLRepository(JobRepository):
         status: JobStatus,
         result: dict[str, Any] | None = None,
         error: str | None = None,
-    ) -> None:
+    ) -> bool:
         stmt = (
             update(JobModel)
             .where(JobModel.user_id == user_id, JobModel.id == job_id, JobModel.status == JobStatus.RUNNING)
             .values(status=status, result=result, error=error, finished_at=func.now())
+            .returning(JobModel.id)
         )
-        await self.session.execute(stmt)
+
+        return (await self.session.execute(stmt)).scalar_one_or_none() is not None
