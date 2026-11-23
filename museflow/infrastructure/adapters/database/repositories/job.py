@@ -93,12 +93,12 @@ class JobSQLRepository(JobRepository):
         return job_db.to_entity() if job_db else None
 
     async def finish(self, user_id: uuid.UUID, job_id: uuid.UUID, result: dict[str, Any] | None) -> bool:
-        return await self._end(user_id, job_id, status=JobStatus.DONE, result=result)
+        return await self._mark_ended(user_id, job_id, status=JobStatus.DONE, result=result)
 
     async def fail(self, user_id: uuid.UUID, job_id: uuid.UUID, error: str) -> bool:
-        return await self._end(user_id, job_id, status=JobStatus.FAILED, error=error)
+        return await self._mark_ended(user_id, job_id, status=JobStatus.FAILED, error=error)
 
-    async def _end(
+    async def _mark_ended(
         self,
         user_id: uuid.UUID,
         job_id: uuid.UUID,

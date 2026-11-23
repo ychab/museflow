@@ -88,10 +88,10 @@ def main() -> None:
         third_party_level=app_settings.LOG_LEVEL_THIRD_PARTY,
         handlers=app_settings.LOG_HANDLERS_WORKER,
     )
-    asyncio.run(_relay())
+    asyncio.run(_run_relay())
 
 
-async def _relay() -> None:
+async def _run_relay() -> None:
     # `docker compose stop` sends SIGTERM: the round under way ends, then the relay stops
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
