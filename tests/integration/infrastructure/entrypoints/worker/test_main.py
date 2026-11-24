@@ -37,6 +37,7 @@ class TestCeleryApp:
         self,
         broker_url: str,
         database_uri: str,
+        file_storage_dir: Path,
         tmp_path: Path,
         async_session_trans: AsyncSession,
     ) -> None:
@@ -44,6 +45,7 @@ class TestCeleryApp:
         with CeleryWorker(
             broker_url=broker_url,
             database_uri=database_uri,
+            file_storage_dir=file_storage_dir,
             log_file=tmp_path / "worker.log",
             queues=[BATCH_QUEUE.name],
         ):
@@ -55,12 +57,14 @@ class TestCeleryApp:
         self,
         broker_url: str,
         database_uri: str,
+        file_storage_dir: Path,
         tmp_path: Path,
         async_session_trans: AsyncSession,
     ) -> None:
         with CeleryWorker(
             broker_url=broker_url,
             database_uri=database_uri,
+            file_storage_dir=file_storage_dir,
             log_file=tmp_path / "worker.log",
             queues=[INTERACTIVE_QUEUE.name],
         ):
@@ -96,6 +100,7 @@ class TestCeleryApp:
         worker: CeleryWorker,
         broker_url: str,
         database_uri: str,
+        file_storage_dir: Path,
         tmp_path: Path,
         async_session_trans: AsyncSession,
     ) -> None:
@@ -106,7 +111,12 @@ class TestCeleryApp:
         worker.kill()
 
         # The message was never acknowledged: RabbitMQ hands it to the next worker
-        with CeleryWorker(broker_url=broker_url, database_uri=database_uri, log_file=tmp_path / "next.log"):
+        with CeleryWorker(
+            broker_url=broker_url,
+            database_uri=database_uri,
+            file_storage_dir=file_storage_dir,
+            log_file=tmp_path / "next.log",
+        ):
             assert await self._wait_for_user(async_session_trans, "redelivered@example.com")
 
     async def test__task__process_killed__retried(

@@ -23,6 +23,7 @@ from museflow.infrastructure.entrypoints.api.schemas.common import HealthCheckRe
 from museflow.infrastructure.entrypoints.api.v1.endpoints.jobs import router as job_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.playlists import router as playlist_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.provider import router as provider_router
+from museflow.infrastructure.entrypoints.api.v1.endpoints.tracks import router as track_router
 from museflow.infrastructure.entrypoints.api.v1.endpoints.users import router as user_router
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
@@ -68,6 +69,7 @@ api_v1_router = APIRouter()
 api_v1_router.include_router(user_router, prefix="/users", tags=["users"])
 api_v1_router.include_router(playlist_router, prefix="/playlists", tags=["playlists"])
 api_v1_router.include_router(job_router, prefix="/jobs", tags=["jobs"])
+api_v1_router.include_router(track_router, prefix="/tracks", tags=["tracks"])
 api_v1_router.include_router(provider_router, prefix="/{provider}", tags=["provider"])
 
 app.include_router(api_v1_router, prefix=API_V1_PREFIX)

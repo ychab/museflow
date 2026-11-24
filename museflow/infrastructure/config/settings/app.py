@@ -64,6 +64,16 @@ class AppSettings(BaseSettings):
     # per user: a volume shared by the API and the workers once deployed.
     FILE_STORAGE_DIR: Path = BASE_DIR / ".storage"
 
+    # The streaming history export, uploaded as a zip archive: a few dozen MB for a decade of plays (12 MB measured),
+    # in JSON files of about 10 MB each. The archive is untrusted: the worker caps what it extracts by the bytes it
+    # really decompresses, never by the sizes the archive declares (a zip bomb lies about them).
+    HISTORY_ARCHIVE_MAX_SIZE_MB: int = Field(default=100, ge=1)
+    # Each extracted file is read whole by the import: the cap bounds the memory of a worker process
+    HISTORY_ARCHIVE_MAX_FILE_SIZE_MB: int = Field(default=100, ge=1)
+    HISTORY_ARCHIVE_MAX_EXTRACTED_SIZE_MB: int = Field(default=1024, ge=1)
+    # An export holds a few dozen entries; a bomb may hold millions of tiny ones
+    HISTORY_ARCHIVE_MAX_ENTRIES: int = Field(default=1000, ge=1)
+
     # Processes of a worker, each running one task at a time with a database pool of its own: the database sees up to
     # WORKER_CONCURRENCY × (DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW) connections from one worker.
     WORKER_CONCURRENCY: int = Field(default=2, ge=1)

@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import EmailStr
 
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
@@ -16,5 +18,20 @@ async def get_user(email: EmailStr, uow: UnitOfWorkPort) -> User:
 
     if user is None:
         raise UserNotFoundError(f"User with email '{email}' not found.")
+
+    return user
+
+
+async def get_user_by_id(user_id: uuid.UUID, uow: UnitOfWorkPort) -> User:
+    """Gets a user by ID, as a task message carries it.
+
+    Raises:
+        UserNotFoundError: If no user has this ID: deleted since.
+    """
+    async with uow:
+        user = await uow.users.get_by_id(user_id)
+
+    if user is None:
+        raise UserNotFoundError(f"User {user_id} not found.")
 
     return user

@@ -189,6 +189,7 @@ case, so its own module.
 | Use case outcome | `<Verb><Object>Report` for a batch run, `<Verb><Object>Result` otherwise; a read names the object alone, its verb only says how the data is fetched | `ImportRatingsResult`, `TopTagsResult` |
 | Entity write input | `<Entity><Action>Input` | `UserCreateInput` |
 | Flow config input | `<Verb><Object>ConfigInput` | `EnrichTracksConfigInput` |
+| Job input, kept as the job's JSON | `<Verb><Object>JobInput` | `ImportStreamingHistoryJobInput` |
 | Imported file entry | `<Noun>EntryInput` | `RatingEntryInput` |
 | Repository method | The repository names the object: `get` / `get_by_<field>` one, `get_list` a filterable collection, `get_<other>s` another object; `create`, `update`, `delete`, `bulk_<verb>` for a batch, `purge` all of a user's rows; a domain verb when it fits better | `tracks.get_list`, `get_track_ids`, `bulk_upsert`, `consume` |
 

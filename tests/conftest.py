@@ -1,10 +1,14 @@
+import io
 import logging
+import zipfile
 from collections.abc import Iterable
 from datetime import UTC
 from datetime import datetime
 
 import pytest
 from time_machine import TimeMachineFixture
+
+from tests import ASSETS_DIR
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -90,6 +94,23 @@ def frozen_time(time_machine: TimeMachineFixture) -> datetime:
     fixed_dt = datetime(2026, 1, 1, tzinfo=UTC)
     time_machine.move_to(fixed_dt, tick=False)
     return fixed_dt
+
+
+@pytest.fixture
+def zip_archive(request: pytest.FixtureRequest) -> bytes:
+    """A zip archive of the entries `request.param` gives (name → content); by default, the sample streaming history
+    files in a folder, as Spotify delivers them."""
+    entries: dict[str, bytes] = getattr(request, "param", None) or {
+        f"Spotify Extended Streaming History/{path.name}": path.read_bytes()
+        for path in sorted((ASSETS_DIR / "history" / "spotify" / "samples").iterdir())
+    }
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, content in entries.items():
+            archive.writestr(name, content)
+
+    return buffer.getvalue()
 
 
 def get_wiremock_server_groups(items: list[pytest.Item]) -> dict[str, set[str]]:

@@ -1,8 +1,10 @@
+import dataclasses
 import uuid
 
 from fastapi import status
 from httpx import AsyncClient
 
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import JobStatus
 from museflow.infrastructure.entrypoints.api.main import app
@@ -17,11 +19,12 @@ class TestJobList:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     async def test__nominal(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+        report = ImportStreamingHistoryReport(items_read=6, plays_total=4, plays_created=4, tracks_created=4)
         job_db = await JobModelFactory.create_async(
             user_id=user.id,
             status=JobStatus.DONE,
-            input={"chunk_size": 500},
-            result={"tracks_count": 12},
+            input={"prefix": "history/1", "provider": "spotify", "min_ms_played": 30_000, "purge": False},
+            result=dataclasses.asdict(report),
         )
         await JobModelFactory.create_async()
 
@@ -35,8 +38,9 @@ class TestJobList:
                 "id": str(job_db.id),
                 "kind": job_db.kind.value,
                 "status": "done",
-                "input": {"chunk_size": 500},
-                "result": {"tracks_count": 12},
+                # Where its files are stays internal
+                "input": {"provider": "spotify", "min_ms_played": 30_000, "purge": False},
+                "result": dataclasses.asdict(report),
                 "error": None,
                 "created_at": job_db.created_at.isoformat().replace("+00:00", "Z"),
                 "started_at": None,

@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from museflow.domain.exceptions import JobAlreadyActiveError
 from museflow.domain.exceptions import JobNotFoundError
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
@@ -20,6 +21,8 @@ from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
 from museflow.infrastructure.entrypoints.api.schemas.common import ProblemDetails
+from museflow.infrastructure.utils.archive import ArchiveInvalidError
+from museflow.infrastructure.utils.archive import ArchiveTooLargeError
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +112,7 @@ class ProblemDetailsHandler:
         )
 
 
-# The domain exceptions the routes let through; a route's own exceptions are added with the route
+# The exceptions the routes let through: the domain's, and those of the infrastructure a route calls
 PROBLEMS: Final[dict[type[Exception], Problem]] = {
     # Accepted risk (#102): this answer reveals that the email has an account. A neutral one needs a full user workflow
     # with email verification, planned in #289 before the app is open to strangers.
@@ -125,4 +128,14 @@ PROBLEMS: Final[dict[type[Exception], Problem]] = {
     # The adapter logs why the provider refused the code
     ProviderExchangeCodeError: Problem(status=status.HTTP_400_BAD_REQUEST, detail="Failed to exchange code"),
     JobNotFoundError: Problem(status=status.HTTP_404_NOT_FOUND, detail="Job not found"),
+    JobAlreadyActiveError: Problem(
+        status=status.HTTP_409_CONFLICT,
+        detail="A job of this kind is already pending or running",
+    ),
+    # The checks of an upload, before it is stored
+    ArchiveInvalidError: Problem(
+        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        detail="The file is not a readable zip archive",
+    ),
+    ArchiveTooLargeError: Problem(status=status.HTTP_413_CONTENT_TOO_LARGE, detail="The archive is too large"),
 }
