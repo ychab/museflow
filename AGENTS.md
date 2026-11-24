@@ -71,7 +71,12 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   word of the domain language (a listening period, a discovery strategy) is a value object of the domain, even when
   only the application handles it. A `*Result` / `*Report` stays in its use case module; `outputs/` holds what
   several use cases or a port share, in the module of its theme (`outputs/stats.py`).
-- **Inputs** are Pydantic `BaseModel` or `@dataclass(frozen=True, kw_only=True)`, named as in [Naming](#naming).
+- **Inputs** are named as in [Naming](#naming). Pydantic `BaseModel` when the application gets raw data to validate:
+  the entries of an imported file (`RatingEntryInput`), an entity write with validators (`UserCreateInput`), a job
+  input read back from its JSON (`ImportStreamingHistoryJobInput`). `@dataclass(frozen=True, kw_only=True)` when code
+  builds it from values already typed: a flow config (`EnrichTracksConfigInput`), an entry an adapter maps from its
+  validated DTO (`StreamingHistoryEntryInput`). Pydantic is the one outside library the application uses: a
+  validation library with no I/O, kept out of the domain.
 - **Use cases** are standalone async functions by default (`use_cases/user_create.py`). Use a class with a named method
   when it holds injected dependencies and is called with user-specific args (`use_cases/track_history_import.py`), and a
   class with one method per step when the entrypoint calls several steps of one flow, e.g. find, confirm, then delete
