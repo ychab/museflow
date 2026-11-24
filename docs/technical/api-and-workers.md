@@ -64,6 +64,8 @@ A long flow can't run inside an HTTP request: the API records the job, answers a
   token.
 - **No result backend, no SSE, no percentage**: the table holds the status and the result or the error, and a job is
   short enough to poll.
+- **Typed per kind**: `GET /jobs/{id}` documents the input and the result of each kind of job, the error as the name
+  of its exception (#265).
 
 ```mermaid
 stateDiagram-v2
@@ -79,20 +81,22 @@ stateDiagram-v2
 
 ### One job, end to end
 
-The first job sets the pattern every other one copies:
+The first job, the history import (#265), sets the pattern every other one copies:
 
 ```mermaid
 flowchart TB
-    CLIENT["Client"] -- "1 · POST" --> API["API"]
-    API -- "2 · the job, pending, and NOTIFY: one commit" --> PG[("PostgreSQL<br/>museflow_job")]
-    PG -- "3 · NOTIFY wakes the relay" --> RL["Relay"]
-    RL -- "4 · the task message (job_id, user_id)" --> MQ["RabbitMQ"]
-    MQ -- "5 · delivers it" --> WK["Worker"]
-    WK -- "6 · running, then done or failed" --> PG
-    CLIENT -. "7 · GET /jobs/{id}, polled" .-> API
+    CLIENT["Client"] -- "1 · POST the archive" --> API["API"]
+    API -- "2 · the archive, as is" --> FS[["Storage"]]
+    API -- "3 · the job, pending, and NOTIFY: one commit" --> PG[("PostgreSQL<br/>museflow_job")]
+    PG -- "4 · NOTIFY wakes the relay" --> RL["Relay"]
+    RL -- "5 · the task message (job_id, user_id)" --> MQ["RabbitMQ"]
+    MQ -- "6 · delivers it" --> WK["Worker"]
+    WK -- "7 · extracts, imports, deletes the files" --> FS
+    WK -- "8 · running, then done or failed" --> PG
+    CLIENT -. "9 · GET /jobs/{id}, polled" .-> API
 ```
 
-??? example "Step by step, lane by lane (an enrichment)"
+??? example "Step by step, lane by lane (a history import)"
 
     <div class="seq">
     <script type="application/json">
@@ -100,36 +104,38 @@ flowchart TB
       "lanes": [
         {"id": "client", "name": "Client", "sub": "app, curl", "color": "grey"},
         {"id": "api", "name": "API", "sub": "FastAPI", "color": "teal"},
+        {"id": "fs", "name": "Storage", "sub": "shared volume", "color": "amber"},
         {"id": "db", "name": "PostgreSQL", "sub": "museflow_job", "color": "indigo"},
         {"id": "relay", "name": "Relay", "sub": "publishes", "color": "green"},
         {"id": "mq", "name": "RabbitMQ", "sub": "task queue", "color": "amber"},
-        {"id": "worker", "name": "Worker", "sub": "Celery task", "color": "teal"},
-        {"id": "llm", "name": "OpenRouter", "sub": "paid LLM calls", "color": "grey"}
+        {"id": "worker", "name": "Worker", "sub": "Celery task", "color": "teal"}
       ],
       "steps": [
-        {"phase": "Queue, inside the request: one transaction"},
-        {"from": "client", "to": "api", "text": "<code>POST /api/v1/tracks/enrichment</code> (config)", "detail": "Bearer access token"},
-        {"note": "api", "style": "check", "text": "A paid job: within the user's LLM budget? (#263)"},
+        {"phase": "Queue, inside the request"},
+        {"from": "client", "to": "api", "text": "<code>POST /api/v1/tracks/streaming-history</code>, the zip archive and the options", "detail": "Multipart, so Swagger can send it; Bearer access token"},
+        {"note": "api", "style": "check", "text": "Checks without extracting: name, type, signature, size", "detail": "<a href=\"#files-go-through-the-storage-port\">Below</a>"},
+        {"from": "api", "to": "fs", "text": "Stores the archive as is, under <code>history/{job_id}/</code>", "detail": "First: a job never points to a file not there yet"},
         {"from": "api", "to": "db", "text": "<code>INSERT</code> the job, <code>pending</code>, <code>published_at</code> empty; <code>pg_notify</code>; commit", "detail": "The notification leaves on commit only: a rollback sends none"},
-        {"from": "db", "to": "api", "text": "A job of this kind is already pending or running", "style": "fail", "detail": "The partial unique index refuses it: <code>409 Conflict</code>"},
-        {"from": "api", "to": "client", "text": "<code>202 Accepted</code>, the job ID", "detail": "<code>Location: /api/v1/jobs/{id}</code>; no call to RabbitMQ"},
+        {"from": "db", "to": "api", "text": "A job of this kind is already pending or running", "style": "fail", "detail": "The partial unique index refuses it: the archive deleted, <code>409 Conflict</code>"},
+        {"from": "api", "to": "client", "text": "<code>202 Accepted</code>, the job", "detail": "<code>Location: /api/v1/jobs/{id}</code>; no call to RabbitMQ"},
         {"phase": "Publish, in the relay"},
         {"from": "db", "to": "relay", "text": "<code>NOTIFY</code> wakes the relay, which listens (<code>LISTEN</code>)", "detail": "Otherwise it wakes up every 5 seconds: a notification missed while it restarted is caught up"},
         {"from": "relay", "to": "db", "text": "Block 1: reads the jobs whose <code>published_at</code> is empty, the oldest first"},
-        {"from": "relay", "to": "mq", "text": "Publishes each task <code>(job_id, user_id)</code>, confirmed by the broker", "detail": "Publisher confirms, out of any transaction. IDs only, never an entity nor a token"},
+        {"from": "relay", "to": "mq", "text": "Publishes each task <code>(job_id, user_id)</code>, confirmed by the broker", "detail": "Publisher confirms, out of any transaction. IDs only, never the archive nor a token"},
         {"from": "relay", "to": "db", "text": "Block 2: <code>published_at = now()</code> for those confirmed"},
         {"phase": "Run, in a worker"},
         {"from": "mq", "to": "worker", "text": "Delivers the message", "detail": "One at a time per process (prefetch 1), acknowledged at the end (acks late)"},
         {"from": "worker", "to": "db", "text": "Block: starts the job, <code>pending → running</code>, by a compare-and-set", "detail": "A message for a job already running is a duplicate, dropped, unless its attempt died: <a href=\"#a-message-for-a-job-already-running\">below</a>"},
-        {"from": "worker", "to": "llm", "text": "The use case runs: LLM batches outside any transaction", "detail": "Each batch committed in its own block, as on the CLI"},
-        {"note": "worker", "style": "check", "text": "Killed mid-run: the message was never acknowledged", "detail": "RabbitMQ redelivers it; the job resumes from its committed checkpoints"},
+        {"from": "worker", "to": "fs", "text": "Reads the archive, extracts the history files one at a time, stores each"},
+        {"note": "worker", "text": "The import use case, on the files extracted, as on the CLI", "detail": "A block per chunk of tracks; a play already saved is skipped, so a second run creates none"},
         {"from": "worker", "to": "db", "text": "Block: <code>done</code>, the report as the result"},
         {"from": "worker", "to": "db", "text": "Or, after the retries: <code>failed</code>, with the name of the error", "style": "fail", "detail": "Transient errors only are retried, with backoff; then the dead-letter queue"},
+        {"from": "worker", "to": "fs", "text": "Deletes the archive and the files extracted", "detail": "Kept after a transient error, for the next try"},
         {"from": "worker", "to": "mq", "text": "Acknowledges the message"},
         {"phase": "Poll"},
         {"from": "client", "to": "api", "text": "<code>GET /api/v1/jobs/{id}</code>, every few seconds"},
         {"from": "api", "to": "db", "text": "<code>SELECT … WHERE id = … AND user_id = …</code>", "detail": "Another user's job is a 404, as an unknown one"},
-        {"from": "api", "to": "client", "text": "The status, then the result or the error"}
+        {"from": "api", "to": "client", "text": "The status, then the report or the error"}
       ]
     }
     </script>
@@ -361,9 +367,48 @@ tracing a request across the API, the broker and the worker comes with #269.
 
 ## Files go through the storage port
 
-An upload (the streaming history export, #265) can't travel in a task message. The API writes it through
-`FileStoragePort` (#249), on a volume the workers share, and the message carries its key. The task deletes the files
-once the import is committed.
+An upload can't travel in a task message: the API stores it through `FileStoragePort` (#249), on a volume the workers
+share, and the job's input says where. The streaming history export (#265) is a zip archive, untrusted input:
+
+```mermaid
+flowchart TB
+    UP["The upload"] --> API{"API: name, type,<br/>signature, size"}
+    API -- "refused" --> R1["415, 413:<br/>nothing stored"]:::fail
+    API -- "looks right" --> ZIP[["history/{job_id}/archive.zip<br/>as is"]]
+    ZIP --> WK{"Worker: extracts,<br/>counting the bytes"}
+    WK -- "over a cap" --> R2["Job failed:<br/>ArchiveTooLargeError"]:::fail
+    WK -- "history files only" --> FILES[["history/{job_id}/files/{rank}/{name}"]]
+    FILES --> IMP["The import use case"]
+    IMP --> DEL["Job ended:<br/>history/{job_id}/ deleted"]
+
+    classDef fail stroke:#b42318,stroke-width:2px
+```
+
+- **The API checks what it can without extracting**, then stores the archive as is. The name and the media type prove
+  nothing; the zip signature and a readable central directory turn a wrong file away before it is stored. The cap,
+  100 MB, leaves room: an export of a decade weighs about 12. The entries are counted before the directory is read,
+  off the event loop: a directory of millions of empty entries would hold the API for seconds.
+- **The worker extracts it, one file at a time.** The caps count the bytes really decompressed, never the sizes the
+  archive declares, which a zip bomb fakes: 100 MB a file (the import reads each whole), 1 GB in all, 1,000 entries.
+- **An entry's path is never used**, only its file name: `../../` leads nowhere. Each file goes in a folder of its
+  rank in the archive, so two files of the same name, from two folders, are both kept: the import skips the plays
+  saved twice.
+- **The files are deleted when the job ends**, done or failed for good. A transient error keeps them for the next try,
+  which extracts them again under the same keys.
+
+| A bad upload | Caught by | The client sees |
+|---|---|---|
+| Wrong name or media type, not a zip, unreadable | API | `415` |
+| Over 100 MB, or over 1,000 entries | API | `413` |
+| An import already pending or running | The unique index | `409`; the archive is deleted |
+| A zip bomb | Worker | The job `failed`, `ArchiveTooLargeError` |
+| A path climbing out (`../`, absolute) | Worker | Nothing: the file is kept under its name |
+| No streaming history file in it | Worker | The job `failed`, `StreamingHistoryFilesNotFoundError` |
+
+**Accepted risks.** The API dying between storing the archive and committing its job leaves the archive behind, and a
+job failed after its last try keeps its files: the sweeper of #299 deletes both. Starlette receives the whole body
+before the route checks its size, and before the access token: the cap bounds what is read and stored, and a reverse
+proxy caps the body once deployed.
 
 ## API conventions
 
@@ -378,8 +423,8 @@ Each domain exception maps to a status code; the routes catch none. The body is 
   "type": "about:blank",
   "title": "Conflict",
   "status": 409,
-  "detail": "A track enrichment is already running.",
-  "instance": "/api/v1/tracks/enrichment"
+  "detail": "A job of this kind is already pending or running",
+  "instance": "/api/v1/tracks/streaming-history"
 }
 ```
 
