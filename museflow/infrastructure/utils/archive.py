@@ -39,7 +39,7 @@ class ArchiveTooLargeError(Exception):
 @dataclass(frozen=True, kw_only=True)
 class ArchiveLimits:
     max_file_size: int  # bytes decompressed for one file
-    max_extracted_size: int  # bytes decompressed for all the files kept
+    max_total_size: int  # bytes decompressed for all the files kept
     max_entries: int  # entries of the archive, kept or not
 
 
@@ -82,7 +82,7 @@ def extract_files(content: bytes, pattern: str, limits: ArchiveLimits) -> Iterat
             if entry.is_dir() or not fnmatchcase(name, pattern):
                 continue
 
-            max_size = min(limits.max_file_size, limits.max_extracted_size - extracted_size)
+            max_size = min(limits.max_file_size, limits.max_total_size - extracted_size)
             file_content = _read(archive, entry, rank=rank, max_size=max_size)
             extracted_size += len(file_content)
 

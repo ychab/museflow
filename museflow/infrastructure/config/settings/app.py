@@ -65,14 +65,18 @@ class AppSettings(BaseSettings):
     FILE_STORAGE_DIR: Path = BASE_DIR / ".storage"
 
     # The streaming history export, uploaded as a zip archive: a few dozen MB for a decade of plays (12 MB measured),
-    # in JSON files of about 10 MB each. The archive is untrusted: the worker caps what it extracts by the bytes it
-    # really decompresses, never by the sizes the archive declares (a zip bomb lies about them).
-    HISTORY_ARCHIVE_MAX_SIZE_MB: int = Field(default=100, ge=1)
-    # Each extracted file is read whole by the import: the cap bounds the memory of a worker process
-    HISTORY_ARCHIVE_MAX_FILE_SIZE_MB: int = Field(default=100, ge=1)
-    HISTORY_ARCHIVE_MAX_EXTRACTED_SIZE_MB: int = Field(default=1024, ge=1)
-    # An export holds a few dozen entries; a bomb may hold millions of tiny ones
-    HISTORY_ARCHIVE_MAX_ENTRIES: int = Field(default=1000, ge=1)
+    # in JSON files of about 10 MB each. The archive is untrusted, and compressed: a small one may extract to far more
+    # (a zip bomb). UPLOAD caps what the API receives, compressed; EXTRACTED caps what the worker decompresses, counted
+    # by the bytes it really reads, never by the sizes the archive declares (a bomb lies about them).
+    # The archive as uploaded: bounds the disk of the API
+    HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB: int = Field(default=100, ge=1)
+    # Its entries, folders and other files included: an export holds a few dozen, a bomb may hold millions of tiny ones,
+    # which the API spends seconds listing
+    HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES: int = Field(default=1000, ge=1)
+    # One file once decompressed: the import reads it whole, so the cap bounds the memory of a worker process
+    HISTORY_EXTRACTED_FILE_MAX_SIZE_MB: int = Field(default=100, ge=1)
+    # All the files kept, once decompressed: bounds the disk of the workers
+    HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB: int = Field(default=1024, ge=1)
 
     # Processes of a worker, each running one task at a time with a database pool of its own: the database sees up to
     # WORKER_CONCURRENCY × (DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW) connections from one worker.

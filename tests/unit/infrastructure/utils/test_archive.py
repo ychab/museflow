@@ -14,7 +14,7 @@ KB: Final[int] = 1024
 class TestExtractFiles:
     @pytest.fixture
     def limits(self) -> ArchiveLimits:
-        return ArchiveLimits(max_file_size=10 * KB, max_extracted_size=15 * KB, max_entries=3)
+        return ArchiveLimits(max_file_size=10 * KB, max_total_size=15 * KB, max_entries=3)
 
     @pytest.mark.parametrize(
         "zip_archive",

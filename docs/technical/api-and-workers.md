@@ -408,7 +408,7 @@ flowchart TB
 **Accepted risks.** The API dying between storing the archive and committing its job leaves the archive behind, and a
 job failed after its last try keeps its files: the sweeper of #299 deletes both. Starlette receives the whole body
 before the route checks its size, and before the access token: the cap bounds what is read and stored, and a reverse
-proxy caps the body once deployed.
+proxy caps the body once deployed (#304).
 
 ## API conventions
 

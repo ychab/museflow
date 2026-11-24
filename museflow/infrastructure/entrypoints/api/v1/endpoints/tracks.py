@@ -88,16 +88,16 @@ async def _read_archive(archive: UploadFile) -> bytes:
 
     Accepted risk: Starlette receives the whole body before the route runs, on a temporary file, and before the
     access token is checked: the cap bounds what is read and stored, not what is received. A reverse proxy caps the
-    body once deployed.
+    body once deployed (#304).
     """
     if not (archive.filename or "").lower().endswith(".zip") or archive.content_type not in ZIP_MEDIA_TYPES:
         raise ArchiveInvalidError(f"Not a zip archive: {archive.content_type}")
 
-    max_size = app_settings.HISTORY_ARCHIVE_MAX_SIZE_MB * 1024 * 1024
+    max_size = app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB * 1024 * 1024
     content = await archive.read(max_size + 1)
     if len(content) > max_size:
-        raise ArchiveTooLargeError(f"The archive is over {app_settings.HISTORY_ARCHIVE_MAX_SIZE_MB} MB")
+        raise ArchiveTooLargeError(f"The archive is over {app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB} MB")
 
     # Reads the central directory: off the event loop, which other requests share
-    await asyncio.to_thread(check_zip, content, max_entries=app_settings.HISTORY_ARCHIVE_MAX_ENTRIES)
+    await asyncio.to_thread(check_zip, content, max_entries=app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES)
     return content
