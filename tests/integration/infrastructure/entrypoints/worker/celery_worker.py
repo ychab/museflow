@@ -65,8 +65,8 @@ class CeleryWorker:
             "DATABASE_URI": self._database_uri,
             "MUSEFLOW_FILE_STORAGE_DIR": str(self._file_storage_dir),
             # Caps small enough for a test's zip bomb to stay small
-            "MUSEFLOW_HISTORY_ARCHIVE_MAX_FILE_SIZE_MB": "1",
-            "MUSEFLOW_HISTORY_ARCHIVE_MAX_EXTRACTED_SIZE_MB": "2",
+            "MUSEFLOW_HISTORY_EXTRACTED_FILE_MAX_SIZE_MB": "1",
+            "MUSEFLOW_HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB": "2",
             "MUSEFLOW_LOG_HANDLERS_WORKER": '["console"]',
             # A retry without waiting
             "MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS": "1",

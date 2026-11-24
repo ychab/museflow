@@ -97,7 +97,7 @@ class TestTrackStreamingHistoryImport:
         file_storage: LocalFileStorage,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(app_settings, "HISTORY_ARCHIVE_MAX_SIZE_MB", 1)
+        monkeypatch.setattr(app_settings, "HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB", 1)
         content = b"PK\x03\x04" + b"\x00" * 1024 * 1024
 
         response = await async_client.post(url, files={"archive": ("export.zip", content, "application/zip")})

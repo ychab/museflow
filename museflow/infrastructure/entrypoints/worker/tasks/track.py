@@ -79,9 +79,9 @@ async def _extract_archive(
     archive = await file_storage.get(user_id=job.user_id, key=job_in.archive_key)
 
     limits = ArchiveLimits(
-        max_file_size=app_settings.HISTORY_ARCHIVE_MAX_FILE_SIZE_MB * 1024 * 1024,
-        max_extracted_size=app_settings.HISTORY_ARCHIVE_MAX_EXTRACTED_SIZE_MB * 1024 * 1024,
-        max_entries=app_settings.HISTORY_ARCHIVE_MAX_ENTRIES,
+        max_file_size=app_settings.HISTORY_EXTRACTED_FILE_MAX_SIZE_MB * 1024 * 1024,
+        max_total_size=app_settings.HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB * 1024 * 1024,
+        max_entries=app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES,
     )
 
     # One file in memory at a time. Each under a folder of its rank in the archive: two files of the same name, from
