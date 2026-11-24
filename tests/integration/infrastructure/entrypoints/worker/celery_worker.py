@@ -26,11 +26,19 @@ class CeleryWorker:
 
     _process: subprocess.Popen[bytes]
 
-    def __init__(self, broker_url: str, database_uri: str, log_file: Path, queues: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        broker_url: str,
+        database_uri: str,
+        file_storage_dir: Path,
+        log_file: Path,
+        queues: list[str] | None = None,
+    ) -> None:
         """`queues`: those it consumes, all of them by default, as `celery worker` without `--queues`."""
         self.name = f"test-{uuid.uuid4().hex[:8]}@museflow"
         self._broker_url = broker_url
         self._database_uri = database_uri
+        self._file_storage_dir = file_storage_dir
         self._log_file = log_file
         self._queues = queues
 
@@ -55,6 +63,10 @@ class CeleryWorker:
             **os.environ,
             "BROKER_URL": self._broker_url,
             "DATABASE_URI": self._database_uri,
+            "MUSEFLOW_FILE_STORAGE_DIR": str(self._file_storage_dir),
+            # Caps small enough for a test's zip bomb to stay small
+            "MUSEFLOW_HISTORY_ARCHIVE_MAX_FILE_SIZE_MB": "1",
+            "MUSEFLOW_HISTORY_ARCHIVE_MAX_EXTRACTED_SIZE_MB": "2",
             "MUSEFLOW_LOG_HANDLERS_WORKER": '["console"]',
             # A retry without waiting
             "MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS": "1",

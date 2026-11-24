@@ -36,6 +36,8 @@ celery_app = Celery(
     "museflow",
     broker=broker_settings.URL.get_secret_value(),  # type: ignore[union-attr]
     task_cls=MuseflowTask,
+    # The modules of the tasks, one per theme, loaded by the worker: they import this app
+    include=["museflow.infrastructure.entrypoints.worker.tasks.track"],
 )
 celery_app.conf.update(
     # A worker consumes both unless told one (`--queues`). A task goes to the batch queue, unless its name (`<theme>.`

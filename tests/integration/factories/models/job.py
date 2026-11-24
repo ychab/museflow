@@ -1,8 +1,11 @@
+import uuid
 from typing import Any
 
 from polyfactory import Use
 
+from museflow.application.inputs.history import ImportStreamingHistoryJobInput
 from museflow.domain.enums import JobStatus
+from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models.job import JobModel
 
 from tests.integration.factories.models.base import BaseModelFactory
@@ -13,7 +16,13 @@ class JobModelFactory(BaseModelFactory[JobModel]):
     __model__ = JobModel
 
     status = JobStatus.PENDING
-    input: Use[[], dict[str, Any]] = Use(dict)
+    # The input of the only kind of job, a history import
+    input: Use[[], dict[str, Any]] = Use(
+        lambda: ImportStreamingHistoryJobInput(
+            prefix=f"history/{uuid.uuid4()}",
+            provider=MusicProvider.SPOTIFY,
+        ).model_dump(mode="json")
+    )
     result = None
     error = None
     published_at = None

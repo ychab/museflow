@@ -22,6 +22,7 @@ from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
 from museflow.application.ports.security import StateTokenGeneratorPort
+from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
@@ -62,6 +63,10 @@ def get_access_token_manager(wiring: Annotated[Wiring, Depends(get_wiring)]) -> 
 
 def get_state_token_generator(wiring: Annotated[Wiring, Depends(get_wiring)]) -> StateTokenGeneratorPort:
     return wiring.build_state_token_generator()
+
+
+def get_file_storage(wiring: Annotated[Wiring, Depends(get_wiring)]) -> FileStoragePort:
+    return wiring.build_file_storage()
 
 
 def get_page_params(
@@ -147,5 +152,6 @@ UnitOfWorkDep = Annotated[UnitOfWorkPort, Depends(get_unit_of_work)]
 PasswordHasherDep = Annotated[PasswordHasherPort, Depends(get_password_hasher)]
 AccessTokenManagerDep = Annotated[AccessTokenManagerPort, Depends(get_access_token_manager)]
 ProviderOAuthDep = Annotated[ProviderOAuthPort, Depends(get_provider_oauth)]
+FileStorageDep = Annotated[FileStoragePort, Depends(get_file_storage)]
 PageParamsDep = Annotated[PageParams, Depends(get_page_params)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
