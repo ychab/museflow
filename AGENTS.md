@@ -247,6 +247,9 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   - the closing log, or an `if ...: return` right above, sticks to the final `return`;
   - a body of one or two statements stays compact; a table printed by a command (its columns, the loop adding its
     rows, the print) is one step; in tests, arrange / act / assert.
+- A comment says why, the idea a reader can't see in the code: never how the code works, the values of a setting, or
+  what another file or component does, which change without the comment and then mislead. A constraint a library or
+  a protocol puts on us is a why: it stays (`adapters/archive/zip.py`, the errors `zipfile` raises).
 - No docstrings for obvious code; only for ports, complex algorithms and non-obvious `Raises:`. Google style, without
   repeating the types.
 

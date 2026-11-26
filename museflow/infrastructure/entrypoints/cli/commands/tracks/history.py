@@ -59,13 +59,9 @@ def tracks_history_command(
     purge: Annotated[bool, typer.Option("--purge/--no-purge", help="Purge existing tracks before import")] = False,
 ) -> None:
     # Typer has no exclusive options: one of the two, and only one
-    match archive, directory:
-        case Path() as source, None:
-            pass
-        case None, Path() as source:
-            pass
-        case _:
-            raise typer.BadParameter("Give either --archive or --directory")
+    source = archive or directory
+    if source is None or (archive is not None and directory is not None):
+        raise typer.BadParameter("Give either --archive or --directory")
 
     start_time = time.perf_counter()
 

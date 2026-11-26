@@ -104,19 +104,19 @@ class TestTrackStreamingHistoryImport:
 
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
 
-    async def test__too_large(
+    async def test__too_many_entries(
         self,
         url: str,
+        zip_archive: bytes,
         user: User,
         access_token: str,
         async_client: AsyncClient,
         file_storage: LocalFileStorage,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(app_settings, "HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB", 1)
-        content = b"PK\x03\x04" + b"\x00" * 1024 * 1024
+        monkeypatch.setattr(app_settings, "HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES", 1)
 
-        response = await async_client.post(url, files={"archive": ("export.zip", content, "application/zip")})
+        response = await async_client.post(url, files={"archive": ("export.zip", zip_archive, "application/zip")})
 
         assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE
         assert await file_storage.list_keys(user_id=user.id, prefix="history") == []

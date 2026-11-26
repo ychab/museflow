@@ -405,22 +405,21 @@ flowchart TB
 |---|---|---|
 | Not a zip, unreadable | API | `415` |
 | A body over 100 MB | Proxy, before reading it | `413` |
-| Over 100 MB, or over 1,000 entries | API | `413` |
+| Over 1,000 entries | API | `413` |
 | An import already pending or running | The unique index | `409`; the archive is deleted |
 | A zip bomb | Worker | The job `failed`, `ArchiveTooLargeError` |
 | A path climbing out (`../`, absolute) | Worker | Nothing: the file is kept under its name |
 | No streaming history file in it | Worker | The job `failed`, `StreamingHistoryFilesNotFoundError` |
 
 **Accepted risks.** The API dying between storing the archive and committing its job leaves the archive behind, and a
-job failed after its last try keeps its files: the sweeper of #299 deletes both. Starlette receives the whole body
-before the route checks its size, and before the access token: the proxy refuses a body over the cap first (#304),
-unless the API is reached without it (`make run`, a deployment publishing its port).
+job failed after its last try keeps its files: the sweeper of #299 deletes both.
 
 **The proxy** (`docker/nginx/default.conf.template`) is the only service of the stack with a published port. A body
 over 1 MB is refused (`413`, a problem details body as the API's), over the archive cap on the upload route: from its
 `Content-Length` before reading it, or as soon as it crosses the cap without one. It sets read timeouts against slow
-clients, and receives a body whole before passing it on, so that a slow upload holds no API worker. The archive cap is
-one value for the proxy and the API (`MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB` in `docker-compose.yml`).
+clients, and receives a body whole before passing it on, so that a slow upload holds no API worker. The API trusts it
+with the size of a body, and reads an upload whole: it is never reached without the proxy. The archive cap is
+`MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB` in `docker-compose.yml`.
 
 ## API conventions
 
