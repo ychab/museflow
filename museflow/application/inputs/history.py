@@ -15,6 +15,23 @@ class ImportStreamingHistoryConfigInput:
     purge: bool = False
 
 
+@dataclass(frozen=True, kw_only=True)
+class StreamingHistoryEntryInput:
+    name: str
+    artist: str
+    album_name: str | None
+    provider_id: str
+    played_at: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
+class StreamingHistoryFileStats:
+    items_read: int = 0
+    items_skipped_no_timestamp: int = 0
+    items_skipped_short_play: int = 0
+    items_skipped_no_track_id: int = 0
+
+
 class ImportStreamingHistoryJobInput(BaseModel):
     """What a history import job runs on, kept as its input: where its files are, and the options of the import.
 
@@ -35,20 +52,3 @@ class ImportStreamingHistoryJobInput(BaseModel):
     @property
     def files_prefix(self) -> str:
         return f"{self.prefix}/files"
-
-
-@dataclass(frozen=True, kw_only=True)
-class StreamingHistoryEntryInput:
-    name: str
-    artist: str
-    album_name: str | None
-    provider_id: str
-    played_at: datetime
-
-
-@dataclass(frozen=True, kw_only=True)
-class StreamingHistoryFileStats:
-    items_read: int = 0
-    items_skipped_no_timestamp: int = 0
-    items_skipped_short_play: int = 0
-    items_skipped_no_track_id: int = 0
