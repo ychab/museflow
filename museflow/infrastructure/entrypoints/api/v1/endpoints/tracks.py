@@ -1,5 +1,4 @@
 from typing import Annotated
-from typing import Final
 
 from fastapi import APIRouter
 from fastapi import File
@@ -12,7 +11,6 @@ from fastapi import status
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.track_history_import_queue import queue_history_import
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ArchiveInvalidError
 from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import ArchiveReaderDep
@@ -23,12 +21,6 @@ from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
 
 router = APIRouter()
-
-# What browsers and HTTP clients send for a zip: `application/zip`, `application/x-zip-compressed` on Windows, and
-# `application/octet-stream` when they don't know the extension (curl). It proves nothing: the signature does.
-ZIP_MEDIA_TYPES: Final[frozenset[str]] = frozenset(
-    {"application/zip", "application/x-zip-compressed", "application/x-zip", "application/octet-stream"}
-)
 
 
 @router.post(
@@ -82,18 +74,13 @@ async def import_streaming_history(
 
 
 async def _read_archive(archive: UploadFile) -> bytes:
-    """The content of the upload, once its name, media type and size look like a zip archive.
-
-    Cheap checks that prove nothing on their own: the use case checks the content before storing it, the worker as it
-    extracts it.
+    """The content of the upload, read up to the cap: the use case checks it before storing it, the worker as it
+    extracts it. Its name and media type are not checked: the client chooses them, they prove nothing.
 
     Starlette receives the whole body before the route runs, on a temporary file, and before the access token is
     checked: this cap bounds what is read and stored, not what is received. The reverse proxy of the stack refuses a
     body over it first (#304). Accepted risk: the API reached without it (`make run`) receives any size.
     """
-    if not (archive.filename or "").lower().endswith(".zip") or archive.content_type not in ZIP_MEDIA_TYPES:
-        raise ArchiveInvalidError(f"Not a zip archive: {archive.content_type}")
-
     max_size = app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB * 1024 * 1024
     content = await archive.read(max_size + 1)
     if len(content) > max_size:

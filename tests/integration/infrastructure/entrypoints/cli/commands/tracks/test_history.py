@@ -53,7 +53,7 @@ class TestTracksHistoryLogic:
         report = await tracks_history_logic(
             progress=progress,
             email=user.email,
-            directory=HISTORY_DIR,
+            source=HISTORY_DIR,
             config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
             provider=MusicProvider.SPOTIFY,
         )
@@ -87,7 +87,7 @@ class TestTracksHistoryLogic:
         report = await tracks_history_logic(
             progress=progress,
             email=user.email,
-            archive=archive,
+            source=archive,
             config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
             provider=MusicProvider.SPOTIFY,
         )

@@ -53,22 +53,19 @@ class TestTrackStreamingHistoryImport:
         ("file_name", "content_type"),
         [("export.rar", "application/zip"), ("export.zip", "application/json")],
     )
-    async def test__not_zip__name_or_type(
+    async def test__any_name_or_type(
         self,
         url: str,
         file_name: str,
         content_type: str,
         zip_archive: bytes,
-        user: User,
         access_token: str,
         async_client: AsyncClient,
-        file_storage: LocalFileStorage,
     ) -> None:
+        # The client chooses them, they prove nothing: the content is checked
         response = await async_client.post(url, files={"archive": (file_name, zip_archive, content_type)})
 
-        assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
-        assert response.json()["detail"] == "The file is not a readable zip archive"
-        assert await file_storage.list_keys(user_id=user.id, prefix="history") == []
+        assert response.status_code == status.HTTP_202_ACCEPTED
 
     @pytest.mark.parametrize(
         "content",
@@ -82,11 +79,14 @@ class TestTrackStreamingHistoryImport:
         user: User,
         access_token: str,
         async_client: AsyncClient,
+        file_storage: LocalFileStorage,
     ) -> None:
         # Named and typed as a zip, which proves nothing
         response = await async_client.post(url, files={"archive": ("export.zip", content, "application/zip")})
 
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+        assert response.json()["detail"] == "The file is not a readable zip archive"
+        assert await file_storage.list_keys(user_id=user.id, prefix="history") == []
 
     @pytest.mark.parametrize("zip_archive", [{"é.json": b"1"}], indirect=True)
     async def test__not_zip__directory_unreadable(
