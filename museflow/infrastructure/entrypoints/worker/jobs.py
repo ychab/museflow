@@ -1,8 +1,11 @@
+import dataclasses
 import logging
 import uuid
 from collections.abc import Callable
 from collections.abc import Coroutine
 from typing import Any
+from typing import ClassVar
+from typing import Protocol
 
 from celery import Task
 
@@ -14,8 +17,15 @@ from museflow.infrastructure.entrypoints.worker.dependencies import run_task
 
 logger = logging.getLogger(__name__)
 
-# What a job task runs once its job started: the use case of its kind, returning the result of the job
-type JobWork = Callable[[Job], Coroutine[Any, Any, dict[str, Any] | None]]
+
+class JobReport(Protocol):
+    """What a job's work returns: the report of its use case, a dataclass, kept as the job's result (JSON)."""
+
+    __dataclass_fields__: ClassVar[dict[str, Any]]
+
+
+# What a job task runs once its job started: the use case of its kind, returning its report
+type JobWork = Callable[[Job], Coroutine[Any, Any, JobReport | None]]
 
 
 def run_job(task: Task, job_id: str, user_id: str, work: JobWork) -> None:  # type: ignore[type-arg]
@@ -55,4 +65,4 @@ async def _run_job(job_id: uuid.UUID, user_id: uuid.UUID, work: JobWork, resumed
         logger.warning(f"Job {job_id} failed: {type(e).__name__}", extra={"job_id": str(job_id)})
         raise
 
-    await use_case.finish(result)
+    await use_case.finish(dataclasses.asdict(result) if result is not None else None)

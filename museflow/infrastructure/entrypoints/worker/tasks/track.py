@@ -1,12 +1,11 @@
-import dataclasses
 import logging
-from typing import Any
 
 from celery import Task
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import ImportStreamingHistoryJobInput
 from museflow.application.ports.storage import FileStoragePort
+from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryUseCase
 from museflow.application.use_cases.user_get import get_user_by_id
 from museflow.domain.entities.job import Job
@@ -29,7 +28,7 @@ def track_history_import_task(self: Task[[str, str], None], job_id: str, user_id
     run_job(self, job_id, user_id, track_history_import_work)
 
 
-async def track_history_import_work(job: Job) -> dict[str, Any]:
+async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
     """Extracts the uploaded archive into the user's file storage, imports the files, then deletes them all.
 
     A second run (the message redelivered) does it again: the files extracted are written under the same keys, and
@@ -67,7 +66,7 @@ async def track_history_import_work(job: Job) -> dict[str, Any]:
         raise
 
     await file_storage.delete(user_id=job.user_id, prefix=job_in.prefix)
-    return dataclasses.asdict(report)
+    return report
 
 
 async def _extract_archive(
