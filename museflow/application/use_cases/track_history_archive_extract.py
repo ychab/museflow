@@ -10,7 +10,7 @@ async def extract_history_archive(
     archive: bytes,
     prefix: str,
     file_storage: FileStoragePort,
-    archive_extractor: ArchivePort,
+    archive_reader: ArchivePort,
     streaming_history: StreamingHistoryPort,
 ) -> int:
     """Extracts the provider's streaming history files of the export archive into the user's file storage, under the
@@ -28,7 +28,7 @@ async def extract_history_archive(
     pattern = streaming_history.file_pattern
 
     files_count = 0
-    for archive_file in archive_extractor.extract_files(archive, pattern=pattern):
+    for archive_file in archive_reader.extract(archive, pattern=pattern):
         key = f"{prefix}/{archive_file.rank}/{archive_file.name}"
         await file_storage.put(user_id=user.id, key=key, content=archive_file.content)
         files_count += 1

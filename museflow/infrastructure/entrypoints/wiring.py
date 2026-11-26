@@ -25,6 +25,7 @@ from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ProviderAuthTokenNotFoundError
 from museflow.infrastructure.adapters.advisors.openrouter.client import OpenRouterAdvisorAdapter
+from museflow.infrastructure.adapters.archive.zip import ArchiveLimits
 from museflow.infrastructure.adapters.archive.zip import ZipArchiveAdapter
 from museflow.infrastructure.adapters.common.llm.client import OpenRouterClient
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
@@ -44,7 +45,6 @@ from museflow.infrastructure.adapters.storage.local import LocalFileStorage
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.config.settings.openrouter import openrouter_settings
 from museflow.infrastructure.config.settings.spotify import spotify_settings
-from museflow.infrastructure.utils.archive import ArchiveLimits
 
 
 class Wiring:
@@ -105,7 +105,7 @@ class Wiring:
     def build_file_storage(self) -> FileStoragePort:
         return LocalFileStorage(root=app_settings.FILE_STORAGE_DIR)
 
-    def build_archive_extractor(self) -> ArchivePort:
+    def build_archive_reader(self) -> ArchivePort:
         return ZipArchiveAdapter(
             limits=ArchiveLimits(
                 max_file_size=app_settings.HISTORY_EXTRACTED_FILE_MAX_SIZE_MB * 1024 * 1024,

@@ -33,6 +33,7 @@ from museflow.application.inputs.auth import OAuthProviderUserTokenCreateInput
 from museflow.application.inputs.auth import OAuthProviderUserTokenUpdateInput
 from museflow.application.inputs.user import UserCreateInput
 from museflow.application.inputs.user import UserUpdateInput
+from museflow.application.ports.archive import ArchivePort
 from museflow.application.ports.repositories.auth import OAuthProviderStateRepository
 from museflow.application.ports.repositories.auth import OAuthProviderTokenRepository
 from museflow.application.ports.repositories.blacklist import BlacklistRepository
@@ -371,6 +372,15 @@ def file_storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def file_storage(file_storage_dir: Path) -> LocalFileStorage:
     return LocalFileStorage(root=file_storage_dir)
+
+
+# --- Archive impl ---
+
+
+@pytest.fixture
+def archive_reader(wiring: Wiring) -> ArchivePort:
+    """The zip adapter within the caps of the settings."""
+    return wiring.build_archive_reader()
 
 
 # --- Entity factories ---

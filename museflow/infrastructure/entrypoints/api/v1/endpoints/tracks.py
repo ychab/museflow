@@ -1,4 +1,3 @@
-import asyncio
 from typing import Annotated
 from typing import Final
 
@@ -16,12 +15,12 @@ from museflow.domain.enums import MusicProvider
 from museflow.domain.exceptions import ArchiveInvalidError
 from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.infrastructure.config.settings.app import app_settings
+from museflow.infrastructure.entrypoints.api.dependencies import ArchiveReaderDep
 from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import FileStorageDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
-from museflow.infrastructure.utils.archive import check_zip
 
 router = APIRouter()
 
@@ -59,6 +58,7 @@ async def import_streaming_history(
     current_user: CurrentUserDep,
     uow: UnitOfWorkDep,
     file_storage: FileStorageDep,
+    archive_reader: ArchiveReaderDep,
 ) -> JobResponse:
     """Queues the import of a streaming history export: poll the job it answers until it is done or failed.
 
@@ -74,6 +74,7 @@ async def import_streaming_history(
         purge=purge,
         uow=uow,
         file_storage=file_storage,
+        archive_reader=archive_reader,
     )
 
     response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
@@ -81,10 +82,10 @@ async def import_streaming_history(
 
 
 async def _read_archive(archive: UploadFile) -> bytes:
-    """The content of the upload, once it looks like a zip archive of a sane size.
+    """The content of the upload, once its name, media type and size look like a zip archive.
 
-    Cheap checks that prove nothing on their own, but turn away a wrong file before it is stored; the worker checks
-    the content as it extracts it.
+    Cheap checks that prove nothing on their own: the use case checks the content before storing it, the worker as it
+    extracts it.
 
     Starlette receives the whole body before the route runs, on a temporary file, and before the access token is
     checked: this cap bounds what is read and stored, not what is received. The reverse proxy of the stack refuses a
@@ -97,7 +98,4 @@ async def _read_archive(archive: UploadFile) -> bytes:
     content = await archive.read(max_size + 1)
     if len(content) > max_size:
         raise ArchiveTooLargeError(f"The archive is over {app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB} MB")
-
-    # Reads the central directory: off the event loop, which other requests share
-    await asyncio.to_thread(check_zip, content, max_entries=app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES)
     return content

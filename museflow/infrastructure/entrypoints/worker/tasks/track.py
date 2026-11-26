@@ -34,7 +34,7 @@ async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
     wiring = get_wiring()
     uow = wiring.build_unit_of_work()
     file_storage = wiring.build_file_storage()
-    archive_extractor = wiring.build_archive_extractor()
+    archive_reader = wiring.build_archive_reader()
     job_in = ImportStreamingHistoryJobInput.model_validate(job.input)
     streaming_history = wiring.build_streaming_history(job_in.provider)
 
@@ -60,7 +60,7 @@ async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
             archive=archive,
             prefix=job_in.files_prefix,
             file_storage=file_storage,
-            archive_extractor=archive_extractor,
+            archive_reader=archive_reader,
             streaming_history=streaming_history,
         )
         logger.info(

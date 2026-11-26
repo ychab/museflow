@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from museflow.application.inputs.history import ImportStreamingHistoryJobInput
+from museflow.application.ports.archive import ArchivePort
 from museflow.application.ports.storage import FileStoragePort
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.domain.entities.job import Job
@@ -20,14 +21,21 @@ async def queue_history_import(
     purge: bool,
     uow: UnitOfWorkPort,
     file_storage: FileStoragePort,
+    archive_reader: ArchivePort,
 ) -> Job:
-    """Stores the streaming history export, as is, then records the job that imports it, for a worker to run.
+    """Checks the streaming history export, stores it as is, then records the job that imports it, for a worker to
+    run.
 
-    The archive is stored first: a job never points to a file that is not there yet.
+    The check extracts nothing: it turns away a wrong file before it is stored, the worker caps the extraction. The
+    archive is stored before the job is recorded: a job never points to a file that is not there yet.
 
     Raises:
+        ArchiveInvalidError: If the export is not a readable archive. Nothing is stored.
+        ArchiveTooLargeError: If it holds too many entries. Nothing is stored.
         JobAlreadyActiveError: If a history import is already pending or running for the user. The archive is deleted.
     """
+    await archive_reader.check(archive)
+
     job_id = uuid.uuid4()
     job_in = ImportStreamingHistoryJobInput(
         prefix=f"history/{job_id}",
