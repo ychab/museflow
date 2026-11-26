@@ -1,4 +1,4 @@
-"""Zip archives a user uploads: untrusted input, checked before it is stored, capped while it is extracted."""
+"""Zip archives a user gives: untrusted input, checked before it is stored, capped while it is extracted."""
 
 import io
 import zipfile
@@ -7,6 +7,10 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 from typing import Final
+
+from museflow.application.outputs.archive import ArchiveFile
+from museflow.domain.exceptions import ArchiveInvalidError
+from museflow.domain.exceptions import ArchiveTooLargeError
 
 # The first bytes of a zip archive (a local file header): what the file is, whatever its name and media type claim
 ZIP_SIGNATURE: Final[bytes] = b"PK\x03\x04"
@@ -18,26 +22,11 @@ _CENTRAL_DIRECTORY_SIGNATURE: Final[bytes] = b"PK\x01\x02"
 _READ_CHUNK_SIZE: Final[int] = 1024 * 1024
 
 
-class ArchiveInvalidError(Exception):
-    """The file is not a zip archive, or one that can't be read: damaged, encrypted."""
-
-
-class ArchiveTooLargeError(Exception):
-    """The archive, or what it extracts to, goes beyond a cap."""
-
-
 @dataclass(frozen=True, kw_only=True)
 class ArchiveLimits:
     max_file_size: int  # bytes decompressed for one file
     max_total_size: int  # bytes decompressed for all the files kept
     max_entries: int  # entries of the archive, kept or not
-
-
-@dataclass(frozen=True, kw_only=True)
-class ArchiveFile:
-    rank: int  # the position of its entry in the archive: tells two files of the same name apart
-    name: str  # the file name alone: the path the archive gives it is never used
-    content: bytes
 
 
 def check_zip(content: bytes, max_entries: int) -> None:

@@ -4,9 +4,9 @@ from typing import Final
 
 import pytest
 
-from museflow.infrastructure.utils.archive import ArchiveInvalidError
+from museflow.domain.exceptions import ArchiveInvalidError
+from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.infrastructure.utils.archive import ArchiveLimits
-from museflow.infrastructure.utils.archive import ArchiveTooLargeError
 from museflow.infrastructure.utils.archive import extract_files
 
 PATTERN: Final[str] = "Streaming_History_Audio_*.json"

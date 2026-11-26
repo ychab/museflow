@@ -13,14 +13,14 @@ from fastapi import status
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.track_history_import_queue import queue_history_import
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ArchiveInvalidError
+from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import FileStorageDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
-from museflow.infrastructure.utils.archive import ArchiveInvalidError
-from museflow.infrastructure.utils.archive import ArchiveTooLargeError
 from museflow.infrastructure.utils.archive import check_zip
 
 router = APIRouter()

@@ -45,10 +45,11 @@ museflow/
 │   ├── inputs/      # command/input schemas
 │   ├── outputs/     # shapes handed to the entrypoints for display, by theme (stats, LLM usage, progress events)
 │   ├── mappers/     # pure functions from a domain shape to an input schema
-│   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security, file storage)
+│   └── ports/       # ABC interfaces (unit of work, repositories, providers, advisors, security, file storage,
+│                    # archive)
 └── infrastructure/  # Implements ports
     ├── adapters/    # database (models, repositories, unit of work), providers, advisors, enrichers, profilers, progress,
-    │                # storage, queue
+    │                # storage, archive, queue
     ├── config/settings/
     ├── entrypoints/ # api (FastAPI), cli (Typer), worker (Celery, and the relay publishing the jobs), wiring.py (the
     │                # adapters, built for all of them)
