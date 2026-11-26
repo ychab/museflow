@@ -64,18 +64,13 @@ class AppSettings(BaseSettings):
     # per user: a volume shared by the API and the workers once deployed.
     FILE_STORAGE_DIR: Path = BASE_DIR / ".storage"
 
-    # The streaming history export, uploaded as a zip archive: a few dozen MB for a decade of plays (12 MB measured),
-    # in JSON files of about 10 MB each. The archive is untrusted, and compressed: a small one may extract to far more
-    # (a zip bomb). UPLOAD caps what the API receives, compressed; EXTRACTED caps what the worker decompresses, counted
-    # by the bytes it really reads, never by the sizes the archive declares (a bomb lies about them).
-    # The archive as uploaded: bounds the disk of the API
-    HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB: int = Field(default=100, ge=1)
-    # Its entries, folders and other files included: an export holds a few dozen, a bomb may hold millions of tiny ones,
-    # which the API spends seconds listing
+    # The streaming history export is an untrusted zip archive: a small one may extract to far more (a zip bomb). Its
+    # size as uploaded is capped by the reverse proxy, the rest here.
+    # The entries of the archive: a bomb may hold millions of tiny ones, which take time and memory just to list
     HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES: int = Field(default=1000, ge=1)
-    # One file once decompressed: the import reads it whole, so the cap bounds the memory of a worker process
+    # One file once decompressed: the import reads it whole, so the cap bounds the memory of a process
     HISTORY_EXTRACTED_FILE_MAX_SIZE_MB: int = Field(default=100, ge=1)
-    # All the files kept, once decompressed: bounds the disk of the workers
+    # All the files kept, once decompressed: bounds the disk
     HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB: int = Field(default=1024, ge=1)
 
     # Processes of a worker, each running one task at a time with a database pool of its own: the database sees up to

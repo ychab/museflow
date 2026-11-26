@@ -11,8 +11,6 @@ from fastapi import status
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.use_cases.track_history_import_queue import queue_history_import
 from museflow.domain.enums import MusicProvider
-from museflow.domain.exceptions import ArchiveTooLargeError
-from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.api.dependencies import ArchiveReaderDep
 from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import FileStorageDep
@@ -54,9 +52,9 @@ async def import_streaming_history(
 ) -> JobResponse:
     """Queues the import of a streaming history export: poll the job it answers until it is done or failed.
 
-    The archive is stored as is; a worker extracts and imports it.
+    The archive is stored as is; a worker extracts and imports it. Its size is capped by the reverse proxy in front.
     """
-    content = await _read_archive(archive)
+    content = await archive.read()
 
     job = await queue_history_import(
         user=current_user,
@@ -71,18 +69,3 @@ async def import_streaming_history(
 
     response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
     return JobResponse.model_validate(job)
-
-
-async def _read_archive(archive: UploadFile) -> bytes:
-    """The content of the upload, read up to the cap: the use case checks it before storing it, the worker as it
-    extracts it. Its name and media type are not checked: the client chooses them, they prove nothing.
-
-    Starlette receives the whole body before the route runs, on a temporary file, and before the access token is
-    checked: this cap bounds what is read and stored, not what is received. The reverse proxy of the stack refuses a
-    body over it first (#304). Accepted risk: the API reached without it (`make run`) receives any size.
-    """
-    max_size = app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB * 1024 * 1024
-    content = await archive.read(max_size + 1)
-    if len(content) > max_size:
-        raise ArchiveTooLargeError(f"The archive is over {app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB} MB")
-    return content

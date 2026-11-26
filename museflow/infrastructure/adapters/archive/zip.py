@@ -26,10 +26,10 @@ class ZipArchiveAdapter(ArchivePort):
     The caps count the bytes really decompressed, never the sizes the archive declares, which a zip bomb fakes.
     """
 
-    # The first bytes of a zip archive (a local file header): what the file is, whatever its name and media type claim
+    # The first bytes of any zip archive: what the file is, whatever its name claims
     _SIGNATURE: Final[bytes] = b"PK\x03\x04"
     # The start of each record of the central directory, one per entry: counted before the archive is opened, which
-    # reads them all (a 94 MB archive of 2 million empty entries takes seconds and a GB of memory)
+    # reads them all, so that millions of empty entries can't hold the process
     _CENTRAL_DIRECTORY_SIGNATURE: Final[bytes] = b"PK\x01\x02"
     # Bytes decompressed at a time: the caps are checked between two reads, so a bomb never gets further than one more
     _READ_CHUNK_SIZE: Final[int] = 1024 * 1024
@@ -38,7 +38,7 @@ class ZipArchiveAdapter(ArchivePort):
         self._limits = limits
 
     async def check(self, content: bytes) -> None:
-        # Reads the central directory: off the event loop, which other requests share
+        # Off the event loop: listing a large archive would hold every other request
         await asyncio.to_thread(self._check, content)
 
     def extract(self, content: bytes, pattern: str) -> Iterator[ArchiveFile]:
