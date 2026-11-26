@@ -140,10 +140,12 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   an option several entrypoints take is an alias (`CurrentUserDep` in `api/dependencies.py`, `EmailOption` in
   `cli/options.py`). A parameter without a default after one with a default makes the parameters keyword-only (`*`)
   rather than reordering them; a mutable or computed default goes in `default_factory`.
-- **API schemas** belong to their version, part of its contract: `v1/schemas/`, one module per endpoint module, named
-  alike (`v1/schemas/playlists.py` for `v1/endpoints/playlists.py`); `v1/schemas/common.py` holds what every theme of
-  the version reuses (`PageResponse[T]`, `SuccessResponse`). `api/schemas.py` holds only what every version shares
-  with the app itself: the error body (`ProblemDetails`), the paging parameters, the health check.
+- **API schemas** follow the route that answers with them, not how generic they look: under `vN/schemas/` when the
+  route is versioned, part of that version's contract; in `api/schemas.py` when it is not (the error body
+  `ProblemDetails` answered by every route, the paging parameters, the `/health` check). In `v1/schemas/`, one module
+  per endpoint module, named alike (`v1/schemas/playlists.py` for `v1/endpoints/playlists.py`); `v1/schemas/common.py`
+  holds what every theme of the version reuses (`PageResponse[T]`, `SuccessResponse`). A shape a later version reuses
+  as is moves up to `api/schemas.py` then, not before.
 - **API errors** (`entrypoints/api/errors.py`): a route catches no domain exception. Each one it lets through gets a
   `Problem` (status, fixed detail) in `PROBLEMS`, answered as an RFC 9457 problem details body; another user's object
   is a 404, as an unknown one. A collection is paged with `PageParamsDep` and `PageResponse[T]`.
