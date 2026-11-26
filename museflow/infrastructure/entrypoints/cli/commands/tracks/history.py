@@ -59,8 +59,13 @@ def tracks_history_command(
     purge: Annotated[bool, typer.Option("--purge/--no-purge", help="Purge existing tracks before import")] = False,
 ) -> None:
     # Typer has no exclusive options: one of the two, and only one
-    if (archive is None) == (directory is None):
-        raise typer.BadParameter("Give either --archive or --directory")
+    match archive, directory:
+        case Path() as source, None:
+            pass
+        case None, Path() as source:
+            pass
+        case _:
+            raise typer.BadParameter("Give either --archive or --directory")
 
     start_time = time.perf_counter()
 
@@ -76,8 +81,7 @@ def tracks_history_command(
             report = run_logic(
                 tracks_history_logic(
                     email=email,
-                    archive=archive,
-                    directory=directory,
+                    source=source,
                     config=config,
                     provider=provider,
                     progress=progress,
@@ -115,21 +119,16 @@ def tracks_history_command(
 
 async def tracks_history_logic(
     email: EmailStr,
-    archive: Path | None = None,
-    directory: Path | None = None,
-    *,
+    source: Path,
     config: ImportStreamingHistoryConfigInput,
     provider: MusicProvider,
     progress: ProgressPort,
 ) -> ImportStreamingHistoryReport:
-    """Puts the export files into the user's file storage, extracted from the archive or copied from the directory,
-    imports them, then deletes them.
+    """Puts the export files into the user's file storage, extracted from the source when it is an archive, copied
+    from it when it is a directory, imports them, then deletes them.
 
     The CLI reads the files through the storage like the worker does with an upload: one import path for both.
     """
-    if (archive is None) == (directory is None):
-        raise ValueError("Either an archive or a directory, not both")
-
     wiring = get_wiring()
     uow = wiring.build_unit_of_work()
     streaming_history = wiring.build_streaming_history(provider)
@@ -144,24 +143,24 @@ async def tracks_history_logic(
         progress=progress,
     )
     try:
-        if archive is not None:
+        if source.is_dir():
+            paths = sorted(source.glob(streaming_history.file_pattern))
+            if not paths:
+                raise StreamingHistoryFilesNotFoundError(
+                    f"No {streaming_history.file_pattern} files found in: {source}"
+                )
+
+            for path in paths:
+                await file_storage.put(user_id=user.id, key=f"{config.prefix}/{path.name}", content=path.read_bytes())
+        else:
             await extract_history_archive(
                 user=user,
-                archive=archive.read_bytes(),
+                archive=source.read_bytes(),
                 prefix=config.prefix,
                 file_storage=file_storage,
                 archive_reader=wiring.build_archive_reader(),
                 streaming_history=streaming_history,
             )
-        else:
-            paths = sorted(directory.glob(streaming_history.file_pattern))  # type: ignore[union-attr]
-            if not paths:
-                raise StreamingHistoryFilesNotFoundError(
-                    f"No {streaming_history.file_pattern} files found in: {directory}"
-                )
-
-            for path in paths:
-                await file_storage.put(user_id=user.id, key=f"{config.prefix}/{path.name}", content=path.read_bytes())
 
         report = await use_case.import_history(user=user, config=config)
     finally:

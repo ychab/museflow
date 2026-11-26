@@ -349,7 +349,7 @@ class TestTracksHistoryLogic:
             await tracks_history_logic(
                 progress=mock_progress,
                 email="test@example.com",
-                directory=history_dir,
+                source=history_dir,
                 config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
                 provider=MusicProvider.SPOTIFY,
             )
@@ -371,7 +371,7 @@ class TestTracksHistoryLogic:
             await tracks_history_logic(
                 progress=mock_progress,
                 email=user.email,
-                directory=tmp_path,
+                source=tmp_path,
                 config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
                 provider=MusicProvider.SPOTIFY,
             )
@@ -394,23 +394,12 @@ class TestTracksHistoryLogic:
             await tracks_history_logic(
                 progress=mock_progress,
                 email=user.email,
-                directory=history_dir,
+                source=history_dir,
                 config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
                 provider=MusicProvider.SPOTIFY,
             )
 
         mock_file_storage.delete.assert_awaited_once_with(user_id=user.id, prefix=self.PREFIX)
-
-    async def test__sources__not_one(self, mock_progress: mock.AsyncMock, history_dir: Path) -> None:
-        with pytest.raises(ValueError, match="Either an archive or a directory"):
-            await tracks_history_logic(
-                progress=mock_progress,
-                email="test@example.com",
-                archive=history_dir / "my_spotify_data.zip",
-                directory=history_dir,
-                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
-                provider=MusicProvider.SPOTIFY,
-            )
 
     async def test__archive__error__files_deleted(
         self,
@@ -432,7 +421,7 @@ class TestTracksHistoryLogic:
             await tracks_history_logic(
                 progress=mock_progress,
                 email=user.email,
-                archive=archive,
+                source=archive,
                 config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
                 provider=MusicProvider.SPOTIFY,
             )

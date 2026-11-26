@@ -116,7 +116,7 @@ flowchart TB
       "steps": [
         {"phase": "Queue, inside the request"},
         {"from": "client", "to": "api", "text": "<code>POST /api/v1/tracks/streaming-history</code>, the zip archive and the options", "detail": "Multipart, so Swagger can send it; Bearer access token"},
-        {"note": "api", "style": "check", "text": "Checks without extracting: name, type, signature, size", "detail": "<a href=\"#files-go-through-the-storage-port\">Below</a>"},
+        {"note": "api", "style": "check", "text": "Checks without extracting: size, signature, central directory", "detail": "<a href=\"#files-go-through-the-storage-port\">Below</a>"},
         {"from": "api", "to": "fs", "text": "Stores the archive as is, under <code>history/{job_id}/</code>", "detail": "First: a job never points to a file not there yet"},
         {"from": "api", "to": "db", "text": "<code>INSERT</code> the job, <code>pending</code>, <code>published_at</code> empty; <code>pg_notify</code>; commit", "detail": "The notification leaves on commit only: a rollback sends none"},
         {"from": "db", "to": "api", "text": "A job of this kind is already pending or running", "style": "fail", "detail": "The partial unique index refuses it: the archive deleted, <code>409 Conflict</code>"},
@@ -375,7 +375,7 @@ share, and the job's input says where. The streaming history export (#265) is a 
 
 ```mermaid
 flowchart TB
-    UP["The upload"] --> API{"API: name, type,<br/>signature, size"}
+    UP["The upload"] --> API{"API: size,<br/>signature, directory"}
     API -- "refused" --> R1["415, 413:<br/>nothing stored"]:::fail
     API -- "looks right" --> ZIP[["history/{job_id}/archive.zip<br/>as is"]]
     ZIP --> WK{"Worker: extracts,<br/>counting the bytes"}
@@ -387,8 +387,9 @@ flowchart TB
     classDef fail stroke:#b42318,stroke-width:2px
 ```
 
-- **The API checks what it can without extracting**, then stores the archive as is. The name and the media type prove
-  nothing; the zip signature and a readable central directory turn a wrong file away before it is stored. The cap,
+- **The API checks what it can without extracting**, then stores the archive as is. The name and the media type,
+  chosen by the client, prove nothing and are not checked; the zip signature and a readable central directory turn a
+  wrong file away before it is stored, in the use case that queues the job. The cap,
   100 MB, leaves room: an export of a decade weighs about 12. The entries are counted before the directory is read,
   off the event loop: a directory of millions of empty entries would hold the API for seconds.
 - **The worker extracts it, one file at a time,** through the `extract_history_archive` use case, which
@@ -402,7 +403,7 @@ flowchart TB
 
 | A bad upload | Caught by | The client sees |
 |---|---|---|
-| Wrong name or media type, not a zip, unreadable | API | `415` |
+| Not a zip, unreadable | API | `415` |
 | A body over 100 MB | Proxy, before reading it | `413` |
 | Over 100 MB, or over 1,000 entries | API | `413` |
 | An import already pending or running | The unique index | `409`; the archive is deleted |
