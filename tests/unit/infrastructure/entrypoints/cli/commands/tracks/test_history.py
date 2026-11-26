@@ -11,6 +11,7 @@ from museflow.application.inputs.history import ImportStreamingHistoryConfigInpu
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
 from museflow.domain.exceptions import StreamingHistoryInvalidFormatError
 from museflow.domain.exceptions import UserNotFoundError
@@ -67,6 +68,45 @@ class TestTracksHistoryParserCommand:
         output = clean_typer_text(result.output)
         assert "Invalid value for '--directory'" in output
         assert "does not exist" in output
+
+    def test__archive(self, runner: CliRunner, tmp_path: Path) -> None:
+        archive = tmp_path / "my_spotify_data.zip"
+        archive.write_bytes(b"PK\x03\x04")
+
+        result = runner.invoke(app, ["tracks", "history", "--email", "test@example.com", "--archive", str(archive)])
+        assert result.exit_code == 0
+
+    def test__archive__directory(self, runner: CliRunner, tmp_path: Path, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["tracks", "history", "--email", "test@example.com", "--archive", str(tmp_path)])
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--archive'" in output
+        assert "is a directory" in output
+
+    @pytest.mark.parametrize(
+        "sources",
+        [
+            pytest.param(["--archive", "archive.zip", "--directory", "."], id="both"),
+            pytest.param([], id="none"),
+        ],
+    )
+    def test__sources__not_one(
+        self,
+        runner: CliRunner,
+        sources: list[str],
+        clean_typer_text: TextCleaner,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "archive.zip").write_bytes(b"PK\x03\x04")
+
+        result = runner.invoke(app, ["tracks", "history", "--email", "test@example.com", *sources])
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert "Give either --archive or --directory" in output
 
     def test__provider__invalid(self, runner: CliRunner, tmp_path: Path) -> None:
         # fmt: off
@@ -193,6 +233,27 @@ class TestTracksHistoryCommand:
 
         output = clean_typer_text(result.stderr)
         assert "No Streaming_History_Audio_*.json files found in: /bad/path" in output
+
+    def test__archive__too_large(
+        self,
+        mock_tracks_history_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+        tmp_path: Path,
+    ) -> None:
+        mock_tracks_history_logic.side_effect = ArchiveTooLargeError(
+            "Entry 3 of the archive decompresses beyond the caps"
+        )
+
+        result = runner.invoke(
+            app,
+            ["tracks", "history", "--email", "test@example.com", "--directory", str(tmp_path)],
+        )
+        assert result.exit_code == 1
+
+        output = clean_typer_text(result.stderr)
+        assert "Entry 3 of the archive decompresses beyond the caps" in output
+        assert "Error:" not in output
 
     def test__generic_exception(
         self,
@@ -338,4 +399,43 @@ class TestTracksHistoryLogic:
                 provider=MusicProvider.SPOTIFY,
             )
 
+        mock_file_storage.delete.assert_awaited_once_with(user_id=user.id, prefix=self.PREFIX)
+
+    async def test__sources__not_one(self, mock_progress: mock.AsyncMock, history_dir: Path) -> None:
+        with pytest.raises(ValueError, match="Either an archive or a directory"):
+            await tracks_history_logic(
+                progress=mock_progress,
+                email="test@example.com",
+                archive=history_dir / "my_spotify_data.zip",
+                directory=history_dir,
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
+                provider=MusicProvider.SPOTIFY,
+            )
+
+    async def test__archive__error__files_deleted(
+        self,
+        user: User,
+        mock_user_repository: mock.AsyncMock,
+        mock_file_storage: mock.AsyncMock,
+        mock_use_case_cls: mock.Mock,
+        mock_progress: mock.AsyncMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_user_repository.get_by_email.return_value = user
+        archive = tmp_path / "my_spotify_data.zip"
+        archive.write_bytes(b"PK\x03\x04")
+
+        with (
+            mock.patch(f"{self.TARGET_PATH}.extract_history_archive", side_effect=ArchiveTooLargeError()),
+            pytest.raises(ArchiveTooLargeError),
+        ):
+            await tracks_history_logic(
+                progress=mock_progress,
+                email=user.email,
+                archive=archive,
+                config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
+                provider=MusicProvider.SPOTIFY,
+            )
+
+        mock_use_case_cls.return_value.import_history.assert_not_awaited()
         mock_file_storage.delete.assert_awaited_once_with(user_id=user.id, prefix=self.PREFIX)

@@ -91,7 +91,7 @@ museflow llm export       --output backup/llm-usage.yaml
 After a database reset, re-import the history first, then restore (no LLM call, no cost):
 
 ```bash
-museflow tracks history   --directory ~/Downloads/MySpotifyData
+museflow tracks history   --archive ~/Downloads/my_spotify_data.zip
 museflow rate import      --input backup/ratings.yaml
 museflow blacklist import --input backup/blacklist.yaml
 museflow enrich import    --input backup/enrichment.yaml

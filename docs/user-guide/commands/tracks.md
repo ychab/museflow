@@ -4,16 +4,18 @@ Import the streaming history and delete tracks from the library.
 
 ## `tracks history`
 
-Imports the extended streaming history from JSON files (see [Spotify data export](../spotify-data-export.md)).
+Imports the extended streaming history: the zip archive Spotify delivers, or the directory it unzips to (see
+[Spotify data export](../spotify-data-export.md)).
 
 ```bash
-museflow tracks history [--email <email>] --directory <path> [OPTIONS]
+museflow tracks history [--email <email>] (--archive <file> | --directory <path>) [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--directory` | required | Directory containing streaming history JSON files. |
+| `--archive` | | Zip archive of the export, as delivered. |
+| `--directory` | | Directory containing streaming history JSON files. |
 | `--provider` | `spotify` | Music provider to import streaming history from. |
 | `--min-duration-played` | `90` | Minimum duration played in seconds to include. |
 | `--batch-size` | `20` | Number of tracks to upsert per batch (1 to 500). |
@@ -22,17 +24,20 @@ museflow tracks history [--email <email>] --directory <path> [OPTIONS]
 **Prerequisites**
 
 - The user exists.
-- A directory containing the exported `Streaming_History_Audio_*.json` files. Other files of the export
-  (video history, `Userdata.json`, ...) are ignored.
+- Either `--archive` or `--directory`, not both: the zip archive of the export, or a directory containing its
+  `Streaming_History_Audio_*.json` files, wherever they sit in it. Other files of the export (video history,
+  `Userdata.json`, ...) are ignored.
 
-The history files are copied into the file storage (`MUSEFLOW_FILE_STORAGE_DIR`, `.storage/` at the repository root by
-default) for the time of the import, the same path an upload through the API takes, then deleted, also when the import
-fails. Your export directory is left as it is.
+The history files are extracted from the archive, or copied from the directory, into the file storage
+(`MUSEFLOW_FILE_STORAGE_DIR`, `.storage/` at the repository root by default) for the time of the import, the same path
+an upload through the API takes, then deleted, also when the import fails. Your export is left as it is. The archive
+is extracted within the caps of an upload (`MUSEFLOW_HISTORY_EXTRACTED_*`, `MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES`):
+an export of a decade weighs about 12 MB, far below them.
 
 **Example**
 
 ```bash
-museflow tracks history --directory ~/Downloads/MySpotifyData --min-duration-played 30
+museflow tracks history --archive ~/Downloads/my_spotify_data.zip --min-duration-played 30
 ```
 
 **Output.** While it runs, a progress bar on stderr counts the files read, then the tracks saved. Then a green

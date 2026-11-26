@@ -11,10 +11,12 @@ from rich.table import Table
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.ports.progress import ProgressPort
+from museflow.application.use_cases.track_history_archive_extract import extract_history_archive
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryUseCase
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.enums import MusicProvider
+from museflow.domain.exceptions import ArchiveError
 from museflow.domain.exceptions import StreamingHistoryError
 from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
 from museflow.domain.exceptions import UserNotFoundError
@@ -29,15 +31,22 @@ from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_h
 from museflow.infrastructure.utils.formatting import format_duration
 
 
-@app.command("history", help="Import extended streaming history from JSON files.")
+@app.command(
+    "history",
+    help="Import extended streaming history: the zip archive of the export, or a directory of its JSON files.",
+)
 def tracks_history_command(
     email: EmailOption,
+    archive: Annotated[
+        Path | None,
+        typer.Option("--archive", help="Zip archive of the export, as delivered", exists=True, dir_okay=False),
+    ] = None,
     directory: Annotated[
-        Path,
+        Path | None,
         typer.Option(
             "--directory", help="Directory containing streaming history JSON files", exists=True, file_okay=False
         ),
-    ],
+    ] = None,
     provider: Annotated[
         MusicProvider, typer.Option("--provider", help="Music provider to import streaming history from")
     ] = MusicProvider.SPOTIFY,
@@ -49,6 +58,10 @@ def tracks_history_command(
     ] = ImportStreamingHistoryConfigInput.batch_size,
     purge: Annotated[bool, typer.Option("--purge/--no-purge", help="Purge existing tracks before import")] = False,
 ) -> None:
+    # Typer has no exclusive options: one of the two, and only one
+    if (archive is None) == (directory is None):
+        raise typer.BadParameter("Give either --archive or --directory")
+
     start_time = time.perf_counter()
 
     config = ImportStreamingHistoryConfigInput(
@@ -63,6 +76,7 @@ def tracks_history_command(
             report = run_logic(
                 tracks_history_logic(
                     email=email,
+                    archive=archive,
                     directory=directory,
                     config=config,
                     provider=provider,
@@ -71,7 +85,7 @@ def tracks_history_command(
             )
     except UserNotFoundError as e:
         raise typer.BadParameter(f"User not found with email: {email}") from e
-    except StreamingHistoryError as e:
+    except (ArchiveError, StreamingHistoryError) as e:
         typer.secho(str(e), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     except Exception as e:
@@ -101,25 +115,27 @@ def tracks_history_command(
 
 async def tracks_history_logic(
     email: EmailStr,
-    directory: Path,
+    archive: Path | None = None,
+    directory: Path | None = None,
+    *,
     config: ImportStreamingHistoryConfigInput,
     provider: MusicProvider,
     progress: ProgressPort,
 ) -> ImportStreamingHistoryReport:
-    """Puts the export files of the directory into the user's file storage, imports them, then deletes them.
+    """Puts the export files into the user's file storage, extracted from the archive or copied from the directory,
+    imports them, then deletes them.
 
-    The CLI reads the files through the storage like the API does with an upload: one import path for both.
+    The CLI reads the files through the storage like the worker does with an upload: one import path for both.
     """
+    if (archive is None) == (directory is None):
+        raise ValueError("Either an archive or a directory, not both")
+
     wiring = get_wiring()
     uow = wiring.build_unit_of_work()
     streaming_history = wiring.build_streaming_history(provider)
     file_storage = wiring.build_file_storage()
 
     user = await get_user(email=email, uow=uow)
-
-    paths = sorted(directory.glob(streaming_history.file_pattern))
-    if not paths:
-        raise StreamingHistoryFilesNotFoundError(f"No {streaming_history.file_pattern} files found in: {directory}")
 
     use_case = ImportStreamingHistoryUseCase(
         uow=uow,
@@ -128,8 +144,25 @@ async def tracks_history_logic(
         progress=progress,
     )
     try:
-        for path in paths:
-            await file_storage.put(user_id=user.id, key=f"{config.prefix}/{path.name}", content=path.read_bytes())
+        if archive is not None:
+            await extract_history_archive(
+                user=user,
+                archive=archive.read_bytes(),
+                prefix=config.prefix,
+                file_storage=file_storage,
+                archive_extractor=wiring.build_archive_extractor(),
+                streaming_history=streaming_history,
+            )
+        else:
+            paths = sorted(directory.glob(streaming_history.file_pattern))  # type: ignore[union-attr]
+            if not paths:
+                raise StreamingHistoryFilesNotFoundError(
+                    f"No {streaming_history.file_pattern} files found in: {directory}"
+                )
+
+            for path in paths:
+                await file_storage.put(user_id=user.id, key=f"{config.prefix}/{path.name}", content=path.read_bytes())
+
         report = await use_case.import_history(user=user, config=config)
     finally:
         await file_storage.delete(user_id=user.id, prefix=config.prefix)
