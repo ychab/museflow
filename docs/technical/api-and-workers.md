@@ -18,6 +18,7 @@ flowchart LR
     CLIENT["Client<br/>(app, curl)"]
     subgraph RUN["Docker compose"]
         direction LR
+        PX["proxy<br/>nginx, caps the bodies"]
         API["api<br/>FastAPI"]
         MQ["RabbitMQ<br/>broker"]
         RL["relay<br/>publishes the jobs"]
@@ -28,7 +29,8 @@ flowchart LR
     end
     EXT["Spotify<br/>OpenRouter"]
 
-    CLIENT -- "POST: 202 + job ID<br/>GET /jobs/{id}: poll" --> API
+    CLIENT -- "POST: 202 + job ID<br/>GET /jobs/{id}: poll" --> PX
+    PX -- "forwards" --> API
     API -- "job row + NOTIFY" --> PG
     PG -- "LISTEN, unpublished jobs" --> RL
     RL -- "task: job_id, user_id" --> MQ
@@ -50,6 +52,7 @@ flowchart LR
 | Publishing a job | A relay reads the `jobs` table (#261) | The API publishing after its commit: a crash in between loses the message |
 | Files | A storage port on a named volume (#249) | A cloud bucket: a cost for now, one more adapter later |
 | Task queues | Two, by who waits: batch and interactive | One queue: a playlist would wait behind an enrichment |
+| In front of the API | An nginx reverse proxy (#304): the only service a client reaches, capping the request bodies | Uvicorn facing the clients: it receives a body whole before any check |
 | Services | One application, three entrypoints | Microservices: out of scope, see [lessons learned](../product/lessons-learned.md#if-it-grew-services-not-one-app) |
 
 ## The jobs table is the source of truth
@@ -399,6 +402,7 @@ flowchart TB
 | A bad upload | Caught by | The client sees |
 |---|---|---|
 | Wrong name or media type, not a zip, unreadable | API | `415` |
+| A body over 100 MB | Proxy, before reading it | `413` |
 | Over 100 MB, or over 1,000 entries | API | `413` |
 | An import already pending or running | The unique index | `409`; the archive is deleted |
 | A zip bomb | Worker | The job `failed`, `ArchiveTooLargeError` |
@@ -407,8 +411,14 @@ flowchart TB
 
 **Accepted risks.** The API dying between storing the archive and committing its job leaves the archive behind, and a
 job failed after its last try keeps its files: the sweeper of #299 deletes both. Starlette receives the whole body
-before the route checks its size, and before the access token: the cap bounds what is read and stored, and a reverse
-proxy caps the body once deployed (#304).
+before the route checks its size, and before the access token: the proxy refuses a body over the cap first (#304),
+unless the API is reached without it (`make run`, a deployment publishing its port).
+
+**The proxy** (`docker/nginx/default.conf.template`) is the only service of the stack with a published port. A body
+over 1 MB is refused (`413`, a problem details body as the API's), over the archive cap on the upload route: from its
+`Content-Length` before reading it, or as soon as it crosses the cap without one. It sets read timeouts against slow
+clients, and receives a body whole before passing it on, so that a slow upload holds no API worker. The archive cap is
+one value for the proxy and the API (`MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB` in `docker-compose.yml`).
 
 ## API conventions
 

@@ -1,0 +1,43 @@
+# The reverse proxy in front of the API: the only service a client reaches. It refuses a body over its cap before
+# reading it (from its Content-Length, or as soon as it crosses the cap without one), where uvicorn would have received
+# it whole, before any check of the route or the access token. The official image fills the ${...} of this template
+# from the environment at startup (envsubst); nginx's own variables ($host) stay as they are.
+
+upstream museflow_api {
+    server app:8000;
+}
+
+server {
+    listen 80;
+
+    # Every route takes a small JSON body: 1 MB is plenty
+    client_max_body_size 1m;
+    # Against slow clients holding a connection: the time allowed between two reads, not for the whole request
+    client_header_timeout 10s;
+    client_body_timeout 30s;
+    # The body is received whole by nginx, on its disk, before uvicorn gets it: a slow upload holds no API worker
+    proxy_request_buffering on;
+
+    # Refused as the API refuses: an RFC 9457 problem details body, not nginx's HTML page
+    error_page 413 @content_too_large;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # The streaming history archive: the API caps the file, the proxy the whole body (the file and a few form fields).
+    # An archive a few hundred bytes under the cap may be refused here first: a 413 either way.
+    location = /api/v1/tracks/streaming-history {
+        client_max_body_size ${MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB}m;
+        proxy_pass http://museflow_api;
+    }
+
+    location / {
+        proxy_pass http://museflow_api;
+    }
+
+    location @content_too_large {
+        default_type application/problem+json;
+        return 413 '{"type": "about:blank", "title": "Content Too Large", "status": 413, "detail": "The request body is too large", "instance": "$uri"}';
+    }
+}

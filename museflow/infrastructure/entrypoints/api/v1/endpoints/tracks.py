@@ -86,9 +86,9 @@ async def _read_archive(archive: UploadFile) -> bytes:
     Cheap checks that prove nothing on their own, but turn away a wrong file before it is stored; the worker checks
     the content as it extracts it.
 
-    Accepted risk: Starlette receives the whole body before the route runs, on a temporary file, and before the
-    access token is checked: the cap bounds what is read and stored, not what is received. A reverse proxy caps the
-    body once deployed (#304).
+    Starlette receives the whole body before the route runs, on a temporary file, and before the access token is
+    checked: this cap bounds what is read and stored, not what is received. The reverse proxy of the stack refuses a
+    body over it first (#304). Accepted risk: the API reached without it (`make run`) receives any size.
     """
     if not (archive.filename or "").lower().endswith(".zip") or archive.content_type not in ZIP_MEDIA_TYPES:
         raise ArchiveInvalidError(f"Not a zip archive: {archive.content_type}")

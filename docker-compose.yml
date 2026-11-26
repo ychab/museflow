@@ -12,6 +12,8 @@ x-app-env: &app-env
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-dummy-api-key}
   MUSEFLOW_JWT_SIGNING_KEY: ${MUSEFLOW_JWT_SIGNING_KEY:-dummy-jwt-signing-key-wUthyXrnRohATQkaVqIL8RRfdSoSuKQf}
   MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY: ${MUSEFLOW_PROVIDER_TOKEN_ENCRYPTION_KEY:-dummy-token-encryption-key-Hq3vZt8LmRw2KpXc}
+  # The archive cap, the proxy's too: one value for both (docker/nginx/default.conf.template)
+  MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB: &archive-max-size ${MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB:-100}
   # INFO shows uvicorn's access logs (one line per request)
   MUSEFLOW_LOG_LEVEL_THIRD_PARTY: ${MUSEFLOW_LOG_LEVEL_THIRD_PARTY:-WARNING}
 
@@ -126,8 +128,8 @@ services:
     container_name: museflow-app
     environment:
       <<: *app-env
-    ports:
-      - ${APP_PORT_LOCAL_FORWARD:-8000}:8000
+      # Trust the X-Forwarded-* headers of any address: only the proxy reaches the API, which publishes no port
+      FORWARDED_ALLOW_IPS: "*"
     volumes:
       - file_storage:/app/.storage
     depends_on:
@@ -135,6 +137,29 @@ services:
         condition: service_healthy
       migration:
         condition: service_completed_successfully
+    networks:
+      - museflow-network
+    restart: unless-stopped
+
+  proxy:
+    # The only service a client reaches: it caps the request bodies before the API receives them (#304)
+    image: nginx:1.30.8-alpine
+    container_name: museflow-proxy
+    environment:
+      MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB: *archive-max-size
+    ports:
+      - ${APP_PORT_LOCAL_FORWARD:-8000}:80
+    volumes:
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      app:
+        condition: service_healthy
     networks:
       - museflow-network
     restart: unless-stopped
