@@ -1,7 +1,7 @@
 import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 from typing import Final
 
 from celery import Task
@@ -19,6 +19,11 @@ from museflow.infrastructure.entrypoints.worker.main import celery_app
 # use case against the database, as a real task does: the test sees it ran from the user it created.
 
 PASSWORD: Final[str] = "a-test-password"
+
+
+@dataclass(frozen=True, kw_only=True)
+class _StubReport:
+    user_id: str
 
 
 @celery_app.task(name="tests.create_user")
@@ -72,13 +77,13 @@ def job_once_killed_task(self: Task[[str, str], None], job_id: str, user_id: str
     run_job(self, job_id, user_id, _work_once_killed)
 
 
-async def _work(job: Job) -> dict[str, Any] | None:
+async def _work(job: Job) -> _StubReport:
     if job.input.get("fail"):
         raise ValueError("Not worth a retry")
-    return {"user_id": str(job.user_id)}
+    return _StubReport(user_id=str(job.user_id))
 
 
-async def _work_once_killed(job: Job) -> dict[str, Any] | None:
+async def _work_once_killed(job: Job) -> _StubReport:
     started = Path(job.input["started_file"])
 
     # Runs in the process the test kills, which never saves its coverage
