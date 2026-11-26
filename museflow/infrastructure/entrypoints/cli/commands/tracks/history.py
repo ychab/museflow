@@ -150,7 +150,7 @@ async def tracks_history_logic(
                 archive=archive.read_bytes(),
                 prefix=config.prefix,
                 file_storage=file_storage,
-                archive_extractor=wiring.build_archive_extractor(),
+                archive_reader=wiring.build_archive_reader(),
                 streaming_history=streaming_history,
             )
         else:

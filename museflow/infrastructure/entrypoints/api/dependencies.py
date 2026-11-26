@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import jwt
 
+from museflow.application.ports.archive import ArchivePort
 from museflow.application.ports.providers.oauth import ProviderOAuthPort
 from museflow.application.ports.security import AccessTokenManagerPort
 from museflow.application.ports.security import PasswordHasherPort
@@ -67,6 +68,10 @@ def get_state_token_generator(wiring: Annotated[Wiring, Depends(get_wiring)]) ->
 
 def get_file_storage(wiring: Annotated[Wiring, Depends(get_wiring)]) -> FileStoragePort:
     return wiring.build_file_storage()
+
+
+def get_archive_reader(wiring: Annotated[Wiring, Depends(get_wiring)]) -> ArchivePort:
+    return wiring.build_archive_reader()
 
 
 def get_page_params(
@@ -153,5 +158,6 @@ PasswordHasherDep = Annotated[PasswordHasherPort, Depends(get_password_hasher)]
 AccessTokenManagerDep = Annotated[AccessTokenManagerPort, Depends(get_access_token_manager)]
 ProviderOAuthDep = Annotated[ProviderOAuthPort, Depends(get_provider_oauth)]
 FileStorageDep = Annotated[FileStoragePort, Depends(get_file_storage)]
+ArchiveReaderDep = Annotated[ArchivePort, Depends(get_archive_reader)]
 PageParamsDep = Annotated[PageParams, Depends(get_page_params)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]

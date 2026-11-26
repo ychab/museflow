@@ -6,17 +6,17 @@ from museflow.application.use_cases.track_history_archive_extract import extract
 from museflow.domain.entities.user import User
 from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.domain.exceptions import StreamingHistoryFilesNotFoundError
+from museflow.infrastructure.adapters.archive.zip import ArchiveLimits
 from museflow.infrastructure.adapters.archive.zip import ZipArchiveAdapter
 from museflow.infrastructure.adapters.providers.spotify.history import SpotifyStreamingHistoryAdapter
 from museflow.infrastructure.adapters.storage.local import LocalFileStorage
-from museflow.infrastructure.utils.archive import ArchiveLimits
 
 
 class TestExtractHistoryArchive:
     PREFIX: Final[str] = "history/batch/files"
 
     @pytest.fixture
-    def archive_extractor(self) -> ZipArchiveAdapter:
+    def archive_reader(self) -> ZipArchiveAdapter:
         return ZipArchiveAdapter(limits=ArchiveLimits(max_file_size=1024, max_total_size=2048, max_entries=3))
 
     @pytest.mark.parametrize(
@@ -35,14 +35,14 @@ class TestExtractHistoryArchive:
         user: User,
         zip_archive: bytes,
         file_storage: LocalFileStorage,
-        archive_extractor: ZipArchiveAdapter,
+        archive_reader: ZipArchiveAdapter,
     ) -> None:
         files_count = await extract_history_archive(
             user=user,
             archive=zip_archive,
             prefix=self.PREFIX,
             file_storage=file_storage,
-            archive_extractor=archive_extractor,
+            archive_reader=archive_reader,
             streaming_history=SpotifyStreamingHistoryAdapter(),
         )
 
@@ -61,7 +61,7 @@ class TestExtractHistoryArchive:
         user: User,
         zip_archive: bytes,
         file_storage: LocalFileStorage,
-        archive_extractor: ZipArchiveAdapter,
+        archive_reader: ZipArchiveAdapter,
     ) -> None:
         with pytest.raises(StreamingHistoryFilesNotFoundError, match="files found in the archive"):
             await extract_history_archive(
@@ -69,7 +69,7 @@ class TestExtractHistoryArchive:
                 archive=zip_archive,
                 prefix=self.PREFIX,
                 file_storage=file_storage,
-                archive_extractor=archive_extractor,
+                archive_reader=archive_reader,
                 streaming_history=SpotifyStreamingHistoryAdapter(),
             )
 
@@ -83,7 +83,7 @@ class TestExtractHistoryArchive:
         user: User,
         zip_archive: bytes,
         file_storage: LocalFileStorage,
-        archive_extractor: ZipArchiveAdapter,
+        archive_reader: ZipArchiveAdapter,
     ) -> None:
         with pytest.raises(ArchiveTooLargeError):
             await extract_history_archive(
@@ -91,7 +91,7 @@ class TestExtractHistoryArchive:
                 archive=zip_archive,
                 prefix=self.PREFIX,
                 file_storage=file_storage,
-                archive_extractor=archive_extractor,
+                archive_reader=archive_reader,
                 streaming_history=SpotifyStreamingHistoryAdapter(),
             )
 
