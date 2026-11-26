@@ -88,6 +88,22 @@ class TestTrackStreamingHistoryImport:
 
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
 
+    @pytest.mark.parametrize("zip_archive", [{"é.json": b"1"}], indirect=True)
+    async def test__not_zip__directory_unreadable(
+        self,
+        url: str,
+        zip_archive: bytes,
+        user: User,
+        access_token: str,
+        async_client: AsyncClient,
+    ) -> None:
+        # A name flagged UTF-8 that is not: opening the archive raises a UnicodeDecodeError, not a BadZipFile
+        content = zip_archive.replace("é".encode(), b"\xff\xfe")
+
+        response = await async_client.post(url, files={"archive": ("export.zip", content, "application/zip")})
+
+        assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
     async def test__too_large(
         self,
         url: str,

@@ -2,7 +2,6 @@
 
 import io
 import zipfile
-import zlib
 from collections.abc import Iterator
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
@@ -17,15 +16,6 @@ _CENTRAL_DIRECTORY_SIGNATURE: Final[bytes] = b"PK\x01\x02"
 
 # Bytes decompressed at a time: the caps are checked between two reads, so a bomb never gets further than one more
 _READ_CHUNK_SIZE: Final[int] = 1024 * 1024
-# What reading an entry raises on a damaged or unsupported archive: a CRC mismatch or overlapping entries
-# (BadZipFile), an encrypted entry (RuntimeError), an unknown compression (NotImplementedError), corrupt data
-_READ_ERRORS: Final[tuple[type[Exception], ...]] = (
-    zipfile.BadZipFile,
-    RuntimeError,
-    NotImplementedError,
-    zlib.error,
-    EOFError,
-)
 
 
 class ArchiveInvalidError(Exception):
@@ -96,22 +86,28 @@ def _open(content: bytes, max_entries: int) -> zipfile.ZipFile:
     if entries_count > max_entries:
         raise ArchiveTooLargeError(f"The archive holds up to {entries_count} entries, over {max_entries}")
 
+    # Any error: zipfile documents no set of errors on a damaged archive (see `_read`)
     try:
         return zipfile.ZipFile(io.BytesIO(content))
-    except zipfile.BadZipFile as e:
-        raise ArchiveInvalidError("Unreadable zip archive") from e
+    except Exception as e:
+        raise ArchiveInvalidError(f"Unreadable zip archive: {type(e).__name__}") from e
 
 
 def _read(archive: zipfile.ZipFile, entry: zipfile.ZipInfo, rank: int, max_size: int) -> bytes:
     content = bytearray()
 
+    # Any error but our cap: zipfile documents no set of errors on a damaged entry. Fuzzing it (bytes changed at random)
+    # raised BadZipFile, OSError and LZMAError (bzip2, lzma), zlib.error, ValueError, UnicodeDecodeError, EOFError,
+    # NotImplementedError (an unknown compression) and RuntimeError (an encrypted entry). The block only reads.
     try:
         with archive.open(entry) as file:
             while chunk := file.read(_READ_CHUNK_SIZE):
                 content += chunk
                 if len(content) > max_size:
                     raise ArchiveTooLargeError(f"Entry {rank} of the archive decompresses beyond the caps")
-    except _READ_ERRORS as e:
+    except ArchiveTooLargeError:
+        raise
+    except Exception as e:
         raise ArchiveInvalidError(f"Entry {rank} of the archive can't be read: {type(e).__name__}") from e
 
     return bytes(content)
