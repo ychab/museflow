@@ -20,7 +20,7 @@ from museflow.domain.exceptions import UserAlreadyExistsError
 from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
-from museflow.infrastructure.entrypoints.api.schemas.common import ProblemDetails
+from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
 from museflow.infrastructure.utils.archive import ArchiveInvalidError
 from museflow.infrastructure.utils.archive import ArchiveTooLargeError
 

@@ -1,8 +1,8 @@
+"""The schemas every version of the API shares: its errors, its paging parameters, its health check."""
+
 from typing import Any
 
 from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
 
 
 class ProblemDetails(BaseModel):
@@ -21,21 +21,6 @@ class ProblemDetails(BaseModel):
 class PageParams(BaseModel):
     limit: int
     offset: int
-
-
-class PageResponse[T](BaseModel):
-    """One page of a collection, paged by offset."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    items: list[T]
-    total: int = Field(description="How many items the whole collection holds, all pages together")
-    limit: int
-    offset: int
-
-
-class SuccessResponse(BaseModel):
-    message: str
 
 
 class HealthCheckResponse(BaseModel):

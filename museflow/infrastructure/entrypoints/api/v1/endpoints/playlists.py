@@ -9,8 +9,8 @@ from museflow.domain.enums import PlaylistType
 from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import PageParamsDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
-from museflow.infrastructure.entrypoints.api.schemas.common import PageResponse
-from museflow.infrastructure.entrypoints.api.schemas.playlists import PlaylistResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.common import PageResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.playlists import PlaylistResponse
 
 router = APIRouter()
 

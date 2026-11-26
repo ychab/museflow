@@ -140,9 +140,10 @@ The layering is enforced by import-linter: the contracts live in `pyproject.toml
   an option several entrypoints take is an alias (`CurrentUserDep` in `api/dependencies.py`, `EmailOption` in
   `cli/options.py`). A parameter without a default after one with a default makes the parameters keyword-only (`*`)
   rather than reordering them; a mutable or computed default goes in `default_factory`.
-- **API schemas** (`entrypoints/api/schemas/`): one module per endpoint module, named alike (`schemas/playlists.py`
-  for `v1/endpoints/playlists.py`); `schemas/common.py` holds what every theme reuses (`ProblemDetails`,
-  `PageResponse[T]`, `SuccessResponse`).
+- **API schemas** belong to their version, part of its contract: `v1/schemas/`, one module per endpoint module, named
+  alike (`v1/schemas/playlists.py` for `v1/endpoints/playlists.py`); `v1/schemas/common.py` holds what every theme of
+  the version reuses (`PageResponse[T]`, `SuccessResponse`). `api/schemas.py` holds only what every version shares
+  with the app itself: the error body (`ProblemDetails`), the paging parameters, the health check.
 - **API errors** (`entrypoints/api/errors.py`): a route catches no domain exception. Each one it lets through gets a
   `Problem` (status, fixed detail) in `PROBLEMS`, answered as an RFC 9457 problem details body; another user's object
   is a 404, as an unknown one. A collection is paged with `PageParamsDep` and `PageResponse[T]`.
