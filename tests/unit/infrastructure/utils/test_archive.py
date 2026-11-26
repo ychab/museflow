@@ -1,3 +1,5 @@
+import io
+import zipfile
 from typing import Final
 
 import pytest
@@ -67,4 +69,15 @@ class TestExtractFiles:
         damaged[zip_archive.index(b"_1.json") + len(b"_1.json") + 4] ^= 0xFF
 
         with pytest.raises(ArchiveInvalidError, match="Entry 0 of the archive can't be read"):
+            list(extract_files(bytes(damaged), pattern=PATTERN, limits=limits))
+
+    def test__damaged_entry__bzip2(self, limits: ArchiveLimits) -> None:
+        # Another compression, other errors: bzip2 raises an OSError on corrupt data
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_BZIP2) as archive:
+            archive.writestr("Streaming_History_Audio_1.json", b"a few plays, " * 100)
+        damaged = bytearray(buffer.getvalue())
+        damaged[damaged.index(b"_1.json") + len(b"_1.json") + 10] ^= 0xFF
+
+        with pytest.raises(ArchiveInvalidError, match="Entry 0 of the archive can't be read: OSError"):
             list(extract_files(bytes(damaged), pattern=PATTERN, limits=limits))
