@@ -59,10 +59,10 @@ does not load) into the terminal. See [`provider`](commands/provider.md).
 
 ### 3. Import the streaming history
 
-Request the export first ([Spotify data export](spotify-data-export.md)), unzip it, then:
+Request the export first ([Spotify data export](spotify-data-export.md)), then:
 
 ```bash
-museflow tracks history --directory ~/Downloads/MySpotifyData
+museflow tracks history --archive ~/Downloads/my_spotify_data.zip
 ```
 
 Short plays are ignored (90 seconds by default), and tracks are stored with their play count and first/last

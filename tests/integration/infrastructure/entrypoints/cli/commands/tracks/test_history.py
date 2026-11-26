@@ -62,3 +62,39 @@ class TestTracksHistoryLogic:
         # The export files were in the user's storage during the import, and are deleted after it
         assert keys_during_import == [f"{self.PREFIX}/{path.name}" for path in sorted(HISTORY_DIR.iterdir())]
         assert await file_storage.list_keys(user_id=user.id, prefix=self.PREFIX) == []
+
+    async def test__archive__nominal(
+        self,
+        user: User,
+        mock_use_case: mock.AsyncMock,
+        zip_archive: bytes,
+        file_storage: LocalFileStorage,
+        progress: RichProgressAdapter,
+        tmp_path: Path,
+    ) -> None:
+        archive = tmp_path / "my_spotify_data.zip"
+        archive.write_bytes(zip_archive)
+        keys_during_import: list[str] = []
+
+        async def import_history(
+            user: User, config: ImportStreamingHistoryConfigInput
+        ) -> ImportStreamingHistoryReport:
+            keys_during_import.extend(await file_storage.list_keys(user_id=user.id, prefix=config.prefix))
+            return ImportStreamingHistoryReport(items_read=6)
+
+        mock_use_case.import_history.side_effect = import_history
+
+        report = await tracks_history_logic(
+            progress=progress,
+            email=user.email,
+            archive=archive,
+            config=ImportStreamingHistoryConfigInput(prefix=self.PREFIX),
+            provider=MusicProvider.SPOTIFY,
+        )
+
+        assert report.items_read == 6
+        # The files extracted from the archive were in the user's storage during the import, and are deleted after it
+        assert keys_during_import == [
+            f"{self.PREFIX}/{rank}/{path.name}" for rank, path in enumerate(sorted(HISTORY_DIR.iterdir()))
+        ]
+        assert await file_storage.list_keys(user_id=user.id, prefix=self.PREFIX) == []

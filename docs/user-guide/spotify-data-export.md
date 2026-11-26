@@ -10,7 +10,8 @@ year.
 2. In the **Download your data** section, select **Extended streaming history**.
 3. Confirm the request, then confirm it again from the email that Spotify sends.
 4. Wait. Spotify states that it can take **up to 30 days**; it is often faster.
-5. An email arrives with a download link. Download the **ZIP** archive and unzip it.
+5. An email arrives with a download link. Download the **ZIP** archive: MuseFlow reads it as is, no need to unzip
+   it.
 
 !!! note
     Spotify occasionally changes the wording and layout of the privacy page. Look for the extended streaming
@@ -29,8 +30,8 @@ Streaming_History_Audio_2021-2024_2.json
 The other files of the export (video history, user data, and so on) are not needed.
 
 !!! note
-    `tracks history` only reads the `Streaming_History_Audio_*.json` files of the directory it is given. The other
-    files of the export can stay in the folder, so you can point `--directory` at the unzipped export as is.
+    `tracks history` only reads the `Streaming_History_Audio_*.json` files, from the archive (`--archive`) or from the
+    directory it unzips to (`--directory`). The other files of the export can stay where they are.
 
 ## What MuseFlow reads
 
@@ -67,7 +68,7 @@ IDs is merged into one track with the combined play times.
 ## Importing
 
 ```bash
-museflow tracks history --directory ~/Downloads/MySpotifyData
+museflow tracks history --archive ~/Downloads/my_spotify_data.zip
 ```
 
-See [`tracks history`](commands/tracks.md#tracks-history) for all options and the printed report.
+Or, if you unzipped it already: `--directory ~/Downloads/MySpotifyData`. See [`tracks history`](commands/tracks.md#tracks-history) for all options and the printed report.

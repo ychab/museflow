@@ -28,7 +28,7 @@ Everything runs on the user's own machine; the only outbound traffic is to OpenR
 | LLM usage | `museflow_llm_usage` | Calls, tokens and cost per command run, step and model; no prompt or reply content |
 | User | `museflow_user` | Email and Argon2 password hash |
 | Spotify OAuth tokens | `museflow_auth_token` | Access and refresh token, encrypted (see [Token encryption](token-encryption.md)) |
-| Raw export files | Wherever the user keeps them; a copy in the file storage (`MUSEFLOW_FILE_STORAGE_DIR`, `.storage/` by default) during an import | `tracks history` copies the history files under the user's own directory, imports them, then deletes the copy, also when the import fails. The originals are never modified |
+| Raw export files | Wherever the user keeps them; a copy in the file storage (`MUSEFLOW_FILE_STORAGE_DIR`, `.storage/` by default) during an import | `tracks history` extracts the history files from the archive, or copies them from the directory, under the user's own directory, imports them, then deletes the copy, also when the import fails. The originals are never modified |
 
 ## What is dropped at import
 
