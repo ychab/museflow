@@ -257,6 +257,12 @@ every annotation of the class that uses it (`list[Track]`) then names the method
   `logger.warning(..., exc_info=True)` when the run goes on; the message gives the context. An expected error that
   its message explains (a rate limit, a rejected query) logs no traceback.
 - Never log secrets (tokens, passwords): log IDs.
+- Catch the exceptions you expect, by name. `except Exception` only where every failure gets the same answer, never
+  to silence one:
+  - a boundary that cleans up, fails the job or shows the error, then raises again or exits (`worker/jobs.py`);
+  - a library fed untrusted input whose errors are no documented contract, turned into one exception of ours
+    (`zipfile` on an upload, `infrastructure/utils/archive.py`): the `try` holds only that call, our own exceptions
+    raised inside are raised again first, and a comment says why.
 - Domain exceptions live in `domain/exceptions.py`; adapter-specific ones in their adapter package.
 - An exception ends in `Error`, as in the standard library (`ValueError`): `UserNotFoundError`, even when the caller
   handles it as an expected outcome (`TasteProfileBuildPausedError`). Only a control-flow signal that never reaches a
