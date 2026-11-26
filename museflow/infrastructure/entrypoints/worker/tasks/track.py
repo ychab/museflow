@@ -4,21 +4,18 @@ from celery import Task
 
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
 from museflow.application.inputs.history import ImportStreamingHistoryJobInput
-from museflow.application.ports.storage import FileStoragePort
+from museflow.application.use_cases.track_history_archive_extract import extract_history_archive
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryUseCase
 from museflow.application.use_cases.user_get import get_user_by_id
 from museflow.domain.entities.job import Job
 from museflow.domain.enums import JobKind
 from museflow.infrastructure.adapters.progress.log import LogProgressAdapter
-from museflow.infrastructure.config.settings.app import app_settings
 from museflow.infrastructure.entrypoints.worker.const import JOB_TASK_NAMES
 from museflow.infrastructure.entrypoints.worker.const import TRANSIENT_ERRORS
 from museflow.infrastructure.entrypoints.worker.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.worker.jobs import run_job
 from museflow.infrastructure.entrypoints.worker.main import celery_app
-from museflow.infrastructure.utils.archive import ArchiveLimits
-from museflow.infrastructure.utils.archive import extract_files
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +34,7 @@ async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
     wiring = get_wiring()
     uow = wiring.build_unit_of_work()
     file_storage = wiring.build_file_storage()
+    archive_extractor = wiring.build_archive_extractor()
     job_in = ImportStreamingHistoryJobInput.model_validate(job.input)
     streaming_history = wiring.build_streaming_history(job_in.provider)
 
@@ -55,7 +53,21 @@ async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
 
     try:
         user = await get_user_by_id(job.user_id, uow=uow)
-        await _extract_archive(job, job_in, pattern=streaming_history.file_pattern, file_storage=file_storage)
+        archive = await file_storage.get(user_id=job.user_id, key=job_in.archive_key)
+
+        files_count = await extract_history_archive(
+            user=user,
+            archive=archive,
+            prefix=job_in.files_prefix,
+            file_storage=file_storage,
+            archive_extractor=archive_extractor,
+            streaming_history=streaming_history,
+        )
+        logger.info(
+            f"Job {job.id}: archive extracted, {files_count} file(s)",
+            extra={"job_id": str(job.id), "files_count": files_count},
+        )
+
         report = await use_case.import_history(user=user, config=config)
     except TRANSIENT_ERRORS:
         # Kept for the next try. Accepted risk: after the last one, the job fails with its files left, until the
@@ -67,31 +79,3 @@ async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
 
     await file_storage.delete(user_id=job.user_id, prefix=job_in.prefix)
     return report
-
-
-async def _extract_archive(
-    job: Job,
-    job_in: ImportStreamingHistoryJobInput,
-    pattern: str,
-    file_storage: FileStoragePort,
-) -> None:
-    archive = await file_storage.get(user_id=job.user_id, key=job_in.archive_key)
-
-    limits = ArchiveLimits(
-        max_file_size=app_settings.HISTORY_EXTRACTED_FILE_MAX_SIZE_MB * 1024 * 1024,
-        max_total_size=app_settings.HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB * 1024 * 1024,
-        max_entries=app_settings.HISTORY_UPLOAD_ARCHIVE_MAX_ENTRIES,
-    )
-
-    # One file in memory at a time. Each under a folder of its rank in the archive: two files of the same name, from
-    # two folders of the archive, are both kept (the import skips the plays saved twice).
-    files_count = 0
-    for archive_file in extract_files(archive, pattern=pattern, limits=limits):
-        key = f"{job_in.files_prefix}/{archive_file.rank}/{archive_file.name}"
-        await file_storage.put(user_id=job.user_id, key=key, content=archive_file.content)
-        files_count += 1
-
-    logger.info(
-        f"Job {job.id}: archive extracted, {files_count} file(s)",
-        extra={"job_id": str(job.id), "files_count": files_count},
-    )

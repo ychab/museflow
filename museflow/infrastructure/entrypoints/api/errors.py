@@ -12,6 +12,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from museflow.domain.exceptions import ArchiveInvalidError
+from museflow.domain.exceptions import ArchiveTooLargeError
 from museflow.domain.exceptions import JobAlreadyActiveError
 from museflow.domain.exceptions import JobNotFoundError
 from museflow.domain.exceptions import ProviderExchangeCodeError
@@ -21,8 +23,6 @@ from museflow.domain.exceptions import UserEmailAlreadyExistsError
 from museflow.domain.exceptions import UserInactiveError
 from museflow.domain.exceptions import UserInvalidCredentialsError
 from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
-from museflow.infrastructure.utils.archive import ArchiveInvalidError
-from museflow.infrastructure.utils.archive import ArchiveTooLargeError
 
 logger = logging.getLogger(__name__)
 

@@ -391,7 +391,8 @@ flowchart TB
   nothing; the zip signature and a readable central directory turn a wrong file away before it is stored. The cap,
   100 MB, leaves room: an export of a decade weighs about 12. The entries are counted before the directory is read,
   off the event loop: a directory of millions of empty entries would hold the API for seconds.
-- **The worker extracts it, one file at a time.** The caps count the bytes really decompressed, never the sizes the
+- **The worker extracts it, one file at a time,** through the `extract_history_archive` use case, which
+  `tracks history --archive` runs as well, within the same caps. The caps count the bytes really decompressed, never the sizes the
   archive declares, which a zip bomb fakes: 100 MB a file (the import reads each whole), 1 GB in all, 1,000 entries.
 - **An entry's path is never used**, only its file name: `../../` leads nowhere. Each file goes in a folder of its
   rank in the archive, so two files of the same name, from two folders, are both kept: the import skips the plays

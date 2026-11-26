@@ -175,6 +175,20 @@ class DiscoveryTasteStrategyError(Exception): ...
 class FileStorageKeyNotFoundError(Exception): ...
 
 
+# --- Archive exceptions ---
+
+
+class ArchiveError(Exception): ...
+
+
+class ArchiveInvalidError(ArchiveError):
+    """The file is not a zip archive, or one that can't be read: damaged, encrypted."""
+
+
+class ArchiveTooLargeError(ArchiveError):
+    """The archive, or what it extracts to, goes beyond a cap."""
+
+
 # --- Streaming history exceptions ---
 
 
