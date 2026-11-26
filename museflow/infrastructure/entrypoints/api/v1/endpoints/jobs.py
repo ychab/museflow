@@ -7,8 +7,8 @@ from museflow.application.use_cases.job_list import get_jobs
 from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import PageParamsDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
-from museflow.infrastructure.entrypoints.api.schemas.common import PageResponse
-from museflow.infrastructure.entrypoints.api.schemas.jobs import JobResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.common import PageResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
 
 router = APIRouter()
 

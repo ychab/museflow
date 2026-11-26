@@ -30,7 +30,7 @@ from museflow.infrastructure.config.settings.spotify import spotify_settings
 from museflow.infrastructure.entrypoints.api.const import API_V1_PREFIX
 from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_DEFAULT
 from museflow.infrastructure.entrypoints.api.const import PAGE_LIMIT_MAX
-from museflow.infrastructure.entrypoints.api.schemas.common import PageParams
+from museflow.infrastructure.entrypoints.api.schemas import PageParams
 from museflow.infrastructure.entrypoints.wiring import Wiring
 
 logger = logging.getLogger(__name__)

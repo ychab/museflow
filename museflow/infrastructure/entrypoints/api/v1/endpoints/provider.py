@@ -12,9 +12,9 @@ from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import ProviderOAuthDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.dependencies import get_state_token_generator
-from museflow.infrastructure.entrypoints.api.schemas.common import SuccessResponse
-from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectCompleteRequest
-from museflow.infrastructure.entrypoints.api.schemas.provider import ProviderConnectResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.common import SuccessResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.provider import ProviderConnectCompleteRequest
+from museflow.infrastructure.entrypoints.api.v1.schemas.provider import ProviderConnectResponse
 
 router = APIRouter()
 
