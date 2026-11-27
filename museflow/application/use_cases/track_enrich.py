@@ -134,7 +134,9 @@ class EnrichTracksUseCase:
                 continue
             consecutive_failures = 0
 
-            # One block per batch: a paid batch survives a later failure.
+            # One block per batch: a paid batch survives a later failure, and a run that resumes skips its tracks.
+            # Accepted risk: this write failing (the database unreachable) loses the batch, which the next try pays
+            # again; one batch at most.
             async with self._uow as uow:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
 

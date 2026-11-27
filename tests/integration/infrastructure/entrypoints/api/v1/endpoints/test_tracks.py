@@ -3,7 +3,9 @@ from httpx import AsyncClient
 
 import pytest
 
+from museflow.application.inputs.enrich import EnrichTracksJobInput
 from museflow.domain.entities.user import User
+from museflow.domain.enums import JobKind
 from museflow.domain.enums import JobStatus
 from museflow.infrastructure.adapters.storage.local import LocalFileStorage
 from museflow.infrastructure.config.settings.app import app_settings
@@ -132,5 +134,57 @@ class TestTrackStreamingHistoryImport:
         await JobModelFactory.create_async(user_id=user.id, status=JobStatus.PENDING)
 
         response = await async_client.post(url, files={"archive": ("export.zip", zip_archive, "application/zip")})
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+
+
+class TestTrackEnrich:
+    @pytest.fixture
+    def url(self) -> str:
+        return app.url_path_for("track_enrich")
+
+    async def test__not_authenticated(self, url: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    async def test__nominal(self, url: str, user: User, access_token: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={"fields": ["mood", "genre", "mood"]})
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        response_data = response.json()
+        assert response.headers["Location"] == app.url_path_for("job_get", job_id=response_data["id"])
+        assert response_data["kind"] == "track_enrich"
+        assert response_data["status"] == JobStatus.PENDING
+        assert response_data["input"] == {"fields": ["genre", "mood"]}
+        assert response_data["result"] is None
+
+    async def test__fields__default_all(self, url: str, access_token: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={})
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert response.json()["input"] == {"fields": ["genre", "locale", "mood"]}
+
+    @pytest.mark.parametrize("fields", [[], ["tempo"]], ids=["empty", "unknown"])
+    async def test__fields__invalid(
+        self,
+        url: str,
+        fields: list[str],
+        access_token: str,
+        async_client: AsyncClient,
+    ) -> None:
+        response = await async_client.post(url, json={"fields": fields})
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    async def test__already_active(self, url: str, user: User, access_token: str, async_client: AsyncClient) -> None:
+        await JobModelFactory.create_async(
+            user_id=user.id,
+            kind=JobKind.TRACK_ENRICH,
+            status=JobStatus.PENDING,
+            input=EnrichTracksJobInput().model_dump(mode="json"),
+        )
+
+        response = await async_client.post(url, json={})
 
         assert response.status_code == status.HTTP_409_CONFLICT

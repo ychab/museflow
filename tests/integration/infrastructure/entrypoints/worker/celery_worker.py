@@ -68,6 +68,10 @@ class CeleryWorker:
             "MUSEFLOW_HISTORY_EXTRACTED_FILE_MAX_SIZE_MB": "1",
             "MUSEFLOW_HISTORY_EXTRACTED_TOTAL_MAX_SIZE_MB": "2",
             "MUSEFLOW_LOG_HANDLERS_WORKER": '["console"]',
+            # The LLM calls go to WireMock, tried once
+            "OPENROUTER_BASE_URL": os.environ["WIREMOCK_OPENROUTER_BASE_URL"],
+            "OPENROUTER_VERIFY_SSL": "false",
+            "OPENROUTER_HTTP_MAX_RETRIES": "1",
             # A retry without waiting
             "MUSEFLOW_WORKER_TASK_RETRY_BACKOFF_MAX_SECONDS": "1",
         }

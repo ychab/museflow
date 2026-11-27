@@ -68,6 +68,7 @@ class JobKind(StrEnum):
     """What a background job runs: at most one job of each kind runs per user at a time."""
 
     TRACK_HISTORY_IMPORT = "track_history_import"  # the streaming history import (#265)
+    TRACK_ENRICH = "track_enrich"  # the enrichment of the tracks missing a field (#262): paid LLM batches
 
 
 class JobStatus(StrEnum):

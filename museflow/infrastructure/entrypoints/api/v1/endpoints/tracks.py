@@ -8,7 +8,9 @@ from fastapi import Response
 from fastapi import UploadFile
 from fastapi import status
 
+from museflow.application.inputs.enrich import EnrichTracksJobInput
 from museflow.application.inputs.history import ImportStreamingHistoryConfigInput
+from museflow.application.use_cases.track_enrich_queue import queue_track_enrichment
 from museflow.application.use_cases.track_history_import_queue import queue_history_import
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.entrypoints.api.dependencies import ArchiveReaderDep
@@ -16,6 +18,7 @@ from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import FileStorageDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
+from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JOB_RESPONSE_ADAPTER
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
 
 router = APIRouter()
@@ -68,4 +71,29 @@ async def import_streaming_history(
     )
 
     response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
-    return JobResponse.model_validate(job)
+    return JOB_RESPONSE_ADAPTER.validate_python(job, from_attributes=True)
+
+
+@router.post(
+    "/enrichment",
+    name="track_enrich",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={status.HTTP_409_CONFLICT: {"model": ProblemDetails, "description": "An enrichment is already running"}},
+)
+async def enrich_tracks(
+    *,
+    job_in: EnrichTracksJobInput,
+    request: Request,
+    response: Response,
+    current_user: CurrentUserDep,
+    uow: UnitOfWorkDep,
+) -> JobResponse:
+    """Queues the enrichment of the tracks missing a field (genres, moods, sung languages) by an LLM: poll the job it
+    answers until it is done or failed.
+
+    A job that failed midway left the tracks it enriched saved: queue another one, which enriches the rest.
+    """
+    job = await queue_track_enrichment(user=current_user, job_in=job_in, uow=uow)
+
+    response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
+    return JOB_RESPONSE_ADAPTER.validate_python(job, from_attributes=True)

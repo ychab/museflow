@@ -4,6 +4,7 @@ from typing import Any
 from polyfactory import Use
 
 from museflow.application.inputs.history import ImportStreamingHistoryJobInput
+from museflow.domain.enums import JobKind
 from museflow.domain.enums import JobStatus
 from museflow.domain.enums import MusicProvider
 from museflow.infrastructure.adapters.database.models.job import JobModel
@@ -15,8 +16,9 @@ from tests.integration.factories.models.user import UserModelFactory
 class JobModelFactory(BaseModelFactory[JobModel]):
     __model__ = JobModel
 
+    # A history import by default, its input with it: a kind and an input of another kind go together
+    kind = JobKind.TRACK_HISTORY_IMPORT
     status = JobStatus.PENDING
-    # The input of the only kind of job, a history import
     input: Use[[], dict[str, Any]] = Use(
         lambda: ImportStreamingHistoryJobInput(
             prefix=f"history/{uuid.uuid4()}",

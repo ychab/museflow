@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import Annotated
+from typing import Final
 from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import TypeAdapter
 
+from museflow.domain.enums import EnrichField
 from museflow.domain.enums import JobKind
 from museflow.domain.enums import JobStatus
 from museflow.domain.enums import MusicProvider
@@ -34,20 +38,44 @@ class TrackHistoryImportJobResultResponse(BaseModel):
     tracks_purged: int
 
 
-class TrackHistoryImportJobResponse(BaseModel):
+class TrackEnrichJobInputResponse(BaseModel):
+    fields: list[EnrichField]
+
+
+class TrackEnrichJobResultResponse(BaseModel):
+    """The report of the enrichment. A job resumed after its worker died counts the tracks enriched by its last try
+    only."""
+
+    enriched_count: int
+    error_count: int = Field(description="The batches of tracks that failed: their tracks are left for the next job")
+
+
+class _JobResponse(BaseModel):
+    """What every kind of job answers; each kind adds its `kind`, `input` and `result`."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    kind: Literal[JobKind.TRACK_HISTORY_IMPORT]
     status: JobStatus
-    input: TrackHistoryImportJobInputResponse
-    result: TrackHistoryImportJobResultResponse | None = Field(description="What the job returned, once done")
     error: str | None = Field(description="Why the job failed, once failed: the name of the error")
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
 
 
-# A job of any kind: one response per kind, its input and result typed. The next kind turns it into a union
-# discriminated by `kind` (`Annotated[A | B, Field(discriminator="kind")]`), validated with a `TypeAdapter`.
-JobResponse = TrackHistoryImportJobResponse
+class TrackHistoryImportJobResponse(_JobResponse):
+    kind: Literal[JobKind.TRACK_HISTORY_IMPORT]
+    input: TrackHistoryImportJobInputResponse
+    result: TrackHistoryImportJobResultResponse | None = Field(description="What the job returned, once done")
+
+
+class TrackEnrichJobResponse(_JobResponse):
+    kind: Literal[JobKind.TRACK_ENRICH]
+    input: TrackEnrichJobInputResponse
+    result: TrackEnrichJobResultResponse | None = Field(description="What the job returned, once done")
+
+
+# A job of any kind, its input and result typed by its `kind`
+JobResponse = Annotated[TrackHistoryImportJobResponse | TrackEnrichJobResponse, Field(discriminator="kind")]
+
+JOB_RESPONSE_ADAPTER: Final[TypeAdapter[JobResponse]] = TypeAdapter(JobResponse)

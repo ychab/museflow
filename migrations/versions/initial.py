@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 03b29f673af3
+Revision ID: e5f3a896e1ca
 Revises:
-Create Date: 2026-11-22 22:33:11.317580
+Create Date: 2026-11-27 08:48:22.920167
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '03b29f673af3'
+revision: str = 'e5f3a896e1ca'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -81,7 +81,7 @@ def upgrade() -> None:
     op.create_table('museflow_job',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('kind', sa.Enum('TRACK_HISTORY_IMPORT', name='jobkind'), nullable=False),
+    sa.Column('kind', sa.Enum('TRACK_HISTORY_IMPORT', 'TRACK_ENRICH', name='jobkind'), nullable=False),
     sa.Column('status', sa.Enum('PENDING', 'RUNNING', 'DONE', 'FAILED', name='jobstatus'), nullable=False),
     sa.Column('input', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('result', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
