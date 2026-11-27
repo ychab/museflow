@@ -165,6 +165,22 @@ class TestTasteBuildParserCommand:
         output = clean_typer_text(result.output)
         assert f"Invalid value for '--track-limit': {expected_msg}" in output
 
+    @pytest.mark.parametrize(
+        "name",
+        [
+            pytest.param("my profile", id="space"),
+            pytest.param("rock/indie", id="slash"),
+            pytest.param("é", id="accent"),
+            pytest.param("a" * 65, id="too_long"),
+        ],
+    )
+    def test__name__invalid(self, runner: CliRunner, name: str, clean_typer_text: TextCleaner) -> None:
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", name])
+        assert result.exit_code != 0
+
+        output = clean_typer_text(result.output)
+        assert "Invalid value for '--name': letters, digits, '-' and '_' only, 64 at most" in output
+
 
 class TestTasteBuildCommand:
     @pytest.fixture(autouse=True)

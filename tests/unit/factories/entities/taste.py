@@ -32,6 +32,8 @@ class TasteProfileDataFactory(TypedDictFactory[TasteProfileData]):
 class TasteProfileFactory(DataclassFactory[TasteProfile]):
     __model__ = TasteProfile
 
+    name = Use(DataclassFactory.__faker__.slug)
+
     profiler_metadata: dict[str, Any] = {
         "gateway": "openrouter",
         "steps": {

@@ -158,8 +158,8 @@ class TestTasteViewLogic:
 class TestGenerateProfileHtmlContent:
     def test__escapes_profile_text(self) -> None:
         script = "<script>alert(1)</script>"
+        # The name, a slug, holds no markup: the AI-written text and the model ids may
         taste_profile = TasteProfileFactory.build(
-            name=script,
             profile=TasteProfileDataFactory.build(
                 personality_archetype=script,
                 life_phase_insights=[script],
@@ -171,4 +171,4 @@ class TestGenerateProfileHtmlContent:
         content = generate_profile_html_content(taste_profile)
 
         assert "<script>" not in content
-        assert content.count("&lt;script&gt;alert(1)&lt;/script&gt;") == 5
+        assert content.count("&lt;script&gt;alert(1)&lt;/script&gt;") == 4

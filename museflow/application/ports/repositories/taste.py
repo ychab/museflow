@@ -9,7 +9,12 @@ from museflow.domain.value_objects.taste import TasteProfileData
 
 class TasteProfileRepository(ABC):
     @abstractmethod
-    async def get_list(self, user_id: uuid.UUID) -> list[TasteProfile]: ...
+    async def get_list(self, user_id: uuid.UUID, limit: int | None = None, offset: int = 0) -> list[TasteProfile]:
+        """Return the user's profiles, the last updated first. `limit` and `offset` page them; no limit returns them all."""
+        ...
+
+    @abstractmethod
+    async def count(self, user_id: uuid.UUID) -> int: ...
 
     @abstractmethod
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None: ...

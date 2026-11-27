@@ -14,7 +14,7 @@ museflow taste build [--email <email>] --name <name> [OPTIONS]
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | every profile | Profile name (unique per user). |
+| `--name` | every profile | Profile name (unique per user): letters, digits, `-` and `_`, 64 at most, as it keys the profile in the API's URLs. |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10): the periods are cut from their plays only. |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000), capped by the tracks played at least once. A track played in several periods takes a seed in each. |

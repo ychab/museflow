@@ -147,3 +147,16 @@ class TestTasteProfileBuildSQLRepository:
         await taste_build_repository.release(user.id, lease_db.name, uuid.uuid4())
 
         assert await self._get_lease(async_session_db, user, lease_db.name) is not None
+
+    @pytest.mark.parametrize(("lease_db", "expected"), [(10, True), (-10, False)], indirect=["lease_db"])
+    async def test__is_held(
+        self,
+        user: User,
+        lease_db: TasteProfileBuildModel,
+        expected: bool,
+        taste_build_repository: TasteProfileBuildRepository,
+    ) -> None:
+        assert await taste_build_repository.is_held(user.id, lease_db.name) is expected
+
+    async def test__is_held__no_lease(self, user: User, taste_build_repository: TasteProfileBuildRepository) -> None:
+        assert await taste_build_repository.is_held(user.id, "main") is False

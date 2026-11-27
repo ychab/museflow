@@ -76,6 +76,22 @@ class TestTasteProfileSQLRepository:
         result = await taste_profile_repository.get(user_id=uuid.uuid4(), name="my-profile")
         assert result is None
 
+    async def test__get_list__paged(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
+        profiles_db = [await TasteProfileModelFactory.create_async(user_id=user.id) for _ in range(3)]
+        await TasteProfileModelFactory.create_async()  # Another user
+
+        result = await taste_profile_repository.get_list(user_id=user.id, limit=2, offset=1)
+
+        # The last updated first: the page skips the latest one
+        assert [profile.id for profile in result] == [profiles_db[1].id, profiles_db[0].id]
+
+    async def test__count(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
+        for _ in range(2):
+            await TasteProfileModelFactory.create_async(user_id=user.id)
+        await TasteProfileModelFactory.create_async()  # Another user
+
+        assert await taste_profile_repository.count(user_id=user.id) == 2
+
     async def test__get_latest__found(self, user: User, taste_profile_repository: TasteProfileRepository) -> None:
         older_db = await TasteProfileModelFactory.create_async(user_id=user.id)
         newer_db = await TasteProfileModelFactory.create_async(user_id=user.id)

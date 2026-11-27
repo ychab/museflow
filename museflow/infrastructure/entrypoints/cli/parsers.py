@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from typing import Annotated
 from typing import Final
@@ -11,6 +12,7 @@ from pydantic.fields import FieldInfo
 import typer
 
 from museflow.application.inputs.user import UserCreateInput
+from museflow.domain.const import TASTE_PROFILE_NAME_PATTERN
 from museflow.domain.types import LocaleCode
 from museflow.domain.utils.text import validate_locale
 from museflow.infrastructure.types import LogHandler
@@ -52,6 +54,13 @@ def parse_locale(value: str) -> LocaleCode:
         raise typer.BadParameter(f"Locale must be a 2-letter ISO 639-1 code, got '{value}'")
 
     return locale
+
+
+def parse_taste_profile_name(value: str) -> str:
+    if not re.fullmatch(TASTE_PROFILE_NAME_PATTERN, value):
+        raise typer.BadParameter("letters, digits, '-' and '_' only, 64 at most")
+
+    return value
 
 
 def parse_log_handlers(values: list[str]) -> list[str]:
