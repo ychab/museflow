@@ -68,4 +68,5 @@ TRANSIENT_ERRORS: Final[tuple[type[Exception], ...]] = (
 # The task each kind of job runs: `<theme>.<verb>`, which routes it to its queue (`task_routes`)
 JOB_TASK_NAMES: Final[dict[JobKind, str]] = {
     JobKind.TRACK_HISTORY_IMPORT: "track.history_import",
+    JobKind.TRACK_ENRICH: "track.enrich",
 }

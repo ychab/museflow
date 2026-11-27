@@ -4,8 +4,11 @@ import uuid
 from fastapi import status
 from httpx import AsyncClient
 
+from museflow.application.inputs.enrich import EnrichTracksJobInput
+from museflow.application.use_cases.track_enrich import EnrichTracksReport
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
+from museflow.domain.enums import JobKind
 from museflow.domain.enums import JobStatus
 from museflow.infrastructure.entrypoints.api.main import app
 
@@ -57,6 +60,25 @@ class TestJobGet:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["status"] == "pending"
+
+    async def test__enrich__typed(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+        report = EnrichTracksReport(enriched_count=180, error_count=1)
+        job_db = await JobModelFactory.create_async(
+            user_id=user.id,
+            kind=JobKind.TRACK_ENRICH,
+            status=JobStatus.DONE,
+            input=EnrichTracksJobInput().model_dump(mode="json"),
+            result=dataclasses.asdict(report),
+        )
+
+        response = await async_client.get(app.url_path_for("job_get", job_id=str(job_db.id)))
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert response_data["kind"] == "track_enrich"
+        assert response_data["input"] == {"fields": ["genre", "locale", "mood"]}
+        # No fingerprints asked for through the API: none to miss
+        assert response_data["result"] == {"enriched_count": 180, "error_count": 1}
 
     async def test__other_user__not_found(self, user: User, access_token: str, async_client: AsyncClient) -> None:
         job_db = await JobModelFactory.create_async()

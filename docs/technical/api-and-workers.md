@@ -421,6 +421,46 @@ clients, and receives a body whole before passing it on, so that a slow upload h
 with the size of a body, and reads an upload whole: it is never reached without the proxy. The archive cap is
 `MUSEFLOW_HISTORY_UPLOAD_ARCHIVE_MAX_SIZE_MB` in `docker-compose.yml`.
 
+## A paid job resumes from its data
+
+The enrichment (#262) is the first job that pays an LLM: `POST /tracks/enrichment` queues it, with the fields to fill
+(genres, moods, sung languages, all by default). It runs the use case of `museflow enrich tracks`, batch by batch,
+each batch saved in a transaction of its own. A try that dies leaves those batches saved.
+
+**The data is the checkpoint.** A track enriched has its fields, a track left has none: a try that resumes asks for
+the tracks still missing a field, and pays only for them. Nothing records how far a try went.
+
+```mermaid
+flowchart LR
+    T1["Try 1<br/>batches 1 to 3 saved"] --> K["Killed<br/>mid-batch 4"]:::fail
+    K --> T2["Try 2, resumed<br/>the tracks still missing a field"]
+    T2 --> B["Batch 4 and the rest:<br/>paid once"]:::ok
+    T2 -. "batches 1 to 3:<br/>no longer missing" .-> S["Not sent again"]:::ok
+
+    classDef fail stroke:#b42318,stroke-width:2px
+    classDef ok stroke:#2f7d32,stroke-width:2px
+```
+
+- **No `force`, no `limit`** through the API: both would break the resume. With `force`, a try that resumes can't
+  tell the tracks done again from the others and pays the whole library once more; with `limit`, it counts its cap
+  from the tracks left and goes past it. Redoing an enrichment is #313: the fields cleared with the job's insert, so
+  that it resumes like any other.
+- **Neither the model nor the batch size**: they set the cost, the owner's call, in the settings.
+- **A job with nothing to enrich** is done at once, with nothing enriched: queuing reads no track.
+
+| What fails | What happens | Paid again |
+|---|---|---|
+| OpenRouter answers `5xx`, or times out | The adapter retries the call | Nothing: a failed call is not billed |
+| An invalid reply | Asked again (`@self_heal`), then the batch fails; 3 in a row stop the job | The replies asked again |
+| OpenRouter down, credits out, a rate limit longer than the client waits | The job fails (`TrackEnrichmentAbortedError`): queue another one, it resumes | Nothing |
+| The database, while a batch is saved | A transient error: the task is retried, and resumes | That one batch: accepted risk |
+| The worker or its process, killed | Redelivered or retried: the job resumes | The batch in flight |
+
+**The cost stays with the owner.** The job's result counts the tracks enriched and the batches failed, never an
+amount: the worker logs the cost of each try, and records it in `museflow_llm_usage`, read with
+`museflow llm usage`. The cost of a process killed is not recorded yet: #312 records it batch by batch, before the
+budget of #263 sums it.
+
 ## API conventions
 
 Set by #252, so that every route answers the same way.
@@ -463,5 +503,7 @@ Each domain exception maps to a status code; the routes catch none. The body is 
 
 - **Microservices**: one application, three entrypoints. The ports are where it would split.
 - **A Celery result backend, SSE, progress percentages**: the jobs table and polling cover the need.
+- **Celery retrying an LLM failure**: the adapter already retries what a new call may fix. Past it (credits out, a long
+  rate limit), more tries would hold a worker for nothing: the job fails, and the next one resumes.
 - **Migrations in production**: the single `initial` migration is still regenerated during development
   ([Data model](data-model.md)); a handful of family users can re-import.
