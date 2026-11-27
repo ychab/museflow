@@ -161,6 +161,7 @@ class BuildTasteProfileUseCase:
                     await uow.taste_profiles.upsert_checkpoint(
                         user_id=user.id,
                         name=config.name,
+                        title=config.title,
                         logic_version=self._profiler.logic_version,
                         profiler_metadata=self._profiler.profiler_metadata,
                         tracks_count=tracks_count,
@@ -193,6 +194,7 @@ class BuildTasteProfileUseCase:
         taste_profile = TasteProfile(
             user_id=user.id,
             name=config.name,
+            title=config.title,
             profile=current_profile,
             profiler_metadata=self._profiler.profiler_metadata,
             tracks_count=tracks_count,

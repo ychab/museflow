@@ -57,6 +57,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         stmt = pg_insert(TasteProfileModel).values(
             id=profile.id,
             name=profile.name,
+            title=profile.title,
             user_id=profile.user_id,
             profile=profile.profile,
             profiler_metadata=profile.profiler_metadata,
@@ -67,6 +68,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         upsert_stmt = stmt.on_conflict_do_update(
             constraint="uq_museflow_taste_profile_user_name",
             set_={
+                "title": stmt.excluded.title,
                 "profile": stmt.excluded.profile,
                 "profiler_metadata": stmt.excluded.profiler_metadata,
                 "tracks_count": stmt.excluded.tracks_count,
@@ -96,6 +98,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         self,
         user_id: uuid.UUID,
         name: str,
+        title: str,
         logic_version: str,
         profiler_metadata: dict[str, Any],
         tracks_count: int,
@@ -105,6 +108,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         insert_stmt = pg_insert(TasteProfileModel).values(
             id=uuid.uuid4(),
             name=name,
+            title=title,
             user_id=user_id,
             profile=profile_data,
             profiler_metadata=profiler_metadata,
@@ -116,6 +120,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
         upsert_stmt = insert_stmt.on_conflict_do_update(
             constraint="uq_museflow_taste_profile_user_name",
             set_={
+                "title": insert_stmt.excluded.title,
                 "profile": insert_stmt.excluded.profile,
                 "profiler_metadata": insert_stmt.excluded.profiler_metadata,
                 "tracks_count": insert_stmt.excluded.tracks_count,

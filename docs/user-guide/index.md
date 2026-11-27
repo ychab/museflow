@@ -90,7 +90,7 @@ Adds genre, mood and language metadata to tracks with an LLM. Required for the `
 ### 6. Build a taste profile
 
 ```bash
-museflow taste build --name my-profile
+museflow taste build --title "My profile"
 ```
 
 Analyses the library with an LLM and stores a master taste profile (eras, personality archetype, life-phase

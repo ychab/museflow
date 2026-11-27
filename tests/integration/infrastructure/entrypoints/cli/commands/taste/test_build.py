@@ -37,6 +37,7 @@ class TestTasteBuildLogic:
             progress=progress,
             email=user.email,
             name="my-profile",
+            title="My profile",
             resume=False,
             rated_only=False,
             track_limit=3000,

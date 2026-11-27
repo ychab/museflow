@@ -26,6 +26,7 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
     __table_args__ = (UniqueConstraint("user_id", "name", name="uq_museflow_taste_profile_user_name"),)
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("museflow_user.id", ondelete="CASCADE"),
         nullable=False,
@@ -50,6 +51,7 @@ class TasteProfileModel(UUIDIdMixin, DatetimeTrackMixin, Base, kw_only=True):
         return TasteProfileEntity(
             id=self.id,
             name=self.name,
+            title=self.title,
             user_id=self.user_id,
             profile=self.profile,
             profiler_metadata=self.profiler_metadata,

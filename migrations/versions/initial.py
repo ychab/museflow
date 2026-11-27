@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e5f3a896e1ca
+Revision ID: 053a03ed3f59
 Revises:
-Create Date: 2026-11-27 08:48:22.920167
+Create Date: 2026-11-28 00:36:10.595131
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e5f3a896e1ca'
+revision: str = '053a03ed3f59'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -100,6 +100,7 @@ def upgrade() -> None:
     op.create_table('museflow_taste_profile',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('profile', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('profiler_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),

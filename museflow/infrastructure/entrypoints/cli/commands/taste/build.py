@@ -16,10 +16,12 @@ from museflow.application.use_cases.taste_profile_build import BuildTasteProfile
 from museflow.application.use_cases.user_get import get_user
 from museflow.domain.const import TASTE_BATCH_COUNT_TARGET
 from museflow.domain.const import TASTE_BATCH_SIZE_MIN
+from museflow.domain.const import TASTE_PROFILE_NAME_MAX_LENGTH
 from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.exceptions import TasteProfileBuildPausedError
 from museflow.domain.exceptions import TasteProfileNoSeedError
 from museflow.domain.exceptions import UserNotFoundError
+from museflow.domain.utils.text import slugify
 from museflow.infrastructure.adapters.common.llm.usage import LLMUsageMeter
 from museflow.infrastructure.adapters.progress.rich import RichProgressAdapter
 from museflow.infrastructure.config.loggers.setup import console_stderr
@@ -38,14 +40,16 @@ from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usag
 @app.command("build", help="Build a master taste profile from your library.")
 def taste_build_command(
     email: EmailOption,
+    title: Annotated[str, typer.Option("--title", help='Profile title, as shown (e.g. "Soirées d\'hiver")')],
     name: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--name",
-            help="Profile name (unique per user): letters, digits, '-' and '_'",
+            help="Profile name keying it, unique per user: letters, digits, '-' and '_'. Default: the title as a slug",
             parser=parse_taste_profile_name,
+            show_default=False,
         ),
-    ],
+    ] = None,
     resume: Annotated[bool, typer.Option("--resume/--no-resume", help="Resume from last checkpoint")] = False,
     rated_only: Annotated[
         bool,
@@ -86,6 +90,10 @@ def taste_build_command(
     ] = None,
     verbose: VerboseOption = False,
 ) -> None:
+    name = name or slugify(title, max_length=TASTE_PROFILE_NAME_MAX_LENGTH)
+    if not name:
+        raise typer.BadParameter("needs a letter or a digit, or pass --name", param_hint="'--title'")
+
     meter = LLMUsageMeter()
     try:
         with RichProgressAdapter(console=console_stderr, meter=meter, animated=has_rich_log_handler()) as progress:
@@ -93,6 +101,7 @@ def taste_build_command(
                 taste_build_logic(
                     email=email,
                     name=name,
+                    title=title,
                     resume=resume,
                     rated_only=rated_only,
                     track_limit=track_limit,
@@ -136,6 +145,7 @@ def taste_build_command(
 async def taste_build_logic(
     email: EmailStr,
     name: str,
+    title: str,
     track_limit: int,
     batch_size: int | None,
     resume: bool,
@@ -158,6 +168,7 @@ async def taste_build_logic(
         use_case = BuildTasteProfileUseCase(uow=uow, profiler=profiler_adapter, progress=progress)
         config = BuildTasteProfileConfigInput(
             name=name,
+            title=title,
             resume=resume,
             rated_only=rated_only,
             track_limit=track_limit,
@@ -197,7 +208,7 @@ def _print_profile(profile: TasteProfile) -> None:
     console.print(
         Panel(
             Group(*lines),
-            title=Text.assemble(("✓ ", "green"), f"Taste profile '{profile.name}'"),
+            title=Text.assemble(("✓ ", "green"), f"Taste profile '{profile.title}' ({profile.name})"),
             title_align="left",
             border_style="green",
         )
