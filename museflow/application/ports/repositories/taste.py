@@ -33,6 +33,7 @@ class TasteProfileRepository(ABC):
         self,
         user_id: uuid.UUID,
         name: str,
+        title: str,
         logic_version: str,
         profiler_metadata: dict[str, Any],
         tracks_count: int,

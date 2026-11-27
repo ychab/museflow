@@ -15,7 +15,8 @@ TASTE_BATCH_COUNT_TARGET: Final[int] = 20
 # Past this many eras, the two oldest become one: a long library keeps a readable timeline
 TASTE_TIMELINE_MAX_ERAS: Final[int] = 15
 # A profile name keys the profile in the API's URLs: a slug, never a `/` nor a space to encode
-TASTE_PROFILE_NAME_PATTERN: Final[str] = r"^[A-Za-z0-9_-]{1,64}$"
+TASTE_PROFILE_NAME_MAX_LENGTH: Final[int] = 64
+TASTE_PROFILE_NAME_PATTERN: Final[str] = rf"^[A-Za-z0-9_-]{{1,{TASTE_PROFILE_NAME_MAX_LENGTH}}}$"
 # Models return weights with up to 16 decimals: noise that costs prompt tokens at each later step
 TASTE_WEIGHT_DECIMALS: Final[int] = 3
 

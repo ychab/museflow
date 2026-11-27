@@ -1,6 +1,7 @@
 import pytest
 
 from museflow.domain.utils.text import normalize_text
+from museflow.domain.utils.text import slugify
 from museflow.domain.utils.text import strip_control_chars
 from museflow.domain.utils.text import unidecode_lower_text
 from museflow.domain.utils.text import validate_locales
@@ -16,6 +17,21 @@ class TestUnidecodeLower:
     )
     def test__nominal(self, text: str, expected: str) -> None:
         assert unidecode_lower_text(text) == expected
+
+
+class TestSlugify:
+    @pytest.mark.parametrize(
+        ("text", "max_length", "expected"),
+        [
+            pytest.param("Soirées d'hiver", 64, "soirees-d-hiver", id="accents_apostrophe"),
+            pytest.param("  Late night / Winter 2025!  ", 64, "late-night-winter-2025", id="punctuation_spaces"),
+            pytest.param("main", 64, "main", id="already_a_slug"),
+            pytest.param("🎧 ♪", 64, "", id="no_letter_nor_digit"),
+            pytest.param("abc def", 4, "abc", id="cut_at_a_hyphen"),
+        ],
+    )
+    def test__nominal(self, text: str, max_length: int, expected: str) -> None:
+        assert slugify(text, max_length=max_length) == expected
 
 
 class TestStripControlChars:

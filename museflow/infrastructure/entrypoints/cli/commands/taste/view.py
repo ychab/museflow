@@ -73,7 +73,7 @@ async def taste_view_logic(email: EmailStr, name: str) -> TasteProfile:
 def generate_profile_html_content(taste_profile: TasteProfile) -> str:
     taste_profile = dataclasses.replace(
         taste_profile,
-        name=escape(taste_profile.name),
+        title=escape(taste_profile.title),
         profile=_escape_html(taste_profile.profile),
         profiler_metadata=_escape_html(taste_profile.profiler_metadata),
     )
@@ -83,7 +83,7 @@ def generate_profile_html_content(taste_profile: TasteProfile) -> str:
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>MuseFlow | {taste_profile.name}</title>
+        <title>MuseFlow | {taste_profile.title}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700;800&display=swap');

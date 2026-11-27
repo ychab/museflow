@@ -30,6 +30,12 @@ def unidecode_lower_text(text: str) -> str:
     return unidecode(text).lower()
 
 
+def slugify(text: str, max_length: int) -> str:
+    """Lowercase ASCII words joined by hyphens ("Soirées d'hiver" → "soirees-d-hiver"); empty without a letter or digit."""
+    slug = re.sub(r"[^a-z0-9]+", "-", unidecode_lower_text(text)).strip("-")
+    return slug[:max_length].rstrip("-")
+
+
 def normalize_text(text: str) -> str:
     text = unidecode_lower_text(text)
 

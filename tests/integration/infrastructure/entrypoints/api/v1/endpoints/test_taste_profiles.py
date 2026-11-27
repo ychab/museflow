@@ -36,6 +36,7 @@ class TestTasteProfileList:
         assert response_data["items"][0] == {
             "id": str(profiles_db[1].id),
             "name": profiles_db[1].name,
+            "title": profiles_db[1].title,
             "status": "finished",
             "tracks_count": profiles_db[1].tracks_count,
             "logic_version": profiles_db[1].logic_version,

@@ -8,13 +8,14 @@ life-phase insights) that guides [`playlist discover`](playlist.md#playlist-disc
 Builds a master taste profile from the library.
 
 ```bash
-museflow taste build [--email <email>] --name <name> [OPTIONS]
+museflow taste build [--email <email>] --title <title> [--name <name>] [OPTIONS]
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
-| `--name` | every profile | Profile name (unique per user): letters, digits, `-` and `_`, 64 at most, as it keys the profile in the API's URLs. |
+| `--title` | every profile | Profile title, as shown (`"Soirées d'hiver"`). |
+| `--name` | the title as a slug (`soirees-d-hiver`) | Profile name keying it, unique per user: letters, digits, `-` and `_`, 64 at most, as it keys the profile in the API's URLs. |
 | `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10): the periods are cut from their plays only. |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000), capped by the tracks played at least once. A track played in several periods takes a seed in each. |
@@ -43,8 +44,8 @@ with an error. Run the same command again with `--resume` to continue from the c
 **Example**
 
 ```bash
-museflow taste build --name my-profile --track-limit 1500
-museflow taste build --name test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
+museflow taste build --title "My profile" --track-limit 1500
+museflow taste build --title test --track-limit 200 --reflect-model anthropic/claude-sonnet-4.5
 ```
 
 **Output.** While it runs, a progress bar on stderr counts the listening periods, then a live line follows the

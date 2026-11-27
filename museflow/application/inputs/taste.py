@@ -5,6 +5,7 @@ from datetime import timedelta
 @dataclass(frozen=True, kw_only=True)
 class BuildTasteProfileConfigInput:
     name: str
+    title: str
     track_limit: int = 3000
     batch_size: int | None = None  # None: sized from the seed count
     throttling_sleep_seconds: float = 0.0

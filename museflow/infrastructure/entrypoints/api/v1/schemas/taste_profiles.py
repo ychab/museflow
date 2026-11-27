@@ -38,7 +38,8 @@ class TasteProfileSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    name: str
+    name: str = Field(description="The slug keying the profile in the URLs")
+    title: str = Field(description="What to show, as the user typed it")
     status: TasteProfileStatus = Field(
         description="`building` while a build runs or is paused: the profile is partial"
     )

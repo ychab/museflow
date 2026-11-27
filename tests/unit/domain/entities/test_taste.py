@@ -64,3 +64,7 @@ class TestTasteProfileName:
     def test__invalid(self, name: str) -> None:
         with pytest.raises(ValueError, match="Invalid taste profile name"):
             TasteProfileFactory.build(name=name)
+
+    def test__title__defaults_to_name(self) -> None:
+        # A profile exported before the title: it shows its name
+        assert TasteProfileFactory.build(name="main", title="").title == "main"

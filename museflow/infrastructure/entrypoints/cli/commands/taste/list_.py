@@ -33,6 +33,7 @@ def taste_list_command(
     table = Table(title="Taste Profiles")
     table.add_column("ID", style="dim")
     table.add_column("Name")
+    table.add_column("Title")
     table.add_column("Logic")
     table.add_column("Status")
     table.add_column("Tracks")
@@ -42,6 +43,7 @@ def taste_list_command(
         table.add_row(
             str(profile.id),
             profile.name,
+            profile.title,
             profile.logic_version,
             profile.status.value,
             str(profile.tracks_count),

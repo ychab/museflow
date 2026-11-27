@@ -141,6 +141,7 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
+            title="My profile",
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,
@@ -155,11 +156,13 @@ class TestTasteProfileSQLRepository:
         row = (await async_session_db.execute(stmt)).scalar_one()
         assert row.checkpoint_batch_index == 3
         assert row.checkpoint_profile is not None
+        assert row.title == "My profile"
 
         # Second call updates the checkpoint
         await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
+            title="My profile",
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,
@@ -180,6 +183,7 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
+            title="My profile",
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=50,
@@ -212,6 +216,7 @@ class TestTasteProfileSQLRepository:
         await taste_profile_repository.upsert_checkpoint(
             user_id=user.id,
             name="my-profile",
+            title="My profile",
             logic_version="v1.0",
             profiler_metadata={},
             tracks_count=100,

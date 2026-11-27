@@ -37,7 +37,7 @@ class TestTasteBuildParserCommand:
                 "taste",
                 "build",
                 "--email", "test@example.com",
-                "--name", "my-profile",
+                "--title", "My profile",
                 "--track-limit", "3000",
                 "--batch-size", "40",
             ],
@@ -57,13 +57,42 @@ class TestTasteBuildParserCommand:
                 "taste",
                 "build",
                 "--email", "test@example.com",
-                "--name", "my-profile",
+                "--title", "My profile",
                 "--rated-only",
             ],
         )
         # fmt: on
         mock_taste_build_logic.assert_called_once()
         assert mock_taste_build_logic.call_args.kwargs["rated_only"] is True
+
+    def test__title__slug_as_name(self, mock_taste_build_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "Soirées d'hiver"])
+
+        assert mock_taste_build_logic.call_args.kwargs["title"] == "Soirées d'hiver"
+        assert mock_taste_build_logic.call_args.kwargs["name"] == "soirees-d-hiver"
+
+    def test__name__over_title(self, mock_taste_build_logic: mock.AsyncMock, runner: CliRunner) -> None:
+        # fmt: off
+        runner.invoke(
+            app,
+            ["taste", "build", "--email", "test@example.com", "--title", "Soirées d'hiver", "--name", "winter"],
+        )
+        # fmt: on
+        assert mock_taste_build_logic.call_args.kwargs["name"] == "winter"
+
+    def test__title__no_slug(
+        self,
+        mock_taste_build_logic: mock.AsyncMock,
+        runner: CliRunner,
+        clean_typer_text: TextCleaner,
+    ) -> None:
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "🎧"])
+
+        assert result.exit_code != 0
+        assert "Invalid value for '--title': needs a letter or a digit, or pass --name" in clean_typer_text(
+            result.output
+        )
+        mock_taste_build_logic.assert_not_called()
 
     def test__models__passed_to_logic(
         self,
@@ -77,7 +106,7 @@ class TestTasteBuildParserCommand:
                 "taste",
                 "build",
                 "--email", "test@example.com",
-                "--name", "my-profile",
+                "--title", "My profile",
                 "--segment-model", "openai/gpt-5-nano",
                 "--merge-model", "openai/gpt-5-mini",
                 "--reflect-model", "anthropic/claude-sonnet-4.5",
@@ -175,7 +204,9 @@ class TestTasteBuildParserCommand:
         ],
     )
     def test__name__invalid(self, runner: CliRunner, name: str, clean_typer_text: TextCleaner) -> None:
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", name])
+        result = runner.invoke(
+            app, ["taste", "build", "--email", "test@example.com", "--title", "My profile", "--name", name]
+        )
         assert result.exit_code != 0
 
         output = clean_typer_text(result.output)
@@ -208,7 +239,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_taste_build_logic.side_effect = UserNotFoundError()
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code != 0
 
         output = clean_typer_text(result.stderr)
@@ -222,7 +253,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_taste_build_logic.side_effect = TasteProfileNoSeedError()
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 1
 
         output = clean_typer_text(result.stderr)
@@ -236,7 +267,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_taste_build_logic.side_effect = TasteProfileBuildPausedError(4, 25, "rate limit exceeded")
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 1
 
         output = clean_typer_text(result.stderr)
@@ -257,11 +288,13 @@ class TestTasteBuildCommand:
         mock_taste_build_logic.side_effect = build
 
         result = runner.invoke(
-            app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile", "--verbose"]
+            app, ["taste", "build", "--email", "test@example.com", "--title", "My profile", "--verbose"]
         )
         assert result.exit_code == 0
         # --verbose: the table per step and model
-        assert result.output.index(f"Taste profile '{taste_profile.name}'") < result.output.index("LLM usage")
+        assert result.output.index(
+            f"Taste profile '{taste_profile.title}' ({taste_profile.name})"
+        ) < result.output.index("LLM usage")
         assert "$0.0123" in result.output
 
     def test__paused__usage_printed(
@@ -275,7 +308,7 @@ class TestTasteBuildCommand:
 
         mock_taste_build_logic.side_effect = build
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 1
         assert result.output.index("Build paused") < result.output.index("LLM call(s)")
         assert "$0.0123" in result.output
@@ -288,7 +321,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_taste_build_logic.side_effect = Exception("Boom")
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 1
 
         output = clean_typer_text(result.stderr)
@@ -306,7 +339,7 @@ class TestTasteBuildCommand:
 
         mock_taste_build_logic.side_effect = build
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         # 128 + SIGINT, as a shell reports a command stopped by Ctrl+C
         assert result.exit_code == 130
         assert "Build interrupted: the periods done are saved. Run with --resume to continue." in clean_typer_text(
@@ -339,11 +372,11 @@ class TestTasteBuildCommand:
             profiler_metadata={"steps": {step: steps[step] for step in ("merge", "reflect", "segment")}},
         )
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
-        assert f"✓ Taste profile '{taste_profile.name}'" in output
+        assert f"✓ Taste profile '{taste_profile.title}' ({taste_profile.name})" in output
         assert "Dark Metal Wanderer" in output
         era = taste_profile.profile["taste_timeline"][0]
         assert f"{era['time_range']} {era['era_label']}" in output
@@ -372,7 +405,7 @@ class TestTasteBuildCommand:
     ) -> None:
         mock_taste_build_logic.return_value = taste_profile
 
-        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--name", "my-profile"])
+        result = runner.invoke(app, ["taste", "build", "--email", "test@example.com", "--title", "My profile"])
         assert result.exit_code == 0
 
         output = clean_typer_text(result.stdout)
@@ -407,6 +440,7 @@ class TestTasteBuildLogic:
             progress=mock_progress,
             email="test@example.com",
             name="my-profile",
+            title="My profile",
             track_limit=3000,
             batch_size=200,
             resume=False,
@@ -433,6 +467,7 @@ class TestTasteBuildLogic:
                 progress=mock_progress,
                 email="test@example.com",
                 name="my-profile",
+                title="My profile",
                 track_limit=3000,
                 batch_size=200,
                 resume=False,

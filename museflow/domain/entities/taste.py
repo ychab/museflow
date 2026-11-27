@@ -17,7 +17,8 @@ from museflow.domain.value_objects.taste import TasteProfileData
 class TasteProfile:
     id: uuid.UUID = field(default_factory=uuid.uuid4)
 
-    name: str
+    name: str  # the slug keying the profile, unique per user
+    title: str = ""  # what the clients show, as the user typed it; the name when none was given
     user_id: uuid.UUID
 
     profile: TasteProfileData
@@ -36,6 +37,8 @@ class TasteProfile:
             raise ValueError(
                 f"Invalid taste profile name {self.name!r}: letters, digits, '-' and '_' only, 64 at most"
             )
+        if not self.title:
+            object.__setattr__(self, "title", self.name)
 
     def sort_timeline(self) -> Self:
         sorted_timeline = sorted(self.profile["taste_timeline"], key=era_sort_key, reverse=True)
