@@ -49,7 +49,7 @@ async def taste_export_logic(email: EmailStr, name: str | None = None) -> list[T
     user = await get_user(email=email, uow=uow)
 
     if name is None:
-        return await get_taste_profiles(user_id=user.id, uow=uow)
+        return (await get_taste_profiles(user_id=user.id, uow=uow)).items
 
     # Exporting one profile reads it exactly as viewing it does.
     return [await get_taste_profile(user_id=user.id, name=name, uow=uow)]

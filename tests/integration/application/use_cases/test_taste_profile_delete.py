@@ -1,11 +1,17 @@
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
+
 import pytest
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.application.ports.unit_of_work import UnitOfWorkPort
 from museflow.application.use_cases.taste_profile_delete import delete_taste_profile
 from museflow.domain.entities.user import User
+from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 
+from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
 
 
@@ -25,3 +31,40 @@ class TestDeleteTasteProfileUseCase:
     async def test__not_found(self, uow: UnitOfWorkPort, user: User) -> None:
         with pytest.raises(TasteProfileNotFoundError):
             await delete_taste_profile(user_id=user.id, name="my-profile", uow=uow)
+
+    async def test__build_running(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
+        await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            name="my-profile",
+            lease_until=datetime.now(UTC) + timedelta(minutes=10),
+        )
+
+        with pytest.raises(TasteProfileBuildInProgressError):
+            await delete_taste_profile(user_id=user.id, name="my-profile", uow=uow)
+
+        # Its next checkpoint would bring it back: kept
+        assert await taste_profile_repository.get(user_id=user.id, name="my-profile") is not None
+
+    async def test__build_lease_expired(
+        self,
+        uow: UnitOfWorkPort,
+        user: User,
+        taste_profile_repository: TasteProfileRepository,
+    ) -> None:
+        # A build killed: once its lease expires, nothing holds the profile any more
+        await TasteProfileModelFactory.create_async(user_id=user.id, name="my-profile")
+        await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            name="my-profile",
+            lease_until=datetime.now(UTC) - timedelta(minutes=10),
+        )
+
+        await delete_taste_profile(user_id=user.id, name="my-profile", uow=uow)
+
+        assert await taste_profile_repository.get(user_id=user.id, name="my-profile") is None

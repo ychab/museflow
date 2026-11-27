@@ -29,6 +29,7 @@ from museflow.infrastructure.entrypoints.cli.dependencies import get_wiring
 from museflow.infrastructure.entrypoints.cli.dependencies import run_logic
 from museflow.infrastructure.entrypoints.cli.options import EmailOption
 from museflow.infrastructure.entrypoints.cli.options import VerboseOption
+from museflow.infrastructure.entrypoints.cli.parsers import parse_taste_profile_name
 from museflow.infrastructure.entrypoints.cli.utils.display import console
 from museflow.infrastructure.entrypoints.cli.utils.display import has_rich_log_handler
 from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usage
@@ -37,7 +38,14 @@ from museflow.infrastructure.entrypoints.cli.utils.display import print_llm_usag
 @app.command("build", help="Build a master taste profile from your library.")
 def taste_build_command(
     email: EmailOption,
-    name: Annotated[str, typer.Option("--name", help="Profile name (unique per user)")],
+    name: Annotated[
+        str,
+        typer.Option(
+            "--name",
+            help="Profile name (unique per user): letters, digits, '-' and '_'",
+            parser=parse_taste_profile_name,
+        ),
+    ],
     resume: Annotated[bool, typer.Option("--resume/--no-resume", help="Resume from last checkpoint")] = False,
     rated_only: Annotated[
         bool,

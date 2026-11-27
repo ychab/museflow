@@ -18,14 +18,21 @@ class TasteProfileSQLRepository(TasteProfileRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_list(self, user_id: uuid.UUID) -> list[TasteProfile]:
+    async def get_list(self, user_id: uuid.UUID, limit: int | None = None, offset: int = 0) -> list[TasteProfile]:
         stmt = (
             select(TasteProfileModel)
             .where(TasteProfileModel.user_id == user_id)
-            .order_by(TasteProfileModel.updated_at.desc())
+            # The ID breaks the ties: pages stay stable between two calls
+            .order_by(TasteProfileModel.updated_at.desc(), TasteProfileModel.id)
+            .limit(limit)
+            .offset(offset)
         )
         result = await self.session.execute(stmt)
         return [row.to_entity() for row in result.scalars()]
+
+    async def count(self, user_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(TasteProfileModel).where(TasteProfileModel.user_id == user_id)
+        return (await self.session.execute(stmt)).scalar_one()
 
     async def get(self, user_id: uuid.UUID, name: str) -> TasteProfile | None:
         stmt = select(TasteProfileModel).where(

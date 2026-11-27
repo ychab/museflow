@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from sqlalchemy import delete
 from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +50,18 @@ class TasteProfileBuildSQLRepository(TasteProfileBuildRepository):
         result = await self.session.execute(stmt)
         renewed = result.scalar_one_or_none() is not None
         return renewed
+
+    async def is_held(self, user_id: uuid.UUID, name: str) -> bool:
+        stmt = select(
+            select(TasteProfileBuildModel)
+            .where(
+                TasteProfileBuildModel.user_id == user_id,
+                TasteProfileBuildModel.name == name,
+                TasteProfileBuildModel.lease_until >= func.now(),
+            )
+            .exists()
+        )
+        return (await self.session.execute(stmt)).scalar_one()
 
     async def release(self, user_id: uuid.UUID, name: str, build_id: uuid.UUID) -> None:
         stmt = delete(TasteProfileBuildModel).where(

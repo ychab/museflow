@@ -33,6 +33,11 @@ class TasteProfileBuildRepository(ABC):
         ...
 
     @abstractmethod
+    async def is_held(self, user_id: uuid.UUID, name: str) -> bool:
+        """Tells whether a build holds the lease of the profile name, unexpired."""
+        ...
+
+    @abstractmethod
     async def release(self, user_id: uuid.UUID, name: str, build_id: uuid.UUID) -> None:
         """Gives the lease up, only if the build still holds it."""
         ...

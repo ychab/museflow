@@ -53,3 +53,14 @@ class TestTasteProfileSortTimeline:
         profile.sort_timeline()
 
         assert profile.profile["taste_timeline"][0]["time_range"] == original_first
+
+
+class TestTasteProfileName:
+    @pytest.mark.parametrize("name", ["main", "rock_2024", "Late-Night", "a" * 64])
+    def test__valid(self, name: str) -> None:
+        assert TasteProfileFactory.build(name=name).name == name
+
+    @pytest.mark.parametrize("name", ["", "my profile", "rock/indie", "é", "a" * 65])
+    def test__invalid(self, name: str) -> None:
+        with pytest.raises(ValueError, match="Invalid taste profile name"):
+            TasteProfileFactory.build(name=name)
