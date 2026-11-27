@@ -455,6 +455,7 @@ flowchart LR
 | OpenRouter down, credits out, a rate limit longer than the client waits | The job fails (`TrackEnrichmentAbortedError`): queue another one, it resumes | Nothing |
 | The database, while a batch is saved | A transient error: the task is retried, and resumes | That one batch: accepted risk |
 | The worker or its process, killed | Redelivered or retried: the job resumes | The batch in flight |
+| The configured model, gone from OpenRouter or missing a parameter | The job fails (`LLMModelError`) before any batch. Queuing another one fails alike: the operator fixes the setting | Nothing |
 
 **The cost stays with the owner.** The job's result counts the tracks enriched and the batches failed, never an
 amount: the worker logs the cost of each try, and records it in `museflow_llm_usage`, read with

@@ -50,7 +50,7 @@ class TrackEnrichJobResultResponse(BaseModel):
     error_count: int = Field(description="The batches of tracks that failed: their tracks are left for the next job")
 
 
-class _JobResponse(BaseModel):
+class BaseJobResponse(BaseModel):
     """What every kind of job answers; each kind adds its `kind`, `input` and `result`."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -63,13 +63,13 @@ class _JobResponse(BaseModel):
     finished_at: datetime | None
 
 
-class TrackHistoryImportJobResponse(_JobResponse):
+class TrackHistoryImportJobResponse(BaseJobResponse):
     kind: Literal[JobKind.TRACK_HISTORY_IMPORT]
     input: TrackHistoryImportJobInputResponse
     result: TrackHistoryImportJobResultResponse | None = Field(description="What the job returned, once done")
 
 
-class TrackEnrichJobResponse(_JobResponse):
+class TrackEnrichJobResponse(BaseJobResponse):
     kind: Literal[JobKind.TRACK_ENRICH]
     input: TrackEnrichJobInputResponse
     result: TrackEnrichJobResultResponse | None = Field(description="What the job returned, once done")
@@ -78,4 +78,4 @@ class TrackEnrichJobResponse(_JobResponse):
 # A job of any kind, its input and result typed by its `kind`
 JobResponse = Annotated[TrackHistoryImportJobResponse | TrackEnrichJobResponse, Field(discriminator="kind")]
 
-JOB_RESPONSE_ADAPTER: Final[TypeAdapter[JobResponse]] = TypeAdapter(JobResponse)
+JobResponseAdapter: Final[TypeAdapter[JobResponse]] = TypeAdapter(JobResponse)

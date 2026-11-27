@@ -8,8 +8,8 @@ from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import PageParamsDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.v1.schemas.common import PageResponse
-from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JOB_RESPONSE_ADAPTER
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponseAdapter
 
 router = APIRouter()
 
@@ -30,4 +30,4 @@ async def list_jobs(
 async def view_job(job_id: uuid.UUID, current_user: CurrentUserDep, uow: UnitOfWorkDep) -> JobResponse:
     """A background job, polled until it is done or failed: another user's job is a 404, as an unknown one."""
     job = await get_job(user=current_user, job_id=job_id, uow=uow)
-    return JOB_RESPONSE_ADAPTER.validate_python(job, from_attributes=True)
+    return JobResponseAdapter.validate_python(job, from_attributes=True)

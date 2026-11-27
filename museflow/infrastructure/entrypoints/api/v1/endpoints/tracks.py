@@ -18,8 +18,8 @@ from museflow.infrastructure.entrypoints.api.dependencies import CurrentUserDep
 from museflow.infrastructure.entrypoints.api.dependencies import FileStorageDep
 from museflow.infrastructure.entrypoints.api.dependencies import UnitOfWorkDep
 from museflow.infrastructure.entrypoints.api.schemas import ProblemDetails
-from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JOB_RESPONSE_ADAPTER
 from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponse
+from museflow.infrastructure.entrypoints.api.v1.schemas.jobs import JobResponseAdapter
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ async def import_streaming_history(
     )
 
     response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
-    return JOB_RESPONSE_ADAPTER.validate_python(job, from_attributes=True)
+    return JobResponseAdapter.validate_python(job, from_attributes=True)
 
 
 @router.post(
@@ -96,4 +96,4 @@ async def enrich_tracks(
     job = await queue_track_enrichment(user=current_user, job_in=job_in, uow=uow)
 
     response.headers["Location"] = request.app.url_path_for("job_get", job_id=str(job.id))
-    return JOB_RESPONSE_ADAPTER.validate_python(job, from_attributes=True)
+    return JobResponseAdapter.validate_python(job, from_attributes=True)
