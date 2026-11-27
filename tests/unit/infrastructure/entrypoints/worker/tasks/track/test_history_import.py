@@ -5,11 +5,11 @@ import pytest
 
 from museflow.application.inputs.history import ImportStreamingHistoryJobInput
 from museflow.domain.enums import MusicProvider
-from museflow.infrastructure.entrypoints.worker.tasks.track import track_history_import_work
+from museflow.infrastructure.entrypoints.worker.tasks.track.history_import import track_history_import_work
 
 from tests.unit.factories.entities.job import JobFactory
 
-TARGET_PATH = "museflow.infrastructure.entrypoints.worker.tasks.track"
+TARGET_PATH = "museflow.infrastructure.entrypoints.worker.tasks.track.history_import"
 
 
 class TestTrackHistoryImportWork:
