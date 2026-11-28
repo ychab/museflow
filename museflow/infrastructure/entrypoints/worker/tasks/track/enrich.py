@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name=JOB_TASK_NAMES[JobKind.TRACK_ENRICH], bind=True)
-def track_enrich_task(self: Task[[str, str], None], job_id: str, user_id: str) -> None:
-    run_job(self, job_id, user_id, track_enrich_work)
+def track_enrich_task(task: Task[[str, str], None], job_id: str, user_id: str) -> None:
+    run_job(task, job_id, user_id, track_enrich_work)
 
 
 async def track_enrich_work(job: Job) -> EnrichTracksReport:

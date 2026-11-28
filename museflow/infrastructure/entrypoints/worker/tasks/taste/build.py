@@ -30,8 +30,8 @@ class TasteBuildJobResult:
 
 
 @celery_app.task(name=JOB_TASK_NAMES[JobKind.TASTE_BUILD], bind=True)
-def taste_build_task(self: Task[[str, str], None], job_id: str, user_id: str) -> None:
-    run_job(self, job_id, user_id, taste_build_work)
+def taste_build_task(task: Task[[str, str], None], job_id: str, user_id: str) -> None:
+    run_job(task, job_id, user_id, taste_build_work)
 
 
 async def taste_build_work(job: Job) -> TasteBuildJobResult:
