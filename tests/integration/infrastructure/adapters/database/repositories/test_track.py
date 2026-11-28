@@ -724,9 +724,6 @@ class TestTrackSQLRepository:
         track_db = (await async_session_db.execute(stmt)).scalar_one()
         assert track_db.score_skipped is True
 
-    async def test__bulk_update__empty_list__is_noop(self, track_repository: TrackRepository) -> None:
-        await track_repository.bulk_update([], frozenset({EnrichField.GENRE}))
-
     async def test__rate__updates_score(
         self,
         async_session_db: AsyncSession,

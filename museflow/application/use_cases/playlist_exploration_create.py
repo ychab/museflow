@@ -92,13 +92,14 @@ class CreateExplorationPlaylistUseCase:
             result = await self._explore(user, config, artists, blacklist, liked_tracks)
             playlist_id = result.playlist.id if result.playlist else None
         finally:
-            await self._llm_usage.save(
-                user_id=user.id,
-                run_id=uuid.uuid4(),
-                operation=LLMOperation.EXPLORE,
-                usages=self._advisor.pop_usages(),
-                playlist_id=playlist_id,
-            )
+            if usages := self._advisor.pop_usages():
+                await self._llm_usage.save(
+                    user_id=user.id,
+                    run_id=uuid.uuid4(),
+                    operation=LLMOperation.EXPLORE,
+                    usages=usages,
+                    playlist_id=playlist_id,
+                )
 
         return result
 

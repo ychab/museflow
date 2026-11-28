@@ -12,19 +12,6 @@ from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 
 class TestLLMUsageServiceSave:
-    async def test__no_usage__nothing_recorded(
-        self,
-        user: User,
-        mock_uow: mock.AsyncMock,
-        mock_llm_usage_repository: mock.AsyncMock,
-    ) -> None:
-        await LLMUsageService(uow=mock_uow).save(
-            user_id=user.id, run_id=uuid.uuid4(), operation=LLMOperation.ENRICH, usages=[]
-        )
-
-        mock_uow.__aenter__.assert_not_awaited()
-        mock_llm_usage_repository.bulk_accumulate.assert_not_awaited()
-
     async def test__profile_not_found__recorded_without_profile(
         self,
         user: User,

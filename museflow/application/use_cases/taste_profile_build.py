@@ -72,13 +72,15 @@ class BuildTasteProfileUseCase:
         try:
             profile = await self._build_profile(user, config, build_id)
         finally:
-            await self._llm_usage.save(
-                user_id=user.id,
-                run_id=build_id,
-                operation=LLMOperation.TASTE_BUILD,
-                usages=self._profiler.pop_usages(),
-                profile_name=config.name,
-            )
+            if usages := self._profiler.pop_usages():
+                await self._llm_usage.save(
+                    user_id=user.id,
+                    run_id=build_id,
+                    operation=LLMOperation.TASTE_BUILD,
+                    usages=usages,
+                    profile_name=config.name,
+                )
+
             await self._release_lease(user, config, build_id)
 
         return profile
@@ -174,7 +176,7 @@ class BuildTasteProfileUseCase:
                         profile_data=current_profile,
                         batch_index=i,
                     )
-                    await self._llm_usage.add(
+                    await self._llm_usage.add_all(
                         user.id, build_id, LLMOperation.TASTE_BUILD, usages, profile_name=config.name, uow=uow
                     )
 
@@ -218,7 +220,7 @@ class BuildTasteProfileUseCase:
         async with self._uow as uow:
             await self._renew_lease(uow, user, config, build_id)
             taste_profile = await uow.taste_profiles.upsert(taste_profile)
-            await self._llm_usage.add(
+            await self._llm_usage.add_all(
                 user.id, build_id, LLMOperation.TASTE_BUILD, usages, profile_name=config.name, uow=uow
             )
 
