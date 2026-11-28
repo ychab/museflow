@@ -114,6 +114,8 @@ class TasteProfileSQLRepository(TasteProfileRepository):
             profiler_metadata=profiler_metadata,
             tracks_count=tracks_count,
             logic_version=logic_version,
+            # Partial until the build ends: a new profile too, or the column default would call it finished
+            status=TasteProfileStatus.BUILDING,
             checkpoint_profile=profile_data,
             checkpoint_batch_index=batch_index,
         )
@@ -125,7 +127,7 @@ class TasteProfileSQLRepository(TasteProfileRepository):
                 "profiler_metadata": insert_stmt.excluded.profiler_metadata,
                 "tracks_count": insert_stmt.excluded.tracks_count,
                 "logic_version": insert_stmt.excluded.logic_version,
-                "status": TasteProfileStatus.BUILDING,
+                "status": insert_stmt.excluded.status,
                 "checkpoint_profile": insert_stmt.excluded.checkpoint_profile,
                 "checkpoint_batch_index": insert_stmt.excluded.checkpoint_batch_index,
                 "updated_at": func.now(),
