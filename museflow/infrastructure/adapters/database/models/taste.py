@@ -78,3 +78,9 @@ class TasteProfileBuildModel(UUIDIdMixin, Base, kw_only=True):
     # The fencing token: each build draws its own, and writes only while the lease still holds it.
     build_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     lease_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # The job running the build, None for the CLI: the next try of the job takes its lease back at once
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("museflow_job.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )

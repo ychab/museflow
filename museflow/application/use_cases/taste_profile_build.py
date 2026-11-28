@@ -21,6 +21,7 @@ from museflow.domain.entities.taste import TasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
+from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
@@ -46,10 +47,21 @@ class BuildTasteProfileUseCase:
     async def build_profile(self, user: User, config: BuildTasteProfileConfigInput) -> TasteProfile:
         """Builds the profile, or resumes it from its last checkpoint.
 
+        A resumed build of a finished profile returns it as it is: nothing is left to build, and its checkpoint is
+        gone, so a build would pay for it all again.
+
         Raises:
             TasteProfileBuildInProgressError: If another build of the profile is running, before any LLM call, or if
                 another build took the profile over from this one, whose lease had expired.
         """
+        if config.resume:
+            async with self._uow as uow:
+                taste_profile = await uow.taste_profiles.get(user_id=user.id, name=config.name)
+
+            if taste_profile is not None and taste_profile.status == TasteProfileStatus.FINISHED:
+                logger.debug(f"Taste profile '{config.name}' already finished, nothing to resume")
+                return taste_profile
+
         # Before any paid call: two builds of one profile would pay twice and overwrite each other's checkpoints.
         build_id = uuid.uuid4()
 
@@ -58,6 +70,7 @@ class BuildTasteProfileUseCase:
                 user_id=user.id,
                 name=config.name,
                 build_id=build_id,
+                job_id=config.job_id,
                 lease_duration=config.lease_duration,
             )
 
@@ -128,7 +141,8 @@ class BuildTasteProfileUseCase:
                 current_profile, start_batch_index = checkpoint
                 logger.debug(f"Resuming taste profile from period {start_batch_index + 1} / {len(periods)}")
             else:
-                logger.warning("No checkpoint found for this profile, starting from scratch")
+                # Not a warning: a first build that resumes, as every try of a job does, has no checkpoint yet
+                logger.debug("No checkpoint found for this profile, starting from scratch")
 
         await self._progress.publish(StepStarted(step=ProgressStep.TASTE_PERIODS, total=len(periods)))
 

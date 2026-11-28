@@ -8,11 +8,47 @@ from httpx import AsyncClient
 import pytest
 
 from museflow.domain.entities.user import User
+from museflow.domain.enums import JobStatus
 from museflow.domain.enums import TasteProfileStatus
 from museflow.infrastructure.entrypoints.api.main import app
 
 from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
 from tests.integration.factories.models.taste import TasteProfileModelFactory
+
+
+class TestTasteProfileBuild:
+    @pytest.fixture
+    def url(self) -> str:
+        return app.url_path_for("taste_profile_build")
+
+    async def test__not_authenticated(self, url: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={"title": "Winter"})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    async def test__nominal(self, url: str, user: User, access_token: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={"title": "Soirées d'hiver", "rated_only": True})
+
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        response_data = response.json()
+        assert response.headers["Location"] == app.url_path_for("job_get", job_id=response_data["id"])
+        assert response_data["kind"] == "taste_build"
+        assert response_data["status"] == JobStatus.PENDING
+        assert response_data["input"] == {"name": "soirees-d-hiver", "title": "Soirées d'hiver", "rated_only": True}
+        assert response_data["result"] is None
+
+    async def test__title__no_slug(self, url: str, access_token: str, async_client: AsyncClient) -> None:
+        response = await async_client.post(url, json={"title": "!!!"})
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    async def test__finished(self, url: str, user: User, access_token: str, async_client: AsyncClient) -> None:
+        await TasteProfileModelFactory.create_async(user_id=user.id, name="winter")
+
+        response = await async_client.post(url, json={"title": "Winter"})
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.json()["detail"] == "This taste profile is already built: delete it to build it again"
 
 
 class TestTasteProfileList:

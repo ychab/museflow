@@ -12,8 +12,19 @@ class TasteProfileBuildRepository(ABC):
     """
 
     @abstractmethod
-    async def claim(self, user_id: uuid.UUID, name: str, build_id: uuid.UUID, lease_duration: timedelta) -> bool:
+    async def claim(
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        build_id: uuid.UUID,
+        job_id: uuid.UUID | None,
+        lease_duration: timedelta,
+    ) -> bool:
         """Takes the lease of the profile name, unless another build holds it and its lease has not expired.
+
+        Args:
+            job_id: The job running the build, if any. A lease held by a try of the same job is taken over at once,
+                expired or not: that try died, since a job runs one try at a time.
 
         Returns:
             True if the build now holds the lease, False if another build does.

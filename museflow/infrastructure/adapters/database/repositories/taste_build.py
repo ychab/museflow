@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from sqlalchemy import delete
 from sqlalchemy import func
+from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -16,20 +17,36 @@ class TasteProfileBuildSQLRepository(TasteProfileBuildRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def claim(self, user_id: uuid.UUID, name: str, build_id: uuid.UUID, lease_duration: timedelta) -> bool:
+    async def claim(
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        build_id: uuid.UUID,
+        job_id: uuid.UUID | None,
+        lease_duration: timedelta,
+    ) -> bool:
         insert_stmt = pg_insert(TasteProfileBuildModel).values(
             id=uuid.uuid4(),
             user_id=user_id,
             name=name,
             build_id=build_id,
+            job_id=job_id,
             lease_until=func.now() + lease_duration,
         )
         # A held lease is left as it is: no row is updated, so none returned. Two claims at once queue on the row
-        # lock, and the second sees the lease the first just took.
+        # lock, and the second sees the lease the first just took. A NULL job never equals another: a CLI build
+        # takes over an expired lease only.
         stmt = insert_stmt.on_conflict_do_update(
             constraint="uq_museflow_taste_profile_build_user_name",
-            set_={"build_id": insert_stmt.excluded.build_id, "lease_until": insert_stmt.excluded.lease_until},
-            where=TasteProfileBuildModel.lease_until < func.now(),
+            set_={
+                "build_id": insert_stmt.excluded.build_id,
+                "job_id": insert_stmt.excluded.job_id,
+                "lease_until": insert_stmt.excluded.lease_until,
+            },
+            where=or_(
+                TasteProfileBuildModel.lease_until < func.now(),
+                TasteProfileBuildModel.job_id == insert_stmt.excluded.job_id,
+            ),
         ).returning(TasteProfileBuildModel.id)
 
         result = await self.session.execute(stmt)

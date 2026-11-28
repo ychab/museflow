@@ -40,6 +40,7 @@ celery_app = Celery(
     include=[
         "museflow.infrastructure.entrypoints.worker.tasks.track.history_import",
         "museflow.infrastructure.entrypoints.worker.tasks.track.enrich",
+        "museflow.infrastructure.entrypoints.worker.tasks.taste.build",
     ],
 )
 celery_app.conf.update(

@@ -5,6 +5,7 @@ from fastapi import status
 from httpx import AsyncClient
 
 from museflow.application.inputs.enrich import EnrichTracksJobInput
+from museflow.application.inputs.taste import BuildTasteProfileJobInput
 from museflow.application.use_cases.track_enrich import EnrichTracksReport
 from museflow.application.use_cases.track_history_import import ImportStreamingHistoryReport
 from museflow.domain.entities.user import User
@@ -79,6 +80,23 @@ class TestJobGet:
         assert response_data["input"] == {"fields": ["genre", "locale", "mood"]}
         # No fingerprints asked for through the API: none to miss
         assert response_data["result"] == {"enriched_count": 180, "error_count": 1}
+
+    async def test__taste_build__typed(self, user: User, access_token: str, async_client: AsyncClient) -> None:
+        job_db = await JobModelFactory.create_async(
+            user_id=user.id,
+            kind=JobKind.TASTE_BUILD,
+            status=JobStatus.DONE,
+            input=BuildTasteProfileJobInput(title="Winter").model_dump(mode="json"),
+            result={"name": "winter", "tracks_count": 120},
+        )
+
+        response = await async_client.get(app.url_path_for("job_get", job_id=str(job_db.id)))
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert response_data["kind"] == "taste_build"
+        assert response_data["input"] == {"name": "winter", "title": "Winter", "rated_only": False}
+        assert response_data["result"] == {"name": "winter", "tracks_count": 120}
 
     async def test__other_user__not_found(self, user: User, access_token: str, async_client: AsyncClient) -> None:
         job_db = await JobModelFactory.create_async()

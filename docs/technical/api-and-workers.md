@@ -462,6 +462,49 @@ amount: the worker logs the cost of each try, and records it in `museflow_llm_us
 `museflow llm usage`. The cost of a process killed is not recorded yet: #312 records it batch by batch, before the
 budget of #263 sums it.
 
+### A taste profile build resumes from its checkpoint
+
+The build (#266) is the second paid job: `POST /taste-profiles` queues it, with the title, the name (the title as a
+slug by default) and whether to seed it with rated tracks only. Unlike the enrichment, a build already has a
+checkpoint, saved with each listening period, and a lease that keeps two builds off one profile (#243). The state of
+the profile tells what the request does:
+
+```mermaid
+flowchart TB
+    P["POST /taste-profiles"] --> F{"The profile"}
+    F -- "none" --> N["202: built from scratch"]:::ok
+    F -- "building<br/>(paused, its job failed)" --> R["202: resumed from its checkpoint"]:::ok
+    F -- "finished" --> C1["409: delete it first"]:::fail
+    F -- "held by a CLI build" --> C2["409: a build is running"]:::fail
+    F -- "a build job active,<br/>any profile" --> C3["409: the jobs index"]:::fail
+
+    classDef fail stroke:#b42318,stroke-width:2px
+    classDef ok stroke:#2f7d32,stroke-width:2px
+```
+
+- **The worker always resumes**: a try picks up after the last period saved, whether a pause, a dead worker or a
+  transient error stopped the one before. A paused build (a rate limit, an invalid reply) fails its job with
+  `TasteProfileBuildPausedError`: the same request queues the job that resumes it.
+- **The lease knows its job.** A dead try leaves its lease until it expires; the message is redelivered at once. A claim
+  from the same job takes that lease over, with a new fencing token: the mirror of the `running` rule above, as a job
+  runs one try at a time. Any other build waits for the lease to expire, and a try that was not dead stops at its next
+  checkpoint.
+- **A finished profile is never built again by a resume**: a try killed after saving it, before its job was done,
+  finds it finished and returns it, paying nothing.
+- **Only the title, the name and `rated_only`** through the API: the seed cap, the batch size and the models set the
+  cost, the owner's call, in the settings.
+
+| What fails | What happens | Paid again |
+|---|---|---|
+| A rate limit, an invalid reply after `@self_heal` | The job fails (`TasteProfileBuildPausedError`): the same request resumes it | Nothing |
+| The database, while a period is saved | A transient error: the task is retried, takes its lease back, resumes | That one period: accepted risk |
+| The worker or its process, killed | Redelivered or retried: the job takes its lease back, resumes | The period in flight, or the reflection |
+| Killed after the profile was saved | The next try returns the profile: the job is done | Nothing |
+| A try still alive after its job moved on | Its next checkpoint finds the lease taken over: it stops | One period at most |
+
+Accepted risk, as with `taste build --resume`: a resume reads the periods again, which no longer match the
+checkpoint after an import that changed the history, or with another `rated_only`; the profile then mixes both.
+
 ## API conventions
 
 Set by #252, so that every route answers the same way.

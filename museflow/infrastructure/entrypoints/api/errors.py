@@ -18,6 +18,7 @@ from museflow.domain.exceptions import JobAlreadyActiveError
 from museflow.domain.exceptions import JobNotFoundError
 from museflow.domain.exceptions import ProviderExchangeCodeError
 from museflow.domain.exceptions import ProviderOAuthStateInvalidError
+from museflow.domain.exceptions import TasteProfileAlreadyExistsError
 from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileNotFoundError
 from museflow.domain.exceptions import UserAlreadyExistsError
@@ -138,6 +139,10 @@ PROBLEMS: Final[dict[type[Exception], Problem]] = {
     TasteProfileBuildInProgressError: Problem(
         status=status.HTTP_409_CONFLICT,
         detail="A build of this taste profile is running",
+    ),
+    TasteProfileAlreadyExistsError: Problem(
+        status=status.HTTP_409_CONFLICT,
+        detail="This taste profile is already built: delete it to build it again",
     ),
     # The checks of an upload, before it is stored
     ArchiveInvalidError: Problem(

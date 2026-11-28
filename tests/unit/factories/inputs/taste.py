@@ -13,3 +13,5 @@ class BuildTasteProfileConfigInputFactory(DataclassFactory[BuildTasteProfileConf
     rated_only = False
     # A random duration may be negative, or overflow the database timestamps once added to now()
     lease_duration = timedelta(minutes=15)
+    # A CLI build by default: a random job would break the foreign key of the lease
+    job_id = None

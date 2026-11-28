@@ -11,9 +11,11 @@ import pytest
 
 from museflow.application.ports.repositories.taste_build import TasteProfileBuildRepository
 from museflow.domain.entities.user import User
+from museflow.domain.enums import JobStatus
 from museflow.infrastructure.adapters.database.models import TasteProfileBuildModel
 from museflow.infrastructure.adapters.database.repositories.taste_build import TasteProfileBuildSQLRepository
 
+from tests.integration.factories.models.job import JobModelFactory
 from tests.integration.factories.models.taste import TasteProfileBuildModelFactory
 
 LEASE_DURATION: Final[timedelta] = timedelta(minutes=15)
@@ -50,7 +52,7 @@ class TestTasteProfileBuildSQLRepository:
     ) -> None:
         build_id = uuid.uuid4()
 
-        claimed = await taste_build_repository.claim(user.id, "main", build_id, LEASE_DURATION)
+        claimed = await taste_build_repository.claim(user.id, "main", build_id, None, LEASE_DURATION)
 
         assert claimed is True
         lease_db = await self._get_lease(async_session_db, user, "main")
@@ -67,7 +69,7 @@ class TestTasteProfileBuildSQLRepository:
     ) -> None:
         holder_id, lease_until = lease_db.build_id, lease_db.lease_until
 
-        claimed = await taste_build_repository.claim(user.id, lease_db.name, uuid.uuid4(), LEASE_DURATION)
+        claimed = await taste_build_repository.claim(user.id, lease_db.name, uuid.uuid4(), None, LEASE_DURATION)
 
         assert claimed is False
         lease_db_after = await self._get_lease(async_session_db, user, lease_db.name)
@@ -84,13 +86,70 @@ class TestTasteProfileBuildSQLRepository:
     ) -> None:
         build_id = uuid.uuid4()
 
-        claimed = await taste_build_repository.claim(user.id, lease_db.name, build_id, LEASE_DURATION)
+        claimed = await taste_build_repository.claim(user.id, lease_db.name, build_id, None, LEASE_DURATION)
 
         assert claimed is True
         lease_db_after = await self._get_lease(async_session_db, user, lease_db.name)
         assert lease_db_after is not None
         assert lease_db_after.build_id == build_id
         assert lease_db_after.lease_until > datetime.now(UTC)
+
+    async def test__claim__held_by_the_same_job__taken_over(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        taste_build_repository: TasteProfileBuildRepository,
+    ) -> None:
+        # The lease a dead try of the job left, unexpired
+        job_db = await JobModelFactory.create_async(user_id=user.id, status=JobStatus.RUNNING)
+        lease_db = await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            job_id=job_db.id,
+            lease_until=datetime.now(UTC) + timedelta(minutes=10),
+        )
+        build_id = uuid.uuid4()
+
+        claimed = await taste_build_repository.claim(user.id, lease_db.name, build_id, job_db.id, LEASE_DURATION)
+
+        assert claimed is True
+        lease_db_after = await self._get_lease(async_session_db, user, lease_db.name)
+        assert lease_db_after is not None
+        assert (lease_db_after.build_id, lease_db_after.job_id) == (build_id, job_db.id)
+
+    async def test__claim__held_by_another_job(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        taste_build_repository: TasteProfileBuildRepository,
+    ) -> None:
+        other_db = await JobModelFactory.create_async(user_id=user.id, status=JobStatus.DONE)
+        job_db = await JobModelFactory.create_async(user_id=user.id)
+        lease_db = await TasteProfileBuildModelFactory.create_async(
+            user_id=user.id,
+            job_id=other_db.id,
+            lease_until=datetime.now(UTC) + timedelta(minutes=10),
+        )
+        holder_id = lease_db.build_id
+
+        claimed = await taste_build_repository.claim(user.id, lease_db.name, uuid.uuid4(), job_db.id, LEASE_DURATION)
+
+        assert claimed is False
+        lease_db_after = await self._get_lease(async_session_db, user, lease_db.name)
+        assert lease_db_after is not None
+        assert (lease_db_after.build_id, lease_db_after.job_id) == (holder_id, other_db.id)
+
+    @pytest.mark.parametrize("lease_db", [10], indirect=True)
+    async def test__claim__held_by_the_cli__refused_to_a_job(
+        self,
+        user: User,
+        lease_db: TasteProfileBuildModel,
+        taste_build_repository: TasteProfileBuildRepository,
+    ) -> None:
+        job_db = await JobModelFactory.create_async(user_id=user.id)
+
+        claimed = await taste_build_repository.claim(user.id, lease_db.name, uuid.uuid4(), job_db.id, LEASE_DURATION)
+
+        assert claimed is False
 
     @pytest.mark.parametrize("lease_db", [-10], indirect=True)
     async def test__renew__holder__even_expired(
