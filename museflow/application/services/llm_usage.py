@@ -13,8 +13,8 @@ class LLMUsageService:
     def __init__(self, uow: UnitOfWorkPort) -> None:
         self._uow = uow
 
+    @staticmethod
     async def add_all(
-        self,
         user_id: uuid.UUID,
         run_id: uuid.UUID,
         operation: LLMOperation,
