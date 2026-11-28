@@ -130,14 +130,15 @@ class CreateDiscoveryPlaylistUseCase:
             )
             playlist_id = result.playlist.id if result.playlist else None
         finally:
-            await self._llm_usage.save(
-                user_id=user.id,
-                run_id=uuid.uuid4(),
-                operation=LLMOperation.DISCOVER,
-                usages=self._advisor.pop_usages(),
-                profile_name=profile.name,
-                playlist_id=playlist_id,
-            )
+            if usages := self._advisor.pop_usages():
+                await self._llm_usage.save(
+                    user_id=user.id,
+                    run_id=uuid.uuid4(),
+                    operation=LLMOperation.DISCOVER,
+                    usages=usages,
+                    profile_name=profile.name,
+                    playlist_id=playlist_id,
+                )
 
         return result
 

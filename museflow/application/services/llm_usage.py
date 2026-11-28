@@ -13,7 +13,7 @@ class LLMUsageService:
     def __init__(self, uow: UnitOfWorkPort) -> None:
         self._uow = uow
 
-    async def add(
+    async def add_all(
         self,
         user_id: uuid.UUID,
         run_id: uuid.UUID,
@@ -29,9 +29,6 @@ class LLMUsageService:
         The profile stays unknown when no profile has that name yet, e.g. a build paused before its first checkpoint;
         a later batch of the run links it.
         """
-        if not usages:
-            return
-
         profile = await uow.taste_profiles.get(user_id=user_id, name=profile_name) if profile_name else None
         await uow.llm_usage.bulk_accumulate(
             [
@@ -60,12 +57,9 @@ class LLMUsageService:
 
         A failure is logged and never raised, so it cannot hide the outcome of the run.
         """
-        if not usages:
-            return
-
         try:
             async with self._uow as uow:
-                await self.add(user_id, run_id, operation, usages, profile_name, playlist_id, uow=uow)
+                await self.add_all(user_id, run_id, operation, usages, profile_name, playlist_id, uow=uow)
         except Exception:
             logger.exception(
                 "Failed to save the LLM usage", extra={"user_id": str(user_id), "operation": operation.value}

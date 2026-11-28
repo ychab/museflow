@@ -146,7 +146,7 @@ for i, batch in enumerate(batches, start=1):
     # One block per batch: a paid batch survives a later failure, and commits with its cost.
     async with self._uow as uow:
         await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
-        await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
+        await self._llm_usage.add_all(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
 ```
 
 **Writes that form one fact share one block** (`CreateDiscoveryPlaylistUseCase`). The remote playlist is created first, outside

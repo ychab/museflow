@@ -216,6 +216,8 @@ every annotation of the class that uses it (`list[Track]`) then names the method
 - Public members first, private helpers (`_`-prefixed) after: a reader opens a module for what it exposes. A helper
   run at import time (a decorator argument such as `_is_retryable_error`, a module-level constant) stays above its
   first use. Group members by kind; never class/function/class.
+- A method taking a collection never checks that it is empty: the caller does, where the rule reads
+  (`if usages:` before saving them), and the tests guard it, as an empty bulk `INSERT` fails at once.
 - No `return` inside a `try` block that has a `finally:`: assign the result in the `try`, then return it after the
   statement, so the exit point stays visible.
 - No duplicated inner functions: a closure repeated in several places becomes a decorator or shared helper

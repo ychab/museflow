@@ -58,12 +58,13 @@ class EnrichTracksUseCase:
         try:
             report = await self._enrich(user, config, run_id)
         finally:
-            await self._llm_usage.save(
-                user_id=user.id,
-                run_id=run_id,
-                operation=LLMOperation.ENRICH,
-                usages=self._track_enricher.pop_usages(),
-            )
+            if usages := self._track_enricher.pop_usages():
+                await self._llm_usage.save(
+                    user_id=user.id,
+                    run_id=run_id,
+                    operation=LLMOperation.ENRICH,
+                    usages=usages,
+                )
         return report
 
     async def _enrich(self, user: User, config: EnrichTracksConfigInput, run_id: uuid.UUID) -> EnrichTracksReport:
@@ -128,8 +129,9 @@ class EnrichTracksUseCase:
             )
 
             if not enriched_tracks:
-                async with self._uow as uow:
-                    await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
+                if usages:
+                    async with self._uow as uow:
+                        await self._llm_usage.add_all(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
 
                 error_count += 1
                 consecutive_failures += 1
@@ -149,7 +151,7 @@ class EnrichTracksUseCase:
             # batch and its cost, which the next try pays again; one batch at most.
             async with self._uow as uow:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
-                await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
+                await self._llm_usage.add_all(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
 
             enriched_count += len(enriched_tracks)
 

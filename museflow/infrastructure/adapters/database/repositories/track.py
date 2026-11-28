@@ -348,9 +348,6 @@ class TrackSQLRepository(TrackRepository):
         return track_ids, created_count
 
     async def bulk_update(self, tracks: list[Track], fields: frozenset[EnrichField]) -> None:
-        if not tracks:
-            return
-
         columns = {self._ENRICH_FIELD_TO_COLUMN[f] for f in fields}
 
         await self.session.execute(
