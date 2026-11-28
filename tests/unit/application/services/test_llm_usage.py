@@ -1,4 +1,5 @@
 import logging
+import uuid
 from unittest import mock
 
 import pytest
@@ -17,10 +18,12 @@ class TestLLMUsageServiceRecord:
         mock_uow: mock.AsyncMock,
         mock_llm_usage_repository: mock.AsyncMock,
     ) -> None:
-        await LLMUsageService(uow=mock_uow).record(user_id=user.id, operation=LLMOperation.ENRICH, usages=[])
+        await LLMUsageService(uow=mock_uow).record(
+            user_id=user.id, run_id=uuid.uuid4(), operation=LLMOperation.ENRICH, usages=[]
+        )
 
         mock_uow.__aenter__.assert_not_awaited()
-        mock_llm_usage_repository.bulk_create.assert_not_awaited()
+        mock_llm_usage_repository.bulk_accumulate.assert_not_awaited()
 
     async def test__profile_not_found__recorded_without_profile(
         self,
@@ -34,12 +37,13 @@ class TestLLMUsageServiceRecord:
 
         await LLMUsageService(uow=mock_uow).record(
             user_id=user.id,
+            run_id=uuid.uuid4(),
             operation=LLMOperation.TASTE_BUILD,
             usages=[LLMUsageFactory.build()],
             profile_name="my-profile",
         )
 
-        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_accumulate.call_args.args[0]
         assert record.profile_id is None
 
     async def test__failure__logged_not_raised(
@@ -49,11 +53,12 @@ class TestLLMUsageServiceRecord:
         mock_llm_usage_repository: mock.AsyncMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        mock_llm_usage_repository.bulk_create.side_effect = RuntimeError("database down")
+        mock_llm_usage_repository.bulk_accumulate.side_effect = RuntimeError("database down")
 
         with caplog.at_level(logging.ERROR):
             await LLMUsageService(uow=mock_uow).record(
                 user_id=user.id,
+                run_id=uuid.uuid4(),
                 operation=LLMOperation.ENRICH,
                 usages=[LLMUsageFactory.build()],
             )

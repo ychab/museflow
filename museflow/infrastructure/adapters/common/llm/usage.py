@@ -11,11 +11,13 @@ from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 class LLMUsageMeter:
     """Sums the usage OpenRouter reports for each reply, per step and model, over one command run.
 
-    Created when the command starts, it also times the whole run.
+    Created when the command starts, it also times the whole run. Besides the whole run, it keeps what was not taken
+    yet, which the use case saves batch by batch.
     """
 
     def __init__(self) -> None:
         self._usages: dict[tuple[str, str], LLMUsage] = {}
+        self._untaken: dict[tuple[str, str], LLMUsage] = {}
         self._started_at = time.monotonic()
 
     @property
@@ -38,13 +40,31 @@ class LLMUsageMeter:
         usage: ChatUsage,
         duration: timedelta,
     ) -> None:
+        for usages in (self._usages, self._untaken):
+            self._add(usages, step, model, reasoning_effort, usage, duration)
+
+    def take_usages(self) -> list[LLMUsage]:
+        """What was recorded since the last take, per step and model; the next take starts afresh."""
+        taken = list(self._untaken.values())
+        self._untaken.clear()
+        return taken
+
+    def _add(
+        self,
+        usages: dict[tuple[str, str], LLMUsage],
+        step: str,
+        model: str,
+        reasoning_effort: ReasoningEffort,
+        usage: ChatUsage,
+        duration: timedelta,
+    ) -> None:
         # A step runs on one setting through a command run: the effort comes with the step, it needs no key of its own.
-        current = self._usages.get(
+        current = usages.get(
             (step, model),
             LLMUsage(step=step, model=model, reasoning_effort=reasoning_effort),
         )
         details = usage.completion_tokens_details
-        self._usages[(step, model)] = dataclasses.replace(
+        usages[(step, model)] = dataclasses.replace(
             current,
             calls=current.calls + 1,
             prompt_tokens=current.prompt_tokens + usage.prompt_tokens,

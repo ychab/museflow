@@ -64,6 +64,28 @@ class LLMUsageSQLRepository(LLMUsageRepository):
 
         return created
 
+    async def bulk_accumulate(self, records: list[LLMUsageRecord]) -> None:
+        # A take holds one row per step and model: the statement never meets one key twice, which PostgreSQL rejects.
+        columns = LLMUsageModel.__table__.columns
+        rows = [LLMUsageModel.from_entity(record) for record in records]
+
+        stmt = pg_insert(LLMUsageModel).values(
+            [{column.key: getattr(row, column.key) for column in columns} for row in rows]
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["user_id", "run_id", "step", "model"],
+            set_={
+                **{
+                    key: getattr(LLMUsageModel, key) + getattr(stmt.excluded, key)
+                    for key in ("calls", "prompt_tokens", "completion_tokens", "reasoning_tokens", "cost", "duration")
+                },
+                "profile_id": func.coalesce(stmt.excluded.profile_id, LLMUsageModel.profile_id),
+                "playlist_id": func.coalesce(stmt.excluded.playlist_id, LLMUsageModel.playlist_id),
+                "updated_at": func.now(),
+            },
+        )
+        await self.session.execute(stmt)
+
     async def summarize(
         self,
         user_id: uuid.UUID | None,

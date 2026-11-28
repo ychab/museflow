@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +27,7 @@ class TestLLMUsageServiceRecord:
 
         await LLMUsageService(uow=uow).record(
             user_id=user.id,
+            run_id=uuid.uuid4(),
             operation=LLMOperation.DISCOVER,
             usages=usages,
             profile_name=profile_db.name,
@@ -48,6 +51,7 @@ class TestLLMUsageServiceRecord:
     ) -> None:
         await LLMUsageService(uow=uow).record(
             user_id=user.id,
+            run_id=uuid.uuid4(),
             operation=LLMOperation.ENRICH,
             usages=[LLMUsageFactory.build()],
         )

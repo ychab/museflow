@@ -179,6 +179,32 @@ class TestEnrichTracksUseCase:
             StepDone(step=ProgressStep.ENRICH_TRACKS),
         ]
 
+    async def test__enricher_error__batch_cost_saved_alone(
+        self,
+        use_case: EnrichTracksUseCase,
+        user: User,
+        mock_track_repository: mock.AsyncMock,
+        mock_llm_usage_repository: mock.AsyncMock,
+        mock_enricher: mock.AsyncMock,
+    ) -> None:
+        tracks = TrackFactory.batch(4)
+        mock_track_repository.get_list.return_value = tracks
+        # A reply the enricher rejected was billed all the same
+        failed_usage, enriched_usage = LLMUsageFactory.batch(2)
+        mock_enricher.take_usages.side_effect = [[failed_usage], [enriched_usage], []]
+        mock_enricher.enrich_tracks.side_effect = [
+            TrackEnrichmentError("Invalid enrichment response"),
+            [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[2:]],
+        ]
+
+        await use_case.enrich(user, EnrichTracksConfigInput(batch_size=2))
+
+        mock_track_repository.bulk_update.assert_awaited_once()
+        assert [
+            [record.usage for record in call.args[0]]
+            for call in mock_llm_usage_repository.bulk_accumulate.call_args_list
+        ] == [[failed_usage], [enriched_usage]]
+
     @pytest.mark.parametrize(
         ("error", "expected_message", "expected_traceback"),
         [
@@ -232,8 +258,9 @@ class TestEnrichTracksUseCase:
     ) -> None:
         tracks = TrackFactory.batch(6)
         mock_track_repository.get_list.return_value = tracks
-        # The batches billed before the abort.
-        mock_enricher.usages = [LLMUsageFactory.build()]
+        # The first batch's cost, then what the aborted batch was billed before it failed.
+        batch_usage, abort_usage = LLMUsageFactory.batch(2)
+        mock_enricher.take_usages.side_effect = [[batch_usage], [abort_usage]]
         mock_enricher.enrich_tracks.side_effect = [
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[:2]],
             error,
@@ -246,8 +273,12 @@ class TestEnrichTracksUseCase:
         assert exc_info.value.enriched_count == 2
         assert mock_enricher.enrich_tracks.await_count == 2
         mock_track_repository.bulk_update.assert_awaited_once()
-        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
-        assert (record.operation, record.usage) == (LLMOperation.ENRICH, mock_enricher.usages[0])
+        [batch_record], [abort_record] = [
+            call.args[0] for call in mock_llm_usage_repository.bulk_accumulate.call_args_list
+        ]
+        assert (batch_record.operation, batch_record.usage) == (LLMOperation.ENRICH, batch_usage)
+        assert (abort_record.operation, abort_record.usage) == (LLMOperation.ENRICH, abort_usage)
+        assert batch_record.run_id == abort_record.run_id
 
     async def test__consecutive_failures__abort_at_threshold(
         self,

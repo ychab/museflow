@@ -172,13 +172,13 @@ class TestCreateExplorationPlaylistUseCase:
         """Nothing new to pick ends the run, and the advisor calls billed before are saved."""
         mock_track_repository.get_artist_stats.return_value = ArtistStatsFactory.batch(1)
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=True))
-        mock_advisor.usages = [LLMUsageFactory.build()]
+        mock_advisor.take_usages.return_value = [LLMUsageFactory.build()]
 
         with pytest.raises(DiscoveryTrackNoNewError):
             await use_case.create_playlist(user=user, config=CreateExplorationPlaylistConfigInput(max_attempts=1))
 
         mock_advisor.pick_exploration_tracks.assert_not_awaited()
-        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_accumulate.call_args.args[0]
         assert (record.operation, record.profile_id, record.playlist_id) == (LLMOperation.EXPLORE, None, None)
 
     async def test__remote_calls__run_outside_any_block(

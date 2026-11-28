@@ -59,7 +59,7 @@ class TestOpenRouterAdvisorAdapter:
         assert strategy.suggested_playlist_name == "Sonic Expansion - Progressive Horizons"
         assert [artist.name for artist in strategy.artists] == ["Grupo Niche"]
         assert strategy.artists[0].score == pytest.approx(0.9)
-        assert openrouter_advisor.usages[0].step == "advisor_artists"
+        assert openrouter_advisor.take_usages()[0].step == "advisor_artists"
 
     async def test__pick_discovery_tracks__nominal(
         self,
@@ -82,7 +82,7 @@ class TestOpenRouterAdvisorAdapter:
         # The ids "1" and "2" are the candidates in order; the made-up id "99" is dropped.
         assert [(tp.track, tp.score) for tp in tracks_picked] == [(first, 0.9), (second, 0.8)]
         assert "Picks dropped, not among the candidates or picked twice: 1" in caplog.text
-        assert openrouter_advisor.usages[0].step == "advisor_picks"
+        assert openrouter_advisor.take_usages()[0].step == "advisor_picks"
 
     async def test__pick_discovery_tracks__all_kept__no_warning(
         self,

@@ -258,9 +258,9 @@ class TestBuildTasteProfileUseCase:
 
         # 3 segments + 2 merges + 1 reflection
         assert blocks_open == [False] * 6
-        # The lease claimed, the played tracks counted and the periods read, one checkpoint per period, the final upsert,
-        # then the LLM usage and the lease released
-        assert mock_uow.__aenter__.await_count == 8
+        # The lease claimed, the played tracks counted and the periods read, one checkpoint per period, the final upsert
+        # with the LLM usage, then the lease released: every cost was saved with its step, none is left for the end
+        assert mock_uow.__aenter__.await_count == 7
 
     @pytest.mark.parametrize("periods", [1], indirect=True)
     async def test__nominal__single_batch(
@@ -491,7 +491,7 @@ class TestBuildTasteProfileUseCase:
         mock_progress: mock.AsyncMock,
     ) -> None:
         usage = LLMUsageFactory.build()
-        profiler = mock.AsyncMock(spec=TasteProfilerPort, usages=[usage])
+        profiler = mock.AsyncMock(spec=TasteProfilerPort, **{"take_usages.return_value": [usage]})
         profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
 
         with pytest.raises(TasteProfileBuildPausedError):
@@ -500,7 +500,7 @@ class TestBuildTasteProfileUseCase:
             )
 
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=config.name)
-        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_accumulate.call_args.args[0]
         assert (record.operation, record.usage) == (LLMOperation.TASTE_BUILD, usage)
 
     @pytest.mark.parametrize("periods", [3], indirect=True)

@@ -96,9 +96,8 @@ class OpenRouterClient(HttpClientMixin):
         # The caller passes its own meter to read it even after the adapter is gone.
         self._meter = meter or LLMUsageMeter()
 
-    @property
-    def usages(self) -> list[LLMUsage]:
-        return self._meter.usages
+    def take_usages(self) -> list[LLMUsage]:
+        return self._meter.take_usages()
 
     @retry(
         retry=retry_if_exception(_is_retryable_error),

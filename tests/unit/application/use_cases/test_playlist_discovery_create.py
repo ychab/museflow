@@ -148,7 +148,7 @@ class TestCreateDiscoveryPlaylistUseCase:
         """Nothing is offered to pick, and the advisor calls billed are saved."""
         mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
         # The advisor calls billed before the failure.
-        mock_advisor.usages = [LLMUsageFactory.build()]
+        mock_advisor.take_usages.return_value = [LLMUsageFactory.build()]
         artist = discovery_artist_strategy.artists[0].name
         mock_provider_library.search_artist_tracks.return_value = (
             [TrackFactory.build(artists=[artist])] if found else []
@@ -163,7 +163,7 @@ class TestCreateDiscoveryPlaylistUseCase:
         assert mock_track_repository.get_known_identifiers.await_count == int(found)
         profile = mock_taste_profile_repository.get_latest.return_value
         mock_taste_profile_repository.get.assert_awaited_once_with(user_id=user.id, name=profile.name)
-        (record,) = mock_llm_usage_repository.bulk_create.call_args.args[0]
+        (record,) = mock_llm_usage_repository.bulk_accumulate.call_args.args[0]
         assert (record.operation, record.playlist_id) == (LLMOperation.DISCOVER, None)
 
     async def test__attempts__artists_and_tracks_not_offered_twice(

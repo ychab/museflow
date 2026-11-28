@@ -97,9 +97,11 @@ class TestBuildTasteProfileUseCase:
         count = (await async_session_db.execute(stmt)).scalar_one()
         assert count == 1
 
-        rows = (
-            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
-        ).scalars()
+        rows = list(
+            (await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))).scalars()
+        )
+        # Saved period by period, each with its checkpoint, into the rows of one run
+        assert len({row.run_id for row in rows}) == 1
         assert {(row.operation, row.step, row.profile_id, row.calls) for row in rows} == {
             (LLMOperation.TASTE_BUILD, "profiler segment", profile.id, 2),
             (LLMOperation.TASTE_BUILD, "profiler merge", profile.id, 1),

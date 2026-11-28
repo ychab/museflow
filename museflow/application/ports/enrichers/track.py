@@ -10,10 +10,12 @@ from museflow.domain.value_objects.track import TrackEnrichment
 class TrackEnricherPort(ABC):
     """Abstract port for a service that infers genre and mood metadata for tracks."""
 
-    @property
     @abstractmethod
-    def usages(self) -> list[LLMUsage]:
-        """Tokens and cost of the calls made since the adapter was created, per step and model."""
+    def take_usages(self) -> list[LLMUsage]:
+        """Tokens and cost of the calls made since the last take, per step and model; the next take starts afresh.
+
+        A use case saves each take: what it took is never handed over again, so a run never counts a call twice.
+        """
         ...
 
     @abstractmethod
