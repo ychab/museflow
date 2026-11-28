@@ -414,7 +414,7 @@ flowchart TB
 **Accepted risks.** The API dying between storing the archive and committing its job leaves the archive behind, and a
 job failed after its last try keeps its files: the sweeper of #299 deletes both.
 
-**The proxy** (`docker/nginx/default.conf.template`) is the only service of the stack with a published port. A body
+**The proxy** (`conf/docker/nginx/default.conf.template`) is the only service of the stack with a published port. A body
 over 1 MB is refused (`413`, a problem details body as the API's), over the archive cap on the upload route: from its
 `Content-Length` before reading it, or as soon as it crosses the cap without one. It sets read timeouts against slow
 clients, and receives a body whole before passing it on, so that a slow upload holds no API worker. The API trusts it
