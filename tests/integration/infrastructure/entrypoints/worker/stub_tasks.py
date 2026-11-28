@@ -38,8 +38,8 @@ def create_user_as_playlist_task(email: str) -> None:
 
 
 @celery_app.task(name="tests.create_user_after_transient_error", bind=True)
-def create_user_after_transient_error_task(self: Task[[str], None], email: str) -> None:
-    if self.request.retries == 0:
+def create_user_after_transient_error_task(task: Task[[str], None], email: str) -> None:
+    if task.request.retries == 0:
         raise ConnectionError("The database is unreachable")
 
     run_task(_create_user(email))
@@ -65,16 +65,16 @@ def create_user_once_killed_task(email: str, started_file: str) -> None:
 
 
 @celery_app.task(name="tests.job", bind=True)
-def job_task(self: Task[[str, str], None], job_id: str, user_id: str) -> None:
+def job_task(task: Task[[str, str], None], job_id: str, user_id: str) -> None:
     """A job task, as a real one: its work returns the job's result, or fails it when the job's input says so."""
-    run_job(self, job_id, user_id, _work)
+    run_job(task, job_id, user_id, _work)
 
 
 @celery_app.task(name="tests.job_once_killed", bind=True)
-def job_once_killed_task(self: Task[[str, str], None], job_id: str, user_id: str) -> None:
+def job_once_killed_task(task: Task[[str, str], None], job_id: str, user_id: str) -> None:
     """A job task whose first run writes its process ID to the `started_file` of the job's input, then waits for the
     test to kill it."""
-    run_job(self, job_id, user_id, _work_once_killed)
+    run_job(task, job_id, user_id, _work_once_killed)
 
 
 async def _work(job: Job) -> _StubReport:

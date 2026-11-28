@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name=JOB_TASK_NAMES[JobKind.TRACK_HISTORY_IMPORT], bind=True)
-def track_history_import_task(self: Task[[str, str], None], job_id: str, user_id: str) -> None:
-    run_job(self, job_id, user_id, track_history_import_work)
+def track_history_import_task(task: Task[[str, str], None], job_id: str, user_id: str) -> None:
+    run_job(task, job_id, user_id, track_history_import_work)
 
 
 async def track_history_import_work(job: Job) -> ImportStreamingHistoryReport:
