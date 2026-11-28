@@ -229,7 +229,7 @@ class TestOpenRouterClient:
         with caplog.at_level(logging.DEBUG):
             await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        [recorded] = meter.usages
+        [recorded] = meter.run_usages
         assert recorded.duration > timedelta(0)
         assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
             step="test",
@@ -256,7 +256,7 @@ class TestOpenRouterClient:
 
         await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        [recorded] = meter.usages
+        [recorded] = meter.run_usages
         assert dataclasses.replace(recorded, duration=timedelta(0)) == LLMUsage(
             step="test", model="google/gemini-2.5-flash", reasoning_effort=ReasoningEffort.LOW, calls=1
         )
@@ -279,7 +279,7 @@ class TestOpenRouterClient:
             adapter="test",
         )
 
-        [recorded] = meter.usages
+        [recorded] = meter.run_usages
         assert recorded.reasoning_effort == ReasoningEffort.HIGH
 
     async def test__complete__rejected__records_nothing(
@@ -300,7 +300,7 @@ class TestOpenRouterClient:
         with pytest.raises(LLMRequestError):
             await metered_client.complete(messages, response_model=Answer, schema=SCHEMA, llm=llm, adapter="test")
 
-        assert meter.usages == []
+        assert meter.run_usages == []
 
     async def test__complete__429_with_retry_after__sleeps_and_retries(
         self,

@@ -113,7 +113,7 @@ def mock_build_provider_library(mock_wiring: mock.MagicMock, mock_provider_libra
 
 @pytest.fixture
 def mock_build_profiler(mock_wiring: mock.MagicMock) -> mock.MagicMock:
-    profiler = mock.AsyncMock(spec=TasteProfilerPort, **{"take_usages.return_value": []})
+    profiler = mock.AsyncMock(spec=TasteProfilerPort, **{"pop_usages.return_value": []})
     mock_wiring.build_profiler.return_value.__aenter__.return_value = profiler
     builder: mock.MagicMock = mock_wiring.build_profiler
     return builder
@@ -121,7 +121,7 @@ def mock_build_profiler(mock_wiring: mock.MagicMock) -> mock.MagicMock:
 
 @pytest.fixture
 def mock_build_enricher(mock_wiring: mock.MagicMock) -> mock.MagicMock:
-    enricher = mock.AsyncMock(spec=TrackEnricherPort, **{"take_usages.return_value": []})
+    enricher = mock.AsyncMock(spec=TrackEnricherPort, **{"pop_usages.return_value": []})
     mock_wiring.build_enricher.return_value.__aenter__.return_value = enricher
     builder: mock.MagicMock = mock_wiring.build_enricher
     return builder

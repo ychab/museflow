@@ -11,8 +11,8 @@ class OpenRouterAdapterMixin:
     def __init__(self, client: OpenRouterClient) -> None:
         self._client = client
 
-    def take_usages(self) -> list[LLMUsage]:
-        return self._client.take_usages()
+    def pop_usages(self) -> list[LLMUsage]:
+        return self._client.pop_usages()
 
     async def close(self) -> None:
         await self._client.close()

@@ -172,7 +172,7 @@ class TestCreateExplorationPlaylistUseCase:
         """Nothing new to pick ends the run, and the advisor calls billed before are saved."""
         mock_track_repository.get_artist_stats.return_value = ArtistStatsFactory.batch(1)
         mock_track_repository.get_known_identifiers.return_value = mock.Mock(is_known=mock.Mock(return_value=True))
-        mock_advisor.take_usages.return_value = [LLMUsageFactory.build()]
+        mock_advisor.pop_usages.return_value = [LLMUsageFactory.build()]
 
         with pytest.raises(DiscoveryTrackNoNewError):
             await use_case.create_playlist(user=user, config=CreateExplorationPlaylistConfigInput(max_attempts=1))

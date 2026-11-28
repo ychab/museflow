@@ -107,7 +107,7 @@ def print_llm_usage(meter: LLMUsageMeter, verbose: bool) -> None:
 
     Prints nothing when no call was made.
     """
-    usages = meter.usages
+    usages = meter.run_usages
     if not usages:
         return
 

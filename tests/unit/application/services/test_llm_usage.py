@@ -11,14 +11,14 @@ from museflow.domain.enums import LLMOperation
 from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 
-class TestLLMUsageServiceRecord:
+class TestLLMUsageServiceSave:
     async def test__no_usage__nothing_recorded(
         self,
         user: User,
         mock_uow: mock.AsyncMock,
         mock_llm_usage_repository: mock.AsyncMock,
     ) -> None:
-        await LLMUsageService(uow=mock_uow).record(
+        await LLMUsageService(uow=mock_uow).save(
             user_id=user.id, run_id=uuid.uuid4(), operation=LLMOperation.ENRICH, usages=[]
         )
 
@@ -35,7 +35,7 @@ class TestLLMUsageServiceRecord:
         # A build paused before its first checkpoint left no profile behind.
         mock_taste_profile_repository.get.return_value = None
 
-        await LLMUsageService(uow=mock_uow).record(
+        await LLMUsageService(uow=mock_uow).save(
             user_id=user.id,
             run_id=uuid.uuid4(),
             operation=LLMOperation.TASTE_BUILD,
@@ -56,7 +56,7 @@ class TestLLMUsageServiceRecord:
         mock_llm_usage_repository.bulk_accumulate.side_effect = RuntimeError("database down")
 
         with caplog.at_level(logging.ERROR):
-            await LLMUsageService(uow=mock_uow).record(
+            await LLMUsageService(uow=mock_uow).save(
                 user_id=user.id,
                 run_id=uuid.uuid4(),
                 operation=LLMOperation.ENRICH,

@@ -11,22 +11,22 @@ from museflow.infrastructure.adapters.common.llm.schemas import ChatUsage
 class LLMUsageMeter:
     """Sums the usage OpenRouter reports for each reply, per step and model, over one command run.
 
-    Created when the command starts, it also times the whole run. Besides the whole run, it keeps what was not taken
+    Created when the command starts, it also times the whole run. Besides the whole run, it keeps what was not popped
     yet, which the use case saves batch by batch.
     """
 
     def __init__(self) -> None:
-        self._usages: dict[tuple[str, str], LLMUsage] = {}
-        self._untaken: dict[tuple[str, str], LLMUsage] = {}
+        self._run_usages: dict[tuple[str, str], LLMUsage] = {}
+        self._pending: dict[tuple[str, str], LLMUsage] = {}
         self._started_at = time.monotonic()
 
     @property
-    def usages(self) -> list[LLMUsage]:
-        return list(self._usages.values())
+    def run_usages(self) -> list[LLMUsage]:
+        return list(self._run_usages.values())
 
     @property
     def total_cost(self) -> Decimal:
-        return sum((usage.cost for usage in self._usages.values()), Decimal(0))
+        return sum((usage.cost for usage in self._run_usages.values()), Decimal(0))
 
     @property
     def elapsed(self) -> timedelta:
@@ -40,14 +40,14 @@ class LLMUsageMeter:
         usage: ChatUsage,
         duration: timedelta,
     ) -> None:
-        for usages in (self._usages, self._untaken):
+        for usages in (self._run_usages, self._pending):
             self._add(usages, step, model, reasoning_effort, usage, duration)
 
-    def take_usages(self) -> list[LLMUsage]:
-        """What was recorded since the last take, per step and model; the next take starts afresh."""
-        taken = list(self._untaken.values())
-        self._untaken.clear()
-        return taken
+    def pop_usages(self) -> list[LLMUsage]:
+        """What was recorded since the last pop, per step and model; the next pop starts afresh."""
+        popped = list(self._pending.values())
+        self._pending.clear()
+        return popped
 
     def _add(
         self,

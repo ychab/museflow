@@ -491,7 +491,7 @@ class TestBuildTasteProfileUseCase:
         mock_progress: mock.AsyncMock,
     ) -> None:
         usage = LLMUsageFactory.build()
-        profiler = mock.AsyncMock(spec=TasteProfilerPort, **{"take_usages.return_value": [usage]})
+        profiler = mock.AsyncMock(spec=TasteProfilerPort, **{"pop_usages.return_value": [usage]})
         profiler.build_profile_segment.side_effect = TasteProfileBuildError("bad response")
 
         with pytest.raises(TasteProfileBuildPausedError):
