@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from museflow.application.ports.repositories.taste import TasteProfileRepository
 from museflow.domain.entities.user import User
+from museflow.domain.enums import TasteProfileStatus
 from museflow.infrastructure.adapters.database.models.playlist import PlaylistModel
 from museflow.infrastructure.adapters.database.models.taste import TasteProfileModel
 
@@ -157,6 +158,7 @@ class TestTasteProfileSQLRepository:
         assert row.checkpoint_batch_index == 3
         assert row.checkpoint_profile is not None
         assert row.title == "My profile"
+        assert row.status == TasteProfileStatus.BUILDING
 
         # Second call updates the checkpoint
         await taste_profile_repository.upsert_checkpoint(
