@@ -37,6 +37,8 @@ class WireMockContext:
         status: int,
         query_params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | None = None,
+        body_file_name: str | None = None,
+        fixed_delay_milliseconds: int | None = None,
         priority: int = 1,
         scenario_name: str | None = None,
         required_state: str | None = None,
@@ -57,6 +59,10 @@ class WireMockContext:
             body["request"]["queryParameters"] = {k: {"equalTo": str(v)} for k, v in query_params.items()}
         if json_body is not None:
             body["response"]["jsonBody"] = json_body
+        if body_file_name:
+            body["response"]["bodyFileName"] = body_file_name
+        if fixed_delay_milliseconds:
+            body["response"]["fixedDelayMilliseconds"] = fixed_delay_milliseconds
 
         if scenario_name:
             body["scenarioName"] = scenario_name

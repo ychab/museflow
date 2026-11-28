@@ -67,14 +67,16 @@ class BuildTasteProfileUseCase:
                 f"expire if it was killed (at most {config.lease_duration})"
             )
 
-        # What the profiler spent is saved whatever the outcome: a paused build was billed too.
+        # What the profiler spent since the last checkpoint is saved whatever the outcome: a paused build was billed
+        # too. The build is the run its usage is saved under.
         try:
             profile = await self._build_profile(user, config, build_id)
         finally:
             await self._llm_usage.record(
                 user_id=user.id,
+                run_id=build_id,
                 operation=LLMOperation.TASTE_BUILD,
-                usages=self._profiler.usages,
+                usages=self._profiler.take_usages(),
                 profile_name=config.name,
             )
             await self._release_lease(user, config, build_id)
@@ -155,7 +157,11 @@ class BuildTasteProfileUseCase:
                     else await self._profiler.merge_profiles(current_profile, segment, period.plays / plays_processed)
                 )
 
-                # One block per batch: a paid batch survives a later failure.
+                # One block per batch: a paid batch survives a later failure, and commits with its cost. Accepted risk:
+                # the block rolled back (the lease taken over, the database unreachable) loses the cost of the period;
+                # one period at most.
+                usages = self._profiler.take_usages()
+
                 async with self._uow as uow:
                     await self._renew_lease(uow, user, config, build_id)
                     await uow.taste_profiles.upsert_checkpoint(
@@ -167,6 +173,9 @@ class BuildTasteProfileUseCase:
                         tracks_count=tracks_count,
                         profile_data=current_profile,
                         batch_index=i,
+                    )
+                    await self._llm_usage.add(
+                        user.id, build_id, LLMOperation.TASTE_BUILD, usages, profile_name=config.name, uow=uow
                     )
 
                 await self._progress.publish(StepAdvanced(step=ProgressStep.TASTE_PERIODS, done=i, total=len(periods)))
@@ -203,9 +212,17 @@ class BuildTasteProfileUseCase:
             updated_at=datetime.now(UTC),
         ).sort_timeline()
 
+        # The reflection's cost commits with the profile, as a period's with its checkpoint.
+        usages = self._profiler.take_usages()
+
         async with self._uow as uow:
             await self._renew_lease(uow, user, config, build_id)
-            return await uow.taste_profiles.upsert(taste_profile)
+            taste_profile = await uow.taste_profiles.upsert(taste_profile)
+            await self._llm_usage.add(
+                user.id, build_id, LLMOperation.TASTE_BUILD, usages, profile_name=config.name, uow=uow
+            )
+
+        return taste_profile
 
     async def _renew_lease(
         self,

@@ -1,11 +1,15 @@
 import uuid
+from decimal import Decimal
+from typing import Final
 
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import anyio
 import pytest
 
+from museflow.application.inputs.enrich import EnrichTracksConfigInput
 from museflow.application.inputs.enrich import EnrichTracksJobInput
 from museflow.domain.enums import GenreTag
 from museflow.domain.enums import JobKind
@@ -20,7 +24,12 @@ from tests.integration.factories.models.job import JobModelFactory
 from tests.integration.factories.models.track import TrackModelFactory
 from tests.integration.factories.models.user import UserModelFactory
 from tests.integration.infrastructure.entrypoints.worker.celery_worker import CeleryWorker
+from tests.integration.infrastructure.entrypoints.worker.conftest import WAIT_TIMEOUT_SECONDS
 from tests.integration.infrastructure.entrypoints.worker.conftest import JobWaiter
+from tests.integration.utils.wiremock import WireMockContext
+
+# What the enricher reply of the WireMock fixture costs ($0.0001958), at the precision of the usage column
+BATCH_COST: Final[Decimal] = Decimal("0.000196")
 
 
 @pytest.mark.wiremock("openrouter")
@@ -79,6 +88,45 @@ class TestTrackEnrichTask:
         # One batch paid: the track the first try enriched was not sent again
         assert await self._llm_calls(async_session_trans, job_db.user_id) == 1
 
+    async def test__killed__batches_done_recorded(
+        self,
+        openrouter_wiremock: WireMockContext,
+        worker: CeleryWorker,
+        async_session_trans: AsyncSession,
+    ) -> None:
+        # Three batches: the first two answered, the third answered too late, as the worker is killed while it waits
+        for required_state, new_state, delay in [
+            ("Started", "second", None),
+            ("second", "third", None),
+            ("third", None, 60_000),
+        ]:
+            openrouter_wiremock.create_mapping(
+                method="POST",
+                url_path="/chat/completions",
+                status=200,
+                body_file_name="chat_completions_enricher.json",
+                fixed_delay_milliseconds=delay,
+                scenario_name="enrichment killed",
+                required_state=required_state,
+                new_state=new_state,
+            )
+        user_db = await UserModelFactory.create_async()
+        await TrackModelFactory.create_batch_async(2 * EnrichTracksConfigInput().batch_size + 1, user_id=user_db.id)
+        job_db = await self._create_job(async_session_trans, user_db.id)
+
+        track_enrich_task.apply_async(args=(str(job_db.id), str(job_db.user_id)), task_id=str(job_db.id))
+        with anyio.fail_after(WAIT_TIMEOUT_SECONDS):
+            while await self._llm_calls(async_session_trans, user_db.id) != 2:
+                await anyio.sleep(0.2)
+        worker.kill()
+
+        # What the two batches cost outlives the process, which never reached the end of its run
+        statement = select(LLMUsageModel).where(LLMUsageModel.user_id == user_db.id)
+        usage_db = (await async_session_trans.execute(statement)).scalar_one()
+        assert (usage_db.calls, usage_db.cost) == (2, 2 * BATCH_COST)
+        await async_session_trans.refresh(job_db)
+        assert job_db.status == JobStatus.RUNNING
+
     @staticmethod
     async def _create_job(
         session: AsyncSession, user_id: uuid.UUID, status: JobStatus = JobStatus.PENDING
@@ -95,5 +143,5 @@ class TestTrackEnrichTask:
 
     @staticmethod
     async def _llm_calls(session: AsyncSession, user_id: uuid.UUID) -> int:
-        statement = select(func.sum(LLMUsageModel.calls)).where(LLMUsageModel.user_id == user_id)
+        statement = select(func.coalesce(func.sum(LLMUsageModel.calls), 0)).where(LLMUsageModel.user_id == user_id)
         return (await session.execute(statement)).scalar_one()

@@ -27,6 +27,14 @@ class LLMUsageRepository(ABC):
         ...
 
     @abstractmethod
+    async def bulk_accumulate(self, records: list[LLMUsageRecord]) -> None:
+        """Adds the usage rows to those of their run: a row whose user, run, step and model already exist sums both.
+
+        A link to a profile or a playlist given by a row is kept; one missing is left as it was.
+        """
+        ...
+
+    @abstractmethod
     async def summarize(
         self,
         user_id: uuid.UUID | None,

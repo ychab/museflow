@@ -20,10 +20,12 @@ class TasteProfilerPort(ABC):
     @abstractmethod
     def profiler_metadata(self) -> dict[str, Any]: ...
 
-    @property
     @abstractmethod
-    def usages(self) -> list[LLMUsage]:
-        """Tokens and cost of the calls made since the adapter was created, per step and model."""
+    def take_usages(self) -> list[LLMUsage]:
+        """Tokens and cost of the calls made since the last take, per step and model; the next take starts afresh.
+
+        A use case saves each take: what it took is never handed over again, so a run never counts a call twice.
+        """
         ...
 
     @abstractmethod

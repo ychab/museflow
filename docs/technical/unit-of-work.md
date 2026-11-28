@@ -131,7 +131,7 @@ of the project and hands them out on a fresh session. The transaction is the pri
 ## Concrete cases
 
 **Reads before a remote call, writes per paid batch** (`EnrichTracksUseCase`). The read block closes before the first
-LLM call. Each batch gets its own block, so a paid batch survives a later failure:
+LLM call. Each batch gets its own block, so a paid batch survives a later failure, its cost saved with it:
 
 ```python
 async with self._uow as uow:
@@ -141,9 +141,12 @@ for i, batch in enumerate(batches, start=1):
     enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)  # no block open
     ...
 
-    # One block per batch: a paid batch survives a later failure.
+    usages = self._track_enricher.take_usages()
+
+    # One block per batch: a paid batch survives a later failure, and commits with its cost.
     async with self._uow as uow:
         await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
+        await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
 ```
 
 **Writes that form one fact share one block** (`CreateDiscoveryPlaylistUseCase`). The remote playlist is created first, outside

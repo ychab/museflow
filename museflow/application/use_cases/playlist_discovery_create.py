@@ -132,8 +132,9 @@ class CreateDiscoveryPlaylistUseCase:
         finally:
             await self._llm_usage.record(
                 user_id=user.id,
+                run_id=uuid.uuid4(),
                 operation=LLMOperation.DISCOVER,
-                usages=self._advisor.usages,
+                usages=self._advisor.take_usages(),
                 profile_name=profile.name,
                 playlist_id=playlist_id,
             )

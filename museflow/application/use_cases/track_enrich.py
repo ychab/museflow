@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import uuid
 from dataclasses import dataclass
 
 from museflow.application.inputs.enrich import EnrichTracksConfigInput
@@ -44,25 +45,28 @@ class EnrichTracksUseCase:
         self._llm_usage = LLMUsageService(uow=uow)
 
     async def enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
-        """Enriches the user's tracks batch by batch; each enriched batch is saved at once, so a stop keeps it.
+        """Enriches the user's tracks batch by batch; each batch is saved at once with its cost, so a stop keeps both.
 
         Raises:
             TrackEnrichmentAbortedError: If the enricher cannot serve any batch (auth, credits, outage, rate
                 limit), or after `max_consecutive_failures` failed batches in a row, since a failed batch may still be
                 billed.
         """
-        # What the enricher spent is saved whatever the outcome: an aborted run was billed too.
+        run_id = uuid.uuid4()
+
+        # What the enricher spent since its last batch is saved whatever the outcome: an aborted run was billed too.
         try:
-            report = await self._enrich(user, config)
+            report = await self._enrich(user, config, run_id)
         finally:
             await self._llm_usage.record(
                 user_id=user.id,
+                run_id=run_id,
                 operation=LLMOperation.ENRICH,
-                usages=self._track_enricher.usages,
+                usages=self._track_enricher.take_usages(),
             )
         return report
 
-    async def _enrich(self, user: User, config: EnrichTracksConfigInput) -> EnrichTracksReport:
+    async def _enrich(self, user: User, config: EnrichTracksConfigInput, run_id: uuid.UUID) -> EnrichTracksReport:
         missing_fields = None if config.force else config.fields
         not_found_count = 0
 
@@ -115,12 +119,18 @@ class EnrichTracksUseCase:
                     last_failure = "no enrichment returned"
 
             tracks_done += len(batch)
+            # Paid even when it failed: a batch saves its cost at once, with its tracks or alone, so a process killed
+            # later in the run keeps it.
+            usages = self._track_enricher.take_usages()
 
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=tracks_done, total=len(tracks))
             )
 
             if not enriched_tracks:
+                async with self._uow as uow:
+                    await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
+
                 error_count += 1
                 consecutive_failures += 1
 
@@ -135,10 +145,11 @@ class EnrichTracksUseCase:
             consecutive_failures = 0
 
             # One block per batch: a paid batch survives a later failure, and a run that resumes skips its tracks.
-            # Accepted risk: this write failing (the database unreachable) loses the batch, which the next try pays
-            # again; one batch at most.
+            # Accepted risk: this write failing (the database unreachable), or the process dying before it, loses the
+            # batch and its cost, which the next try pays again; one batch at most.
             async with self._uow as uow:
                 await uow.tracks.bulk_update(enriched_tracks, fields=config.fields)
+                await self._llm_usage.add(user.id, run_id, LLMOperation.ENRICH, usages, uow=uow)
 
             enriched_count += len(enriched_tracks)
 

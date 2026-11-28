@@ -245,16 +245,33 @@ build spans two runs, and the LLM time is the one worth comparing. They print it
 those calls were paid too. The table is skipped when no call was made.
 
 The same totals are saved to `museflow_llm_usage`, one row per step and model, under a `run_id` shared by the rows of
-the run ([Data model](data-model.md#llm-usage)). The advisor, profiler and enricher ports expose them as `usages`, and
-each use case saves them in a `finally:` block, through the application service `LLMUsageService`
-(`application/services/llm_usage.py`), in a transaction of its own:
+the run ([Data model](data-model.md#llm-usage)). They are saved batch by batch (#312), so a process killed mid-run
+(a worker out of memory, a redeploy) leaves what its batches were billed recorded, and the sums never undercount:
 
-- `BuildTasteProfileUseCase` links the rows to the profile, once a checkpoint or the finished profile exists;
-- `CreateDiscoveryPlaylistUseCase` links them to the profile it used, and to the playlist it created (none on a dry run or a
-  failure);
-- `EnrichTracksUseCase` links them to nothing.
+```mermaid
+flowchart TB
+    CALL["LLM call of a batch"] --> TAKE["take_usages()"]
+    TAKE --> OK{"batch kept?"}
+    OK -- yes --> TX["one block: the batch's rows + its usage"]
+    OK -- no --> ALONE["its own block: the usage alone"]
+    REST["finally: the rest, e.g. an aborted batch"] --> REC["its own block, a failure logged"]
+```
 
-Saving them never hides the outcome: a failure is logged and the use case goes on with its own result or error.
+The meter keeps two sums: the whole run, which the CLI prints, and what was not taken yet. The advisor, profiler and
+enricher ports hand the latter over with `take_usages()`, which empties it: what a use case took never comes back, so
+no call counts twice. Each batch adds its take to the rows of its run (`bulk_accumulate`, an upsert that sums), through
+the application service `LLMUsageService` (`application/services/llm_usage.py`):
+
+- `EnrichTracksUseCase` saves a batch's cost with its tracks, in one block; a failed batch, paid all the same, alone;
+- `BuildTasteProfileUseCase` saves a period's cost (segment and merge) with its checkpoint, the reflection's with the
+  profile, and links the rows to the profile;
+- `CreateDiscoveryPlaylistUseCase` and `CreateExplorationPlaylistUseCase` still save the whole run at the end: a playlist
+  run makes a few calls, and the playlist they link to exists only then.
+
+What is left in a `finally:` block (an aborted batch, a playlist run) is saved in a transaction of its own, and saving
+it never hides the outcome: a failure is logged and the use case goes on with its own result or error. Accepted risk:
+a reply received but not yet committed is lost with its batch when the process dies or the block rolls back; one
+batch at most.
 
 `museflow llm usage` reads them back ([`llm`](../user-guide/commands/llm.md)): one `GROUP BY ROLLUP` per call, by
 operation, model, step, month, profile, user or run, for one user or all of them. The `ROLLUP` row gives the total, where a

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 
@@ -74,3 +75,35 @@ class TestLLMUsageMeter:
             ),
         ]
         assert meter.total_cost == Decimal("0.022")
+
+    def test__take_usages__only_what_was_not_taken(self) -> None:
+        meter = LLMUsageMeter()
+        usage = ChatUsage(prompt_tokens=10, completion_tokens=5, cost=Decimal("0.001"))
+        second = timedelta(seconds=1)
+        meter.record("enricher", "google/gemini-2.5-flash-lite", ReasoningEffort.MINIMAL, usage, second)
+
+        first = meter.take_usages()
+        meter.record("enricher", "google/gemini-2.5-flash-lite", ReasoningEffort.MINIMAL, usage, second)
+        meter.record("enricher", "google/gemini-2.5-flash-lite", ReasoningEffort.MINIMAL, usage, second)
+
+        expected = LLMUsage(
+            step="enricher",
+            model="google/gemini-2.5-flash-lite",
+            reasoning_effort=ReasoningEffort.MINIMAL,
+            calls=1,
+            prompt_tokens=10,
+            completion_tokens=5,
+            cost=Decimal("0.001"),
+            duration=second,
+        )
+        assert first == [expected]
+        assert meter.take_usages() == [
+            replace(
+                expected, calls=2, prompt_tokens=20, completion_tokens=10, cost=Decimal("0.002"), duration=2 * second
+            )
+        ]
+        assert meter.take_usages() == []
+        # The whole run stays for the command's output
+        [total] = meter.usages
+        assert total.calls == 3
+        assert meter.total_cost == Decimal("0.003")

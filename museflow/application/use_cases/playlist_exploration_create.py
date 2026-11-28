@@ -94,8 +94,9 @@ class CreateExplorationPlaylistUseCase:
         finally:
             await self._llm_usage.record(
                 user_id=user.id,
+                run_id=uuid.uuid4(),
                 operation=LLMOperation.EXPLORE,
-                usages=self._advisor.usages,
+                usages=self._advisor.take_usages(),
                 playlist_id=playlist_id,
             )
 

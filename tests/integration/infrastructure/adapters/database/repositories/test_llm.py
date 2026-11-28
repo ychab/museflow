@@ -82,6 +82,46 @@ class TestLLMUsageSQLRepository:
         assert created == 1
         assert await llm_usage_repository.get_list(user_id=other_user_db.id) == [record_other]
 
+    async def test__bulk_accumulate__same_run__summed(
+        self,
+        async_session_db: AsyncSession,
+        user: User,
+        llm_usage_repository: LLMUsageRepository,
+    ) -> None:
+        profile_db = await TasteProfileModelFactory.create_async(user_id=user.id)
+        run_id = uuid.uuid4()
+        # A build paused before its first checkpoint knows no profile: a later batch links it, and none unlinks it.
+        unlinked, linked = (
+            LLMUsageRecordFactory.build(user_id=user.id, run_id=run_id, profile_id=profile_id, playlist_id=None)
+            for profile_id in (None, profile_db.id)
+        )
+        await llm_usage_repository.bulk_accumulate([unlinked, linked])
+        unlinked_again = replace(unlinked, id=uuid.uuid4(), profile_id=profile_db.id, created_at=datetime.now(UTC))
+        linked_again = replace(linked, id=uuid.uuid4(), profile_id=None, created_at=datetime.now(UTC))
+
+        await llm_usage_repository.bulk_accumulate([unlinked_again, linked_again])
+
+        rows = (
+            await async_session_db.execute(select(LLMUsageModel).where(LLMUsageModel.user_id == user.id))
+        ).scalars()
+        saved = {row.id: row.to_entity() for row in rows}
+        assert set(saved) == {unlinked.id, linked.id}
+        for record in (unlinked, linked):
+            usage = record.usage
+            assert saved[record.id] == replace(
+                record,
+                profile_id=profile_db.id,
+                usage=replace(
+                    usage,
+                    calls=2 * usage.calls,
+                    prompt_tokens=2 * usage.prompt_tokens,
+                    completion_tokens=2 * usage.completion_tokens,
+                    reasoning_tokens=2 * usage.reasoning_tokens,
+                    cost=2 * usage.cost,
+                    duration=2 * usage.duration,
+                ),
+            ), f"Record {record.id} not summed"
+
     async def test__get_list__nominal(self, user: User, llm_usage_repository: LLMUsageRepository) -> None:
         other_user_db = await UserModelFactory.create_async()
         newer = LLMUsageRecordFactory.build(user_id=user.id, created_at=datetime(2026, 2, 1, tzinfo=UTC))

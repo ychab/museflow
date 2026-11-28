@@ -224,8 +224,9 @@ No `SELECT … FOR UPDATE` or advisory lock held for the whole build: either wou
 `museflow_llm_usage` keeps what the LLM calls cost: one row per command run, step and model, with the reasoning effort (`ReasoningEffort`,
 always sent, see [Model choice per step](llm-pipeline.md#model-choice-per-step)), the calls, tokens,
 cost (`NUMERIC(12, 6)`, in USD) and the time spent waiting for the replies (`INTERVAL`). `run_id` groups the rows of one run and `operation` (`LLMOperation`) names the command:
-`taste_build`, `discover`, `explore` or `enrich`. Rows are written at the end of the command, whatever its outcome (see
-[Cost tracking](llm-pipeline.md#cost-tracking)).
+`taste_build`, `discover`, `explore` or `enrich`. Rows are written batch by batch, each batch adding its calls, tokens,
+cost and time to the rows of its run, whatever the outcome (see [Cost tracking](llm-pipeline.md#cost-tracking)): a
+row's `created_at` dates the first batch of its run.
 
 It is a table of its own rather than a `cost` column on the profile and the playlist, because some spending has no
 entity to carry it: an enrichment, a dry-run discovery, a failed one, a build paused before its first checkpoint.
