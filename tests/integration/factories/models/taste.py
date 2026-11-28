@@ -37,6 +37,8 @@ class TasteProfileBuildModelFactory(BaseModelFactory[TasteProfileBuildModel]):
     __model__ = TasteProfileBuildModel
 
     name = Use(BaseModelFactory.__faker__.sha256)
+    # A CLI build by default: a random job would break the foreign key
+    job_id = None
 
     @classmethod
     async def create_async(cls, **kwargs: Any) -> TasteProfileBuildModel:

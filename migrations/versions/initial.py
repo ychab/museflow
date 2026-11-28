@@ -1,8 +1,8 @@
-"""empty message
+"""initial
 
-Revision ID: 053a03ed3f59
+Revision ID: b0b46b162cb5
 Revises:
-Create Date: 2026-11-28 00:36:10.595131
+Create Date: 2026-11-28 12:18:05.948490
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '053a03ed3f59'
+revision: str = 'b0b46b162cb5'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -81,7 +81,7 @@ def upgrade() -> None:
     op.create_table('museflow_job',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('kind', sa.Enum('TRACK_HISTORY_IMPORT', 'TRACK_ENRICH', name='jobkind'), nullable=False),
+    sa.Column('kind', sa.Enum('TRACK_HISTORY_IMPORT', 'TRACK_ENRICH', 'TASTE_BUILD', name='jobkind'), nullable=False),
     sa.Column('status', sa.Enum('PENDING', 'RUNNING', 'DONE', 'FAILED', name='jobstatus'), nullable=False),
     sa.Column('input', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('result', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -116,16 +116,6 @@ def upgrade() -> None:
     sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_user_name')
     )
     op.create_index(op.f('ix_museflow_taste_profile_user_id'), 'museflow_taste_profile', ['user_id'], unique=False)
-    op.create_table('museflow_taste_profile_build',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('build_id', sa.Uuid(), nullable=False),
-    sa.Column('lease_until', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_build_user_name')
-    )
     op.create_table('museflow_track',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -167,6 +157,18 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_museflow_playlist_user_id'), 'museflow_playlist', ['user_id'], unique=False)
+    op.create_table('museflow_taste_profile_build',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('build_id', sa.Uuid(), nullable=False),
+    sa.Column('lease_until', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('job_id', sa.UUID(), nullable=True),
+    sa.ForeignKeyConstraint(['job_id'], ['museflow_job.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['museflow_user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'name', name='uq_museflow_taste_profile_build_user_name')
+    )
     op.create_table('museflow_track_play',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('track_id', sa.UUID(), nullable=False),
@@ -221,12 +223,12 @@ def downgrade() -> None:
     op.drop_index('ix_museflow_llm_usage_user_id_created_at', table_name='museflow_llm_usage')
     op.drop_table('museflow_llm_usage')
     op.drop_table('museflow_track_play')
+    op.drop_table('museflow_taste_profile_build')
     op.drop_index(op.f('ix_museflow_playlist_user_id'), table_name='museflow_playlist')
     op.drop_table('museflow_playlist')
     op.drop_index(op.f('ix_museflow_track_user_id'), table_name='museflow_track')
     op.drop_index(op.f('ix_museflow_track_fingerprint'), table_name='museflow_track')
     op.drop_table('museflow_track')
-    op.drop_table('museflow_taste_profile_build')
     op.drop_index(op.f('ix_museflow_taste_profile_user_id'), table_name='museflow_taste_profile')
     op.drop_table('museflow_taste_profile')
     op.drop_index('uq_museflow_job_user_kind_active', table_name='museflow_job', postgresql_where=sa.text("status IN ('PENDING', 'RUNNING')"))

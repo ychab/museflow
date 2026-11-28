@@ -69,6 +69,7 @@ class JobKind(StrEnum):
 
     TRACK_HISTORY_IMPORT = "track_history_import"  # the streaming history import (#265)
     TRACK_ENRICH = "track_enrich"  # the enrichment of the tracks missing a field (#262): paid LLM batches
+    TASTE_BUILD = "taste_build"  # the build of a taste profile (#266): paid LLM periods, then a reflection
 
 
 class JobStatus(StrEnum):

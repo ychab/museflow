@@ -90,6 +90,10 @@ class TasteProfileBuildInProgressError(Exception):
     """Another build holds the profile: it refused this one, or took the profile over from it."""
 
 
+class TasteProfileAlreadyExistsError(Exception):
+    """A finished profile holds the name: a new build would overwrite it from its first period."""
+
+
 class TasteProfileNoSeedError(Exception): ...
 
 

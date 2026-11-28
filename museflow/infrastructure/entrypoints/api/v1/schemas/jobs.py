@@ -50,6 +50,19 @@ class TrackEnrichJobResultResponse(BaseModel):
     error_count: int = Field(description="The batches of tracks that failed: their tracks are left for the next job")
 
 
+class TasteBuildJobInputResponse(BaseModel):
+    name: str
+    title: str
+    rated_only: bool
+
+
+class TasteBuildJobResultResponse(BaseModel):
+    """The profile built: read it by its name."""
+
+    name: str
+    tracks_count: int = Field(description="The tracks the profile was built from")
+
+
 class BaseJobResponse(BaseModel):
     """What every kind of job answers; each kind adds its `kind`, `input` and `result`."""
 
@@ -75,7 +88,16 @@ class TrackEnrichJobResponse(BaseJobResponse):
     result: TrackEnrichJobResultResponse | None = Field(description="What the job returned, once done")
 
 
+class TasteBuildJobResponse(BaseJobResponse):
+    kind: Literal[JobKind.TASTE_BUILD]
+    input: TasteBuildJobInputResponse
+    result: TasteBuildJobResultResponse | None = Field(description="What the job returned, once done")
+
+
 # A job of any kind, its input and result typed by its `kind`
-JobResponse = Annotated[TrackHistoryImportJobResponse | TrackEnrichJobResponse, Field(discriminator="kind")]
+JobResponse = Annotated[
+    TrackHistoryImportJobResponse | TrackEnrichJobResponse | TasteBuildJobResponse,
+    Field(discriminator="kind"),
+]
 
 JobResponseAdapter: Final[TypeAdapter[JobResponse]] = TypeAdapter(JobResponse)

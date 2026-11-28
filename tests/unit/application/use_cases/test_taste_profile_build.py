@@ -20,6 +20,7 @@ from museflow.application.use_cases.taste_profile_build import BuildTasteProfile
 from museflow.domain.entities.user import User
 from museflow.domain.enums import LLMOperation
 from museflow.domain.enums import ProgressStep
+from museflow.domain.enums import TasteProfileStatus
 from museflow.domain.exceptions import TasteProfileBuildError
 from museflow.domain.exceptions import TasteProfileBuildInProgressError
 from museflow.domain.exceptions import TasteProfileBuildPausedError
@@ -397,6 +398,9 @@ class TestBuildTasteProfileUseCase:
     ) -> None:
         # Checkpoint at batch 1 — only batches 2 and 3 are processed (2 segment + 2 merge + 1 reflect = 5 calls)
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
+        mock_taste_profile_repository.get.return_value = TasteProfileFactory.build(
+            user_id=user.id, name=config.name, status=TasteProfileStatus.BUILDING
+        )
         mock_taste_profile_repository.get_checkpoint.return_value = (profile_data, 1)
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 
@@ -435,6 +439,7 @@ class TestBuildTasteProfileUseCase:
         httpx_mock: HTTPXMock,
     ) -> None:
         config = BuildTasteProfileConfigInputFactory.build(track_limit=10, batch_size=3, resume=True)
+        mock_taste_profile_repository.get.return_value = None
         mock_taste_profile_repository.get_checkpoint.return_value = None
         mock_taste_profile_repository.upsert.return_value = TasteProfileFactory.build(user_id=user.id)
 

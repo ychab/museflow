@@ -69,4 +69,5 @@ TRANSIENT_ERRORS: Final[tuple[type[Exception], ...]] = (
 JOB_TASK_NAMES: Final[dict[JobKind, str]] = {
     JobKind.TRACK_HISTORY_IMPORT: "track.history_import",
     JobKind.TRACK_ENRICH: "track.enrich",
+    JobKind.TASTE_BUILD: "taste.build",
 }

@@ -16,7 +16,7 @@ museflow taste build [--email <email>] --title <title> [--name <name>] [OPTIONS]
 | `--email` | `MUSEFLOW_CLI_DEFAULT_EMAIL` | User email address. |
 | `--title` | every profile | Profile title, as shown (`"Soirées d'hiver"`). |
 | `--name` | the title as a slug (`soirees-d-hiver`) | Profile name keying it, unique per user: letters, digits, `-` and `_`, 64 at most, as it keys the profile in the API's URLs. |
-| `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. |
+| `--resume` / `--no-resume` | `--no-resume` | Resume from last checkpoint. A profile already finished is shown as it is, with nothing paid. |
 | `--rated-only` / `--no-rated-only` | `--no-rated-only` | Restrict seed tracks to only those the user has explicitly rated (score 0-10): the periods are cut from their plays only. |
 | `--track-limit` | `3000` | Max seed tracks to build the profile (1 to 20000), capped by the tracks played at least once. A track played in several periods takes a seed in each. |
 | `--batch-size` | automatic | Seed tracks per listening period, one LLM request each (1 to 1000). By default 200, or the seeds split into about 20 periods for a larger library. |
