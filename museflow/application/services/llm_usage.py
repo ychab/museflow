@@ -47,7 +47,7 @@ class LLMUsageService:
             ]
         )
 
-    async def record(
+    async def save(
         self,
         user_id: uuid.UUID,
         run_id: uuid.UUID,

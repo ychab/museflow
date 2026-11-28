@@ -191,7 +191,7 @@ class TestEnrichTracksUseCase:
         mock_track_repository.get_list.return_value = tracks
         # A reply the enricher rejected was billed all the same
         failed_usage, enriched_usage = LLMUsageFactory.batch(2)
-        mock_enricher.take_usages.side_effect = [[failed_usage], [enriched_usage], []]
+        mock_enricher.pop_usages.side_effect = [[failed_usage], [enriched_usage], []]
         mock_enricher.enrich_tracks.side_effect = [
             TrackEnrichmentError("Invalid enrichment response"),
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[2:]],
@@ -260,7 +260,7 @@ class TestEnrichTracksUseCase:
         mock_track_repository.get_list.return_value = tracks
         # The first batch's cost, then what the aborted batch was billed before it failed.
         batch_usage, abort_usage = LLMUsageFactory.batch(2)
-        mock_enricher.take_usages.side_effect = [[batch_usage], [abort_usage]]
+        mock_enricher.pop_usages.side_effect = [[batch_usage], [abort_usage]]
         mock_enricher.enrich_tracks.side_effect = [
             [TrackEnrichmentFactory.build(track_id=t.id) for t in tracks[:2]],
             error,

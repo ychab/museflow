@@ -58,11 +58,11 @@ class EnrichTracksUseCase:
         try:
             report = await self._enrich(user, config, run_id)
         finally:
-            await self._llm_usage.record(
+            await self._llm_usage.save(
                 user_id=user.id,
                 run_id=run_id,
                 operation=LLMOperation.ENRICH,
-                usages=self._track_enricher.take_usages(),
+                usages=self._track_enricher.pop_usages(),
             )
         return report
 
@@ -121,7 +121,7 @@ class EnrichTracksUseCase:
             tracks_done += len(batch)
             # Paid even when it failed: a batch saves its cost at once, with its tracks or alone, so a process killed
             # later in the run keeps it.
-            usages = self._track_enricher.take_usages()
+            usages = self._track_enricher.pop_usages()
 
             await self._progress.publish(
                 StepAdvanced(step=ProgressStep.ENRICH_TRACKS, done=tracks_done, total=len(tracks))

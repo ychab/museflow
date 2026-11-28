@@ -148,7 +148,7 @@ class TestCreateDiscoveryPlaylistUseCase:
         """Nothing is offered to pick, and the advisor calls billed are saved."""
         mock_advisor.get_discovery_artists.return_value = discovery_artist_strategy
         # The advisor calls billed before the failure.
-        mock_advisor.take_usages.return_value = [LLMUsageFactory.build()]
+        mock_advisor.pop_usages.return_value = [LLMUsageFactory.build()]
         artist = discovery_artist_strategy.artists[0].name
         mock_provider_library.search_artist_tracks.return_value = (
             [TrackFactory.build(artists=[artist])] if found else []

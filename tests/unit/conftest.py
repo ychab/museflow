@@ -250,7 +250,7 @@ def mock_file_storage() -> mock.AsyncMock:
 
 @pytest.fixture
 def mock_advisor() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=AdvisorPort, **{"take_usages.return_value": []})
+    return mock.AsyncMock(spec=AdvisorPort, **{"pop_usages.return_value": []})
 
 
 @pytest.fixture
@@ -263,7 +263,7 @@ def mock_progress() -> mock.AsyncMock:
 
 @pytest.fixture
 def mock_enricher() -> mock.AsyncMock:
-    return mock.AsyncMock(spec=TrackEnricherPort, **{"take_usages.return_value": []})
+    return mock.AsyncMock(spec=TrackEnricherPort, **{"pop_usages.return_value": []})
 
 
 # --- Adapters ---

@@ -141,7 +141,7 @@ for i, batch in enumerate(batches, start=1):
     enrichments = await self._track_enricher.enrich_tracks(batch, fields=config.fields)  # no block open
     ...
 
-    usages = self._track_enricher.take_usages()
+    usages = self._track_enricher.pop_usages()
 
     # One block per batch: a paid batch survives a later failure, and commits with its cost.
     async with self._uow as uow:

@@ -22,10 +22,10 @@ class AdvisorPort(ABC):
         ...
 
     @abstractmethod
-    def take_usages(self) -> list[LLMUsage]:
-        """Tokens and cost of the calls made since the last take, per step and model; the next take starts afresh.
+    def pop_usages(self) -> list[LLMUsage]:
+        """Tokens and cost of the calls made since the last pop, per step and model; the next pop starts afresh.
 
-        A use case saves each take: what it took is never handed over again, so a run never counts a call twice.
+        A use case saves what it pops: what it popped is never handed over again, so a run never counts a call twice.
         """
         ...
 

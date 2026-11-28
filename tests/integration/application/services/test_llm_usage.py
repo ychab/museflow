@@ -14,7 +14,7 @@ from tests.integration.factories.models.taste import TasteProfileModelFactory
 from tests.unit.factories.value_objects.llm import LLMUsageFactory
 
 
-class TestLLMUsageServiceRecord:
+class TestLLMUsageServiceSave:
     async def test__linked_to_the_profile_and_the_playlist(
         self,
         async_session_db: AsyncSession,
@@ -25,7 +25,7 @@ class TestLLMUsageServiceRecord:
         playlist_db = await PlaylistModelFactory.create_async(user_id=user.id, profile_id=profile_db.id)
         usages = LLMUsageFactory.batch(2)
 
-        await LLMUsageService(uow=uow).record(
+        await LLMUsageService(uow=uow).save(
             user_id=user.id,
             run_id=uuid.uuid4(),
             operation=LLMOperation.DISCOVER,
@@ -49,7 +49,7 @@ class TestLLMUsageServiceRecord:
         user: User,
         uow: UnitOfWorkPort,
     ) -> None:
-        await LLMUsageService(uow=uow).record(
+        await LLMUsageService(uow=uow).save(
             user_id=user.id,
             run_id=uuid.uuid4(),
             operation=LLMOperation.ENRICH,

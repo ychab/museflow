@@ -250,17 +250,17 @@ the run ([Data model](data-model.md#llm-usage)). They are saved batch by batch (
 
 ```mermaid
 flowchart TB
-    CALL["LLM call of a batch"] --> TAKE["take_usages()"]
-    TAKE --> OK{"batch kept?"}
+    CALL["LLM call of a batch"] --> POP["pop_usages()"]
+    POP --> OK{"batch kept?"}
     OK -- yes --> TX["one block: the batch's rows + its usage"]
     OK -- no --> ALONE["its own block: the usage alone"]
     REST["finally: the rest, e.g. an aborted batch"] --> REC["its own block, a failure logged"]
 ```
 
-The meter keeps two sums: the whole run, which the CLI prints, and what was not taken yet. The advisor, profiler and
-enricher ports hand the latter over with `take_usages()`, which empties it: what a use case took never comes back, so
-no call counts twice. Each batch adds its take to the rows of its run (`bulk_accumulate`, an upsert that sums), through
-the application service `LLMUsageService` (`application/services/llm_usage.py`):
+The meter keeps two sums: the whole run, which the CLI prints, and what was not popped yet. The advisor, profiler and
+enricher ports hand the latter over with `pop_usages()`, which empties it: what a use case popped never comes back, so
+no call counts twice. Each batch adds what it popped to the rows of its run (`bulk_accumulate`, an upsert that sums),
+through the application service `LLMUsageService` (`application/services/llm_usage.py`):
 
 - `EnrichTracksUseCase` saves a batch's cost with its tracks, in one block; a failed batch, paid all the same, alone;
 - `BuildTasteProfileUseCase` saves a period's cost (segment and merge) with its checkpoint, the reflection's with the

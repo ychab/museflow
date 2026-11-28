@@ -72,11 +72,11 @@ class BuildTasteProfileUseCase:
         try:
             profile = await self._build_profile(user, config, build_id)
         finally:
-            await self._llm_usage.record(
+            await self._llm_usage.save(
                 user_id=user.id,
                 run_id=build_id,
                 operation=LLMOperation.TASTE_BUILD,
-                usages=self._profiler.take_usages(),
+                usages=self._profiler.pop_usages(),
                 profile_name=config.name,
             )
             await self._release_lease(user, config, build_id)
@@ -160,7 +160,7 @@ class BuildTasteProfileUseCase:
                 # One block per batch: a paid batch survives a later failure, and commits with its cost. Accepted risk:
                 # the block rolled back (the lease taken over, the database unreachable) loses the cost of the period;
                 # one period at most.
-                usages = self._profiler.take_usages()
+                usages = self._profiler.pop_usages()
 
                 async with self._uow as uow:
                     await self._renew_lease(uow, user, config, build_id)
@@ -213,7 +213,7 @@ class BuildTasteProfileUseCase:
         ).sort_timeline()
 
         # The reflection's cost commits with the profile, as a period's with its checkpoint.
-        usages = self._profiler.take_usages()
+        usages = self._profiler.pop_usages()
 
         async with self._uow as uow:
             await self._renew_lease(uow, user, config, build_id)

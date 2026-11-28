@@ -65,7 +65,7 @@ class LLMUsageSQLRepository(LLMUsageRepository):
         return created
 
     async def bulk_accumulate(self, records: list[LLMUsageRecord]) -> None:
-        # A take holds one row per step and model: the statement never meets one key twice, which PostgreSQL rejects.
+        # A pop holds one row per step and model: the statement never meets one key twice, which PostgreSQL rejects.
         columns = LLMUsageModel.__table__.columns
         rows = [LLMUsageModel.from_entity(record) for record in records]
 
